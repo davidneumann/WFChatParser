@@ -1,0 +1,62 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.329
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Application", "src\Core\Application\Application.csproj", "{67C7C932-3C24-428E-95CD-2C2896E080CF}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{8E38F648-6C13-4138-A8FB-4DF35B66CB12}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Infrastructure", "Infrastructure", "{DD1985B9-7A0F-4B8A-AC9C-2C0675DF083E}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WFImageParser", "src\Infrastructure\WFImageParser\WFImageParser.csproj", "{BBB2C262-FBF1-4B7A-B5E7-EAE0FE26BA1D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Presentation", "Presentation", "{908B3390-0AB4-4FFF-A227-F8CD22A58484}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DebugCLI", "src\Presentation\DebugCLI\DebugCLI.csproj", "{1B1D61D2-919E-4496-A2E7-1FA8DFBC9FC7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageOCR", "src\Infrastructure\ImageOCR\ImageOCR.csproj", "{37B37784-9304-480F-9420-CB00B24C023C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageOCRBad", "src\Infrastructure\ImageOCRBad\ImageOCRBad.csproj", "{6A9BCC5C-F268-457B-BD47-F5BE227238C3}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{67C7C932-3C24-428E-95CD-2C2896E080CF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{67C7C932-3C24-428E-95CD-2C2896E080CF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{67C7C932-3C24-428E-95CD-2C2896E080CF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{67C7C932-3C24-428E-95CD-2C2896E080CF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BBB2C262-FBF1-4B7A-B5E7-EAE0FE26BA1D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BBB2C262-FBF1-4B7A-B5E7-EAE0FE26BA1D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BBB2C262-FBF1-4B7A-B5E7-EAE0FE26BA1D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BBB2C262-FBF1-4B7A-B5E7-EAE0FE26BA1D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1B1D61D2-919E-4496-A2E7-1FA8DFBC9FC7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1B1D61D2-919E-4496-A2E7-1FA8DFBC9FC7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1B1D61D2-919E-4496-A2E7-1FA8DFBC9FC7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1B1D61D2-919E-4496-A2E7-1FA8DFBC9FC7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{37B37784-9304-480F-9420-CB00B24C023C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{37B37784-9304-480F-9420-CB00B24C023C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{37B37784-9304-480F-9420-CB00B24C023C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{37B37784-9304-480F-9420-CB00B24C023C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6A9BCC5C-F268-457B-BD47-F5BE227238C3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6A9BCC5C-F268-457B-BD47-F5BE227238C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6A9BCC5C-F268-457B-BD47-F5BE227238C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6A9BCC5C-F268-457B-BD47-F5BE227238C3}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{67C7C932-3C24-428E-95CD-2C2896E080CF} = {8E38F648-6C13-4138-A8FB-4DF35B66CB12}
+		{BBB2C262-FBF1-4B7A-B5E7-EAE0FE26BA1D} = {DD1985B9-7A0F-4B8A-AC9C-2C0675DF083E}
+		{1B1D61D2-919E-4496-A2E7-1FA8DFBC9FC7} = {908B3390-0AB4-4FFF-A227-F8CD22A58484}
+		{37B37784-9304-480F-9420-CB00B24C023C} = {DD1985B9-7A0F-4B8A-AC9C-2C0675DF083E}
+		{6A9BCC5C-F268-457B-BD47-F5BE227238C3} = {DD1985B9-7A0F-4B8A-AC9C-2C0675DF083E}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A72EE6CA-91B9-4DBD-A082-55E80822506F}
+	EndGlobalSection
+EndGlobal
