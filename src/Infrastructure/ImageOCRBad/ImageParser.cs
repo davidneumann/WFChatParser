@@ -1,4 +1,5 @@
-﻿using Leptonica;
+﻿using Common;
+using Leptonica;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -35,7 +36,7 @@ namespace ImageOCRBad
             _tessBaseAPI.Dispose();
         }
 
-        public void ParseImage(string imagePath, string outputDirectory)
+        public ClickPoint[] ParseImage(string imagePath, string outputDirectory)
         {
             // Set the input image
             Pix pix = _tessBaseAPI.SetImage(imagePath);
@@ -47,18 +48,24 @@ namespace ImageOCRBad
 
             // Extract text from result iterator
             StringBuilder stringBuilder = new StringBuilder();
-            PageIteratorLevel pageIteratorLevel = PageIteratorLevel.RIL_PARA;
+            PageIteratorLevel pageIteratorLevel = PageIteratorLevel.RIL_WORD;
+            var clickPoints = new List<ClickPoint>();
             do
             {
-                var text = resultIterator.GetUTF8Text(pageIteratorLevel).Trim();
-                if(text.Length > 0)
-                    stringBuilder.AppendLine(text);
+                var word = resultIterator.GetUTF8Text(pageIteratorLevel);
+                var debug = resultIterator.BoundingBox(PageIteratorLevel.RIL_WORD, out var left, out var top, out var right, out var bottom);
+                if (word.Contains('[') && !word.EndsWith("]"))
+                    clickPoints.Add(new ClickPoint() { X = right - 10, Y = (top + bottom) / 2 });
+                if (left < 10)
+                    stringBuilder.AppendLine();
+                stringBuilder.Append(word);
             } while (resultIterator.Next(pageIteratorLevel));
 
             pix.Dispose();
 
             var file = new FileInfo(imagePath);
             File.WriteAllText(Path.Combine(outputDirectory, file.Name + ".txt"), stringBuilder.ToString());
+            return clickPoints.ToArray();
         }
     }
 }

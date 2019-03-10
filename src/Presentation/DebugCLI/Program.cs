@@ -11,7 +11,7 @@ namespace DebugCLI
 {
     class Program
     {        
-        static string outputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Run 16\Outputs";
+        static string outputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Run 17\Outputs";
 
         static void Main(string[] args)
         {
@@ -66,12 +66,13 @@ namespace DebugCLI
                 totalSeconds += sw.Elapsed.TotalSeconds;
                 sw.Reset();
                 sw.Start();
-                t.ParseImage(cleaned, outputDir);
+                var clickPoints = t.ParseImage(cleaned.OutputPath, outputDir);
                 sw.Stop();
                 totalSeconds += sw.Elapsed.TotalSeconds;
                 Console.WriteLine("Parsed in: " + sw.Elapsed.TotalSeconds + "s");
                 fileTimes.Add(totalSeconds);
                 sw.Reset();
+                ClickPointVisualizer.DrawClickPointsOnImage(cleaned.OutputPath, clickPoints);
                 Console.WriteLine("File done in: " + totalSeconds + "s");
             }
 
