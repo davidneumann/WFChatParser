@@ -17,12 +17,17 @@ namespace WFImageParser
         public string CleanImage(string imagePath, string outputDirectory)
         {
             var converter = new ColorSpaceConverter();
-            var chatRect = new Rectangle(5, 771, 3249, 1320);
+            var chatRect = new Rectangle(5, 750, 3249, 1350);
             //Image.Load(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screenshot (7).png")
             //@"C:\Users\david\OneDrive\Documents\WFChatParser\friday_last_moved.png"
             using (Image<Rgba32> rgbImage = Image.Load(imagePath))
             {
-                rgbImage.Mutate(x => x.Crop(chatRect).Pad(3349, 1420));//.Resize(1526, 654).Pad(1546, 674));
+                if (rgbImage.Height == 1440)
+                    chatRect = new Rectangle(4, 525, 2022, 855);
+
+                //chatRect.Width = (int)(rgbImage.Width * 0.799f);
+
+                rgbImage.Mutate(x => x.Crop(chatRect));
 
                 var maxHsv = 0.29;
 
@@ -51,7 +56,7 @@ namespace WFImageParser
             //Parallel.For(0, image.Width * image.Height, i =>
             //{
             //    var pixel = image[i % image.Width, i / image.Height];
-                
+
             //});
         }
     }
