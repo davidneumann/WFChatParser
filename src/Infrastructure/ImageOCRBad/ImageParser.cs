@@ -50,7 +50,9 @@ namespace ImageOCRBad
             PageIteratorLevel pageIteratorLevel = PageIteratorLevel.RIL_PARA;
             do
             {
-                stringBuilder.Append(resultIterator.GetUTF8Text(pageIteratorLevel));
+                var text = resultIterator.GetUTF8Text(pageIteratorLevel).Trim();
+                if(text.Length > 0)
+                    stringBuilder.AppendLine(text);
             } while (resultIterator.Next(pageIteratorLevel));
 
             pix.Dispose();
