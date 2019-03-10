@@ -1,24 +1,29 @@
 ﻿using ImageOCRBad;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
 using WFImageParser;
 
 namespace DebugCLI
 {
     class Program
-    {
-        static string outputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Run 10\Outputs";
+    {        
+        static string outputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Run 16\Outputs";
 
         static void Main(string[] args)
         {
-            //ProcessChatLogs();
+            if (!Directory.Exists(outputDir))
+                Directory.CreateDirectory(outputDir);
+
+            ProcessChatLogs();
             //ProcessRivens();
         }
 
         private static void ProcessRivens()
         {
-
             var sw = new Stopwatch();
             sw.Start();
             var t = new ImageParser();
@@ -46,9 +51,8 @@ namespace DebugCLI
             sw.Stop();
             Console.WriteLine("Initialize finished in: " + sw.Elapsed.TotalSeconds + "s");
             sw.Reset();
-            if (!Directory.Exists(outputDir))
-                Directory.CreateDirectory(outputDir);
             Console.WriteLine("=Processing files=");
+            var fileTimes = new List<double>();
             foreach (var file in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs"))
             {
                 var name = file.Substring(file.LastIndexOf('\\') + 1);
@@ -66,10 +70,13 @@ namespace DebugCLI
                 sw.Stop();
                 totalSeconds += sw.Elapsed.TotalSeconds;
                 Console.WriteLine("Parsed in: " + sw.Elapsed.TotalSeconds + "s");
+                fileTimes.Add(totalSeconds);
                 sw.Reset();
                 Console.WriteLine("File done in: " + totalSeconds + "s");
             }
 
+            var averageTime = fileTimes.Aggregate(0d, (acc, i) => acc + i) / fileTimes.Count;
+            Console.WriteLine($"Average screenshot processing time: {averageTime}s");
             Console.WriteLine("Jobs done");
         }
     }
