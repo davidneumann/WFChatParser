@@ -17,7 +17,7 @@ namespace WFImageParser
         public string CleanImage(string imagePath, string outputDirectory)
         {
             var converter = new ColorSpaceConverter();
-            var chatRect = new Rectangle(2, 705, 3257, 1395);
+            var chatRect = new Rectangle(5, 771, 3249, 1320);
             //Image.Load(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screenshot (7).png")
             //@"C:\Users\david\OneDrive\Documents\WFChatParser\friday_last_moved.png"
             using (Image<Rgba32> rgbImage = Image.Load(imagePath))
@@ -26,7 +26,6 @@ namespace WFImageParser
 
                 var maxHsv = 0.29;
 
-                //Parallel.For(0, rgbImage.Width * rgbImage.Height, i =>
                 for (int i = 0; i < rgbImage.Width * rgbImage.Height; i++)
                 {
                     var pixel = rgbImage[i % rgbImage.Width, i / rgbImage.Width];

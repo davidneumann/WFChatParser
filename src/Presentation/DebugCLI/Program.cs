@@ -17,7 +17,7 @@ namespace DebugCLI
             sw.Stop();
             Console.WriteLine("Initialize finished in: " + sw.Elapsed.TotalSeconds + "s");
             sw.Reset();
-            var outputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Run 4\Outputs";
+            var outputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Run 6\Outputs";
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
             Console.WriteLine("=Processing files=");
