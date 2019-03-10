@@ -22,7 +22,7 @@ namespace ImageOCRBad
             _tessBaseAPI = new TessBaseAPI();
 
             // Initialize tesseract-ocr 
-            if (!_tessBaseAPI.Init(dataPath, language, oem, null, new string[] { "load_system_dawg", "load_freq_dawg" }, new string[] { "F", "F" }))
+            if (!_tessBaseAPI.Init(dataPath, language, oem, null, new string[] { "load_system_dawg", "load_freq_dawg", "user_patterns_suffix" }, new string[] { "F", "F", "user-patterns" }))
             {
                 throw new Exception("Could not initialize tesseract.");
             }
