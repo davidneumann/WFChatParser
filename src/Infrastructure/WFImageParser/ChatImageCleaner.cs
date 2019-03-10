@@ -22,7 +22,7 @@ namespace WFImageParser
             //@"C:\Users\david\OneDrive\Documents\WFChatParser\friday_last_moved.png"
             using (Image<Rgba32> rgbImage = Image.Load(imagePath))
             {
-                rgbImage.Mutate(x => x.Crop(chatRect).Resize(1526, 654));
+                rgbImage.Mutate(x => x.Crop(chatRect).Resize(1526, 654).Pad(1546, 674));
 
                 var maxHsv = 0.29;
 
