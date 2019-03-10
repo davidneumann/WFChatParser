@@ -14,12 +14,20 @@ namespace ImageOCRBad
         private TessBaseAPI _tessBaseAPI = null;
         public ImageParser()
         {
+        }
+
+        public void Dispose()
+        {
+        }
+
+        public string ParseImage(string imagePath)
+        {
             string dataPath = @"C:\Program Files (x86)\Tesseract-OCR\tessdata";
             string language = "eng";
             OcrEngineMode oem = OcrEngineMode.DEFAULT;
             PageSegmentationMode psm = PageSegmentationMode.SINGLE_BLOCK;
 
-            _tessBaseAPI = new TessBaseAPI();
+            var _tessBaseAPI = new TessBaseAPI();
 
             // Initialize tesseract-ocr 
             if (!_tessBaseAPI.Init(dataPath, language, oem, null, new string[] { "load_system_dawg", "load_freq_dawg" }, new string[] { "F", "F" }))
@@ -28,15 +36,7 @@ namespace ImageOCRBad
             }
             // Set the Page Segmentation mode
             _tessBaseAPI.SetPageSegMode(psm);
-        }
 
-        public void Dispose()
-        {
-            _tessBaseAPI.Dispose();
-        }
-
-        public void ParseImage(string imagePath, string outputDirectory)
-        {
             // Set the input image
             Pix pix = _tessBaseAPI.SetImage(imagePath);
 
@@ -54,9 +54,9 @@ namespace ImageOCRBad
             } while (resultIterator.Next(pageIteratorLevel));
 
             pix.Dispose();
-
-            var file = new FileInfo(imagePath);
-            File.WriteAllText(Path.Combine(outputDirectory, file.Name + ".txt"), stringBuilder.ToString());
+            _tessBaseAPI.Dispose();
+            
+            return stringBuilder.ToString();
         }
     }
 }

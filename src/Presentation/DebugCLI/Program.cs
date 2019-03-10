@@ -2,6 +2,8 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using WFImageParser;
 
 namespace DebugCLI
@@ -17,7 +19,7 @@ namespace DebugCLI
             sw.Stop();
             Console.WriteLine("Initialize finished in: " + sw.Elapsed.TotalSeconds + "s");
             sw.Reset();
-            var outputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Run 8\Outputs";
+            var outputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Run 9\Outputs";
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
             Console.WriteLine("=Processing files=");
@@ -34,7 +36,8 @@ namespace DebugCLI
                 totalSeconds += sw.Elapsed.TotalSeconds;
                 sw.Reset();
                 sw.Start();
-                t.ParseImage(cleaned, outputDir);
+                var result = cleaned.AsParallel().Select((str, i) => new { Index = i, Value = t.ParseImage(str) }).ToArray().OrderBy(x => x.Index).Select(x => x.Value);
+                File.WriteAllLines(Path.Combine(outputDir, name + ".txt."), result);
                 sw.Stop();
                 totalSeconds += sw.Elapsed.TotalSeconds;
                 Console.WriteLine("Parsed in: " + sw.Elapsed.TotalSeconds + "s");
