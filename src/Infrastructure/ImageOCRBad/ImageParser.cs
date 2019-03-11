@@ -13,6 +13,9 @@ namespace ImageOCRBad
     public class ImageParser : IDisposable
     {
         private TessBaseAPI _tessBaseAPI = null;
+
+        private static readonly string[] _suffixes = new string[] { "ada]", "ata]", "bin]", "bo]", "cak]", "can]", "con]", "cron]", "cta]", "des]", "dex]", "do]", "dra]", "lis]", "mag]", "nak]", "nem]", "nent]", "nok]", "pha]", "sus]", "tak]", "tia]", "tin]", "tio]", "tis]", "ton]", "tor]", "tox]", "tron]" };
+
         public ImageParser()
         {
             string dataPath = @"C:\Program Files (x86)\Tesseract-OCR\tessdata";
@@ -52,11 +55,11 @@ namespace ImageOCRBad
             var clickPoints = new List<ClickPoint>();
             do
             {
-                var word = resultIterator.GetUTF8Text(pageIteratorLevel);
+                var word = resultIterator.GetUTF8Text(pageIteratorLevel) + " ";
                 var debug = resultIterator.BoundingBox(PageIteratorLevel.RIL_WORD, out var left, out var top, out var right, out var bottom);
-                if (word.Contains('[') && !word.EndsWith("]"))
-                    clickPoints.Add(new ClickPoint() { X = right - 10, Y = (top + bottom) / 2 });
-                if (left < 10)
+                if (word[0] != '[' && word.Contains(']') && _suffixes.Any(suffix => word.Contains(suffix)))
+                    clickPoints.Add(new ClickPoint() { X = left, Y = (top + bottom) / 2 });
+                if (left < 10 && stringBuilder.Length > 0)
                     stringBuilder.AppendLine();
                 stringBuilder.Append(word);
             } while (resultIterator.Next(pageIteratorLevel));
