@@ -47,6 +47,8 @@ namespace WFGameCapture
             DisplayBounds = Rectangle.FromLTRB(bounds.Left, bounds.Top, bounds.Right, bounds.Bottom);
 
             _duplicateOutput = output1.DuplicateOutput(Device);
+
+            GetOutputAsBitmap().Dispose();
         }
 
         public Texture2D GetOutput(int timeout = 10)
@@ -54,7 +56,7 @@ namespace WFGameCapture
             try
             {
                 var res = _duplicateOutput.TryAcquireNextFrame(timeout, out var frameInfoRef, out var screenResource);
-
+                
                 var clip = ClippingBounds == Rectangle.Empty ? DisplayBounds : ClippingBounds;
 
                 if (_screenTexture == null || clip.Width != _screenTexture.Description.Width ||
@@ -148,9 +150,14 @@ namespace WFGameCapture
 
         public string GetTradeChatImage()
         {
-            var image = GetOutputAsBitmap();
+            var image = GetOutputAsBitmap(System.Threading.Timeout.Infinite);
             image.Save("capture.png");
             return System.IO.Path.Combine(Environment.CurrentDirectory, "capture.png");
+        }
+
+        public string Debug()
+        {
+            return Adapter.Description.Description;
         }
     }
 }
