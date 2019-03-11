@@ -1,8 +1,9 @@
-﻿using System;
+﻿using Application.Interfaces;
+using System;
 
 namespace WFGameCapture
 {
-    public class GameCapture
+    public class GameCapture : IGameCapture
     {
         public string GetTradeChatImage()
         {

@@ -60,6 +60,10 @@
       <Project>{fa74e0b6-ce54-46f4-a15b-259a390c85b9}</Project>
       <Name>Common</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\Core\Application\Application.csproj">
+      <Project>{67c7c932-3c24-428e-95cd-2c2896e080cf}</Project>
+      <Name>Application</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\..\..\packages\leptonica.net.1.75.0.6\build\leptonica.net.targets" Condition="Exists('..\..\..\packages\leptonica.net.1.75.0.6\build\leptonica.net.targets')" />

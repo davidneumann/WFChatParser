@@ -11,7 +11,7 @@ namespace DebugCLI
 {
     class Program
     {        
-        static string outputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Run 17\Outputs";
+        static string outputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Run 18\Outputs";
 
         static void Main(string[] args)
         {
@@ -35,7 +35,9 @@ namespace DebugCLI
             {
                 sw.Reset();
                 sw.Start();
-                t.ParseImage(file, outputDir);
+                var text = t.ParseChatImage(file);
+                var fileInfo = new FileInfo(file);
+                File.WriteAllLines(Path.Combine(outputDir, fileInfo.Name + ".txt"), text.ChatTextLines);
                 sw.Stop();
                 Console.WriteLine("Parsed riven in: " + sw.Elapsed.TotalSeconds + "s");
                 sw.Reset();
@@ -60,19 +62,21 @@ namespace DebugCLI
                 var totalSeconds = 0.0;
                 sw.Reset();
                 sw.Start();
-                var cleaned = p.CleanImage(file, outputDir);
+                var processedImagePath = p.ProcessChatImage(file, outputDir);
                 sw.Stop();
                 Console.WriteLine("Cleaned in: " + sw.Elapsed.TotalSeconds + "s");
                 totalSeconds += sw.Elapsed.TotalSeconds;
                 sw.Reset();
                 sw.Start();
-                var clickPoints = t.ParseImage(cleaned.OutputPath, outputDir);
+                var chatContents = t.ParseChatImage(processedImagePath);
+                var fileInfo = new FileInfo(file);
+                File.WriteAllLines(Path.Combine(outputDir, fileInfo.Name + ".txt"), chatContents.ChatTextLines);
                 sw.Stop();
                 totalSeconds += sw.Elapsed.TotalSeconds;
                 Console.WriteLine("Parsed in: " + sw.Elapsed.TotalSeconds + "s");
                 fileTimes.Add(totalSeconds);
                 sw.Reset();
-                ClickPointVisualizer.DrawClickPointsOnImage(cleaned.OutputPath, clickPoints);
+                ClickPointVisualizer.DrawClickPointsOnImage(processedImagePath, chatContents.ClickPoints);
                 Console.WriteLine("File done in: " + totalSeconds + "s");
             }
 

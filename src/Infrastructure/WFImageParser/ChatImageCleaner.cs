@@ -1,4 +1,5 @@
-﻿using SixLabors.ImageSharp;
+﻿using Application.Interfaces;
+using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.ColorSpaces;
 using SixLabors.ImageSharp.ColorSpaces.Conversion;
 using SixLabors.ImageSharp.PixelFormats;
@@ -11,11 +12,15 @@ using System.Threading.Tasks;
 
 namespace WFImageParser
 {
-    public class ChatImageCleaner
+    public class ChatImageCleaner : IChatImageProcessor
     {
-        //This should return the messages
-        //This hsould also take the image for now I'm hard coding it
-        public ProcessedImageResult CleanImage(string imagePath, string outputDirectory)
+        /// <summary>
+        /// Converts the full color game window into a image of the chat window in grayscale.
+        /// </summary>
+        /// <param name="imagePath">The path to the game screenshot</param>
+        /// <param name="outputDirectory">The directory to save the processed image</param>
+        /// <returns>The full path to the processed image</returns>
+        public string ProcessChatImage(string imagePath, string outputDirectory)
         {
             var converter = new ColorSpaceConverter();
             var chatRect = new Rectangle(5, 750, 3249, 1350);
@@ -31,9 +36,7 @@ namespace WFImageParser
                 rgbImage.Mutate(x => x.Crop(chatRect));
 
                 var maxHsv = 0.29;
-
-                var result = new ProcessedImageResult();
-                bool prevCharBlue = false;
+                
                 for (int i = 0; i < rgbImage.Width * rgbImage.Height; i++)
                 {
                     var x = i % rgbImage.Width;
@@ -62,9 +65,9 @@ namespace WFImageParser
                 }
 
                 var file = new FileInfo(imagePath);
-                result.OutputPath = Path.Combine(outputDirectory, file.Name);
-                rgbImage.Save(result.OutputPath);
-                return result;
+                var outputPath = Path.Combine(outputDirectory, file.Name);
+                rgbImage.Save(outputPath);
+                return outputPath;
             }
 
             //Image<Rgba32> image = Image.Load("test.jpg");
@@ -78,12 +81,6 @@ namespace WFImageParser
             //    var pixel = image[i % image.Width, i / image.Height];
 
             //});
-        }
-
-        public class ProcessedImageResult
-        {
-            public string OutputPath { get; set; }
-            public List<Point> ClickPoints { get; set; } = new List<Point>();
         }
     }
 }

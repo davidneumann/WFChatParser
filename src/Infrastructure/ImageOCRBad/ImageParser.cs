@@ -1,4 +1,5 @@
-﻿using Common;
+﻿using Application.Interfaces;
+using Common;
 using Leptonica;
 using System;
 using System.Collections.Generic;
@@ -10,7 +11,7 @@ using Tesseract;
 
 namespace ImageOCRBad
 {
-    public class ImageParser : IDisposable
+    public class ImageParser : IDisposable, IImageParser
     {
         private TessBaseAPI _tessBaseAPI = null;
 
@@ -39,7 +40,7 @@ namespace ImageOCRBad
             _tessBaseAPI.Dispose();
         }
 
-        public ClickPoint[] ParseImage(string imagePath, string outputDirectory)
+        public ImageParseResult ParseChatImage(string imagePath)
         {
             // Set the input image
             Pix pix = _tessBaseAPI.SetImage(imagePath);
@@ -51,6 +52,7 @@ namespace ImageOCRBad
 
             // Extract text from result iterator
             StringBuilder stringBuilder = new StringBuilder();
+            var chatText = new List<string>();
             PageIteratorLevel pageIteratorLevel = PageIteratorLevel.RIL_WORD;
             var clickPoints = new List<ClickPoint>();
             do
@@ -60,15 +62,45 @@ namespace ImageOCRBad
                 if (word[0] != '[' && word.Contains(']') && _suffixes.Any(suffix => word.Contains(suffix)))
                     clickPoints.Add(new ClickPoint() { X = left, Y = (top + bottom) / 2 });
                 if (left < 10 && stringBuilder.Length > 0)
-                    stringBuilder.AppendLine();
+                {
+                    chatText.Add(stringBuilder.ToString());
+                    stringBuilder.Clear();
+                }
                 stringBuilder.Append(word);
+            } while (resultIterator.Next(pageIteratorLevel));
+            chatText.Add(stringBuilder.ToString());
+
+            pix.Dispose();
+
+            return new ImageParseResult()
+            {
+                ClickPoints = clickPoints.ToArray(),
+                ChatTextLines = chatText.ToArray()
+            };
+        }
+
+        public string[] ParseRivenImage(string imagePath)
+        {
+            // Set the input image
+            Pix pix = _tessBaseAPI.SetImage(imagePath);
+
+            // Recognize image
+            _tessBaseAPI.Recognize();
+
+            ResultIterator resultIterator = _tessBaseAPI.GetIterator();
+
+            // Extract text from result iterator
+            var rivenText = new List<string>();
+            PageIteratorLevel pageIteratorLevel = PageIteratorLevel.RIL_TEXTLINE;
+            do
+            {
+                var line = resultIterator.GetUTF8Text(pageIteratorLevel) + " ";
+                rivenText.Add(line);
             } while (resultIterator.Next(pageIteratorLevel));
 
             pix.Dispose();
 
-            var file = new FileInfo(imagePath);
-            File.WriteAllText(Path.Combine(outputDirectory, file.Name + ".txt"), stringBuilder.ToString());
-            return clickPoints.ToArray();
+            return rivenText.ToArray();
         }
     }
 }
