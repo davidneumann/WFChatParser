@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Infrastructure\ImageOCR\ImageOCR.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\WFGameCapture\WFGameCapture.csproj" />
     <ProjectReference Include="..\..\Infrastructure\WFImageParser\WFImageParser.csproj" />
   </ItemGroup>
 

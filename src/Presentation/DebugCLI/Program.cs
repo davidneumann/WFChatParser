@@ -5,20 +5,23 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using WFGameCapture;
 using WFImageParser;
 
 namespace DebugCLI
 {
     class Program
     {        
-        static string outputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Run 18\Outputs";
+        static string outputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Run 19\Outputs";
 
         static void Main(string[] args)
         {
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
-
-            ProcessChatLogs();
+            
+            var capture = new GameCapture();
+            capture.GetTradeChatImage();
+            //ProcessChatLogs();
             //ProcessRivens();
         }
 
