@@ -30,9 +30,9 @@ namespace WFImageParser
             {
                 if (rgbImage.Height == 1440)
                     chatRect = new Rectangle(4, 530, 2022, 850);
-
-                //chatRect.Width = (int)(rgbImage.Width * 0.799f);
-
+                else if (rgbImage.Height == 1080)
+                    chatRect = new Rectangle(4, 370, 1507, 650);
+                
                 rgbImage.Mutate(x => x.Crop(chatRect));
 
                 var maxHsv = 0.29;
@@ -46,19 +46,6 @@ namespace WFImageParser
                     if (hsvPixel.V > maxHsv)
                     {
                         rgbImage[x, y] = Rgba32.Black;
-                        ////On middle of line check for click points
-                        ///THIS HAS BEEN KILLED AS IT IS BROKEN BY MULTIPLE ITEMS IN A ROW
-                        //if ((y - 25) % 50 == 0)
-                        //{
-                        //    if (hsvPixel.H >= 185 && hsvPixel.S >= 0.5 && !prevCharBlue)
-                        //    {
-                        //        result.ClickPoints.Add(new Point(x, y));
-                        //        prevCharBlue = true;
-                        //        rgbImage[x, y] = Rgba32.Red;
-                        //    }
-                        //    else if (hsvPixel.H < 185 && hsvPixel.S < 0.5 && prevCharBlue)
-                        //        prevCharBlue = false;
-                        //}
                     }
                     else
                         rgbImage[x, y] = Rgba32.White;
@@ -69,18 +56,6 @@ namespace WFImageParser
                 rgbImage.Save(outputPath);
                 return outputPath;
             }
-
-            //Image<Rgba32> image = Image.Load("test.jpg");
-            //image.Crop()
-            //using (var cropped = image.Clone()
-            //{
-
-            //}
-            //Parallel.For(0, image.Width * image.Height, i =>
-            //{
-            //    var pixel = image[i % image.Width, i / image.Height];
-
-            //});
         }
     }
 }

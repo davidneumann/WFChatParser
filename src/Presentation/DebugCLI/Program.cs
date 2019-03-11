@@ -19,18 +19,18 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            Console.WriteLine("Push enter and then switch to warframe");
-            Console.ReadLine();
-            for (int i = 0; i < 5; i++)
-            {
-                Console.Write($"\rStarting in {5 - i} seconds...");
-                System.Threading.Thread.Sleep(1000);
-            }
-            
-            var capture = new GameCapture();
-            capture.GetTradeChatImage();
+            //Console.WriteLine("Push enter and then switch to warframe");
+            //Console.ReadLine();
+            //for (int i = 0; i < 5; i++)
+            //{
+            //    Console.Write($"\rStarting in {5 - i} seconds...");
+            //    System.Threading.Thread.Sleep(1000);
+            //}
 
-            //ProcessChatLogs();
+            //var capture = new GameCapture();
+            //capture.GetTradeChatImage();
+
+            ProcessChatLogs();
             //ProcessRivens();
         }
 
