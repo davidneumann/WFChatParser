@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Tesseract;
 
-namespace ImageOCRBad
+namespace ImageOCR
 {
     public class ImageParser : IDisposable, IImageParser
     {
