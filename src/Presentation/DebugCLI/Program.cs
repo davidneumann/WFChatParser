@@ -23,9 +23,38 @@ namespace DebugCLI
 
             //MonitorChatLive();
 
-            AnalyseImages();
+            //TrainOCR();
+            //ProcessChatLogsNew();
+            //AnalyseImages();
             //ProcessChatLogs();
             //ProcessRivens();
+        }
+
+        private static void ProcessChatLogsNew()
+        {
+            var sw = new Stopwatch();
+            sw.Start();
+            var p = new ChatImageCleaner(JsonConvert.DeserializeObject<CharInfo[]>("chars.json"));
+            sw.Stop();
+            Console.WriteLine("Initialize finished in: " + sw.Elapsed.TotalSeconds + "s");
+            sw.Reset();
+            Console.WriteLine("=Processing files=");
+            var fileTimes = new List<double>();
+            foreach (var file in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs"))
+            {
+                var name = file.Substring(file.LastIndexOf('\\') + 1);
+                Console.WriteLine($"=={name}==");
+                sw.Reset();
+                sw.Start();
+                var chatText = p.ConvertScreenshotToChatText(file, 0.32f);
+                sw.Stop();
+                Console.WriteLine("Parsed in: " + sw.Elapsed.TotalSeconds + "s");
+                sw.Reset();
+                var fileInfo = new FileInfo(file);
+                File.WriteAllLines(Path.Combine(outputDir, fileInfo.Name + ".txt"), chatText);
+            }
+
+            Console.WriteLine("Jobs done");
         }
 
         private static void MonitorChatLive()
@@ -160,7 +189,43 @@ namespace DebugCLI
                     var newP = new ChatImageCleaner(charInfoResults);
                     var charResults = newP.VerifyInput(file, v);
                     if (charResults.SequenceEqual(chars))
-                        validVs.Add(v);                        
+                    {
+                        var info = new FileInfo(file);
+                        File.WriteAllText(Path.Combine(outputDir, info.Name + ".json"), JsonConvert.SerializeObject(charInfoResults));
+                        validVs.Add(v);
+                    }
+                }
+
+                //var processedImagePath = p.AnalysisChatMessage(file, outputDir);
+                //Console.WriteLine(processedImagePath);
+            }
+            Console.WriteLine("Jobs done");
+        }
+
+        private static void TrainOCR()
+        {
+            var p = new ChatImageCleaner(JsonConvert.DeserializeObject<CharInfo[]>(File.ReadAllText("chars.json")));
+            Console.WriteLine("=Processing files=");
+            foreach (var file in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Text Inputs"))
+            {
+                var name = file.Substring(file.LastIndexOf('\\') + 1);
+                Console.WriteLine($"=={name}==");
+
+                var outputFile = Path.Combine(outputDir, name);
+
+                var chars = "! # $ % & ' ( ) * + , - . / 0 1 2 3 4 5 6 7 8 9 : ; < = > ? @ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z \\ ] ^ _ ` a b c d e f g h i j k l m n o p q r s t u v w x y z { | } ~ – — ’ ‚ [".Replace(" ", "");
+
+                var v = 0.32f;
+                p.SaveGreyscaleImage(file, outputFile, v);
+                var charInfoResults = p.AnalyzeInput(file, chars, v);
+                var newP = new ChatImageCleaner(charInfoResults);
+                var charResults = newP.VerifyInput(file, v);
+                if (charResults.SequenceEqual(chars))
+                {
+                    var info = new FileInfo(file);
+                    var path = Path.Combine(outputDir, info.Name + ".json");
+                    File.WriteAllText(path, JsonConvert.SerializeObject(charInfoResults));
+                    Console.WriteLine($"{info.Name} trained correctly. Output: {path}");
                 }
 
                 //var processedImagePath = p.AnalysisChatMessage(file, outputDir);

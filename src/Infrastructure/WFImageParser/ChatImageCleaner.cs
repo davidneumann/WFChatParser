@@ -66,6 +66,64 @@ namespace WFImageParser
         private int[] _lineOffsets = new int[] { 5, 55, 105, 154, 204, 253, 303, 352, 402, 452, 501, 551, 600, 650, 700, 749, 799, 848, 898, 948, 997, 1047, 1096, 1146, 1195, 1245, 1295 };
         private readonly CharInfo[] _knownCharacters;
 
+        public string[] ConvertScreenshotToChatText(string imagePath, float minV)
+        {
+            var converter = new ColorSpaceConverter();
+            var chatRect = new Rectangle(4, 763, 3236, 1350);
+            using (Image<Rgba32> rgbImage = Image.Load(imagePath))
+            {
+                //var maxHsv = 0.29;
+                var allText = new List<string>();
+                foreach (var lineOffset in _lineOffsets)
+                {
+                    var hitPoints = new int[36];
+                    var hitPointCount = 0;
+                    var chars = new System.Text.StringBuilder();
+                    IEnumerable<CharInfo> possibleChars = null;
+                    var sliceIndex = 0;
+                    for (int x = chatRect.Left; x < chatRect.Right; x++)
+                    {
+                        hitPointCount = 0;
+                        for (int y = chatRect.Top + lineOffset; y < chatRect.Top + lineOffset + 36; y++)
+                        {
+                            var pixel = rgbImage[x, y];
+                            var hsvPixel = converter.ToHsv(pixel);
+                            if (hsvPixel.V > minV)
+                            {
+                                hitPoints[hitPointCount++] = y;
+                            }
+                        }
+
+                        if (hitPointCount > 0)
+                        {
+                            IEnumerable<CharInfo> newPossibleChars = null;
+                            if (possibleChars == null)
+                                newPossibleChars = _knownCharacters.Where(c => DoesCharactersMatch(0, hitPoints, hitPointCount, c)).ToList();
+                            else
+                                newPossibleChars = possibleChars.Where(c => DoesCharactersMatch(sliceIndex, hitPoints, hitPointCount, c)).ToList();
+
+                            if (newPossibleChars.Count() > 1)
+                            {
+                                possibleChars = newPossibleChars;
+                                sliceIndex++;
+                            }
+                            else if (newPossibleChars.Count() == 1)
+                            {
+                                sliceIndex = 0;
+                                var character = newPossibleChars.Single();
+                                chars.Append(character.Character);
+                                x += character.Width - 1;
+                            }
+                        }
+                        else
+                            possibleChars = null;
+                    }
+                    allText.Add(chars.ToString());
+                }
+                
+                return allText.ToArray();
+            }
+        }
 
         public void SaveGreyscaleImage(string imagePath, string outputPath, float minV = 0.29f)
         {
