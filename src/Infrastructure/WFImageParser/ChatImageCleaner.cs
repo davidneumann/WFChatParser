@@ -268,14 +268,13 @@ namespace WFImageParser
 
                 if (endX > startX)
                 {
-                    using (Image<Rgba32> debug1 = rgbImage.Clone())
-                    {
-                        debug1.Mutate(i => i.Crop(new Rectangle(startX, lineOffset, endX - startX, lineHeight)));
-                        debug1.Save("test_target.png");
-                    }
+                    //using (Image<Rgba32> debug1 = rgbImage.Clone())
+                    //{
+                    //    debug1.Mutate(i => i.Crop(new Rectangle(startX, lineOffset, endX - startX, lineHeight)));
+                    //    debug1.Save("test_target.png");
+                    //}
 
                     var targetPixels = 0;
-                    var targetMask = new int[endX - startX, lineHeight];
                     for (int x2 = startX; x2 < endX; x2++)
                     {
                         for (int y = lineOffset; y < lineHeight + lineOffset; y++)
@@ -283,16 +282,13 @@ namespace WFImageParser
                             if (converter.ToHsv(rgbImage[x2, y]).V > minV)
                             {
                                 targetPixels++;
-                                targetMask[x2 - startX, y - lineOffset] = 1;
                             }
-                            else
-                                targetMask[x2 - startX, y - lineOffset] = 0;
                         }
                     }
 
 
-                    Console.WriteLine("Target: " + targetPixels);
-                    Console.WriteLine("{0,12} {1,12} {2,12} {3,12}", "Name", "PixelCont", "Match", "Confi");
+                    //Console.WriteLine("Target: " + targetPixels);
+                    //Console.WriteLine("{0,12} {1,12} {2,12} {3,12}", "Name", "PixelCont", "Match", "Confi");
 
                     var bestFit = new Tuple<float, CharacterDetails>(float.MinValue, null);
                     var targetWidth = endX - startX;
@@ -334,24 +330,22 @@ namespace WFImageParser
                                             details.VMask[x2, y] = 0f;                                        
                                     }
                                 }
-
-                                resizedScan.Save("test_resized.png");
                             }
                         }
-                        using (Image<Rgba32> debug2 = new Image<Rgba32>(details.Width, details.Height))
-                        {
-                            for (int x2 = 0; x2 < details.Width; x2++)
-                            {
-                                for (int y = 0; y < details.Height; y++)
-                                {
-                                    if (details.VMask[x2, y] > minV)
-                                        debug2[x2, y] = Rgba32.White;
-                                    else
-                                        debug2[x2, y] = Rgba32.Black;
-                                }
-                            }
-                            debug2.Save("test_reference.png");
-                        }
+                        //using (Image<Rgba32> debug2 = new Image<Rgba32>(details.Width, details.Height))
+                        //{
+                        //    for (int x2 = 0; x2 < details.Width; x2++)
+                        //    {
+                        //        for (int y = 0; y < details.Height; y++)
+                        //        {
+                        //            if (details.VMask[x2, y] > minV)
+                        //                debug2[x2, y] = Rgba32.White;
+                        //            else
+                        //                debug2[x2, y] = Rgba32.Black;
+                        //        }
+                        //    }
+                        //    debug2.Save("test_reference.png");
+                        //}
 
                         var matchingPixels = 0;
                         var matchingPixelsMask = new int[details.Width, details.Height];
@@ -373,24 +367,24 @@ namespace WFImageParser
                             }
                         }
 
-                        using (Image<Rgba32> debug2 = new Image<Rgba32>(details.Width, details.Height))
-                        {
-                            for (int x2 = 0; x2 < details.Width; x2++)
-                            {
-                                for (int y = 0; y < details.Height; y++)
-                                {
-                                    if (matchingPixelsMask[x2, y] > 0)
-                                        debug2[x2, y] = Rgba32.White;
-                                    else
-                                        debug2[x2, y] = Rgba32.Black;
-                                }
-                            }
-                            debug2.Save("test_matching.png");
-                        }
+                        //using (Image<Rgba32> debug2 = new Image<Rgba32>(details.Width, details.Height))
+                        //{
+                        //    for (int x2 = 0; x2 < details.Width; x2++)
+                        //    {
+                        //        for (int y = 0; y < details.Height; y++)
+                        //        {
+                        //            if (matchingPixelsMask[x2, y] > 0)
+                        //                debug2[x2, y] = Rgba32.White;
+                        //            else
+                        //                debug2[x2, y] = Rgba32.Black;
+                        //        }
+                        //    }
+                        //    debug2.Save("test_matching.png");
+                        //}
 
                         
                         var conf = (float)matchingPixels / (float)(Math.Max(targetPixels, details.PixelCount));
-                        Console.WriteLine("{0,12} {1,12} {2,12} {3,12}", details.Name, details.PixelCount, matchingPixels, conf);
+                        //Console.WriteLine("{0,12} {1,12} {2,12} {3,12}", details.Name, details.PixelCount, matchingPixels, conf);
                         if (conf > 0.66f && conf > bestFit.Item1)
                         {
                             bestFit = new Tuple<float, CharacterDetails>(conf, details);

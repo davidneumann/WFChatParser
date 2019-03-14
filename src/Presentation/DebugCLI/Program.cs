@@ -27,20 +27,24 @@ namespace DebugCLI
             //GenerateCharStrings(135);
 
             //var minErrors = int.MaxValue;
-            //var minErrorsV = 0.50f;
-            //for (float v = 0.45f; v > 0.2f; v -= 0.025f)
+            //var minErrorsV = float.MaxValue;
+            //for (float v = 0.7f; v > 0.2f; v -= 0.05f)
             //{
-            var v = 0.65f;
-            MakeBitmapsSmall(v, false);
-            AverageBitmapsSmall(v, false);
+            var v = 0.4999999f;
+            //MakeBitmapsSmall(v, false);
+            //AverageBitmapsSmall(v, false);
+            var sw = new Stopwatch();
+            sw.Start();
             var errors = ParseWithBitmap(v);
+            sw.Stop();
+            Console.WriteLine("Ran in: " + sw.Elapsed.TotalSeconds);
             Console.WriteLine("Found " + errors + " errors");
-            //if (errors < minErrors)
-            //{
-            //    minErrors = errors;
-            //    minErrorsV = v;
-            //    Console.WriteLine("New min errors: " + errors + " v: " + minErrorsV);
-            //}
+            //    if (errors < minErrors)
+            //    {
+            //        minErrors = errors;
+            //        minErrorsV = v;
+            //        Console.WriteLine("New min errors: " + errors + " v: " + minErrorsV);
+            //    }
             //}
             //MakeBitmapsSmall();
 
@@ -54,8 +58,8 @@ namespace DebugCLI
 
         private static int ParseWithBitmap(float minV)
         {
-            var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith("10.png")).ToArray();
-            var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith("10.txt")).ToArray();
+            var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".png")).ToArray();
+            var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".txt")).ToArray();
 
             var errorCount = 0;
             for (int k = 0; k < trainingImages.Length; k++)
@@ -88,16 +92,19 @@ namespace DebugCLI
                     }
                     else
                     {
-                        for (int j = 0; j < correctResults[i].Length; j++)
+                        if (correctResults[i].Length == result[i].Length)
                         {
-                            if (result[i][j] != correctResults[i][j])
+                            for (int j = 0; j < correctResults[i].Length; j++)
                             {
-                                Console.WriteLine("^");
-                                break;
-                            }
-                            else
-                            {
-                                Console.Write(" ");
+                                if (result[i][j] != correctResults[i][j])
+                                {
+                                    Console.WriteLine("^");
+                                    break;
+                                }
+                                else
+                                {
+                                    Console.Write(" ");
+                                }
                             }
                         }
                         Console.WriteLine("They don't match");
