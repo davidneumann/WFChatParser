@@ -24,7 +24,8 @@ namespace DebugCLI
 
             //MonitorChatLive();
 
-            //GenerateCharStrings(135);
+            //GenerateCharStrings(27);
+            //SpaceTest(27);
 
             //var minErrors = int.MaxValue;
             //var minErrorsV = float.MaxValue;
@@ -33,12 +34,12 @@ namespace DebugCLI
             var v = 0.4999999f;
             //MakeBitmapsSmall(v, false);
             //AverageBitmapsSmall(v, false);
-            var sw = new Stopwatch();
-            sw.Start();
-            var errors = ParseWithBitmap(v);
-            sw.Stop();
-            Console.WriteLine("Ran in: " + sw.Elapsed.TotalSeconds);
-            Console.WriteLine("Found " + errors + " errors");
+            //var sw = new Stopwatch();
+            //sw.Start();
+            //var errors = ParseWithBitmap(v);
+            //sw.Stop();
+            //Console.WriteLine("Ran in: " + sw.Elapsed.TotalSeconds);
+            //Console.WriteLine("Found " + errors + " errors");
             //    if (errors < minErrors)
             //    {
             //        minErrors = errors;
@@ -54,9 +55,33 @@ namespace DebugCLI
             //AnalyseImages();
             //ProcessChatLogs();
             //ProcessRivens();^
+
+            var minErrors = int.MaxValue;
+            var goodSpaceWidth = int.MaxValue;
+            for (int spaceWidth = 11; spaceWidth > 5; spaceWidth--)
+            {
+                Console.WriteLine("space width: " + spaceWidth);
+                var sw = new Stopwatch();
+                sw.Start();
+                var errors = ParseWithBitmap(v, spaceWidth, verboseLevel:2, fastFail:true, xOffset:252);
+                sw.Stop();
+                Console.WriteLine("Ran in: " + sw.Elapsed.TotalSeconds);
+                Console.WriteLine("Found " + errors + " errors");
+                if (errors < minErrors)
+                {
+                    minErrors = errors;
+                    goodSpaceWidth = spaceWidth;
+                    Console.WriteLine("New min errors: " + errors + " spaceWidth: " + goodSpaceWidth);
+
+                    if (minErrors == 0)
+                        break;
+                }
+            }
+
+            //DoFullParse(0.49999999f);
         }
 
-        private static int ParseWithBitmap(float minV)
+        private static void DoFullParse(float minV)
         {
             var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".png")).ToArray();
             var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".txt")).ToArray();
@@ -68,10 +93,35 @@ namespace DebugCLI
                 Console.WriteLine($"=={fileInfo.Name}==");
                 var masterKeyFile = trainingImages[k];
                 var correctResults = File.ReadAllLines(trainingText[k]).ToArray();
+
+                var c = new ChatImageCleaner();
+                c.SaveGreyscaleImage(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name), minV);
+
+
+                var results = c.ConvertScreenshotToChatTextWithBitmap(masterKeyFile, minV, 8, xOffset:0, smallText: false);
+                foreach (var result in results)
+                {
+                    Console.WriteLine(result);
+                }
+            }
+        }
+
+        private static int ParseWithBitmap(float minV, int spaceOffset, int verboseLevel = 0, bool fastFail = false, int xOffset=252)
+        {
+            var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith("11.png")).ToArray();
+            var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith("11.txt")).ToArray();
+
+            var errorCount = 0;
+            for (int k = 0; k < trainingImages.Length; k++)
+            {
+                var fileInfo = new FileInfo(trainingText[k]);
+                Console.WriteLine($"=={fileInfo.Name}==");
+                var masterKeyFile = trainingImages[k];
+                var correctResults = File.ReadAllLines(trainingText[k]).ToArray();
                 var c = new ChatImageCleaner();
                 c.SaveGreyscaleImage(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name), minV);
                 var smallOffset = 183;
-                var result = c.ConvertScreenshotToChatTextWithBitmap(masterKeyFile, minV, 252, smallText: false);
+                var result = c.ConvertScreenshotToChatTextWithBitmap(masterKeyFile, minV, spaceOffset, xOffset, smallText: false);
 
                 //Console.WriteLine("Expected");
                 //Console.WriteLine("Recieved");
@@ -84,37 +134,59 @@ namespace DebugCLI
                 }
                 for (int i = 0; i < result.Length; i++)
                 {
-                    Console.WriteLine(correctResults[i]);
-                    Console.WriteLine(result[i]);
-                    if (Enumerable.SequenceEqual(correctResults[i], result[i]))
+                    if (verboseLevel >= 1)
                     {
-                        Console.WriteLine("They match!");
+                        Console.WriteLine(correctResults[i]);
+                        Console.WriteLine(result[i]);
                     }
-                    else
+                    if (verboseLevel >= 2)
                     {
-                        if (correctResults[i].Length == result[i].Length)
+                        if (Enumerable.SequenceEqual(correctResults[i], result[i]))
                         {
-                            for (int j = 0; j < correctResults[i].Length; j++)
+                            Console.WriteLine("They match!");
+                        }
+                    }
+                    if (!Enumerable.SequenceEqual(correctResults[i], result[i]))
+                    {
+                        if (verboseLevel >= 2)
+                        {
+                            if (correctResults[i].Length == result[i].Length)
                             {
-                                if (result[i][j] != correctResults[i][j])
+                                for (int j = 0; j < correctResults[i].Length; j++)
                                 {
-                                    Console.WriteLine("^");
-                                    break;
-                                }
-                                else
-                                {
-                                    Console.Write(" ");
+                                    if (result[i][j] != correctResults[i][j])
+                                    {
+                                        Console.WriteLine("^");
+                                        break;
+                                    }
+                                    else
+                                    {
+                                        Console.Write(" ");
+                                    }
                                 }
                             }
+                            Console.WriteLine("They don't match");
                         }
-                        Console.WriteLine("They don't match");
                         errorCount++;
                     }
-                    Console.WriteLine();
+
+                    if (verboseLevel >= 2)
+                    {
+                        Console.WriteLine();
+                    }
+                }
+
+                if (errorCount > 0 && fastFail)
+                {
+                    return errorCount;
                 }
             }
 
-            Console.WriteLine("V: " + minV + " errors: " + errorCount);
+
+            if (verboseLevel >= 2)
+            {
+                Console.WriteLine("V: " + minV + " errors: " + errorCount);
+            }
             return errorCount;
         }
 
@@ -325,9 +397,28 @@ namespace DebugCLI
                     var sb = new StringBuilder();
                     foreach (var character in chars.OrderBy(x => rand.Next()))
                     {
-                        sb.Append(character + " ");
+                        sb.Append(character);
                     }
-                    Console.WriteLine(sb.ToString().Trim() + " [" + "\n");
+                    Console.WriteLine(sb.ToString().Trim() + "[" + "\n");
+                    fout.WriteLine(sb.ToString() + "[");
+                }
+            }
+        }
+
+        private static void SpaceTest(int count = 35)
+        {
+            var chars = "! # $ % & ' ( ) * + - . / 0 1 2 3 4 5 6 7 8 9 : ; < = > ? @ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z \\ ] ^ _ a b c d e f g h i j k l m n o p q r s t u v w x y z { | } ,".Replace(" ", "");
+            var rand = new Random();
+            using (var fout = new StreamWriter("charstrings.txt"))
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    var sb = new StringBuilder();
+                    foreach (var character in chars.OrderBy(x => rand.Next()))
+                    {
+                        sb.Append("A"+character+"a"+character+" ");
+                    }
+                    Console.WriteLine(sb.ToString().Trim() + "[" + "\n");
                     fout.WriteLine(sb.ToString() + "[");
                 }
             }

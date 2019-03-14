@@ -179,7 +179,7 @@ namespace WFImageParser
             }
         }
 
-        public string[] ConvertScreenshotToChatTextWithBitmap(string imagePath, float minV, int xOffset = 0, int startLine = 0, int endLine = int.MaxValue, bool smallText = true)
+        public string[] ConvertScreenshotToChatTextWithBitmap(string imagePath, float minV, int spaceOffset, int xOffset = 0, int startLine = 0, int endLine = int.MaxValue, bool smallText = true)
         {
             var converter = new ColorSpaceConverter();
             var chatRect = new Rectangle(4, 763, 3236, 1350);
@@ -195,48 +195,94 @@ namespace WFImageParser
                     lineHeight = 36;
                 for (int i = startLine; i < endLine && i < offsets.Length; i++)
                 {
-                    ParseLineBitmapScan(minV, xOffset, converter, chatRect, rgbImage, allText, lineHeight, offsets[i]);
+                    ParseLineBitmapScan(minV, xOffset, converter, chatRect, rgbImage, allText, lineHeight, offsets[i], spaceOffset);
                 }
 
                 return allText.ToArray();
             }
         }
 
-        private void ParseLineBitmapScan(float minV, int xOffset, ColorSpaceConverter converter, Rectangle chatRect, Image<Rgba32> rgbImage, List<string> allText, int lineHeight, int lineOffset)
+        private void ParseLineBitmapScan(float minV, int xOffset, ColorSpaceConverter converter, Rectangle chatRect, Image<Rgba32> rgbImage, List<string> allText, int lineHeight, int lineOffset, float spaceWidth)
         {
             var sb = new System.Text.StringBuilder();
             var emptySlices = 0;
-            var onSpaceChar = false;
+            //var onSpaceChar = false;
+            var startX = xOffset;
+            var endX = xOffset;
+            //var spaceWidth = 0.40 * lineHeight;
             for (int x = xOffset; x < chatRect.Right; x++)
             {
-                var pixelFound = false;
-                for (int y = lineOffset; y < lineOffset + lineHeight; y++)
+                ////check for space and next character
+                ////This currently skips over _ as it never shows up at the midline
+                ////Perhaps try finding the highest pixel in a character and finding the distance to that?
+                //var nextCharX = chatRect.Right;
+                //for (int x2 = endX; x2 < chatRect.Right; x2++)
+                //{
+                //    if (converter.ToHsv(rgbImage[x2, lineOffset + (int)(lineHeight / 2)]).V > minV //most chars
+                //        ||converter.ToHsv(rgbImage[x2, lineOffset + (int)(lineHeight * 0.1944444444444444f)]).V > minV //*
+                //        || converter.ToHsv(rgbImage[x2, lineOffset + (int)(lineHeight * 0.3611111111111111f)]).V > minV //+
+                //        || converter.ToHsv(rgbImage[x2, lineOffset + (int)(lineHeight * 0.1111111111111111f)]).V > minV //7
+                //        || converter.ToHsv(rgbImage[x2, lineOffset + (int)(lineHeight *0.4444444444444444f)]).V > minV //-
+                //        || converter.ToHsv(rgbImage[x2, lineOffset + (int)(lineHeight * 0.8333333333333333f)]).V > minV //_
+                //        || converter.ToHsv(rgbImage[x2, lineOffset + (int)(lineHeight * 0.25f)]).V > minV //:
+                //        || converter.ToHsv(rgbImage[x2, lineOffset + (int)(lineHeight * 0.6388888888888889f)]).V > minV) //.
+                //    {
+                //        nextCharX = x2;
+                //        var distance = x2 - endX;
+                //        if (distance >= spaceWidth)
+                //        {
+                //            sb.Append(' ');
+                //        }
+                //        break;
+                //    }
+                //}
+
+                ////We identified mid line presence of char. Back up until start of char
+                //for (int x2 = nextCharX; x2 > endX; x2--)
+                //{
+                //    var pixelPresent = false;
+                //    for (int y = lineOffset; y < lineHeight + lineOffset; y++)
+                //    {
+                //        if (converter.ToHsv(rgbImage[x2, y]).V > minV)
+                //        {
+                //            pixelPresent = true;
+                //            break;
+                //        }
+                //    }
+
+                //    if(!pixelPresent)
+                //    {
+                //        x = x2 + 1;
+                //        break;
+                //    }
+                //}
+
+                //Advance until next pixel
+                for (int i = endX; i < chatRect.Right; i++)
                 {
-                    if (converter.ToHsv(rgbImage[x, y]).V > minV)
+                    var pixelFound = false;
+                    for (int y = lineOffset; y < lineOffset+lineHeight; y++)
                     {
-                        pixelFound = true;
+                        if (converter.ToHsv(rgbImage[i, y]).V > minV)
+                        {
+                            x = i;
+                            pixelFound = true;
+                            break;
+                        }
+                    }
+
+                    if (pixelFound)
                         break;
-                    }
                 }
 
-                if (!pixelFound)
-                {
-                    if (++emptySlices >= 4 && !onSpaceChar)
-                    {
-                        sb.Append(" ");
-                        onSpaceChar = true;
-                    }
-                    continue;
-                }
-                else
-                {
-                    emptySlices = 0;
-                    onSpaceChar = false;
-                }
+                //Make sure we didn't escape
+                if (x >= chatRect.Right)
+                    break;
 
-
-                var startX = x;
-                var endX = startX + 1;
+                startX = x;
+                var lastCharacterEndX = endX;
+                endX = startX + 1;
+                //This needs to be updated to a look forward approach instead of a look backwards as it is easily fooled by _4 or AW
                 while (true)
                 {
                     var foundNeighbor = false;
@@ -245,7 +291,6 @@ namespace WFImageParser
                         if (converter.ToHsv(rgbImage[endX, y]).V > minV)
                         {
                             //look around to see if any valid pixels are here
-
                             if (foundNeighbor)
                                 break;
 
@@ -265,6 +310,46 @@ namespace WFImageParser
                         break;
                     }
                 }
+
+                //Find closest pixel above baseline in new found character
+                var closestPixel = Point.Empty;
+                for (int i = startX; i < endX; i++)
+                {
+                    for (int y = lineOffset; y < lineOffset + lineHeight * 0.75f; y++)
+                    {
+                        if (converter.ToHsv(rgbImage[i, y]).V > minV)
+                        {
+                            closestPixel = new Point(i, y);
+                            break;
+                        }
+                    }
+
+                    if (closestPixel != Point.Empty)
+                        break;
+                }
+
+                //Double check to see that we didn't ignore some sub-baseline character such as _
+                if(closestPixel == Point.Empty)
+                {
+                    for (int y = lineOffset + (int)(lineOffset * 0.75f); y < lineOffset + lineHeight; y++)
+                    {
+                        for (int i = startX; i < endX; i++)
+                        {
+                            if (converter.ToHsv(rgbImage[i, y]).V > minV)
+                            {
+                                closestPixel = new Point(i, y);
+                                break;
+                            }
+                        }
+
+                        if (closestPixel != Point.Empty)
+                            break;
+                    }
+                }
+
+                //Check if we skipped past a space
+                if (closestPixel.X - lastCharacterEndX > spaceWidth)
+                    sb.Append(' ');
 
                 if (endX > startX)
                 {
