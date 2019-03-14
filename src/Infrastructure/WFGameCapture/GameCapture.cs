@@ -96,7 +96,15 @@ namespace WFGameCapture
             var bitmap = _currentBitmap;
 
             // create bitmap
-            if (bitmap == null || bitmap.Width != clip.Width || bitmap.Height != clip.Height)
+            try
+            {
+                if (bitmap == null || bitmap.Width != clip.Width || bitmap.Height != clip.Height)
+                {
+                    bitmap?.Dispose();
+                    bitmap = new Bitmap(clip.Width, clip.Height, PixelFormat.Format32bppArgb);
+                }
+            }
+            catch
             {
                 bitmap?.Dispose();
                 bitmap = new Bitmap(clip.Width, clip.Height, PixelFormat.Format32bppArgb);
@@ -150,7 +158,7 @@ namespace WFGameCapture
 
         public string GetTradeChatImage()
         {
-            var image = GetOutputAsBitmap(System.Threading.Timeout.Infinite);
+            var image = GetOutputAsBitmap(100);
             image.Save("capture.png");
             return System.IO.Path.Combine(Environment.CurrentDirectory, "capture.png");
         }

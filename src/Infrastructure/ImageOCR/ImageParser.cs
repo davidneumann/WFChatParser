@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Tesseract;
 
@@ -19,15 +20,16 @@ namespace ImageOCR
 
         public ImageParser()
         {
-            string dataPath = @"C:\Program Files (x86)\Tesseract-OCR\tessdata";
+            string dataPath = @"tessdata\";
             string language = "eng";
             OcrEngineMode oem = OcrEngineMode.DEFAULT;
             PageSegmentationMode psm = PageSegmentationMode.SINGLE_BLOCK;
 
             _tessBaseAPI = new TessBaseAPI();
 
+            var path = Path.Combine(Environment.CurrentDirectory, dataPath);
             // Initialize tesseract-ocr 
-            if (!_tessBaseAPI.Init(dataPath, language, oem, new string[] { "bazaar" }))
+            if (!_tessBaseAPI.Init(path, language, oem, new string[] { "bazaar" }))
             {
                 throw new Exception("Could not initialize tesseract.");
             }
@@ -53,15 +55,22 @@ namespace ImageOCR
             // Extract text from result iterator
             StringBuilder stringBuilder = new StringBuilder();
             var chatText = new List<string>();
-            PageIteratorLevel pageIteratorLevel = PageIteratorLevel.RIL_WORD;
+            PageIteratorLevel pageIteratorLevel = PageIteratorLevel.RIL_SYMBOL;
             var clickPoints = new List<ClickPoint>();
+            var regex = new Regex(@"\[\d\d:\d\d\]", RegexOptions.Compiled);
+            var minConf = float.MaxValue;
             do
             {
-                var word = resultIterator.GetUTF8Text(pageIteratorLevel) + " ";
-                var debug = resultIterator.BoundingBox(PageIteratorLevel.RIL_WORD, out var left, out var top, out var right, out var bottom);
-                if (word[0] != '[' && word.Contains(']') && _suffixes.Any(suffix => word.Contains(suffix)))
-                    clickPoints.Add(new ClickPoint() { X = left, Y = (top + bottom) / 2 });
-                if (left < 10 && stringBuilder.Length > 0)
+                var confidence = resultIterator.Confidence(pageIteratorLevel);
+                var word = resultIterator.GetUTF8Text(pageIteratorLevel);
+                if (confidence <= 90)
+                    word = "~~" + word + "~~";
+                if (confidence < minConf)
+                    minConf = confidence;
+                resultIterator.BoundingBox(pageIteratorLevel, out var left, out var top, out var right, out var bottom);
+                //if (word[0] != '[' && word.Contains(']') && _suffixes.Any(suffix => word.Contains(suffix)))
+                //    clickPoints.Add(new ClickPoint() { X = left, Y = (top + bottom) / 2 });
+                if (left < 10 && stringBuilder.Length > 0)// && regex.Match(word).Success)
                 {
                     chatText.Add(stringBuilder.ToString());
                     stringBuilder.Clear();
