@@ -218,6 +218,7 @@ namespace WFImageParser
             var endX = xOffset;
             //var spaceWidth = 0.40 * lineHeight;
             var lastCharacterEndX = startX;
+            List<Point> prevCharacter = new List<Point>();
             for (int x = xOffset; x < chatRect.Right; x++)
             {
 
@@ -252,14 +253,15 @@ namespace WFImageParser
                 //Account for gaps such as in i or j
                 for (int y = firstPixel.Y; y < lineOffset + lineHeight; y++)
                 {
-                    FindCharPixels(minV, converter, rgbImage, charPixels, new Point(firstPixel.X, y));
-
-                    //Account for gaps like in ;
+                    FindCharPixels(minV, converter, rgbImage, charPixels, new Point(firstPixel.X, y), prevCharacter);
+                }
+                //Account for gaps like in ;
+                {
                     var midX = (int)charPixels.Average(p => p.X);
                     var minY = charPixels.Min(p => p.Y);
                     for (int i = lineOffset; i < minY; i++)
                     {
-                        FindCharPixels(minV, converter, rgbImage, charPixels, new Point(midX, i));
+                        FindCharPixels(minV, converter, rgbImage, charPixels, new Point(midX, i), prevCharacter);
                     }
                 }
                 //Account for crazy gaps such as in %
@@ -271,53 +273,63 @@ namespace WFImageParser
                     charPixels.ForEach(p => { if (p.X < startX) startX = p.X; if (p.X > endX) endX = p.X; });
                     for (int y = charPixels.Where(p => p.X == charPixels.Max(p2 => p2.X)).Min(p => p.Y); y < lineOffset+ lineHeight * 0.75f; y++)
                     {
-                        var newFoundPixel = FindCharPixels(minV, converter, rgbImage, charPixels, new Point(endX, y));
+                        var newFoundPixel = FindCharPixels(minV, converter, rgbImage, charPixels, new Point(endX, y), prevCharacter);
                         if (newFoundPixel)
                             foundNewPixels = true;
                     }
                 } while(foundNewPixels);
+                
+                charPixels.ForEach(p => { if (p.X < startX) startX = p.X; if (p.X > endX) endX = p.X; });
+                endX++;
 
                 //Certain charcters can touch, such as AZ, make sure we didn't jump back to the start of the touching letters
                 if (lastCharacterEndX > startX && lastCharacterEndX - startX > lineHeight * 0.3)
                 {
-                    charPixels.RemoveAll(p => p.X < lastCharacterEndX);
-                    startX = lastCharacterEndX;
+                    charPixels.RemoveAll(p => prevCharacter.Any(p2 => p2.X == p.X && p2.Y == p.Y));
+                    //Clean up any scraps
+                    
+                    charPixels.GroupBy(p => p.X).Where(g => g.Count() == 1).SelectMany(g => g).ToList().ForEach(p => charPixels.Remove(p));
+                    if (charPixels.Count > 0 && false)
+                        startX = Math.Max(charPixels.Min(p => p.X), lastCharacterEndX);
+                    else
+                        startX = lastCharacterEndX;
                 }
 
-                //Remove all little dots that stick out
-                if (charPixels.RemoveAll(p => charPixels.Count(p2 => p2.X == p.X) == 1 || charPixels.Count(p2 => p2.Y == p.Y) == 1) > 0)
+                ////Remove all little dots that stick out
+                //if (charPixels.RemoveAll(p => charPixels.Count(p2 => p2.X == p.X) == 1 || charPixels.Count(p2 => p2.Y == p.Y) == 1) > 0)
+                //{
+                //    startX = charPixels.Min(p => p.X);
+                //    endX = charPixels.Max(p => p.X) + 1;
+                //    for (int i = startX; i < endX; i++)
+                //    {
+                //        if(charPixels.Count(p => p.X == i) == 0)
+                //        {
+                //            charPixels.RemoveAll(p => p.X >= i);
+                //            endX = charPixels.Max(p => p.X);
+                //            break;
+                //        }
+                //    }
+                //}
+
+                //All 3/4 width chars have been turned into 2 width to get rid of aliasing problems
+                if (endX - startX > 2 && endX - startX <= 4 && charPixels.Count > 34)
                 {
+                    var pixelsByX = charPixels.GroupBy(p => p.X).Select(g => new KeyValuePair<int, int>(g.First().X, g.Count())).OrderByDescending(g => g.Value).Skip(2);
+                    pixelsByX.ToList().ForEach(kvp => charPixels.RemoveAll(p => p.X == kvp.Key));
                     startX = charPixels.Min(p => p.X);
                     endX = charPixels.Max(p => p.X) + 1;
-                    for (int i = startX; i < endX; i++)
-                    {
-                        if(charPixels.Count(p => p.X == i) == 0)
-                        {
-                            charPixels.RemoveAll(p => p.X >= i);
-                            endX = charPixels.Max(p => p.X);
-                            break;
-                        }
-                    }
-                }
-
-                charPixels.ForEach(p => { if (p.X < startX) startX = p.X; if (p.X > endX) endX = p.X; });
-                endX++;
-
-                //All 3 width chars have been turned into 2 width
-                if (endX - startX == 3)
-                {
-                    var leftMostchars = charPixels.Where(p => p.X == startX).Count();
-                    var rightMostChars = charPixels.Where(p => p.X == endX-1).Count();
-                    if (leftMostchars >= rightMostChars)
-                    {
-                        charPixels.RemoveAll(p => p.X == endX - 1);
-                        endX--;
-                    }
-                    else
-                    {
-                        startX++;
-                        charPixels.RemoveAll(p => p.X == startX);
-                    }
+                    //var leftMostchars = charPixels.Where(p => p.X == startX).Count();
+                    //var rightMostChars = charPixels.Where(p => p.X == endX - 1).Count();
+                    //if (leftMostchars >= rightMostChars)
+                    //{
+                    //    charPixels.RemoveAll(p => p.X == endX - 1);
+                    //    endX--;
+                    //}
+                    //else
+                    //{
+                    //    startX++;
+                    //    charPixels.RemoveAll(p => p.X == startX);
+                    //}
                 }
 
                 //Find closest pixel above baseline in new found character
@@ -352,35 +364,47 @@ namespace WFImageParser
                     //Console.WriteLine("Target: " + targetPixels);
                     //Console.WriteLine("{0,12} {1,12} {2,12} {3,12}", "Name", "PixelCont", "Match", "Confi");
 
-                    var bestFit = new Tuple<float, CharacterDetails>(float.MinValue, null);
+                    var bestFit = new Tuple<float, CharacterDetails, List<Point>>(float.MinValue, null, null);
                     bestFit = GuessCharacter(minV, converter, rgbImage, lineOffset, startX, endX, charPixels, bestFit);
+                    var origStartX = startX;
+                    var origEndX = endX;
                     //try removing some low entropy columns
-                    for (int i = 0; i < 3; i++)
+                    for (int i = 0; i < 2; i++)
                     {
-                        if (bestFit.Item1 <= 0.7f && endX - startX < _maxCharWidth)
+                        if (bestFit.Item1 <= 0.7f && endX - startX < _maxCharWidth && charPixels.Count > 0)
                         {
                             var leftPixels = charPixels.Count(p => p.X == startX);
                             var rightPixels = charPixels.Count(p => p.X == endX - 1);
-                            if (leftPixels <= rightPixels)
+                            var minY = charPixels.Min(p => p.Y);
+                            var maxY = charPixels.Max(p => p.Y);
+                            var topPixels = charPixels.Count(p => p.Y == minY);
+                            var bottomPixels = charPixels.Count(p => p.Y == maxY);
+                            var lowestCount = Math.Min(leftPixels, Math.Min(rightPixels, Math.Min(topPixels, bottomPixels)));
+                            if (leftPixels == lowestCount)
                             {
                                 charPixels.RemoveAll(p => p.X == startX);
                                 startX++;
                             }
-                            else
+                            else if (rightPixels == lowestCount)
                             {
                                 charPixels.RemoveAll(p => p.X == endX - 1);
                                 endX--;
                             }
+                            else if (topPixels == lowestCount)
+                                charPixels.RemoveAll(p => p.Y == minY);
+                            else if (bottomPixels == lowestCount)
+                                charPixels.RemoveAll(p => p.Y == maxY);
                             bestFit = GuessCharacter(minV, converter, rgbImage, lineOffset, startX, endX, charPixels, bestFit);
                         }
                         else
                             break;
-
                     }
+                    startX = origStartX;
+                    endX = origEndX;
 
                     //We can allow loose fits on smaller characters
-                    if (bestFit.Item1 <= 0.33f && bestFit.Item2 != null && bestFit.Item2.PixelCount > 40)
-                        bestFit = bestFit = new Tuple<float, CharacterDetails>(float.MinValue, null);
+                    if (bestFit.Item1 < 0.25f && bestFit.Item2 != null && bestFit.Item2.PixelCount > 40)
+                        bestFit = bestFit = new Tuple<float, CharacterDetails, List<Point>>(float.MinValue, null, null);
 
                     //if (bestFit.Item2 == null)
                     //    Console.WriteLine("failed to identify at: " + startX + " " + lineOffset);
@@ -416,8 +440,15 @@ namespace WFImageParser
                         sb.Append(name);
 
                         lastCharacterEndX = startX + bestFit.Item2.Width;
+                        prevCharacter = bestFit.Item3;
+                        //if (endX - startX > _maxCharWidth * 0.6 && bestFit.Item2.Width < _maxCharWidth * 0.6)
+                        //    lastCharacterEndX++; // overcome the antia aliasing that brought us here
+
                         //Due to new char IDing system we can safely jump a bit ahead to prevent double reading
-                        endX = x = lastCharacterEndX + 3;
+                        if(endX - startX > _maxCharWidth * 0.6 && charPixels.Count - prevCharacter.Count > charPixels.Count * 0.3)
+                            endX = x = lastCharacterEndX;
+                        else
+                            endX = x = lastCharacterEndX + 3;
                     }
                     else
                     {
@@ -428,13 +459,13 @@ namespace WFImageParser
             allText.Add(sb.ToString().Trim());
         }
 
-        private Tuple<float, CharacterDetails> GuessCharacter(float minV, ColorSpaceConverter converter, Image<Rgba32> rgbImage, int lineOffset, int startX, int endX, List<Point> charPixels, Tuple<float, CharacterDetails> bestFit)
+        private Tuple<float, CharacterDetails,List<Point>> GuessCharacter(float minV, ColorSpaceConverter converter, Image<Rgba32> rgbImage, int lineOffset, int startX, int endX, List<Point> charPixels, Tuple<float, CharacterDetails, List<Point>> bestFit)
         {
             var targetWidth = endX - startX;
             var cannidates = _scannedCharacters;
             if (targetWidth <= Math.Round(_maxCharWidth * 0.66f) && targetWidth > Math.Round(_maxCharWidth * 0.15))
                 cannidates = _scannedCharacters.Where(c => c.Width >= targetWidth * 0.8f && c.Width <= targetWidth * 1.2f).ToList();
-            else if (targetWidth < Math.Round(_maxCharWidth * 0.15))
+            else if (targetWidth <= Math.Round(_maxCharWidth * 0.15))
                 cannidates = _scannedCharacters.Where(c => c.Width <= _maxCharWidth * 0.15).ToList();
             foreach (var details in cannidates)
             {
@@ -453,10 +484,70 @@ namespace WFImageParser
                 //    debug2.Save("test_reference.png");
                 //}
 
-                var matchingPixels = 0;
-                var width = Math.Min(endX - startX, details.Width);
+                var matchingPixelsCount = 0;
+                var dVMask = details.VMask;
+                var pixelCount = details.PixelCount;
+                var charWidth = details.Width;
+                //Just like above we need to slam down some skinny characters
+                //All 3/4 width chars have been turned into 2 width to get rid of aliasing problems
+                if (targetWidth == 2 && details.PixelCount > 34 && (details.Width >= 3 || details.Width <= 4))
+                {
+                    pixelCount = 0;
+                    var top2Xs = new KeyValuePair<int,int>[2];
+                    for (int x = 0; x < details.Width; x++)
+                    {
+                        var count = 0;
+                        for (int y = 0; y < details.Height; y++)
+                        {
+                            if (dVMask[x, y] > minV)
+                                count++;
+                        }
+                        if (count > top2Xs[0].Value)
+                            top2Xs[0] = new KeyValuePair<int, int>(x, count);
+                        else if (count > top2Xs[1].Value)
+                            top2Xs[1] = new KeyValuePair<int, int>(x, count);
+                    }
+                    var newMask = new float[2, details.Height];
+                    for (int x = 0; x < 2; x++)
+                    {
+                        for (int y = 0; y < details.Height; y++)
+                        {
+                            newMask[x, y] = details.VMask[top2Xs[x].Key, y];
+                            if (newMask[x, y] > minV)
+                                pixelCount++;
+                        }
+                    }
+                    dVMask = newMask;
+                    charWidth = 2;
+                }
+                //if (targetWidth != details.Width && targetWidth <= 4 && targetWidth >= 3 && details.Width == 2)
+                //{
+                //    var newMask = new float[targetWidth, dVMask.GetLength(1)];
+                //    for (int x = 0; x < details.Width; x++)
+                //    {
+                //        for (int y = 0; y < dVMask.GetLength(1); y++)
+                //        {
+                //            newMask[x, y] = dVMask[x, y];
+                //        }
+                //    }
+                //    for (int x = details.Width; x < targetWidth; x++)
+                //    {
+                //        for (int y = 0; y < dVMask.GetLength(1); y++)
+                //        {
+                //            newMask[x, y] = dVMask[details.Width - 1, y];
+                //            if (newMask[x, y] > minV)
+                //                pixelCount++;
+                //        }
+                //    }
+                //    dVMask = newMask;
+                //    charWidth = targetWidth;
+                //}
+                var width = Math.Min(endX - startX, charWidth);
                 var maxX = startX + width;
-                matchingPixels = charPixels.Count(p => p.X >= startX && p.X < maxX && details.VMask[p.X - startX, p.Y - lineOffset] > minV);
+                var matchingPixels = charPixels.Where(p => p.X >= startX && p.X < maxX && dVMask[p.X - startX, p.Y - lineOffset] > minV).ToList();
+                matchingPixelsCount = charPixels.Count(p => p.X >= startX && p.X < maxX && dVMask[p.X - startX, p.Y - lineOffset] > minV);
+                //var leftMatchingPixels = charPixels.Where(p => p.X <= startX + (endX - startX) / 2).Count(p => p.X >= startX && p.X < maxX && dVMask[p.X - startX, p.Y - lineOffset] > minV);
+                //var rightMatchingPixels = charPixels.Where(p => p.X > startX + (endX - startX) / 2).Count(p => p.X >= startX && p.X < maxX && dVMask[p.X - startX, p.Y - lineOffset] > minV);
                 //for (int x2 = startX; x2 < endX && x2 < startX + details.Width; x2++)
                 //{
                 //    for (int y2 = 0; y2 < details.Height; y2++)
@@ -489,30 +580,33 @@ namespace WFImageParser
                 //    debug2.Save("test_matching.png");
                 //}
 
-                ////Filter out mangled matches from 2 characters touching where left most pixels matter more
-                //if (width > _maxCharWidth * 0.6 &&
-                //    matchingLeftPixels >= (matchingLeftPixels + matchingRightPixels) * 0.8)
-                //    matchingPixels = matchingLeftPixels + matchingRightPixels;
-                //else if (width <= _maxCharWidth * 0.4)
-                //    matchingPixels = matchingLeftPixels + matchingRightPixels;
-                //else
-                //    matchingPixels = 0; //Throw away right heavy matches
+                //Filter out mangled matches from 2 characters touching where left most pixels matter more
+                if (targetWidth > _maxCharWidth * 0.6) {
+                    //Punish this character for pixels that are in the target but not in the character
+                    charPixels.Where(p => p.X - startX > 0 && p.X < maxX).ToList()
+                        .ForEach(p => { 
+                        if (dVMask[p.X - startX, p.Y - lineOffset] < minV)
+                            matchingPixelsCount--;
+                    });
+                }
 
-                var conf = (float)matchingPixels / (float)(Math.Max(charPixels.Count, details.PixelCount));
+                var conf = (float)matchingPixelsCount / (float)(Math.Max(charPixels.Count, pixelCount));
                 //var conf = matchingPixels;
                 //Console.WriteLine("{0,12} {1,12} {2,12} {3,12}", details.Name, details.PixelCount, matchingPixels, conf);
                 if (conf > bestFit.Item1)
                 {
-                    bestFit = new Tuple<float, CharacterDetails>(conf, details);
+                    bestFit = new Tuple<float, CharacterDetails, List<Point>>(conf, details, matchingPixels);
                 }
             }
 
             return bestFit;
         }
 
-        private static bool FindCharPixels(float minV, ColorSpaceConverter converter, Image<Rgba32> rgbImage, List<Point> charPixels, Point checkPoint)
+        private static bool FindCharPixels(float minV, ColorSpaceConverter converter, Image<Rgba32> rgbImage, List<Point> charPixels, Point checkPoint, List<Point> blacklistedPoints)
         {
-            if(!charPixels.Any(p => p.X == checkPoint.X && p.Y == checkPoint.Y) && converter.ToHsv(rgbImage[checkPoint.X, checkPoint.Y]).V > minV)
+            if(!charPixels.Any(p => p.X == checkPoint.X && p.Y == checkPoint.Y) 
+                && !blacklistedPoints.Any(p => p.X == checkPoint.X && p.Y == checkPoint.Y)
+                && converter.ToHsv(rgbImage[checkPoint.X, checkPoint.Y]).V > minV)
             {
                 var didFindNew = false;
                 var neighborCount = 0;
@@ -525,18 +619,18 @@ namespace WFImageParser
                 if (converter.ToHsv(rgbImage[checkPoint.X, checkPoint.Y + 1]).V > minV)
                     neighborCount++;
 
-                if (neighborCount > 1)
+                if (neighborCount >= 1)
                 {
                     charPixels.Add(checkPoint);
                     didFindNew = true;
                 }
-                var neighborAdded = FindCharPixels(minV, converter, rgbImage, charPixels, new Point(checkPoint.X - 1, checkPoint.Y));
+                var neighborAdded = FindCharPixels(minV, converter, rgbImage, charPixels, new Point(checkPoint.X - 1, checkPoint.Y), blacklistedPoints);
                 if (neighborAdded) didFindNew = true;
-                neighborAdded = FindCharPixels(minV, converter, rgbImage, charPixels, new Point(checkPoint.X + 1, checkPoint.Y));
+                neighborAdded = FindCharPixels(minV, converter, rgbImage, charPixels, new Point(checkPoint.X + 1, checkPoint.Y), blacklistedPoints);
                 if (neighborAdded) didFindNew = true;
-                neighborAdded = FindCharPixels(minV, converter, rgbImage, charPixels, new Point(checkPoint.X, checkPoint.Y - 1));
+                neighborAdded = FindCharPixels(minV, converter, rgbImage, charPixels, new Point(checkPoint.X, checkPoint.Y - 1), blacklistedPoints);
                 if (neighborAdded) didFindNew = true;
-                neighborAdded = FindCharPixels(minV, converter, rgbImage, charPixels, new Point(checkPoint.X, checkPoint.Y + 1));
+                neighborAdded = FindCharPixels(minV, converter, rgbImage, charPixels, new Point(checkPoint.X, checkPoint.Y + 1), blacklistedPoints);
                 if (neighborAdded) didFindNew = true;
                 return didFindNew;
             }

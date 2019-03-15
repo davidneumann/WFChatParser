@@ -80,7 +80,7 @@ namespace DebugCLI
             //}
 
             //DoFullParse(0.49999999f);
-            }
+        }
 
         private static void DoFullParse(float minV)
         {
@@ -99,7 +99,7 @@ namespace DebugCLI
                 c.SaveGreyscaleImage(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name), minV);
 
 
-                var results = c.ConvertScreenshotToChatTextWithBitmap(masterKeyFile, minV, 8, xOffset:0, smallText: false);
+                var results = c.ConvertScreenshotToChatTextWithBitmap(masterKeyFile, minV, 8, xOffset: 0, smallText: false);
                 foreach (var result in results)
                 {
                     Console.WriteLine(result);
@@ -107,7 +107,7 @@ namespace DebugCLI
             }
         }
 
-        private static int ParseWithBitmap(float minV, int spaceOffset, int verboseLevel = 0, bool fastFail = false, int xOffset=252)
+        private static int ParseWithBitmap(float minV, int spaceOffset, int verboseLevel = 0, bool fastFail = false, int xOffset = 252)
         {
             var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith("11.png")).ToArray();
             var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith("11.txt")).ToArray();
@@ -417,7 +417,7 @@ namespace DebugCLI
                     var sb = new StringBuilder();
                     foreach (var character in chars.OrderBy(x => rand.Next()))
                     {
-                        sb.Append("A"+character+"a"+character+" ");
+                        sb.Append("A" + character + "a" + character + " ");
                     }
                     Console.WriteLine(sb.ToString().Trim() + "[" + "\n");
                     fout.WriteLine(sb.ToString() + "[");
