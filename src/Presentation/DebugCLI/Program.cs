@@ -29,17 +29,17 @@ namespace DebugCLI
 
             //var minErrors = int.MaxValue;
             //var minErrorsV = float.MaxValue;
-            //for (float v = 0.7f; v > 0.2f; v -= 0.05f)
+            //for (float v = 0.6f; v > 0.2f; v -= 0.1f)
             //{
-            var v = 0.4999999f;
+            var v = 0.5f;
             //MakeBitmapsSmall(v, false);
-            //AverageBitmapsSmall(v, false);
-            //var sw = new Stopwatch();
-            //sw.Start();
-            //var errors = ParseWithBitmap(v);
-            //sw.Stop();
-            //Console.WriteLine("Ran in: " + sw.Elapsed.TotalSeconds);
-            //Console.WriteLine("Found " + errors + " errors");
+            //AverageBitmapsSmall(v, false, 0.5f);//0.415f);
+            //    var sw = new Stopwatch();
+            //    sw.Start();
+            //    var errors = ParseWithBitmap(v, 11, verboseLevel:2);
+            //    sw.Stop();
+            //    Console.WriteLine("Ran in: " + sw.Elapsed.TotalSeconds);
+            //    Console.WriteLine("Found " + errors + " errors");
             //    if (errors < minErrors)
             //    {
             //        minErrors = errors;
@@ -56,30 +56,31 @@ namespace DebugCLI
             //ProcessChatLogs();
             //ProcessRivens();^
 
-            var minErrors = int.MaxValue;
-            var goodSpaceWidth = int.MaxValue;
-            for (int spaceWidth = 11; spaceWidth > 5; spaceWidth--)
-            {
-                Console.WriteLine("space width: " + spaceWidth);
-                var sw = new Stopwatch();
-                sw.Start();
-                var errors = ParseWithBitmap(v, spaceWidth, verboseLevel:2, fastFail:true, xOffset:252);
-                sw.Stop();
-                Console.WriteLine("Ran in: " + sw.Elapsed.TotalSeconds);
-                Console.WriteLine("Found " + errors + " errors");
-                if (errors < minErrors)
-                {
-                    minErrors = errors;
-                    goodSpaceWidth = spaceWidth;
-                    Console.WriteLine("New min errors: " + errors + " spaceWidth: " + goodSpaceWidth);
+            //var minErrors = int.MaxValue;
+            //var goodSpaceWidth = int.MaxValue;
+            //for (int spaceWidth = 11; spaceWidth > 5; spaceWidth--)
+            //{
+            var spaceWidth = 11;
+            Console.WriteLine("space width: " + spaceWidth);
+            var sw = new Stopwatch();
+            sw.Start();
+            var errors = ParseWithBitmap(v, spaceWidth, verboseLevel: 2, fastFail: true, xOffset: 252);
+            sw.Stop();
+            Console.WriteLine("Ran in: " + sw.Elapsed.TotalSeconds);
+            Console.WriteLine("Found " + errors + " errors");
+            //if (errors < minErrors)
+            //{
+            //    minErrors = errors;
+            //    goodSpaceWidth = spaceWidth;
+            //    Console.WriteLine("New min errors: " + errors + " spaceWidth: " + goodSpaceWidth);
 
-                    if (minErrors == 0)
-                        break;
-                }
-            }
+            //    if (minErrors == 0)
+            //        break;
+            //}
+            //}
 
             //DoFullParse(0.49999999f);
-        }
+            }
 
         private static void DoFullParse(float minV)
         {
@@ -190,7 +191,7 @@ namespace DebugCLI
             return errorCount;
         }
 
-        private static void AverageBitmapsSmall(float minV, bool smallText)
+        private static void AverageBitmapsSmall(float minV, bool smallText, float threshold)
         {
             var dirs = Directory.GetDirectories(Environment.CurrentDirectory);
             dirs = dirs.Where(d => (new DirectoryInfo(d)).Name.StartsWith("line_")).ToArray();
@@ -207,7 +208,7 @@ namespace DebugCLI
             }
 
             var c = new ChatImageCleaner();
-            c.AverageBitmaps(files, minV, smallText);
+            c.AverageBitmaps(files, minV, threshold, smallText);
         }
 
         private static void MakeBitmapsSmall(float minV, bool smallSizeText = true)
