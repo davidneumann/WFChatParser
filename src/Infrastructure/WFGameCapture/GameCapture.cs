@@ -56,6 +56,8 @@ namespace WFGameCapture
             try
             {
                 var res = _duplicateOutput.TryAcquireNextFrame(timeout, out var frameInfoRef, out var screenResource);
+                if (screenResource == null)
+                    return _screenTexture;
                 
                 var clip = ClippingBounds == Rectangle.Empty ? DisplayBounds : ClippingBounds;
 
