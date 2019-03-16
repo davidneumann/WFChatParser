@@ -22,7 +22,9 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            //MonitorChatLive();
+            var v = 0.5f;
+
+            MonitorChatLive();
 
             //GenerateCharStrings(27);
             //SpaceTest(27);
@@ -31,7 +33,6 @@ namespace DebugCLI
             //var minErrorsV = float.MaxValue;
             //for (float v = 0.6f; v > 0.2f; v -= 0.1f)
             //{
-            var v = 0.5f;
             //MakeBitmapsSmall(v, false);
             //AverageBitmapsSmall(v, false, 0.5f);//0.415f);
             //    var sw = new Stopwatch();
@@ -60,14 +61,16 @@ namespace DebugCLI
             //var goodSpaceWidth = int.MaxValue;
             //for (int spaceWidth = 11; spaceWidth > 5; spaceWidth--)
             //{
-            var spaceWidth = 11;
-            Console.WriteLine("space width: " + spaceWidth);
-            var sw = new Stopwatch();
-            sw.Start();
-            var errors = ParseWithBitmap(v, spaceWidth, verboseLevel: 2, fastFail: false, xOffset: 252);
-            sw.Stop();
-            Console.WriteLine("Ran in: " + sw.Elapsed.TotalSeconds);
-            Console.WriteLine("Found " + errors + " errors");
+            //var c = new ChatImageCleaner();
+            //c.SaveGreyscaleImage(@"C:\Users\david\Downloads\Untitled.png", @"C:\Users\david\Downloads\Untitled_grey.png", v);
+            //var spaceWidth = 8;
+            //Console.WriteLine("space width: " + spaceWidth);
+            //var sw = new Stopwatch();
+            //sw.Start();
+            //var errors = ParseWithBitmap(v, spaceWidth, verboseLevel: 2, fastFail: false, xOffset: 252);
+            //sw.Stop();
+            //Console.WriteLine("Ran in: " + sw.Elapsed.TotalSeconds);
+            //Console.WriteLine("Found " + errors + " errors");
             //if (errors < minErrors)
             //{
             //    minErrors = errorsz;
@@ -285,7 +288,7 @@ namespace DebugCLI
             Console.WriteLine("Jobs done");
         }
 
-        private static void MonitorChatLive()
+        private static void MonitorChatLive(float minV = 0.5f, int spaceOffset = 8)
         {
             Console.WriteLine("Push enter and then switch to warframe");
             Console.ReadLine();
@@ -296,8 +299,9 @@ namespace DebugCLI
             }
 
             var capture = new GameCapture();
-            var p = new ChatImageCleaner(JsonConvert.DeserializeObject<CharInfo[]>("chars.json"));
-            var t = new ImageParser();
+            //var c = new ChatImageCleaner(JsonConvert.DeserializeObject<CharInfo[]>("chars.json"));
+            var c = new ChatImageCleaner();
+            //var t = new ImageParser();
 
             using (var fout = new System.IO.StreamWriter("output.txt"))
             {
@@ -306,9 +310,10 @@ namespace DebugCLI
                 while (true)
                 {
                     var image = capture.GetTradeChatImage();
-                    var processedImagePath = p.ProcessChatImage(image, Environment.CurrentDirectory);
-                    var text = t.ParseChatImage(processedImagePath);
-                    foreach (var line in text.ChatTextLines)
+                    //var processedImagePath = c.ProcessChatImage(image, Environment.CurrentDirectory);
+                    var text = c.ConvertScreenshotToChatTextWithBitmap(image, minV, spaceOffset, 4, smallText: false);
+                    //var text = t.ParseChatImage(processedImagePath);
+                    foreach (var line in text)
                     {
                         if (!messageHistory.Contains(line))
                         {
