@@ -112,10 +112,10 @@ namespace DebugCLI
 
         private static int ParseWithBitmap(float minV, int spaceOffset, int verboseLevel = 0, bool fastFail = false, int xOffset = 252)
         {
-            //var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".png")).ToArray();
-            //var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".txt")).ToArray();
-            var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith(".png")).ToArray();
-            var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith(".txt")).ToArray();
+            var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".png")).ToArray();
+            var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".txt")).ToArray();
+            //var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith(".png")).ToArray();
+            //var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith(".txt")).ToArray();
 
             var errorCount = 0;
             var pairs = new List<ChatImageCleaner.CharacterPair>();
@@ -124,80 +124,64 @@ namespace DebugCLI
                 var fileInfo = new FileInfo(trainingText[k]);
                 Console.WriteLine($"=={fileInfo.Name}==");
                 var masterKeyFile = trainingImages[k];
-                var correctResults = File.ReadAllLines(trainingText[k]).ToArray();
+                var correctResults = File.ReadAllLines(trainingText[k]).Select(line => line.Replace(" ", "")).ToArray();
                 var c = new ChatImageCleaner();
                 c.SaveGreyscaleImage(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name), minV);
                 var smallOffset = 183;
-                var result = c.ConvertScreenshotToChatTextWithBitmap(masterKeyFile, minV, spaceOffset, xOffset, smallText: false);
-                for (int j = 0; j < correctResults.Length; j++)
+                var result = c.ConvertScreenshotToChatTextWithBitmap(masterKeyFile, minV, spaceOffset, xOffset, smallText: false).Select(line => line.Replace(" ","")).ToArray();
+
+                Console.WriteLine("Expected");
+                Console.WriteLine("Recieved");
+                Console.WriteLine();
+
+                if (correctResults.Length != result.Length)
                 {
-                    var group = 0;
-                    for (int i = 1; i < correctResults[j].Length; i += 3)
+                    errorCount += correctResults.Length;
+                    return errorCount;
+                }
+                for (int i = 0; i < result.Length; i++)
+                {
+                    if (verboseLevel >= 1)
                     {
-                        if (correctResults[j][i] != result[j][group].LeftCharacter.Value ||
-                            correctResults[j][i + 1] != result[j][group].RightCharacter.Value)
+                        Console.WriteLine(correctResults[i]);
+                        Console.WriteLine(result[i]);
+                    }
+                    if (verboseLevel >= 2)
+                    {
+                        if (Enumerable.SequenceEqual(correctResults[i], result[i]))
                         {
-                            Console.WriteLine($"Expected: {correctResults[j][i]}{correctResults[j][i + 1]} got {result[j][group].LeftCharacter.Value}{result[j][group].RightCharacter.Value}");
-                            Debugger.Break();
+                            Console.WriteLine("They match!");
                         }
-                        else
-                            pairs.Add(result[j][group]);
-                        group++;
+                    }
+                    if (!Enumerable.SequenceEqual(correctResults[i], result[i]))
+                    {
+                        if (verboseLevel >= 2)
+                        {
+                            if (correctResults[i].Length == result[i].Length)
+                            {
+                                for (int j = 0; j < correctResults[i].Length; j++)
+                                {
+                                    if (result[i][j] != correctResults[i][j])
+                                    {
+                                        Console.WriteLine("^");
+                                        break;
+                                    }
+                                    else
+                                    {
+                                        Console.Write(" ");
+                                    }
+                                }
+                            }
+                            Console.WriteLine("They don't match");
+                        }
+                        errorCount++;
+                    }
+
+                    if (verboseLevel >= 2)
+                    {
+                        Console.WriteLine();
                     }
                 }
-                File.WriteAllText("spaces.json", JsonConvert.SerializeObject(pairs.Select(p => new { Left = p.LeftCharacter.Name, Right = p.RightCharacter.Name, Gap = p.SpaceBetween })));
-                //Console.WriteLine("Expected");
-                //Console.WriteLine("Recieved");
-                //Console.WriteLine();
-
-                //if (correctResults.Length != result.Length)
-                //{
-                //    errorCount += correctResults.Length;
-                //    return errorCount;
-                //}
-                //for (int i = 0; i < result.Length; i++)
-                //{
-                //    if (verboseLevel >= 1)
-                //    {
-                //        Console.WriteLine(correctResults[i]);
-                //        Console.WriteLine(result[i]);
-                //    }
-                //    if (verboseLevel >= 2)
-                //    {
-                //        if (Enumerable.SequenceEqual(correctResults[i], result[i]))
-                //        {
-                //            Console.WriteLine("They match!");
-                //        }
-                //    }
-                //    if (!Enumerable.SequenceEqual(correctResults[i], result[i]))
-                //    {
-                //        if (verboseLevel >= 2)
-                //        {
-                //            if (correctResults[i].Length == result[i].Length)
-                //            {
-                //                for (int j = 0; j < correctResults[i].Length; j++)
-                //                {
-                //                    if (result[i][j] != correctResults[i][j])
-                //                    {
-                //                        Console.WriteLine("^");
-                //                        break;
-                //                    }
-                //                    else
-                //                    {
-                //                        Console.Write(" ");
-                //                    }
-                //                }
-                //            }
-                //            Console.WriteLine("They don't match");
-                //        }
-                //        errorCount++;
-                //    }
-
-                //    if (verboseLevel >= 2)
-                //    {
-                //        Console.WriteLine();
-                //    }
-                //}
 
                 if (errorCount > 0 && fastFail)
                 {
