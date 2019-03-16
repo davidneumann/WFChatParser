@@ -219,6 +219,7 @@ namespace WFImageParser
             //var spaceWidth = 0.40 * lineHeight;
             var lastCharacterEndX = startX;
             List<Point> prevCharacter = new List<Point>();
+            CharacterDetails lastCharacterDetails = null;
             for (int x = xOffset; x < chatRect.Right; x++)
             {
 
@@ -342,11 +343,6 @@ namespace WFImageParser
                 else
                     closestPixelX = charPixels.Min(p => p.X);
 
-                //Check if we skipped past a space
-                if (closestPixelX - lastCharacterEndX > spaceWidth 
-                    && endX - startX < lineHeight * 1.5) //Make sure we aren't getting tricked by 2 characters touching
-                    sb.Append(' ');
-
                 if (endX - startX > lineHeight * 0.8333333333333333f) //We have a ton of characters combined, limit it
                 {
                     endX = startX + (int)(lineHeight * 0.8333333333333333f);
@@ -437,10 +433,23 @@ namespace WFImageParser
                         else if (name == "comma")
                             name = ",";
 
+
+                        //Check if we skipped past a space
+                        var adjustedSpaceWidth = spaceWidth;
+                        //1 has a lot of space build into after it contents and | has a bunch of space on both sides
+                        if (lastCharacterDetails != null && 
+                            (lastCharacterDetails.Name == "pipe" || lastCharacterDetails.Name == "1" || bestFit.Item2.Name == "pipe"))
+                            adjustedSpaceWidth += (int)(lineHeight * 0.175);
+                        if (closestPixelX - lastCharacterEndX >= adjustedSpaceWidth
+                            && endX - startX < lineHeight * 1.5) //Make sure we aren't getting tricked by 2 characters touching
+                            sb.Append(' ');
+
+                        //Add character
                         sb.Append(name);
 
                         lastCharacterEndX = startX + bestFit.Item2.Width;
                         prevCharacter = bestFit.Item3;
+                        lastCharacterDetails = bestFit.Item2;
                         //if (endX - startX > _maxCharWidth * 0.6 && bestFit.Item2.Width < _maxCharWidth * 0.6)
                         //    lastCharacterEndX++; // overcome the antia aliasing that brought us here
 
@@ -450,9 +459,10 @@ namespace WFImageParser
                         else
                             endX = x = lastCharacterEndX + 3;
                     }
-                    else
+                    else //failed to ID the character, skip it
                     {
-                        x = lastCharacterEndX = endX;
+                        sb.Append(' ');
+                        x = lastCharacterEndX = endX = charPixels.Max(p => p.X) + 1;
                     }
                 }
             }

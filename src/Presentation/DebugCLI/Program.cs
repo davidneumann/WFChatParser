@@ -64,13 +64,13 @@ namespace DebugCLI
             Console.WriteLine("space width: " + spaceWidth);
             var sw = new Stopwatch();
             sw.Start();
-            var errors = ParseWithBitmap(v, spaceWidth, verboseLevel: 2, fastFail: true, xOffset: 252);
+            var errors = ParseWithBitmap(v, spaceWidth, verboseLevel: 2, fastFail: false, xOffset: 252);
             sw.Stop();
             Console.WriteLine("Ran in: " + sw.Elapsed.TotalSeconds);
             Console.WriteLine("Found " + errors + " errors");
             //if (errors < minErrors)
             //{
-            //    minErrors = errors;
+            //    minErrors = errorsz;
             //    goodSpaceWidth = spaceWidth;
             //    Console.WriteLine("New min errors: " + errors + " spaceWidth: " + goodSpaceWidth);
 
@@ -109,8 +109,8 @@ namespace DebugCLI
 
         private static int ParseWithBitmap(float minV, int spaceOffset, int verboseLevel = 0, bool fastFail = false, int xOffset = 252)
         {
-            var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith("11.png")).ToArray();
-            var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith("11.txt")).ToArray();
+            var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".png")).ToArray();
+            var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".txt")).ToArray();
 
             var errorCount = 0;
             for (int k = 0; k < trainingImages.Length; k++)
