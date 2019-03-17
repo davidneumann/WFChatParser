@@ -24,17 +24,9 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            IConfiguration config = new ConfigurationBuilder()
-              .AddJsonFile("appsettings.json", true, true)
-              .AddJsonFile("appsettings.development.json", true, true)
-              .AddJsonFile("appsettings.production.json", true, true)
-              .Build();
-
-            var dataSender = new DataSender(new Uri(config["DataSender:HostName"]), 
-                config["DataSender:ConnectionMessage"],
-                config["DataSender:MessagePrefix"]);
-
             var v = 0.5f;
+
+            TestDataSender();
 
             //MonitorChatLive();
 
@@ -97,32 +89,32 @@ namespace DebugCLI
             //DoFullParse(0.49999999f);
         }
 
-        private static void DoFullParse(float minV)
+        private static void TestDataSender()
         {
-            var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".png")).ToArray();
-            var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".txt")).ToArray();
+            IConfiguration config = new ConfigurationBuilder()
+              .AddJsonFile("appsettings.json", true, true)
+              .AddJsonFile("appsettings.development.json", true, true)
+              .AddJsonFile("appsettings.production.json", true, true)
+              .Build();
 
-            var errorCount = 0;
+            var dataSender = new DataSender(new Uri(config["DataSender:HostName"]),
+                config["DataSender:ConnectionMessage"],
+                config["DataSender:MessagePrefix"]);
+
+            var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".png")).ToArray();
+
+            var c = new ChatImageCleaner();
             for (int k = 0; k < trainingImages.Length; k++)
             {
-                var fileInfo = new FileInfo(trainingText[k]);
-                Console.WriteLine($"=={fileInfo.Name}==");
-                var masterKeyFile = trainingImages[k];
-                var correctResults = File.ReadAllLines(trainingText[k]).ToArray();
-
-                var c = new ChatImageCleaner();
-                c.SaveGreyscaleImage(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name), minV);
-
-
-                var results = c.ConvertScreenshotToChatTextWithBitmap(masterKeyFile, minV, 8, xOffset: 0, smallText: false);
-                foreach (var result in results)
+                var messages = c.ConvertScreenshotToChatTextWithBitmap(trainingImages[k], smallText: false).ToArray();
+                foreach (var message in messages)
                 {
-                    Console.WriteLine(result);
+                    if (dataSender != null)
+                        dataSender.SendChatMessage(message);
                 }
             }
         }
-
-        private static int ParseWithBitmap(float minV, int spaceWidth, int verboseLevel = 0, bool fastFail = false, int xOffset = 252)
+        private static int ParseWithBitmap(float minV, int spaceWidth, int verboseLevel = 0, bool fastFail = false, int xOffset = 0)
         {
             var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".png")).ToArray();
             var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".txt")).ToArray();
@@ -139,7 +131,7 @@ namespace DebugCLI
                 var c = new ChatImageCleaner();
                 c.SaveGreyscaleImage(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name), minV);
                 var smallOffset = 183;
-                var result = c.ConvertScreenshotToChatTextWithBitmap(masterKeyFile, minV, spaceWidth, xOffset, smallText: false).ToArray();
+                var result = c.ConvertScreenshotToChatTextWithBitmap(masterKeyFile, minV:minV, spaceWidth:spaceWidth, xOffset:xOffset, smallText: false).ToArray();
 
                 Console.WriteLine("Expected");
                 Console.WriteLine("Recieved");

@@ -206,8 +206,11 @@ namespace WFImageParser
             }
         }
 
-        public string[] ConvertScreenshotToChatTextWithBitmap(string imagePath, float minV, int spaceWidth, int xOffset = 0, int startLine = 0, int endLine = int.MaxValue, bool smallText = true)
+        public string[] ConvertScreenshotToChatTextWithBitmap(string imagePath, int xOffset = 4, int startLine = 0, int endLine = int.MaxValue, bool smallText = false, float minV = 0.5f, int spaceWidth = 6)
         {
+            if (smallText)
+                throw new NotImplementedException();
+
             var converter = new ColorSpaceConverter();
             var chatRect = new Rectangle(4, 763, 3236, 1350);
             if (!smallText)

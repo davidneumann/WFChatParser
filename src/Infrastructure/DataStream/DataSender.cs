@@ -10,7 +10,7 @@ namespace DataStream
         private readonly string _connectionMessage;
         private WebSocket _webSocket;
 
-        public DataSender(Uri websocketHostname, string messagePrefix, string connectionMessage)
+        public DataSender(Uri websocketHostname, string connectionMessage, string messagePrefix)
         {
             _websocketHostname = websocketHostname;
             _messagePrefix = messagePrefix;
@@ -25,11 +25,6 @@ namespace DataStream
             _webSocket.Connect();
             if (_connectionMessage != null && _connectionMessage.Length > 0)
                 _webSocket.Send(_connectionMessage);
-
-            using (var test = new WebSocket(string.Empty))
-            {
-
-            }
         }
 
         public void Dispose()
