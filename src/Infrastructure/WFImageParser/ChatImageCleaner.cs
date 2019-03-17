@@ -18,7 +18,7 @@ namespace WFImageParser
     public class ChatImageCleaner : IChatImageProcessor
     {
         private List<CharacterDetails> _scannedCharacters = new List<CharacterDetails>();
-        private Dictionary<string, List<SimpleGapPair>> _gapPairs = new Dictionary<string, List<SimpleGapPair>>();
+        private Dictionary<string, Dictionary<string, int>> _gapPairs = new Dictionary<string, Dictionary<string, int>>();
         private int _maxCharWidth = 0;
 
         private static readonly string GAPSFILE = Path.Combine("ocrdata", "gaps.json");
@@ -71,8 +71,11 @@ namespace WFImageParser
                     foreach (var gapPair in gapPairs)
                     {
                         if (!_gapPairs.ContainsKey(gapPair.Left))
-                            _gapPairs.Add(gapPair.Left, new List<SimpleGapPair>());
-                        _gapPairs[gapPair.Left].Add(gapPair);
+                            _gapPairs.Add(gapPair.Left, new Dictionary<string, int>());
+                        if(gapPair.Gap > 0)
+                            _gapPairs[gapPair.Left].Add(gapPair.Right, gapPair.Gap);
+                        else
+                            _gapPairs[gapPair.Left].Add(gapPair.Right, 0);
                     }
                 }
             }
@@ -203,7 +206,7 @@ namespace WFImageParser
             }
         }
 
-        public string[] ConvertScreenshotToChatTextWithBitmap(string imagePath, float minV, int spaceOffset, int xOffset = 0, int startLine = 0, int endLine = int.MaxValue, bool smallText = true, List<GapPair> gapPairs = null)
+        public string[] ConvertScreenshotToChatTextWithBitmap(string imagePath, float minV, int spaceWidth, int xOffset = 0, int startLine = 0, int endLine = int.MaxValue, bool smallText = true)
         {
             var converter = new ColorSpaceConverter();
             var chatRect = new Rectangle(4, 763, 3236, 1350);
@@ -221,7 +224,7 @@ namespace WFImageParser
                 var results = new string[endLine - startLine];
                 for (int i = startLine; i < endLine && i < offsets.Length; i++)
                 {
-                    results[i - startLine] = ParseLineBitmapScan(minV, xOffset, converter, chatRect, rgbImage, lineHeight, offsets[i], spaceOffset, gapPairs);
+                    results[i - startLine] = ParseLineBitmapScan(minV, xOffset, converter, chatRect, rgbImage, lineHeight, offsets[i], spaceWidth);
                 }
 
                 return results.Where(line => line.Length > 0).ToArray();
@@ -287,7 +290,7 @@ namespace WFImageParser
                 Y = y;
             }
         }
-        private string ParseLineBitmapScan(float minV, int xOffset, ColorSpaceConverter converter, Rectangle chatRect, Image<Rgba32> rgbImage, int lineHeight, int lineOffset, float spaceWidth, List<GapPair> gapPairs)
+        private string ParseLineBitmapScan(float minV, int xOffset, ColorSpaceConverter converter, Rectangle chatRect, Image<Rgba32> rgbImage, int lineHeight, int lineOffset, float spaceWidth)
         {
             var sb = new System.Text.StringBuilder();
             var emptySlices = 0;
@@ -300,8 +303,6 @@ namespace WFImageParser
             List<Point> prevTargetCharacters = new List<Point>();
             List<Point> targetCharacterPixels = null;
             CharacterDetails lastCharacterDetails = null;
-            GapPair currentPair = new GapPair();
-            var dotSkipped = false;
             for (int x = xOffset; x < chatRect.Right; x++)
             {
                 //Advance until next pixel
@@ -473,42 +474,31 @@ namespace WFImageParser
                             name = ",";
 
 
-                        //Check if we skipped past a space
-                        var jaggyFreePrev = prevTargetCharacters.Where(p => prevTargetCharacters.Count(p2 => p2.X == p.X) > 1 && prevTargetCharacters.Count(p2 => p2.Y == p.Y) > 1).ToArray();
-                        var jaggyFreeChar = targetCharacterPixels.Where(p => targetCharacterPixels.Count(p2 => p2.X == p.X) > 1 && targetCharacterPixels.Count(p2 => p2.Y == p.Y) > 1).ToArray();
+                        ////Check if we skipped past a space
 
-                        var closestPixelX = jaggyFreeChar.Min(p => p.X);
+                        //var closestPixelX = jaggyFreeChar.Min(p => p.X);
 
-                        var lastPixelX = jaggyFreePrev.Length > 0 ? jaggyFreePrev.Max(p => p.X) + 1 : lastCharacterEndX;
-                        var adjustedSpaceWidth = spaceWidth;
-                        //1 has a lot of space build into after it contents and | has a bunch of space on both sides
-                        if (lastCharacterDetails != null &&
-                            (lastCharacterDetails.Name == "pipe" || lastCharacterDetails.Name == "1" || bestFit.Item2.Name == "pipe"))
-                            adjustedSpaceWidth += (int)(lineHeight * 0.175);
-                        if (closestPixelX - lastPixelX >= adjustedSpaceWidth
-                            && endX - startX < lineHeight * 1.5) //Make sure we aren't getting tricked by 2 characters touching
-                            sb.Append(' ');
+                        //var lastPixelX = jaggyFreePrev.Length > 0 ? jaggyFreePrev.Max(p => p.X) + 1 : lastCharacterEndX;
+                        //var adjustedSpaceWidth = spaceWidth;
+                        ////1 has a lot of space build into after it contents and | has a bunch of space on both sides
+                        //if (lastCharacterDetails != null &&
+                        //    (lastCharacterDetails.Name == "pipe" || lastCharacterDetails.Name == "1" || bestFit.Item2.Name == "pipe"))
+                        //    adjustedSpaceWidth += (int)(lineHeight * 0.175);
+                        //if (closestPixelX - lastPixelX >= adjustedSpaceWidth
+                        //    && endX - startX < lineHeight * 1.5) //Make sure we aren't getting tricked by 2 characters touching
+                        //    sb.Append(' ');
+                        if (prevTargetCharacters != null && prevTargetCharacters.Count > 0)
+                        {
+                            var jaggyFreePrev = prevTargetCharacters.Where(p => prevTargetCharacters.Count(p2 => p2.X == p.X) > 1 && prevTargetCharacters.Count(p2 => p2.Y == p.Y) > 1).ToArray();
+                            var jaggyFreeChar = targetCharacterPixels.Where(p => targetCharacterPixels.Count(p2 => p2.X == p.X) > 1 && targetCharacterPixels.Count(p2 => p2.Y == p.Y) > 1).ToArray();
+
+                            var pixelGap = jaggyFreeChar.Min(p => p.X) - jaggyFreePrev.Max(p => p.X) + 1;
+                            if (pixelGap > _gapPairs[lastCharacterDetails.Name][bestFit.Item2.Name] + spaceWidth)
+                                sb.Append(' ');
+                        }
 
                         //Add character
                         sb.Append(name);
-
-                        //Temp code to generate gap file
-                        if (name == "." && !dotSkipped)
-                        {
-                            dotSkipped = true;
-                        }
-                        else if (dotSkipped)
-                        {
-                            if (currentPair.Left == null)
-                                currentPair.Left = new GapCharacter() { Name = bestFit.Item2.Name, Value = name[0] };
-                            else if (currentPair.Right == null)
-                            {
-                                currentPair.Right = new GapCharacter() { Name = bestFit.Item2.Name, Value = name[0] };
-                                currentPair.Gap = targetCharacterPixels.Min(p => p.X) - prevTargetCharacters.Max(p => p.X);
-                                gapPairs.Add(currentPair);
-                                currentPair = new GapPair();
-                            }
-                        }
 
                         lastCharacterEndX = startX + bestFit.Item2.Width;
                         prevMatchedCharacters = bestFit.Item3;

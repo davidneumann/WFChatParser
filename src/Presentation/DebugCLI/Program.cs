@@ -63,7 +63,7 @@ namespace DebugCLI
             //{
             //var c = new ChatImageCleaner();
             //c.SaveGreyscaleImage(@"C:\Users\david\Downloads\Untitled.png", @"C:\Users\david\Downloads\Untitled_grey.png", v);
-            var spaceWidth = 8;
+            var spaceWidth = 6;
             Console.WriteLine("space width: " + spaceWidth);
             var sw = new Stopwatch();
             sw.Start();
@@ -110,45 +110,28 @@ namespace DebugCLI
             }
         }
 
-        private static int ParseWithBitmap(float minV, int spaceOffset, int verboseLevel = 0, bool fastFail = false, int xOffset = 252)
+        private static int ParseWithBitmap(float minV, int spaceWidth, int verboseLevel = 0, bool fastFail = false, int xOffset = 252)
         {
-            //var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".png")).ToArray();
-            //var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".txt")).ToArray();
-            var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith(".png")).ToArray();
-            var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith(".txt")).ToArray();
+            var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".png")).ToArray();
+            var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".txt")).ToArray();
+            //var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith(".png")).ToArray();
+            //var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith(".txt")).ToArray();
 
             var errorCount = 0;
-            var gapPairs = new List<ChatImageCleaner.GapPair>();
-            var gapPairIndex = 0;
             for (int k = 0; k < trainingImages.Length; k++)
             {
                 var fileInfo = new FileInfo(trainingText[k]);
                 Console.WriteLine($"=={fileInfo.Name}==");
                 var masterKeyFile = trainingImages[k];
-                var correctResults = File.ReadAllLines(trainingText[k])/*.Select(line => line.Replace(" ", ""))*/.ToArray();
+                var correctResults = File.ReadAllLines(trainingText[k]).Select(line => line.Trim()).ToArray();
                 var c = new ChatImageCleaner();
                 c.SaveGreyscaleImage(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name), minV);
                 var smallOffset = 183;
-                var result = c.ConvertScreenshotToChatTextWithBitmap(masterKeyFile, minV, spaceOffset, xOffset, smallText: false, gapPairs: gapPairs).Select(line => line.Replace(" ", "")).ToArray();
+                var result = c.ConvertScreenshotToChatTextWithBitmap(masterKeyFile, minV, spaceWidth, xOffset, smallText: false).ToArray();
 
                 Console.WriteLine("Expected");
                 Console.WriteLine("Recieved");
                 Console.WriteLine();
-
-                //Temp code verify that the gappairs are correct
-                for (int j = 0; j < correctResults.Length; j++)
-                {
-                    for (int i = 1; i < correctResults[j].Length; i += 3)
-                    {
-                        if (correctResults[j][i] != gapPairs[gapPairIndex].Left.Value ||
-                            correctResults[j][i + 1] != gapPairs[gapPairIndex].Right.Value)
-                        {
-                            Console.WriteLine($"Expected: {correctResults[j][i]}{correctResults[j][i + 1]} got {gapPairs[gapPairIndex].Left.Value}{gapPairs[gapPairIndex].Right.Value}");
-                            Debugger.Break();
-                        }
-                        gapPairIndex++;
-                    }
-                }
 
                 if (correctResults.Length != result.Length)
                 {
@@ -204,7 +187,6 @@ namespace DebugCLI
                     return errorCount;
                 }
             }
-            File.WriteAllText("spaces.json", JsonConvert.SerializeObject(gapPairs.Select(p => new { Left = p.Left.Name, Right = p.Right.Name, Gap = p.Gap })));
 
 
 
