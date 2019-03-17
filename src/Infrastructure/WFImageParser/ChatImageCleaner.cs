@@ -531,6 +531,10 @@ namespace WFImageParser
                         x = lastCharacterEndX = endX = cleanTargetPixels.Max(p => p.X) + 1;
                     }
                 }
+                else
+                {
+                    endX = startX = Math.Max(endX + 1, targetCharacterPixels.Max(p => p.X) + 1);
+                }
             }
             if (sb.Length > 0)
             {
