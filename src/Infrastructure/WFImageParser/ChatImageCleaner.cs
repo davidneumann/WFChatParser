@@ -38,14 +38,18 @@ namespace WFImageParser
                     };
                     using (Image<Rgba32> image = Image.Load(file))
                     {
-                        character.VMask = new float[image.Width, image.Height];
+                        character.VMask = new bool[image.Width, image.Height];
                         for (int x = 0; x < image.Width; x++)
                         {
                             for (int y = 0; y < image.Height; y++)
                             {
-                                character.VMask[x, y] = converter.ToHsv(image[x, y]).V;
-                                if (character.VMask[x, y] >= 0.5)
+                                if (image[x, y].R > 128)
+                                {
+                                    character.VMask[x, y] = true;
                                     character.PixelCount++;
+                                }
+                                else
+                                    character.VMask[x, y] = false;
                             }
                         }
                         character.Width = image.Width;
@@ -192,17 +196,19 @@ namespace WFImageParser
             using (Image<Rgba32> rgbImage = Image.Load(imagePath))
             {
                 //var maxHsv = 0.29;
-                var allText = new List<string>();
+                //var allText = new List<string>();
                 var offsets = smallText ? _lineOffsetsSmall : _lineOffsets;
                 var lineHeight = 26;
                 if (!smallText)
                     lineHeight = 36;
+                endLine = Math.Min(endLine, offsets.Length);
+                var results = new string[endLine - startLine];
                 for (int i = startLine; i < endLine && i < offsets.Length; i++)
                 {
-                    ParseLineBitmapScan(minV, xOffset, converter, chatRect, rgbImage, allText, lineHeight, offsets[i], spaceOffset);
+                    results[i-startLine] = ParseLineBitmapScan(minV, xOffset, converter, chatRect, rgbImage, lineHeight, offsets[i], spaceOffset);
                 }
 
-                return allText.ToArray();
+                return results;
             }
         }
 
@@ -247,7 +253,7 @@ namespace WFImageParser
                 Y = y;
             }
         }
-        private void ParseLineBitmapScan(float minV, int xOffset, ColorSpaceConverter converter, Rectangle chatRect, Image<Rgba32> rgbImage, List<string> allText, int lineHeight, int lineOffset, float spaceWidth)
+        private string ParseLineBitmapScan(float minV, int xOffset, ColorSpaceConverter converter, Rectangle chatRect, Image<Rgba32> rgbImage, int lineHeight, int lineOffset, float spaceWidth)
         {
             var sb = new System.Text.StringBuilder();
             var emptySlices = 0;
@@ -262,7 +268,6 @@ namespace WFImageParser
             CharacterDetails lastCharacterDetails = null;
             for (int x = xOffset; x < chatRect.Right; x++)
             {
-
                 //Advance until next pixel
                 var firstPixel = Point.Empty;
                 for (int i = endX; i < chatRect.Right; i++)
@@ -317,18 +322,6 @@ namespace WFImageParser
                     pixelsByX.ToList().ForEach(kvp => cleanTargetPixels.RemoveAll(p => p.X == kvp.Key));
                     startX = cleanTargetPixels.Min(p => p.X);
                     endX = cleanTargetPixels.Max(p => p.X) + 1;
-                    //var leftMostchars = charPixels.Where(p => p.X == startX).Count();
-                    //var rightMostChars = charPixels.Where(p => p.X == endX - 1).Count();
-                    //if (leftMostchars >= rightMostChars)
-                    //{
-                    //    charPixels.RemoveAll(p => p.X == endX - 1);
-                    //    endX--;
-                    //}
-                    //else
-                    //{
-                    //    startX++;
-                    //    charPixels.RemoveAll(p => p.X == startX);
-                    //}
                 }
 
                 if (endX - startX > lineHeight * 0.8333333333333333f) //We have a ton of characters combined, limit it
@@ -339,15 +332,6 @@ namespace WFImageParser
 
                 if (endX > startX)
                 {
-                    //using (Image<Rgba32> debug1 = rgbImage.Clone())
-                    //{
-                    //    debug1.Mutate(i => i.Crop(new Rectangle(startX, lineOffset, endX - startX, lineHeight)));
-                    //    debug1.Save("test_target.png");
-                    //}
-
-                    //Console.WriteLine("Target: " + targetPixels);
-                    //Console.WriteLine("{0,12} {1,12} {2,12} {3,12}", "Name", "PixelCont", "Match", "Confi");
-
                     var bestFit = new Tuple<float, CharacterDetails, List<Point>>(float.MinValue, null, null);
                     bestFit = GuessCharacter(minV, converter, rgbImage, lineOffset, startX, endX, cleanTargetPixels, bestFit);
                     var origStartX = startX;
@@ -426,11 +410,6 @@ namespace WFImageParser
                     if (bestFit.Item1 < 0.20f && bestFit.Item2 != null && bestFit.Item2.PixelCount > 40)
                         bestFit = bestFit = new Tuple<float, CharacterDetails, List<Point>>(float.MinValue, null, null);
 
-                    //if (bestFit.Item2 == null)
-                    //    Console.WriteLine("failed to identify at: " + startX + " " + lineOffset);
-                    //else
-                    //    Console.WriteLine($"Identified {bestFit.Item2.Name} with conf {bestFit.Item1}");
-
                     if (bestFit.Item2 != null && endX != lastCharacterEndX && cleanTargetPixels.Count >= _scannedCharacters.Min(p => p.PixelCount) * 0.8)
                     {
                         var name = bestFit.Item2.Name.Replace(".png", "").Replace(".txt", "").Replace("alt_", "");
@@ -461,16 +440,7 @@ namespace WFImageParser
                         //Check if we skipped past a space
                         var jaggyFreePrev = prevTargetCharacters.Where(p => prevTargetCharacters.Count(p2 => p2.X == p.X) > 1 && prevTargetCharacters.Count(p2 => p2.Y == p.Y) > 1).ToArray();
                         var jaggyFreeChar = targetCharacterPixels.Where(p => targetCharacterPixels.Count(p2 => p2.X == p.X) > 1 && targetCharacterPixels.Count(p2 => p2.Y == p.Y) > 1).ToArray();
-
-                        ////Find closest pixel above baseline in new found character
-                        ////or if there is none the closest one below baseline
-                        ////We limit to first 10 columns as certain touching combos, such as _}, will break things
-                        //var aboveBaselinePixels = jaggyFreeChar.Where(p => p.X <= startX + 10 && p.Y < lineOffset + lineHeight * 0.75f).ToArray();
-                        //var closestPixelX = startX;
-                        //if (aboveBaselinePixels.Length > 0)
-                        //    closestPixelX = aboveBaselinePixels.Min(p => p.X);
-                        //else
-                        //    closestPixelX = jaggyFreeChar.Min(p => p.X);
+                        
                         var closestPixelX = jaggyFreeChar.Min(p => p.X);
 
                         var lastPixelX = jaggyFreePrev.Length > 0 ? jaggyFreePrev.Max(p => p.X) + 1 : lastCharacterEndX;
@@ -490,8 +460,6 @@ namespace WFImageParser
                         prevMatchedCharacters = bestFit.Item3;
                         prevTargetCharacters = targetCharacterPixels;
                         lastCharacterDetails = bestFit.Item2;
-                        //if (endX - startX > _maxCharWidth * 0.6 && bestFit.Item2.Width < _maxCharWidth * 0.6)
-                        //    lastCharacterEndX++; // overcome the antia aliasing that brought us here
 
                         //Due to new char IDing system we can safely jump a bit ahead to prevent double reading
                         if (endX - startX > _maxCharWidth * 0.6 && cleanTargetPixels.Count - prevMatchedCharacters.Count > cleanTargetPixels.Count * 0.3)
@@ -507,7 +475,10 @@ namespace WFImageParser
                 }
             }
             if (sb.Length > 0)
-                allText.Add(sb.ToString().Trim());
+            {
+                return sb.ToString().Trim();
+            }
+            else return string.Empty;
         }
 
         private Tuple<float, CharacterDetails, List<Point>> FindPartialMatch(float minV, Image<Rgba32> rgbImage, int lineOffset, int startX, int endX, List<Point> cleanTargetPixels, Tuple<float, CharacterDetails, List<Point>> bestFit)
@@ -533,7 +504,7 @@ namespace WFImageParser
                         for (int y = 0; y < character.Height; y++)
                         {
                             var p = g.FirstOrDefault(p2 => p2.Y == y);
-                            if (character.VMask[x, y] > minV && p != Point.Empty)
+                            if (character.VMask[x, y] && p != Point.Empty)
                             {
                                 characterPixelsMatched++;
                                 matchingPixels.Add(new Point(x + startX, y + lineOffset));
@@ -597,13 +568,6 @@ namespace WFImageParser
         {
             var targetWidth = endX - startX;
 
-            //using (Image<Rgba32> debug1 = new Image<Rgba32>(null, charPixels.Max(p => p.X) - charPixels.Min(p => p.X) + 1, _scannedCharacters.First().Height, Rgba32.Black))
-            //{
-            //    var leftmost = charPixels.Min(p => p.X);
-            //    charPixels.ForEach(p => debug1[p.X - leftmost, p.Y - lineOffset] = Rgba32.White);
-            //    debug1.Save("test_target.png");
-            //}
-
             var cannidates = _scannedCharacters;
             if (targetWidth <= _maxCharWidth / 2 && targetWidth > Math.Round(_maxCharWidth * 0.15))
                 cannidates = _scannedCharacters.Where(c => c.Width >= targetWidth * 0.8f && c.Width <= targetWidth * 1.2f).ToList();
@@ -611,20 +575,6 @@ namespace WFImageParser
                 cannidates = _scannedCharacters.Where(c => c.Width <= _maxCharWidth * 0.15).ToList();
             foreach (var details in cannidates)
             {
-                //using (Image<Rgba32> debug2 = new Image<Rgba32>(details.Width, details.Height))
-                //{
-                //    for (int x2 = 0; x2 < details.Width; x2++)
-                //    {
-                //        for (int y = 0; y < details.Height; y++)
-                //        {
-                //            if (details.VMask[x2, y] > minV)
-                //                debug2[x2, y] = Rgba32.White;
-                //            else
-                //                debug2[x2, y] = Rgba32.Black;
-                //        }
-                //    }
-                //    debug2.Save("test_reference.png");
-                //}
 
                 var matchingPixelsCount = 0;
                 var dVMask = details.VMask;
@@ -641,7 +591,7 @@ namespace WFImageParser
                         var count = 0;
                         for (int y = 0; y < details.Height; y++)
                         {
-                            if (dVMask[x, y] > minV)
+                            if (dVMask[x, y])
                                 count++;
                         }
                         if (count > top2Xs[0].Value)
@@ -649,104 +599,26 @@ namespace WFImageParser
                         else if (count > top2Xs[1].Value)
                             top2Xs[1] = new KeyValuePair<int, int>(x, count);
                     }
-                    var newMask = new float[2, details.Height];
+                    var newMask = new bool[2, details.Height];
                     for (int x = 0; x < 2; x++)
                     {
                         for (int y = 0; y < details.Height; y++)
                         {
                             newMask[x, y] = details.VMask[top2Xs[x].Key, y];
-                            if (newMask[x, y] > minV)
+                            if (newMask[x, y])
                                 pixelCount++;
                         }
                     }
                     dVMask = newMask;
                     charWidth = 2;
                 }
-                //if (targetWidth != details.Width && targetWidth <= 4 && targetWidth >= 3 && details.Width == 2)
-                //{
-                //    var newMask = new float[targetWidth, dVMask.GetLength(1)];
-                //    for (int x = 0; x < details.Width; x++)
-                //    {
-                //        for (int y = 0; y < dVMask.GetLength(1); y++)
-                //        {
-                //            newMask[x, y] = dVMask[x, y];
-                //        }
-                //    }
-                //    for (int x = details.Width; x < targetWidth; x++)
-                //    {
-                //        for (int y = 0; y < dVMask.GetLength(1); y++)
-                //        {
-                //            newMask[x, y] = dVMask[details.Width - 1, y];
-                //            if (newMask[x, y] > minV)
-                //                pixelCount++;
-                //        }
-                //    }
-                //    dVMask = newMask;
-                //    charWidth = targetWidth;
-                //}
+
                 var width = Math.Min(endX - startX, charWidth);
                 var maxX = startX + width;
-                var matchingPixels = charPixels.Where(p => p.X >= startX && p.X < maxX && dVMask[p.X - startX, p.Y - lineOffset] > minV).ToList();
-                matchingPixelsCount = charPixels.Count(p => p.X >= startX && p.X < maxX && dVMask[p.X - startX, p.Y - lineOffset] > minV);
-                //var leftMatchingPixels = charPixels.Where(p => p.X <= startX + (endX - startX) / 2).Count(p => p.X >= startX && p.X < maxX && dVMask[p.X - startX, p.Y - lineOffset] > minV);
-                //var rightMatchingPixels = charPixels.Where(p => p.X > startX + (endX - startX) / 2).Count(p => p.X >= startX && p.X < maxX && dVMask[p.X - startX, p.Y - lineOffset] > minV);
-                //for (int x2 = startX; x2 < endX && x2 < startX + details.Width; x2++)
-                //{
-                //    for (int y2 = 0; y2 < details.Height; y2++)
-                //    {
-                //        var pV = converter.ToHsv(rgbImage[x2, y2 + lineOffset]).V;
-                //        var dV = details.VMask[x2 - startX, y2];
-                //        //if ((pV > minV && dV > minV) || (pV < minV && dV < minV))
-                //        //{
-                //        //    matchingPixels++;
-                //        //}
-                //        //else
-                //        //    matchingPixels--;
-                //        if (pV > minV && dV > minV)
-                //            matchingPixels++;
-                //    }
-                //}
-
-                //using (Image<Rgba32> debug2 = new Image<Rgba32>(details.Width, details.Height))
-                //{
-                //    for (int x2 = 0; x2 < details.Width; x2++)
-                //    {
-                //        for (int y = 0; y < details.Height; y++)
-                //        {
-                //            if (matchingPixelsMask[x2, y] > 0)
-                //                debug2[x2, y] = Rgba32.White;
-                //            else
-                //                debug2[x2, y] = Rgba32.Black;
-                //        }
-                //    }
-                //    debug2.Save("test_matching.png");
-                //}
-
-                ////Filter out mangled matches from 2 characters touching where left most pixels matter more
-                //if (targetWidth > _maxCharWidth / 2)
-                //{
-                //    //Punish this character for pixels that are in the target but not in the character
-                //    charPixels.Where(p => p.X - startX > 0 && p.X < maxX).ToList()
-                //        .ForEach(p =>
-                //        {
-                //            if (dVMask[p.X - startX, p.Y - lineOffset] < minV)
-                //                matchingPixelsCount--;
-                //        });
-                //    //Punish this character for pixels it has that the target does not have
-                //    //for (int x = 0; x < details.Width; x++)
-                //    //{
-                //    //    var px = charPixels.Where(p => p.X == startX + x).ToArray();
-                //    //    for (int y = 0; y < details.Height; y++)
-                //    //    {
-                //    //        if (dVMask[x, y] > minV && !px.Any(p => p.Y == lineOffset + y))
-                //    //            matchingPixelsCount--;
-                //    //    }
-                //    //}
-                //}
+                var matchingPixels = charPixels.Where(p => p.X >= startX && p.X < maxX && dVMask[p.X - startX, p.Y - lineOffset]).ToList();
+                matchingPixelsCount = charPixels.Count(p => p.X >= startX && p.X < maxX && dVMask[p.X - startX, p.Y - lineOffset]);
 
                 var conf = (float)matchingPixelsCount / (float)(Math.Max(charPixels.Count, pixelCount));
-                //var conf = matchingPixels;
-                //Console.WriteLine("{0,12} {1,12} {2,12} {3,12}", details.Name, details.PixelCount, matchingPixels, conf);
                 if (conf > bestFit.Item1)
                 {
                     bestFit = new Tuple<float, CharacterDetails, List<Point>>(conf, details, matchingPixels);
@@ -1326,7 +1198,7 @@ namespace WFImageParser
 
         private class CharacterDetails
         {
-            public float[,] VMask { get; set; }
+            public bool[,] VMask { get; set; }
             public int PixelCount { get; set; }
             public string Name { get; set; }
             public int Width { get; set; }
