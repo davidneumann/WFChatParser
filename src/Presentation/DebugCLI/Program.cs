@@ -24,8 +24,11 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            MonitorChatLive();
-
+            //MonitorChatLive();
+            var c = new ChatImageCleaner();
+            c.SaveGreyscaleImage(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png", @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input_white.png");
+            c.ConvertScreenshotToChatTextWithBitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png");
+            //VerifyNoErrors(2);
             //var v = 0.5f;
 
             //TestDataSender();
@@ -91,15 +94,21 @@ namespace DebugCLI
             //DoFullParse(0.49999999f);
         }
 
-        private static int ParseWithBitmap(int verboseLevel = 0, bool fastFail = false, int xOffset = 4, float minV = 0.5f, int spaceWidth = 6)
+        private static int VerifyNoErrors(int verboseLevel = 0, bool fastFail = false, int xOffset = 4, float minV = 0.5f, int spaceWidth = 6)
         {
+            var trainingImages = new List<string>();
+            Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".png")).ToList().ForEach(f => trainingImages.Add(f));
+            Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith(".png")).ToList().ForEach(f => trainingImages.Add(f));
+            var trainingText = new List<string>();
+            Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".txt")).ToList().ForEach(f => trainingText.Add(f));
+            Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith(".txt")).ToList().ForEach(f => trainingText.Add(f));
             //var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".png")).ToArray();
             //var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".txt")).ToArray();
-            var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith("e1.png")).ToArray();
-            var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith("e1.txt")).ToArray();
+            //var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith("e1.png")).ToArray();
+            //var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith("e1.txt")).ToArray();
 
             var errorCount = 0;
-            for (int k = 0; k < trainingImages.Length; k++)
+            for (int k = 0; k < trainingImages.Count; k++)
             {
                 var fileInfo = new FileInfo(trainingText[k]);
                 Console.WriteLine($"=={fileInfo.Name}==");
@@ -309,6 +318,15 @@ namespace DebugCLI
             while (true)
             {
                 sw.Restart();
+                for (int i = 6; i >= 0; i--)
+                {
+                    var curFile = Path.Combine(Environment.CurrentDirectory, "capture_" + i + ".png");
+                    var lastFile = Path.Combine(Environment.CurrentDirectory, "capture_" + (i+1) + ".png");
+                    if (File.Exists(lastFile))
+                        File.Delete(lastFile);
+                    if (File.Exists(curFile))
+                        File.Move(curFile, lastFile);
+                }
                 var image = capture.GetTradeChatImage();
                 var imageTime = sw.Elapsed.TotalSeconds;
                 sw.Restart();
@@ -318,7 +336,9 @@ namespace DebugCLI
                 sw.Restart();
                 //var text = t.ParseChatImage(processedImagePath);
                 var saveImage = false;
-                var debugName = "debug_image_" + DateTime.Now.ToString("yyyy-dd-M--HH-mm-ss-fff") + ".png";
+                if (!Directory.Exists(config["DEBUG:ImageDirectory"]))
+                    Directory.CreateDirectory(config["DEBUG:ImageDirectory"]);
+                var debugName = Path.Combine(config["DEBUG:ImageDirectory"], "debug_image_" + DateTime.Now.ToString("yyyy-dd-M--HH-mm-ss-fff") + ".png");
                 foreach (var message in messages)
                 {
                     if (!messageHistory.Contains(message))
@@ -339,9 +359,7 @@ namespace DebugCLI
                 }
                 if (saveImage)
                 {
-                    if (!Directory.Exists(config["DEBUG:ImageDirectory"]))
-                        Directory.CreateDirectory(config["DEBUG:ImageDirectory"]);
-                    File.Copy(image, Path.Combine(config["DEBUG:ImageDirectory"], debugName));
+                    File.Copy(image, debugName);
                 }
                 var transmitTime = sw.Elapsed.TotalSeconds;
                 sw.Stop();

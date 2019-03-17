@@ -233,7 +233,7 @@ namespace WFImageParser
                     var line = ParseLineBitmapScan(minV, xOffset, converter, chatRect, rgbImage, lineHeight, offsets[i], spaceWidth);
                     if (regex.Match(line).Success)
                         results.Add(line);
-                    else
+                    else if(results.Count > 0)
                     {
                         var last = results.Last();
                         results.Remove(last);
@@ -461,7 +461,7 @@ namespace WFImageParser
                     if (bestFit.Item1 < 0.20f && bestFit.Item2 != null && bestFit.Item2.PixelCount > 40)
                         bestFit = bestFit = new Tuple<float, CharacterDetails, List<Point>>(float.MinValue, null, null);
 
-                    if (bestFit.Item2 != null && endX != lastCharacterEndX && cleanTargetPixels.Count >= _scannedCharacters.Min(p => p.PixelCount) * 0.8)
+                    if (bestFit.Item2 != null && endX != lastCharacterEndX)
                     {
                         var name = bestFit.Item2.Name.Replace(".png", "").Replace(".txt", "").Replace("alt_", "");
                         if (name.EndsWith("_upper"))
@@ -528,7 +528,7 @@ namespace WFImageParser
                     else //failed to ID the character, skip it
                     {
                         sb.Append(' ');
-                        x = lastCharacterEndX = endX = cleanTargetPixels.Max(p => p.X) + 1;
+                        x = lastCharacterEndX = endX = targetCharacterPixels.Max(p => p.X) + 1;
                     }
                 }
                 else
@@ -596,20 +596,23 @@ namespace WFImageParser
         {
             int startX = int.MaxValue;
             int endX = int.MinValue;
-            //Add all pixels of this character to a collection
+            //Do initial walk on first pixel
+            FindCharPixels(minV, converter, rgbImage, cleanTargetPixels, firstPixel, prevMatchedCharacters);
+
+            var midX = (int)cleanTargetPixels.Average(p => p.X);
+            
+            //Scan down from the initial midpoint for gap characters
             //Account for gaps such as in i or j
-            for (int y = firstPixel.Y; y < lineOffset + lineHeight; y++)
+            for (int y = cleanTargetPixels.Where(p => p.X == midX).Max(p => p.Y); y < lineOffset + lineHeight; y++)
             {
-                FindCharPixels(minV, converter, rgbImage, cleanTargetPixels, new Point(firstPixel.X, y), prevMatchedCharacters);
+                FindCharPixels(minV, converter, rgbImage, cleanTargetPixels, new Point(midX, y), prevMatchedCharacters);
             }
-            //Account for gaps like in ;
+            //Scan up from new midpoint for gap characters that have a bit sticking out the front. Account for gaps like in ;
+            midX = (int)cleanTargetPixels.Average(p => p.X);
+            var minY = cleanTargetPixels.Min(p => p.Y);
+            for (int i = lineOffset; i < minY; i++)
             {
-                var midX = (int)cleanTargetPixels.Average(p => p.X);
-                var minY = cleanTargetPixels.Min(p => p.Y);
-                for (int i = lineOffset; i < minY; i++)
-                {
-                    FindCharPixels(minV, converter, rgbImage, cleanTargetPixels, new Point(midX, i), prevMatchedCharacters);
-                }
+                FindCharPixels(minV, converter, rgbImage, cleanTargetPixels, new Point(midX, i), prevMatchedCharacters);
             }
             //Account for crazy gaps such as in %
             var foundNewPixels = false;
@@ -777,7 +780,7 @@ namespace WFImageParser
             return chars.ToString();
         }
 
-        public void SaveGreyscaleImage(string imagePath, string outputPath, float minV = 0.29f)
+        public void SaveGreyscaleImage(string imagePath, string outputPath, float minV = 0.5f)
         {
             var converter = new ColorSpaceConverter();
 

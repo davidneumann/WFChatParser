@@ -161,8 +161,8 @@ namespace WFGameCapture
         public string GetTradeChatImage()
         {
             var image = GetOutputAsBitmap(100);
-            image.Save("capture.png");
-            return System.IO.Path.Combine(Environment.CurrentDirectory, "capture.png");
+            image.Save("capture_0.png");
+            return System.IO.Path.Combine(Environment.CurrentDirectory, "capture_0.png");
         }
 
         public string Debug()
