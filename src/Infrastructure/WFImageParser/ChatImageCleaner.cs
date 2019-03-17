@@ -27,35 +27,32 @@ namespace WFImageParser
         public ChatImageCleaner()
         {
             var converter = new ColorSpaceConverter();
-            if (Directory.Exists("final"))
+            if (Directory.Exists("ocrdata"))
             {
-                foreach (var file in Directory.GetFiles("final").Where(f => f.EndsWith(".png")))
+                foreach (var file in Directory.GetFiles("ocrdata").Where(f => f.EndsWith(".png")))
                 {
-                    if (File.Exists(file + ".txt"))
+                    var character = new CharacterDetails()
                     {
-                        var character = new CharacterDetails()
+                        Name = (new FileInfo(file)).Name.Replace(".png", ""),
+                        PixelCount = 0
+                    };
+                    using (Image<Rgba32> image = Image.Load(file))
+                    {
+                        character.VMask = new float[image.Width, image.Height];
+                        for (int x = 0; x < image.Width; x++)
                         {
-                            Name = (new FileInfo(file)).Name.Replace(".png", ""),
-                            PixelCount = 0
-                        };
-                        using (Image<Rgba32> image = Image.Load(file))
-                        {
-                            character.VMask = new float[image.Width, image.Height];
-                            for (int x = 0; x < image.Width; x++)
+                            for (int y = 0; y < image.Height; y++)
                             {
-                                for (int y = 0; y < image.Height; y++)
-                                {
-                                    character.VMask[x, y] = converter.ToHsv(image[x, y]).V;
-                                    if (character.VMask[x, y] >= 0.5)
-                                        character.PixelCount++;
-                                }
+                                character.VMask[x, y] = converter.ToHsv(image[x, y]).V;
+                                if (character.VMask[x, y] >= 0.5)
+                                    character.PixelCount++;
                             }
-                            character.Width = image.Width;
-                            character.Height = image.Height;
-                            _scannedCharacters.Add(character);
-                            if (character.Width > _maxCharWidth)
-                                _maxCharWidth = character.Width;
                         }
+                        character.Width = image.Width;
+                        character.Height = image.Height;
+                        _scannedCharacters.Add(character);
+                        if (character.Width > _maxCharWidth)
+                            _maxCharWidth = character.Width;
                     }
                 }
             }
@@ -107,8 +104,8 @@ namespace WFImageParser
         public void AverageBitmaps(Dictionary<string, List<string>> files, float minV, float threashold, bool smallText = true)
         {
             var converter = new ColorSpaceConverter();
-            if (!Directory.Exists(Path.Combine(Environment.CurrentDirectory, "final")))
-                Directory.CreateDirectory(Path.Combine(Environment.CurrentDirectory, "final"));
+            if (!Directory.Exists(Path.Combine(Environment.CurrentDirectory, "ocroutput")))
+                Directory.CreateDirectory(Path.Combine(Environment.CurrentDirectory, "ocroutput"));
 
             foreach (var character in files.Keys)
             {
@@ -154,8 +151,8 @@ namespace WFImageParser
                                     finalImage[x, y] = Rgba32.Black;
                             }
                         }
-                        finalImage.Save(Path.Combine(Environment.CurrentDirectory, "final", character));
-                        File.WriteAllText(Path.Combine(Environment.CurrentDirectory, "final", character + ".txt"), validCount.ToString());
+                        finalImage.Save(Path.Combine(Environment.CurrentDirectory, "ocroutput", character));
+                        File.WriteAllText(Path.Combine(Environment.CurrentDirectory, "ocroutput", character + ".txt"), validCount.ToString());
                     }
                 }
             }
@@ -356,7 +353,7 @@ namespace WFImageParser
                     var origStartX = startX;
                     var origEndX = endX;
                     var didRemoveJaggies = false;
-                    if(bestFit.Item1 < 0.7 && bestFit.Item2.Width >= 10)
+                    if (bestFit.Item1 < 0.7 && bestFit.Item2.Width >= 10)
                     {
                         var orig = bestFit.Item2;
                         bestFit = FindPartialMatch(minV, rgbImage, lineOffset, startX, endX, cleanTargetPixels, bestFit);
@@ -509,15 +506,15 @@ namespace WFImageParser
                     }
                 }
             }
-            if(sb.Length > 0)
+            if (sb.Length > 0)
                 allText.Add(sb.ToString().Trim());
         }
 
         private Tuple<float, CharacterDetails, List<Point>> FindPartialMatch(float minV, Image<Rgba32> rgbImage, int lineOffset, int startX, int endX, List<Point> cleanTargetPixels, Tuple<float, CharacterDetails, List<Point>> bestFit)
         {
             var groupedPixels = cleanTargetPixels.Select(p => new Point(p.X - startX, p.Y - lineOffset)).GroupBy(p => p.X).ToArray();
-            var targetWidth = cleanTargetPixels.Max(p => p.X) - cleanTargetPixels.Min(p => p.X);
-            foreach (var group in _scannedCharacters.Where(c => c.Width >= 10 && c.Width <= targetWidth).OrderByDescending(c => c.Width).GroupBy(c => c.Width))
+            var targetWidth = cleanTargetPixels.Max(p => p.X) - cleanTargetPixels.Min(p => p.X) + 1;
+            foreach (var group in _scannedCharacters.Where(c => c.Width >= 5 && c.Width <= targetWidth - 1).OrderByDescending(c => c.Width).GroupBy(c => c.Width))
             {
                 var bestCoverage = float.MinValue;
                 CharacterDetails bestCharacter = null;
