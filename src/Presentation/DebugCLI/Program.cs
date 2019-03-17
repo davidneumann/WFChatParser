@@ -24,9 +24,11 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            var v = 0.5f;
+            MonitorChatLive();
 
-            TestDataSender();
+            //var v = 0.5f;
+
+            //TestDataSender();
 
             //MonitorChatLive();
 
@@ -67,14 +69,14 @@ namespace DebugCLI
             //{
             //var c = new ChatImageCleaner();
             //c.SaveGreyscaleImage(@"C:\Users\david\Downloads\Untitled.png", @"C:\Users\david\Downloads\Untitled_grey.png", v);
-            var spaceWidth = 6;
-            Console.WriteLine("space width: " + spaceWidth);
-            var sw = new Stopwatch();
-            sw.Start();
-            var errors = ParseWithBitmap(v, spaceWidth, verboseLevel: 2, fastFail: false, xOffset: 252);
-            sw.Stop();
-            Console.WriteLine("Ran in: " + sw.Elapsed.TotalSeconds);
-            Console.WriteLine("Found " + errors + " errors");
+            //var spaceWidth = 6;
+            //Console.WriteLine("space width: " + spaceWidth);
+            //var sw = new Stopwatch();
+            //sw.Start();
+            //var errors = ParseWithBitmap(verboseLevel: 2, fastFail: false, xOffset: 0);
+            //sw.Stop();
+            //Console.WriteLine("Ran in: " + sw.Elapsed.TotalSeconds);
+            //Console.WriteLine("Found " + errors + " errors");
             //if (errors < minErrors)
             //{
             //    minErrors = errorsz;
@@ -89,37 +91,12 @@ namespace DebugCLI
             //DoFullParse(0.49999999f);
         }
 
-        private static void TestDataSender()
+        private static int ParseWithBitmap(int verboseLevel = 0, bool fastFail = false, int xOffset = 4, float minV = 0.5f, int spaceWidth = 6)
         {
-            IConfiguration config = new ConfigurationBuilder()
-              .AddJsonFile("appsettings.json", true, true)
-              .AddJsonFile("appsettings.development.json", true, true)
-              .AddJsonFile("appsettings.production.json", true, true)
-              .Build();
-
-            var dataSender = new DataSender(new Uri(config["DataSender:HostName"]),
-                config["DataSender:ConnectionMessage"],
-                config["DataSender:MessagePrefix"]);
-
-            var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".png")).ToArray();
-
-            var c = new ChatImageCleaner();
-            for (int k = 0; k < trainingImages.Length; k++)
-            {
-                var messages = c.ConvertScreenshotToChatTextWithBitmap(trainingImages[k], smallText: false).ToArray();
-                foreach (var message in messages)
-                {
-                    if (dataSender != null)
-                        dataSender.SendChatMessage(message);
-                }
-            }
-        }
-        private static int ParseWithBitmap(float minV, int spaceWidth, int verboseLevel = 0, bool fastFail = false, int xOffset = 0)
-        {
-            var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".png")).ToArray();
-            var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".txt")).ToArray();
-            //var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith(".png")).ToArray();
-            //var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith(".txt")).ToArray();
+            //var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".png")).ToArray();
+            //var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".txt")).ToArray();
+            var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith("e1.png")).ToArray();
+            var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith("e1.txt")).ToArray();
 
             var errorCount = 0;
             for (int k = 0; k < trainingImages.Length; k++)
@@ -131,7 +108,7 @@ namespace DebugCLI
                 var c = new ChatImageCleaner();
                 c.SaveGreyscaleImage(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name), minV);
                 var smallOffset = 183;
-                var result = c.ConvertScreenshotToChatTextWithBitmap(masterKeyFile, minV:minV, spaceWidth:spaceWidth, xOffset:xOffset, smallText: false).ToArray();
+                var result = c.ConvertScreenshotToChatTextWithBitmap(masterKeyFile, minV: minV, spaceWidth: spaceWidth, xOffset: xOffset, smallText: false).ToArray();
 
                 Console.WriteLine("Expected");
                 Console.WriteLine("Recieved");
@@ -297,43 +274,79 @@ namespace DebugCLI
 
         private static void MonitorChatLive(float minV = 0.5f, int spaceOffset = 8)
         {
-            //Console.WriteLine("Push enter and then switch to warframe");
-            //Console.ReadLine();
-            //for (int i = 0; i < 5; i++)
-            //{
-            //    Console.Write($"\rStarting in {5 - i} seconds...");
-            //    System.Threading.Thread.Sleep(1000);
-            //}
+            Console.WriteLine("Starting up game capture");
+            var capture = new GameCapture();
+            //var c = new ChatImageCleaner(JsonConvert.DeserializeObject<CharInfo[]>("chars.json"));
+            Console.WriteLine("Starting up image parser");
+            var c = new ChatImageCleaner();
+            //var t = new ImageParser();
 
-            //var capture = new GameCapture();
-            ////var c = new ChatImageCleaner(JsonConvert.DeserializeObject<CharInfo[]>("chars.json"));
-            //var c = new ChatImageCleaner();
-            ////var t = new ImageParser();
+            Console.WriteLine("Loading config for data sender");
+            IConfiguration config = new ConfigurationBuilder()
+              .AddJsonFile("appsettings.json", true, true)
+              .AddJsonFile("appsettings.development.json", true, true)
+              .AddJsonFile("appsettings.production.json", true, true)
+              .Build();
 
-            //using (var fout = new System.IO.StreamWriter("output.txt"))
-            //{
-            //    string[] messageHistory = new string[100];
-            //    var index = 0;
-            //    while (true)
-            //    {
-            //        var image = capture.GetTradeChatImage();
-            //        //var processedImagePath = c.ProcessChatImage(image, Environment.CurrentDirectory);
-            //        var text = c.ConvertScreenshotToChatTextWithBitmap(image, minV, spaceOffset, 4, smallText: false);
-            //        //var text = t.ParseChatImage(processedImagePath);
-            //        foreach (var line in text)
-            //        {
-            //            if (!messageHistory.Contains(line))
-            //            {
-            //                Console.WriteLine(line);
-            //                fout.WriteLine(line);
-            //                fout.Flush();
-            //                messageHistory[index++] = line;
-            //                if (index >= messageHistory.Length)
-            //                    index = 0;
-            //            }
-            //        }
-            //    }
-            //}
+
+            Console.WriteLine("Data sender connecting to: " + config["DataSender:HostName"]);
+            var dataSender = new DataSender(new Uri(config["DataSender:HostName"]),
+                config.GetSection("DataSender:ConnectionMessages").GetChildren().Select(i => i.Value),
+                config["DataSender:MessagePrefix"],
+                config["DataSender:DebugMessagePrefix"]);
+
+            Console.WriteLine("Push enter and then switch to warframe");
+            Console.ReadLine();
+            for (int i = 0; i < 5; i++)
+            {
+                Console.Write($"\rStarting in {5 - i} seconds...");
+                System.Threading.Thread.Sleep(1000);
+            }
+
+            string[] messageHistory = new string[100];
+            var index = 0;
+            var sw = new Stopwatch();
+            while (true)
+            {
+                sw.Restart();
+                var image = capture.GetTradeChatImage();
+                var imageTime = sw.Elapsed.TotalSeconds;
+                sw.Restart();
+                //var processedImagePath = c.ProcessChatImage(image, Environment.CurrentDirectory);
+                var messages = c.ConvertScreenshotToChatTextWithBitmap(image);
+                var parseTime = sw.Elapsed.TotalSeconds;
+                sw.Restart();
+                //var text = t.ParseChatImage(processedImagePath);
+                var saveImage = false;
+                var debugName = "debug_image_" + DateTime.Now.ToString("yyyy-dd-M--HH-mm-ss-fff") + ".png";
+                foreach (var message in messages)
+                {
+                    if (!messageHistory.Contains(message))
+                    {
+                        Console.Write($"\r{parseTime:N2}s: {message}");
+                        dataSender.SendChatMessage(message);
+                        messageHistory[index++] = message;
+                        if (index >= messageHistory.Length)
+                            index = 0;
+                        var username = message.Substring(8);
+                        username = username.Substring(0, username.IndexOf(":"));
+                        if (username.Contains(" "))
+                        {
+                            dataSender.SendDebugMessage("Bad name: " + username + " see " + debugName);
+                            saveImage = true;
+                        }
+                    }
+                }
+                if (saveImage)
+                {
+                    if (!Directory.Exists(config["DEBUG:ImageDirectory"]))
+                        Directory.CreateDirectory(config["DEBUG:ImageDirectory"]);
+                    File.Copy(image, Path.Combine(config["DEBUG:ImageDirectory"], debugName));
+                }
+                var transmitTime = sw.Elapsed.TotalSeconds;
+                sw.Stop();
+                dataSender.SendTimers(imageTime, parseTime, transmitTime);
+            }
         }
 
         private static void ProcessRivens()
