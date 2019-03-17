@@ -1,4 +1,5 @@
 ﻿using Application.Interfaces;
+using Newtonsoft.Json;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.ColorSpaces;
 using SixLabors.ImageSharp.ColorSpaces.Conversion;
@@ -16,13 +17,16 @@ namespace WFImageParser
 {
     public class ChatImageCleaner : IChatImageProcessor
     {
+        private List<CharacterDetails> _scannedCharacters = new List<CharacterDetails>();
+        private Dictionary<string, List<SimpleGapPair>> _gapPairs = new Dictionary<string, List<SimpleGapPair>>();
+        private int _maxCharWidth = 0;
+
+        private static readonly string GAPSFILE = Path.Combine("ocrdata", "gaps.json");
+
         public ChatImageCleaner(CharInfo[] knownCharacters)
         {
             _knownCharacters = knownCharacters;
         }
-
-        private List<CharacterDetails> _scannedCharacters = new List<CharacterDetails>();
-        private int _maxCharWidth = 0;
 
         public ChatImageCleaner()
         {
@@ -57,6 +61,18 @@ namespace WFImageParser
                         _scannedCharacters.Add(character);
                         if (character.Width > _maxCharWidth)
                             _maxCharWidth = character.Width;
+                    }
+                }
+
+                //Load up gap pairs
+                if (File.Exists(GAPSFILE))
+                {
+                    var gapPairs = JsonConvert.DeserializeObject<SimpleGapPair[]>(File.ReadAllText(GAPSFILE));
+                    foreach (var gapPair in gapPairs)
+                    {
+                        if (!_gapPairs.ContainsKey(gapPair.Left))
+                            _gapPairs.Add(gapPair.Left, new List<SimpleGapPair>());
+                        _gapPairs[gapPair.Left].Add(gapPair);
                     }
                 }
             }
@@ -187,7 +203,7 @@ namespace WFImageParser
             }
         }
 
-        public string[] ConvertScreenshotToChatTextWithBitmap(string imagePath, float minV, int spaceOffset, int xOffset = 0, int startLine = 0, int endLine = int.MaxValue, bool smallText = true)
+        public string[] ConvertScreenshotToChatTextWithBitmap(string imagePath, float minV, int spaceOffset, int xOffset = 0, int startLine = 0, int endLine = int.MaxValue, bool smallText = true, List<GapPair> gapPairs = null)
         {
             var converter = new ColorSpaceConverter();
             var chatRect = new Rectangle(4, 763, 3236, 1350);
@@ -205,11 +221,29 @@ namespace WFImageParser
                 var results = new string[endLine - startLine];
                 for (int i = startLine; i < endLine && i < offsets.Length; i++)
                 {
-                    results[i-startLine] = ParseLineBitmapScan(minV, xOffset, converter, chatRect, rgbImage, lineHeight, offsets[i], spaceOffset);
+                    results[i - startLine] = ParseLineBitmapScan(minV, xOffset, converter, chatRect, rgbImage, lineHeight, offsets[i], spaceOffset, gapPairs);
                 }
 
-                return results;
+                return results.Where(line => line.Length > 0).ToArray();
             }
+        }
+
+        public class GapCharacter
+        {
+            public string Name { get; set; }
+            public char Value { get; set; }
+        }
+        public class SimpleGapPair
+        {
+            public string Left { get; set; }
+            public string Right { get; set; }
+            public int Gap { get; set; }
+        }
+        public class GapPair
+        {
+            public GapCharacter Left { get; set; }
+            public GapCharacter Right { get; set; }
+            public int Gap { get; set; }
         }
 
         public class ParseResult
@@ -253,7 +287,7 @@ namespace WFImageParser
                 Y = y;
             }
         }
-        private string ParseLineBitmapScan(float minV, int xOffset, ColorSpaceConverter converter, Rectangle chatRect, Image<Rgba32> rgbImage, int lineHeight, int lineOffset, float spaceWidth)
+        private string ParseLineBitmapScan(float minV, int xOffset, ColorSpaceConverter converter, Rectangle chatRect, Image<Rgba32> rgbImage, int lineHeight, int lineOffset, float spaceWidth, List<GapPair> gapPairs)
         {
             var sb = new System.Text.StringBuilder();
             var emptySlices = 0;
@@ -266,6 +300,8 @@ namespace WFImageParser
             List<Point> prevTargetCharacters = new List<Point>();
             List<Point> targetCharacterPixels = null;
             CharacterDetails lastCharacterDetails = null;
+            GapPair currentPair = new GapPair();
+            var dotSkipped = false;
             for (int x = xOffset; x < chatRect.Right; x++)
             {
                 //Advance until next pixel
@@ -440,7 +476,7 @@ namespace WFImageParser
                         //Check if we skipped past a space
                         var jaggyFreePrev = prevTargetCharacters.Where(p => prevTargetCharacters.Count(p2 => p2.X == p.X) > 1 && prevTargetCharacters.Count(p2 => p2.Y == p.Y) > 1).ToArray();
                         var jaggyFreeChar = targetCharacterPixels.Where(p => targetCharacterPixels.Count(p2 => p2.X == p.X) > 1 && targetCharacterPixels.Count(p2 => p2.Y == p.Y) > 1).ToArray();
-                        
+
                         var closestPixelX = jaggyFreeChar.Min(p => p.X);
 
                         var lastPixelX = jaggyFreePrev.Length > 0 ? jaggyFreePrev.Max(p => p.X) + 1 : lastCharacterEndX;
@@ -455,6 +491,24 @@ namespace WFImageParser
 
                         //Add character
                         sb.Append(name);
+
+                        //Temp code to generate gap file
+                        if (name == "." && !dotSkipped)
+                        {
+                            dotSkipped = true;
+                        }
+                        else if (dotSkipped)
+                        {
+                            if (currentPair.Left == null)
+                                currentPair.Left = new GapCharacter() { Name = bestFit.Item2.Name, Value = name[0] };
+                            else if (currentPair.Right == null)
+                            {
+                                currentPair.Right = new GapCharacter() { Name = bestFit.Item2.Name, Value = name[0] };
+                                currentPair.Gap = targetCharacterPixels.Min(p => p.X) - prevTargetCharacters.Max(p => p.X);
+                                gapPairs.Add(currentPair);
+                                currentPair = new GapPair();
+                            }
+                        }
 
                         lastCharacterEndX = startX + bestFit.Item2.Width;
                         prevMatchedCharacters = bestFit.Item3;
@@ -485,7 +539,8 @@ namespace WFImageParser
         {
             var groupedPixels = cleanTargetPixels.Select(p => new Point(p.X - startX, p.Y - lineOffset)).GroupBy(p => p.X).ToArray();
             var targetWidth = cleanTargetPixels.Max(p => p.X) - cleanTargetPixels.Min(p => p.X) + 1;
-            foreach (var group in _scannedCharacters.Where(c => c.Width >= 5 && c.Width <= targetWidth - 1).OrderByDescending(c => c.Width).GroupBy(c => c.Width))
+            //We are looking to resolve a jumped character so we are removing the smallest(ish) width of characters
+            foreach (var group in _scannedCharacters.Where(c => c.Width >= 5 && c.Width <= targetWidth - 4).OrderByDescending(c => c.Width).GroupBy(c => c.Width))
             {
                 var bestCoverage = float.MinValue;
                 CharacterDetails bestCharacter = null;

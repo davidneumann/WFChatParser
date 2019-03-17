@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.HLSL.CSharpVB" Version="1.0.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
     <PackageReference Include="SixLabors.ImageSharp" Version="1.0.0-beta0006" />
     <PackageReference Include="System.Drawing.Common" Version="4.5.1" />
   </ItemGroup>
@@ -226,6 +227,9 @@
     <None Update="ocrdata\R_upper.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="ocrdata\gaps.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="ocrdata\s_lower.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -292,10 +296,6 @@
     <None Update="ocrdata\}.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="ocrdata\" />
   </ItemGroup>
 
 </Project>
