@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace WFImageParser
@@ -72,7 +73,7 @@ namespace WFImageParser
                     {
                         if (!_gapPairs.ContainsKey(gapPair.Left))
                             _gapPairs.Add(gapPair.Left, new Dictionary<string, int>());
-                        if(gapPair.Gap > 0)
+                        if (gapPair.Gap > 0)
                             _gapPairs[gapPair.Left].Add(gapPair.Right, gapPair.Gap);
                         else
                             _gapPairs[gapPair.Left].Add(gapPair.Right, 0);
@@ -224,10 +225,20 @@ namespace WFImageParser
                 if (!smallText)
                     lineHeight = 36;
                 endLine = Math.Min(endLine, offsets.Length);
-                var results = new string[endLine - startLine];
+                var results = new List<string>();
+                var regex = new Regex(@"^\[\d\d:\d\d\]", RegexOptions.Compiled);
+                //var results = new string[endLine - startLine];
                 for (int i = startLine; i < endLine && i < offsets.Length; i++)
                 {
-                    results[i - startLine] = ParseLineBitmapScan(minV, xOffset, converter, chatRect, rgbImage, lineHeight, offsets[i], spaceWidth);
+                    var line = ParseLineBitmapScan(minV, xOffset, converter, chatRect, rgbImage, lineHeight, offsets[i], spaceWidth);
+                    if (regex.Match(line).Success)
+                        results.Add(line);
+                    else
+                    {
+                        var last = results.Last();
+                        results.Remove(last);
+                        results.Add(last + " " + line);
+                    }
                 }
 
                 return results.Where(line => line.Length > 0).ToArray();
