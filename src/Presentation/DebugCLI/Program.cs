@@ -10,6 +10,8 @@ using System.Runtime.InteropServices;
 using System.Text;
 using WFGameCapture;
 using WFImageParser;
+using DataStream;
+using Microsoft.Extensions.Configuration;
 
 namespace DebugCLI
 {
@@ -21,6 +23,16 @@ namespace DebugCLI
         {
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
+
+            IConfiguration config = new ConfigurationBuilder()
+              .AddJsonFile("appsettings.json", true, true)
+              .AddJsonFile("appsettings.development.json", true, true)
+              .AddJsonFile("appsettings.production.json", true, true)
+              .Build();
+
+            var dataSender = new DataSender(new Uri(config["DataSender:HostName"]), 
+                config["DataSender:ConnectionMessage"],
+                config["DataSender:MessagePrefix"]);
 
             var v = 0.5f;
 
