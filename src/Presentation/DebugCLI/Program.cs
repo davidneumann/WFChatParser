@@ -28,7 +28,7 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            //MonitorChatLive();
+            MonitorChatLive();
             //var c = new ChatImageCleaner();
             //c.SaveGreyscaleImage(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png", @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input_white.png");
             //var res = c.ConvertScreenshotToChatTextWithBitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png");
@@ -37,7 +37,7 @@ namespace DebugCLI
             //    if (line.Contains(":]"))
             //        Debugger.Break();
             //}
-            VerifyNoErrors(2);
+            //VerifyNoErrors(2);
             //var v = 0.5f;
 
             //TestDataSender();
