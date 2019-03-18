@@ -599,7 +599,7 @@ namespace WFImageParser
             int startX = int.MaxValue;
             int endX = int.MinValue;
             //Do initial walk on first pixel
-            FindCharPixels(minV, converter, rgbImage, cleanTargetPixels, firstPixel, prevMatchedCharacters);
+            FindCharPixels(minV, converter, rgbImage, cleanTargetPixels, firstPixel, prevMatchedCharacters, lineOffset, lineHeight);
 
             var midX = (int)cleanTargetPixels.Average(p => p.X);
             
@@ -607,14 +607,14 @@ namespace WFImageParser
             //Account for gaps such as in i or j
             for (int y = cleanTargetPixels.Where(p => p.X == midX).Max(p => p.Y); y < lineOffset + lineHeight; y++)
             {
-                FindCharPixels(minV, converter, rgbImage, cleanTargetPixels, new Point(midX, y), prevMatchedCharacters);
+                FindCharPixels(minV, converter, rgbImage, cleanTargetPixels, new Point(midX, y), prevMatchedCharacters, lineOffset, lineHeight);
             }
             //Scan up from new midpoint for gap characters that have a bit sticking out the front. Account for gaps like in ;
             midX = (int)cleanTargetPixels.Average(p => p.X);
             var minY = cleanTargetPixels.Min(p => p.Y);
             for (int i = lineOffset; i < minY; i++)
             {
-                FindCharPixels(minV, converter, rgbImage, cleanTargetPixels, new Point(midX, i), prevMatchedCharacters);
+                FindCharPixels(minV, converter, rgbImage, cleanTargetPixels, new Point(midX, i), prevMatchedCharacters, lineOffset, lineHeight);
             }
             //Account for crazy gaps such as in %
             var foundNewPixels = false;
@@ -625,7 +625,7 @@ namespace WFImageParser
                 cleanTargetPixels.ForEach(p => { if (p.X < startX) startX = p.X; if (p.X > endX) endX = p.X; });
                 for (int y = cleanTargetPixels.Where(p => p.X == cleanTargetPixels.Max(p2 => p2.X)).Min(p => p.Y); y < lineOffset + lineHeight * 0.75f; y++)
                 {
-                    var newFoundPixel = FindCharPixels(minV, converter, rgbImage, cleanTargetPixels, new Point(endX, y), prevMatchedCharacters);
+                    var newFoundPixel = FindCharPixels(minV, converter, rgbImage, cleanTargetPixels, new Point(endX, y), prevMatchedCharacters, lineOffset, lineHeight);
                     if (newFoundPixel)
                         foundNewPixels = true;
                 }
@@ -696,9 +696,10 @@ namespace WFImageParser
             return bestFit;
         }
 
-        private static bool FindCharPixels(float minV, ColorSpaceConverter converter, Image<Rgba32> rgbImage, List<Point> charPixels, Point checkPoint, List<Point> blacklistedPoints)
+        private static bool FindCharPixels(float minV, ColorSpaceConverter converter, Image<Rgba32> rgbImage, List<Point> charPixels, Point checkPoint, List<Point> blacklistedPoints, int lineOffset, int lineHeight)
         {
-            if (!charPixels.Any(p => p.X == checkPoint.X && p.Y == checkPoint.Y)
+            if (checkPoint.Y >= lineOffset && checkPoint.Y <= lineOffset + lineHeight
+                && !charPixels.Any(p => p.X == checkPoint.X && p.Y == checkPoint.Y)
                 && !blacklistedPoints.Any(p => p.X == checkPoint.X && p.Y == checkPoint.Y)
                 && converter.ToHsv(rgbImage[checkPoint.X, checkPoint.Y]).V > minV)
             {
@@ -718,13 +719,13 @@ namespace WFImageParser
                     charPixels.Add(checkPoint);
                     didFindNew = true;
                 }
-                var neighborAdded = FindCharPixels(minV, converter, rgbImage, charPixels, new Point(checkPoint.X - 1, checkPoint.Y), blacklistedPoints);
+                var neighborAdded = FindCharPixels(minV, converter, rgbImage, charPixels, new Point(checkPoint.X - 1, checkPoint.Y), blacklistedPoints, lineOffset, lineHeight);
                 if (neighborAdded) didFindNew = true;
-                neighborAdded = FindCharPixels(minV, converter, rgbImage, charPixels, new Point(checkPoint.X + 1, checkPoint.Y), blacklistedPoints);
+                neighborAdded = FindCharPixels(minV, converter, rgbImage, charPixels, new Point(checkPoint.X + 1, checkPoint.Y), blacklistedPoints, lineOffset, lineHeight);
                 if (neighborAdded) didFindNew = true;
-                neighborAdded = FindCharPixels(minV, converter, rgbImage, charPixels, new Point(checkPoint.X, checkPoint.Y - 1), blacklistedPoints);
+                neighborAdded = FindCharPixels(minV, converter, rgbImage, charPixels, new Point(checkPoint.X, checkPoint.Y - 1), blacklistedPoints, lineOffset, lineHeight);
                 if (neighborAdded) didFindNew = true;
-                neighborAdded = FindCharPixels(minV, converter, rgbImage, charPixels, new Point(checkPoint.X, checkPoint.Y + 1), blacklistedPoints);
+                neighborAdded = FindCharPixels(minV, converter, rgbImage, charPixels, new Point(checkPoint.X, checkPoint.Y + 1), blacklistedPoints, lineOffset, lineHeight);
                 if (neighborAdded) didFindNew = true;
                 return didFindNew;
             }
