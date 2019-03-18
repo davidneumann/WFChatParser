@@ -507,7 +507,9 @@ namespace WFImageParser
                             var jaggyFreeChar = targetCharacterPixels.Where(p => targetCharacterPixels.Count(p2 => p2.X == p.X) > 1 && targetCharacterPixels.Count(p2 => p2.Y == p.Y) > 1).ToArray();
 
                             var pixelGap = jaggyFreeChar.Min(p => p.X) - jaggyFreePrev.Max(p => p.X) + 1;
-                            if (pixelGap > _gapPairs[lastCharacterDetails.Name][bestFit.Item2.Name] + spaceWidth)
+                            if (_gapPairs.ContainsKey(lastCharacterDetails.Name) 
+                                && _gapPairs[lastCharacterDetails.Name].ContainsKey(bestFit.Item2.Name)
+                                && pixelGap > _gapPairs[lastCharacterDetails.Name][bestFit.Item2.Name] + spaceWidth)
                                 sb.Append(' ');
                         }
 
