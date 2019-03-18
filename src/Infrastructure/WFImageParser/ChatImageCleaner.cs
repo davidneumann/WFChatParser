@@ -393,6 +393,16 @@ namespace WFImageParser
                         var orig = bestFit.Item2;
                         bestFit = FindPartialMatch(minV, rgbImage, lineOffset, startX, endX, cleanTargetPixels, bestFit);
                     }
+                    else if(bestFit.Item1 < 0.7 && bestFit.Item2.Width > 4)
+                    {
+                        var fuzzyCharacter = cleanTargetPixels.Where(p => cleanTargetPixels.Count(p2 => p2.X == p.X) > 1 && cleanTargetPixels.Count(p2 => p2.Y == p.Y) > 1).ToList();
+                        if (fuzzyCharacter.Count > 0)
+                        {
+                            var newMinX = fuzzyCharacter.Min(p => p.X);
+                            var newMaxX = fuzzyCharacter.Max(p => p.X) + 1;
+                            bestFit = GuessCharacter(minV, converter, rgbImage, lineOffset, newMinX, newMaxX, fuzzyCharacter, bestFit);
+                        }
+                    }
                     //try removing some low entropy columns
                     for (int i = 0; i < 2; i++)
                     {
@@ -573,6 +583,10 @@ namespace WFImageParser
                             {
                                 characterPixelsMatched++;
                                 matchingPixels.Add(new Point(x + startX, y + lineOffset));
+                            }
+                            else if(x + startX <= targetWidth / 3 + startX && !character.VMask[x,y] && p != Point.Empty)
+                            {
+                                characterPixelsMatched--;
                             }
                         }
                     }
