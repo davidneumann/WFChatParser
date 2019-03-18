@@ -158,11 +158,11 @@ namespace WFGameCapture
             return new Texture2D(Device, textureDesc);
         }
 
-        public string GetTradeChatImage()
+        public string GetTradeChatImage(string outputPath)
         {
             var image = GetOutputAsBitmap(100);
-            image.Save("capture_0.png");
-            return System.IO.Path.Combine(Environment.CurrentDirectory, "capture_0.png");
+            image.Save(outputPath);
+            return System.IO.Path.Combine(Environment.CurrentDirectory, outputPath);
         }
 
         public string Debug()

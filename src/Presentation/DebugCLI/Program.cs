@@ -19,15 +19,19 @@ namespace DebugCLI
     {
         static string outputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Run 23\Outputs";
 
+        private static DShowCapture _gameCapture;
+
         static void Main(string[] args)
         {
+            Console.CancelKeyPress += Console_CancelKeyPress;
+
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            //MonitorChatLive();
-            var c = new ChatImageCleaner();
-            c.SaveGreyscaleImage(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png", @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input_white.png");
-            c.ConvertScreenshotToChatTextWithBitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png");
+            MonitorChatLive();
+            //var c = new ChatImageCleaner();
+            //c.SaveGreyscaleImage(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png", @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input_white.png");
+            //c.ConvertScreenshotToChatTextWithBitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png");
             //VerifyNoErrors(2);
             //var v = 0.5f;
 
@@ -92,6 +96,12 @@ namespace DebugCLI
             //}
 
             //DoFullParse(0.49999999f);
+        }
+
+        private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
+        {
+            if (_gameCapture != null)
+                _gameCapture.Dispose();
         }
 
         private static int VerifyNoErrors(int verboseLevel = 0, bool fastFail = false, int xOffset = 4, float minV = 0.5f, int spaceWidth = 6)
@@ -284,7 +294,7 @@ namespace DebugCLI
         private static void MonitorChatLive(float minV = 0.5f, int spaceOffset = 8)
         {
             Console.WriteLine("Starting up game capture");
-            var capture = new GameCapture();
+            _gameCapture = new DShowCapture(4096, 2160);
             //var c = new ChatImageCleaner(JsonConvert.DeserializeObject<CharInfo[]>("chars.json"));
             Console.WriteLine("Starting up image parser");
             var c = new ChatImageCleaner();
@@ -320,14 +330,14 @@ namespace DebugCLI
                 sw.Restart();
                 for (int i = 6; i >= 0; i--)
                 {
-                    var curFile = Path.Combine(Environment.CurrentDirectory, "capture_" + i + ".png");
-                    var lastFile = Path.Combine(Environment.CurrentDirectory, "capture_" + (i+1) + ".png");
+                    var curFile = Path.Combine(config["DEBUG:ImageDirectory"], "capture_" + i + ".png");
+                    var lastFile = Path.Combine(config["DEBUG:ImageDirectory"], "capture_" + (i+1) + ".png");
                     if (File.Exists(lastFile))
                         File.Delete(lastFile);
                     if (File.Exists(curFile))
                         File.Move(curFile, lastFile);
                 }
-                var image = capture.GetTradeChatImage();
+                var image = gc.GetTradeChatImage(Path.Combine(config["DEBUG:ImageDirectory"], "capture_0.png"));
                 var imageTime = sw.Elapsed.TotalSeconds;
                 sw.Restart();
                 //var processedImagePath = c.ProcessChatImage(image, Environment.CurrentDirectory);
