@@ -11,6 +11,9 @@ namespace DataStream
         private readonly string _debugMessagePrefix;
         private WebSocket _webSocket;
 
+        public event EventHandler RequestToKill;
+        public event EventHandler<SaveEventArgs> RequestSaveAll;
+
         public DataSender(Uri websocketHostname, IEnumerable<string> connectionMessages, string messagePrefix, string debugMessagePrefix)
         {
             _websocketHostname = websocketHostname;
@@ -34,8 +37,15 @@ namespace DataStream
 
         private void _webSocket_OnMessage(object sender, MessageEventArgs e)
         {
-            if (e.Data.Substring(e.Data.LastIndexOf(":")+1).Trim() == "KILL")
-                Environment.Exit(0);
+            if (e.Data.Substring(e.Data.LastIndexOf(":") + 1).Trim() == "KILL")
+            {
+                RequestToKill?.Invoke(this, EventArgs.Empty);
+            }
+            else if(e.Data.Substring(e.Data.LastIndexOf(":") + 1).Trim().StartsWith("SAVE"))
+            {
+                var name = e.Data.Substring(e.Data.IndexOf(":SAVE") + 5).Trim();
+                RequestSaveAll?.Invoke(this, new SaveEventArgs(name));
+            }
         }
 
         public void Dispose()
@@ -62,6 +72,16 @@ namespace DataStream
         {
             if (_debugMessagePrefix != null)
                 _webSocket.Send(_debugMessagePrefix + message);
+        }
+    }
+
+    public class SaveEventArgs : EventArgs
+    {
+        public string Name { get; internal set; }
+
+        public SaveEventArgs(string name)
+        {
+            this.Name = name;
         }
     }
 }

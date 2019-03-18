@@ -100,6 +100,11 @@ namespace DebugCLI
 
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
         {
+            CleanUp();
+        }
+
+        private static void CleanUp()
+        {
             if (_gameCapture != null)
                 _gameCapture.Dispose();
         }
@@ -314,6 +319,28 @@ namespace DebugCLI
                 config["DataSender:MessagePrefix"],
                 config["DataSender:DebugMessagePrefix"]);
 
+            dataSender.RequestToKill += (s, e) =>
+            {
+                CleanUp();
+                Environment.Exit(0);
+            };
+            dataSender.RequestSaveAll += (s, e) =>
+            {
+                for (int i = 6; i >= 0; i--)
+                {
+                    var dir = Path.Combine(config["DEBUG:ImageDirectory"], "Saves");
+                    if (e.Name != null && e.Name.Length > 0)
+                        dir = Path.Combine(config["DEBUG:ImageDirectory"], "Saves", e.Name);
+                    if (!Directory.Exists(dir))
+                        Directory.CreateDirectory(dir);
+
+                    var curFile = Path.Combine(config["DEBUG:ImageDirectory"], "capture_" + i + ".png");
+                    var copyFile = Path.Combine(dir, "capture_" + i + ".png");
+                    if (File.Exists(curFile))
+                        File.Copy(curFile, copyFile, true);
+                }
+            };
+
             Console.WriteLine("Push enter and then switch to warframe");
             Console.ReadLine();
             for (int i = 0; i < 5; i++)
@@ -337,7 +364,7 @@ namespace DebugCLI
                     if (File.Exists(curFile))
                         File.Move(curFile, lastFile);
                 }
-                var image = gc.GetTradeChatImage(Path.Combine(config["DEBUG:ImageDirectory"], "capture_0.png"));
+                var image = _gameCapture.GetTradeChatImage(Path.Combine(config["DEBUG:ImageDirectory"], "capture_0.png"));
                 var imageTime = sw.Elapsed.TotalSeconds;
                 sw.Restart();
                 //var processedImagePath = c.ProcessChatImage(image, Environment.CurrentDirectory);
