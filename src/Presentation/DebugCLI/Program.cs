@@ -28,7 +28,7 @@ namespace DebugCLI
 
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
-
+            
             //TrainOnImages();
             MonitorChatLive();
             //var c = new ChatImageCleaner();

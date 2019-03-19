@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using WebSocketSharp;
 
 namespace DataStream
@@ -73,11 +74,28 @@ namespace DataStream
         //    _webSocket.Connect();
         //}
 
+        private BackgroundWorker _reconnectWorker = new BackgroundWorker();
+        private void Reconnect()
+        {
+            if(!_reconnectWorker.IsBusy && (_webSocket == null || _webSocket.ReadyState == WebSocketState.Closed || _webSocket.ReadyState == WebSocketState.Closing))
+            {
+                _reconnectWorker.Dispose();
+                _reconnectWorker = new BackgroundWorker();
+                _reconnectWorker.DoWork += (o, e2) => {
+                    if (DateTimeOffset.Now.Subtract(_lastReconnectTime).TotalSeconds < 5)
+                        System.Threading.Thread.Sleep((int)(5 - DateTimeOffset.Now.Subtract(_lastReconnectTime).TotalSeconds) * 1000);
+                    if (_webSocket == null || (_webSocket.ReadyState != WebSocketState.Connecting && _webSocket.ReadyState != WebSocketState.Open))
+                        InitWebsocket();
+                };
+                _reconnectWorker.RunWorkerAsync();
+            }
+        }
+
         private void _webSocket_OnClose(object sender, CloseEventArgs e)
         {
             if (_shouldReconnect)
             {
-                InitWebsocket();
+                Reconnect();
             }
         }
 
@@ -110,18 +128,24 @@ namespace DataStream
                 else
                     _webSocket.Send(message);
             }
+            else if (_shouldReconnect)
+                Reconnect();
         }
 
         public void SendTimers(double imageTime, double parseTime, double transmitTime, int newMessageCount)
         {
             if (_debugMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
                 _webSocket.Send(_debugMessagePrefix + $"Image capture: {imageTime:00.00} Parse time: {parseTime:00.00} TransmitTime: {transmitTime:0.000} New messages {newMessageCount} {newMessageCount / parseTime}/s");
+            else if (_shouldReconnect)
+                Reconnect();
         }
 
         public void SendDebugMessage(string message)
         {
             if (_debugMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
                 _webSocket.Send(_debugMessagePrefix + message);
+            else if (_shouldReconnect)
+                Reconnect();
         }
     }
 
