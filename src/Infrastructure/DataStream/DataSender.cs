@@ -26,14 +26,24 @@ namespace DataStream
             _shouldReconnect = shouldReconnect;
             _connectionStrings = connectionMessages;
 
-            _webSocket = new WebSocket(_websocketHostname.AbsoluteUri);
-            _webSocket.OnMessage += _webSocket_OnMessage;
-            _webSocket.OnOpen += _webSocket_OnOpen;
+            InitWebsocket();
 
             if (_shouldReconnect)
                 _webSocket.OnClose += _webSocket_OnClose;
 
             ConnectWebsocket();
+        }
+
+        private void InitWebsocket()
+        {
+            if (_webSocket != null)
+            {
+                _webSocket.Close();
+                ((IDisposable)_webSocket).Dispose();
+            }
+            _webSocket = new WebSocket(_websocketHostname.AbsoluteUri);
+            _webSocket.OnMessage += _webSocket_OnMessage;
+            _webSocket.OnOpen += _webSocket_OnOpen;
         }
 
         private void _webSocket_OnOpen(object sender, EventArgs e)
@@ -56,7 +66,10 @@ namespace DataStream
         private void _webSocket_OnClose(object sender, CloseEventArgs e)
         {
             if (_shouldReconnect)
+            {
+                InitWebsocket();
                 ConnectWebsocket();
+            }
         }
 
         private void _webSocket_OnMessage(object sender, MessageEventArgs e)
