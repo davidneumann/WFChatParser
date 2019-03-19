@@ -107,20 +107,8 @@ namespace DebugCLI
 
         private static void TrainOnImages()
         {
-            var trainingImagePaths =
-                Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Training Inputs").Where(f => f.EndsWith(".png")).ToArray();
-            var trainingTextPaths =
-                Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Training Inputs").Where(f => f.EndsWith(".txt")).ToArray();
-
-            var c = new ChatImageCleaner();
-            var characters = new List<ChatImageCleaner.TrainingSampleCharacter>();
-            for (int i = 0; i < trainingImagePaths.Length; i++)
-            {
-                var correctText = File.ReadAllLines(trainingTextPaths[i]).Select(line => line.Replace(" ", "").ToArray()).ToList();
-                var results = c.TrainOnImage(trainingImagePaths[i], correctText, xOffset: 253);
-                results.SelectMany(list => list).ToList().ForEach(t => characters.Add(t));
-            }
-            var groupedChars = characters.GroupBy(t => t.Character);
+            var trainer = new OCRTrainer();
+            trainer.TrainOnImages(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Training Inputs", "newdata");
         }
 
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
@@ -384,7 +372,7 @@ namespace DebugCLI
                 for (int i = 6; i >= 0; i--)
                 {
                     var curFile = Path.Combine(config["DEBUG:ImageDirectory"], "capture_" + i + ".png");
-                    var lastFile = Path.Combine(config["DEBUG:ImageDirectory"], "capture_" + (i+1) + ".png");
+                    var lastFile = Path.Combine(config["DEBUG:ImageDirectory"], "capture_" + (i + 1) + ".png");
                     if (File.Exists(lastFile))
                         File.Delete(lastFile);
                     if (File.Exists(curFile))

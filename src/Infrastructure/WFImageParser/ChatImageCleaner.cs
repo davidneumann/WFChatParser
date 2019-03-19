@@ -182,6 +182,47 @@ namespace WFImageParser
             }
         }
 
+        public void MakeGreyscaleImageFromArray(string outputDir, char character, byte[,] pixels)
+        {
+            var name = character.ToString();
+            if (name.ToUpper() != name.ToLower() && name.ToUpper() == name)
+                name = name + "_upper";
+            else if (name.ToUpper() != name.ToLower() && name.ToLower() == name)
+                name = name + "_lower";
+            if (name == ":")
+                name = "colon";
+            else if (name == "*")
+                name = "asterix";
+            else if (name == ">")
+                name = "gt";
+            else if (name == "<")
+                name = "lt";
+            else if (name == "\\")
+                name = "backSlash";
+            else if (name == "?")
+                name = "question";
+            else if (name == "/")
+                name = "forwardSlash";
+            else if (name == "|")
+                name = "pipe";
+            else if (name == "," || name[0] == ',')
+                name = "comma";
+            using (var image = new Image<Rgba32>(pixels.GetLength(0), pixels.GetLength(1)))
+            {
+                for (int x = 0; x < image.Width; x++)
+                {
+                    for (int y = 0; y < image.Height; y++)
+                    {
+                        image[x, y] = new Rgba32(pixels[x, y], pixels[x, y], pixels[x, y]);
+                    }
+                }
+
+                if (!Directory.Exists(outputDir))
+                    Directory.CreateDirectory(outputDir);
+                image.Save(Path.Combine(outputDir, name + ".png"));
+            }
+        }
+
         //private int[] _lineOffsets = new int[] { 5, 55, 105, 154, 204, 253, 303, 352, 402, 452, 501, 551, 600, 650, 700, 749, 799, 848, 898, 948, 997, 1047, 1096, 1146, 1195, 1245, 1295 };
         private int[] _lineOffsetsSmall = new int[] { 737, 776, 815, 853, 892, 931, 970, 1009, 1048, 1087, 1125, 1164, 1203, 1242, 1280, 1320, 1359, 1397, 1436, 1475, 1514, 1553, 1592, 1631, 1669, 1708, 1747, 1786, 1825, 1864, 1903, 1942, 1980, 2019, 2058 };
         private int[] _lineOffsets = new int[] { 768, 818, 868, 917, 967, 1016, 1066, 1115, 1165, 1215, 1264, 1314, 1363, 1413, 1463, 1512, 1562, 1611, 1661, 1711, 1760, 1810, 1859, 1909, 1958, 2008, 2058 };
@@ -1037,92 +1078,6 @@ namespace WFImageParser
                     onChar = false;
                 }
             }
-        }
-
-        public class TrainingSampleCharacter
-        {
-            public List<Point> Pixels;
-            public int Width;
-            public char Character;
-        }
-        public List<List<TrainingSampleCharacter>> TrainOnImage(string imagePath, List<char[]> referenceLines, int xOffset = 4, float minV = 0.5f)
-        {
-            var results = new List<List<TrainingSampleCharacter>>();
-            using (Image<Rgba32> rgbImage = Image.Load(imagePath))
-            {
-                var converter = new ColorSpaceConverter();
-                var chatRect = new Rectangle(4, 763, 3236, 1350);
-                var offsets = _lineOffsets;
-                var lineHeight = 36;
-                var refLineIndex = 0;
-                for (int i = 0; i < offsets.Length; i++)
-                {
-                    var line = TrainOnLine(minV, referenceLines[refLineIndex], xOffset, converter, chatRect, rgbImage, lineHeight, offsets[i]);
-                    if (line.Count > 0 && line.Count == referenceLines[i].Length)
-                    {
-                        results.Add(line);
-                        refLineIndex++;
-                    }
-                    else if (line.Count == referenceLines[i].Length)
-                    {
-                        throw new Exception("Reference lines do not match up with found characters");
-                    }
-                }
-            }
-
-            return results;
-        }
-
-        private List<TrainingSampleCharacter> TrainOnLine(float minV, char[] referenceCharacters, int xOffset, ColorSpaceConverter converter, Rectangle chatRect, Image<Rgba32> rgbImage, int lineHeight, int lineOffset)
-        {
-            var startX = xOffset;
-            var endX = xOffset;
-            List<Point> targetCharacterPixels = null;
-            var refIndex = 0;
-            var results = new List<TrainingSampleCharacter>();
-            for (int x = xOffset; x < chatRect.Right; x++)
-            {
-                targetCharacterPixels = new List<Point>();
-                //Advance until next pixel
-                var firstPixel = Point.Empty;
-                for (int i = endX; i < chatRect.Right; i++)
-                {
-                    var pixelFound = false;
-                    for (int y = lineOffset; y < lineOffset + lineHeight; y++)
-                    {
-                        if (converter.ToHsv(rgbImage[i, y]).V > minV)
-                        {
-                            x = i;
-                            pixelFound = true;
-                            firstPixel = new Point(i, y);
-                            break;
-                        }
-                    }
-
-                    if (pixelFound)
-                    {
-                        break;
-                    }
-                }
-
-                //Make sure we didn't escape
-                if (x >= chatRect.Right || firstPixel == Point.Empty)
-                    break;
-
-                startX = chatRect.Right;
-                FindCharacterPoints(minV, converter, ref chatRect, rgbImage, lineHeight, lineOffset, new List<Point>(), firstPixel, targetCharacterPixels);
-
-                targetCharacterPixels.ForEach(p => { if (p.X < startX) startX = p.X; if (p.X >= endX) endX = p.X + 1; });
-
-                results.Add(new TrainingSampleCharacter() { Pixels = targetCharacterPixels, Width = endX - startX, Character = referenceCharacters[refIndex++] });
-                x = endX;
-            }
-            if(referenceCharacters.Length > refIndex)
-            {
-                throw new Exception("Length missmatch on training line");
-            }
-
-            return results;
         }
 
         public string VerifyInput(string imagePath, float minV, int xOffset = 0)
