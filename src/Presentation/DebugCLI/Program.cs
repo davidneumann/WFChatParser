@@ -30,10 +30,10 @@ namespace DebugCLI
                 Directory.CreateDirectory(outputDir);
 
             //TrainOnImages();
-            MonitorChatLive();
-            //var c = new ChatImageCleaner();
-            //c.SaveGreyscaleImage(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png", @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input_white.png");
-            //var res = c.ConvertScreenshotToChatTextWithBitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png", minV:0.45f);
+            //MonitorChatLive();
+            var c = new ChatImageCleaner();
+            c.SaveGreyscaleImage(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png", @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input_white.png", 0.44f);
+            var res = c.ConvertScreenshotToChatTextWithBitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png", minV: 0.44f);
             //foreach (var line in res)
             //{
             //    if (line.Contains(":]"))
@@ -309,7 +309,7 @@ namespace DebugCLI
             Console.WriteLine("Jobs done");
         }
 
-        private static void MonitorChatLive(float minV = 0.5f, int spaceOffset = 8)
+        private static void MonitorChatLive(float minV = 0.44f, int spaceOffset = 8)
         {
             Console.WriteLine("Starting up game capture");
             _gameCapture = new DShowCapture(4096, 2160);

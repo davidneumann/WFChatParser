@@ -19,7 +19,7 @@ namespace WFImageParser
             public int Width;
             public char Character;
         }
-        public List<List<TrainingSampleCharacter>> TrainOnImage(string imagePath, List<char[]> referenceLines, int xOffset = 4, float minV = 0.5f)
+        public List<List<TrainingSampleCharacter>> TrainOnImage(string imagePath, List<char[]> referenceLines, int xOffset = 4, float minV = 0.44f)
         {
             var results = new List<List<TrainingSampleCharacter>>();
             using (Image<Rgba32> rgbImage = Image.Load(imagePath))

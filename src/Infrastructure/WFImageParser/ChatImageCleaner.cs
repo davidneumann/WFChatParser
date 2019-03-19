@@ -995,7 +995,7 @@ namespace WFImageParser
             return chars.ToString();
         }
 
-        public void SaveGreyscaleImage(string imagePath, string outputPath, float minV = 0.5f)
+        public void SaveGreyscaleImage(string imagePath, string outputPath, float minV = 0.44f)
         {
             var converter = new ColorSpaceConverter();
 
