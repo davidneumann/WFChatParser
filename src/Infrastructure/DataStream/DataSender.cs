@@ -28,6 +28,7 @@ namespace DataStream
 
             _webSocket = new WebSocket(_websocketHostname.AbsoluteUri);
             _webSocket.OnMessage += _webSocket_OnMessage;
+            _webSocket.OnOpen += _webSocket_OnOpen;
 
             if (_shouldReconnect)
                 _webSocket.OnClose += _webSocket_OnClose;
@@ -35,19 +36,21 @@ namespace DataStream
             ConnectWebsocket();
         }
 
+        private void _webSocket_OnOpen(object sender, EventArgs e)
+        {
+            foreach (var message in _connectionStrings)
+            {
+                _webSocket.Send(message);
+            }
+        }
+
         private void ConnectWebsocket()
         {
             if (DateTimeOffset.Now.Subtract(_lastReconnectTime).TotalSeconds < 5)
                 return;
+            _lastReconnectTime = DateTimeOffset.Now;
 
             _webSocket.Connect();
-            if (_webSocket.ReadyState == WebSocketState.Open)
-            {
-                foreach (var message in _connectionStrings)
-                {
-                    _webSocket.Send(message);
-                }
-            }
         }
 
         private void _webSocket_OnClose(object sender, CloseEventArgs e)
