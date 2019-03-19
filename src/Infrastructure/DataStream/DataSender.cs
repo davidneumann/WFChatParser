@@ -9,16 +9,21 @@ namespace DataStream
         private readonly Uri _websocketHostname;
         private readonly string _messagePrefix;
         private readonly string _debugMessagePrefix;
+        private readonly IEnumerable<string> _connectionStrings;
         private WebSocket _webSocket;
 
         public event EventHandler RequestToKill;
         public event EventHandler<SaveEventArgs> RequestSaveAll;
 
-        public DataSender(Uri websocketHostname, IEnumerable<string> connectionMessages, string messagePrefix, string debugMessagePrefix)
+        private bool _shouldReconnect;
+
+        public DataSender(Uri websocketHostname, IEnumerable<string> connectionMessages, string messagePrefix, string debugMessagePrefix, bool shouldReconnect)
         {
             _websocketHostname = websocketHostname;
             _messagePrefix = messagePrefix;
             _debugMessagePrefix = debugMessagePrefix;
+            _shouldReconnect = shouldReconnect;
+            _connectionStrings = connectionMessages;
             ConnectWebsocket(connectionMessages);
         }
 
@@ -27,12 +32,20 @@ namespace DataStream
             _webSocket = new WebSocket(_websocketHostname.AbsoluteUri);
 
             _webSocket.OnMessage += _webSocket_OnMessage;
+            if(_shouldReconnect)
+                _webSocket.OnClose += _webSocket_OnClose;
 
             _webSocket.Connect();
             foreach (var message in connectionMessages)
             {
                 _webSocket.Send(message);
             }
+        }
+
+        private void _webSocket_OnClose(object sender, CloseEventArgs e)
+        {
+            if (_shouldReconnect)
+                ConnectWebsocket(_connectionStrings);
         }
 
         private void _webSocket_OnMessage(object sender, MessageEventArgs e)
@@ -50,12 +63,15 @@ namespace DataStream
 
         public void Dispose()
         {
+            _shouldReconnect = false;
             _webSocket.Close();
             ((IDisposable)_webSocket).Dispose();
         }
 
         public void SendChatMessage(string message)
         {
+            if (!_webSocket.IsAlive && _shouldReconnect)
+                ConnectWebsocket(_connectionStrings);
             if (_messagePrefix != null && _messagePrefix.Length > 0)
                 _webSocket.Send(_messagePrefix + message);
             else
@@ -64,12 +80,16 @@ namespace DataStream
 
         public void SendTimers(double imageTime, double parseTime, double transmitTime, int newMessageCount)
         {
+            if (!_webSocket.IsAlive && _shouldReconnect)
+                ConnectWebsocket(_connectionStrings);
             if (_debugMessagePrefix != null)
                 _webSocket.Send(_debugMessagePrefix + $"Image capture: {imageTime:00.00} Parse time: {parseTime:00.00} TransmitTime: {transmitTime:0.000} New messages {newMessageCount} {newMessageCount / parseTime}/s");
         }
 
         public void SendDebugMessage(string message)
         {
+            if (!_webSocket.IsAlive && _shouldReconnect)
+                ConnectWebsocket(_connectionStrings);
             if (_debugMessagePrefix != null)
                 _webSocket.Send(_debugMessagePrefix + message);
         }

@@ -330,7 +330,8 @@ namespace DebugCLI
             var dataSender = new DataSender(new Uri(config["DataSender:HostName"]),
                 config.GetSection("DataSender:ConnectionMessages").GetChildren().Select(i => i.Value),
                 config["DataSender:MessagePrefix"],
-                config["DataSender:DebugMessagePrefix"]);
+                config["DataSender:DebugMessagePrefix"],
+                true);
 
             dataSender.RequestToKill += (s, e) =>
             {
@@ -415,11 +416,18 @@ namespace DebugCLI
                         messageHistory[index++] = message;
                         if (index >= messageHistory.Length)
                             index = 0;
-                        var username = message.Substring(8);
-                        username = username.Substring(0, username.IndexOf(":"));
-                        if (username.Contains(" ") || username.Contains(@"\/") || username.Contains("]") || username.Contains("[") || badNameRegex.Match(username).Success)
+                        try
                         {
-                            dataSender.SendDebugMessage("Bad name: " + username + " see " + debugName);
+                            var username = message.Substring(8);
+                            username = username.Substring(0, username.IndexOf(":"));
+                            if (username.Contains(" ") || username.Contains(@"\/") || username.Contains("]") || username.Contains("[") || badNameRegex.Match(username).Success)
+                            {
+                                dataSender.SendDebugMessage("Bad name: " + username + " see " + debugName);
+                                saveImage = true;
+                            }
+                        }
+                        catch {
+                            dataSender.SendDebugMessage("Bad name: that could not be found see " + debugName);
                             saveImage = true;
                         }
                     }
