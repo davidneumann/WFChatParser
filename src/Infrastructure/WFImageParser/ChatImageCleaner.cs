@@ -250,7 +250,7 @@ namespace WFImageParser
             }
         }
 
-        public string[] ConvertScreenshotToChatTextWithBitmap(string imagePath, int xOffset = 4, int startLine = 0, int endLine = int.MaxValue, bool smallText = false, float minV = 0.5f, int spaceWidth = 6)
+        public string[] ConvertScreenshotToChatTextWithBitmap(string imagePath, int xOffset = 4, int startLine = 0, int endLine = int.MaxValue, bool smallText = false, float minV = 0.45f, int spaceWidth = 6)
         {
             if (smallText)
                 throw new NotImplementedException();
@@ -410,12 +410,19 @@ namespace WFImageParser
                 if (endX > startX && targetMask.PixelCount > 10)
                 {
                     var bestFit = FastGuessCharacter(targetMask, lineOffset);
-                    if(bestFit.Item1 < 0.7)
+                    if(bestFit.Item1 < 0.7 && targetMask.Width > 4)
                     {
                         var partialMatch = FastGuessPartialCharacter(targetMask, lineOffset);
                         //We need to be sure that this new match is solid and not just better than the existing one
                         if (partialMatch != null && partialMatch.Item1 > 0.7 && partialMatch.Item1 > bestFit.Item1)
                             bestFit = partialMatch;
+                    }
+                    else if(bestFit.Item1 < 0.7)
+                    {
+                        var fuzzyMask = OCRHelpers.FindCharacterMask(firstPixel, rgbImage, prevMatchedCharacters, minV-0.2f, chatRect.Left, chatRect.Right, lineOffset, lineOffset + lineHeight);
+                        var fuzzFit = FastGuessCharacter(targetMask, lineOffset);
+                        if (fuzzFit.Item1 > bestFit.Item1)
+                            bestFit = fuzzFit;
                     }
                     //bestFit = GuessCharacter(minV, converter, rgbImage, lineOffset, startX, endX, cleanTargetPixels, bestFit);
                     //var origStartX = startX;
@@ -635,6 +642,51 @@ namespace WFImageParser
                         {
                             characterPixelsMatched += character.WeightMappings[x, y];
                             matchingPixels.Add(new Point(x + targetMask.MinX, y + lineOffset));
+                        }
+                    }
+                }
+
+                //In English an empty horizontal line conveys a huge amount of meaning, i ! j, so penalize heavily for not getting that right
+                if (character.Width <= 6 || targetMask.Width <= 6)
+                {
+                    for (int y = 0; y < character.Height; y++)
+                    {
+                        var isTargetEmpty = true;
+                        for (int x = 0; x < targetMask.Width; x++)
+                        {
+                            if (targetMask.Mask[x, y])
+                            {
+                                isTargetEmpty = false;
+                                break;
+                            }
+                        }
+
+                        if (isTargetEmpty)
+                        {
+                            for (int x = 0; x < character.Width; x++)
+                            {
+                                if (character.VMask[x, y])
+                                    characterPixelsMatched--;
+                            }
+                        }
+
+                        var isCharacterEmpty = true;
+                        for (int x = 0; x < character.Width; x++)
+                        {
+                            if (character.VMask[x, y])
+                            {
+                                isCharacterEmpty = false;
+                                break;
+                            }
+                        }
+
+                        if (isCharacterEmpty)
+                        {
+                            for (int x = 0; x < targetMask.Width; x++)
+                            {
+                                if (targetMask.Mask[x, y])
+                                    characterPixelsMatched--;
+                            }
                         }
                     }
                 }
@@ -956,6 +1008,30 @@ namespace WFImageParser
                     var pixel = rgbImage[x, y];
                     var hsvPixel = converter.ToHsv(pixel);
                     if (hsvPixel.V > minV)
+                    {
+                        rgbImage[x, y] = Rgba32.Black;
+                    }
+                    else
+                        rgbImage[x, y] = Rgba32.White;
+                }
+
+                rgbImage.Save(outputPath);
+            }
+        }
+
+        public void SaveGreyscaleImage(string imagePath, string outputPath, float minV, float maxV)
+        {
+            var converter = new ColorSpaceConverter();
+
+            using (Image<Rgba32> rgbImage = Image.Load(imagePath))
+            {
+                for (int i = 0; i < rgbImage.Width * rgbImage.Height; i++)
+                {
+                    var x = i % rgbImage.Width;
+                    var y = i / rgbImage.Width;
+                    var pixel = rgbImage[x, y];
+                    var hsvPixel = converter.ToHsv(pixel);
+                    if (hsvPixel.V > minV && hsvPixel.V < maxV)
                     {
                         rgbImage[x, y] = Rgba32.Black;
                     }

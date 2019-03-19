@@ -110,7 +110,7 @@ namespace WFImageParser
             for (int i = 0; i < trainingImagePaths.Length; i++)
             {
                 var correctText = File.ReadAllLines(trainingTextPaths[i]).Select(line => line.Replace(" ", "").ToArray()).ToList();
-                var results = TrainOnImage(trainingImagePaths[i], correctText, xOffset);
+                var results = TrainOnImage(trainingImagePaths[i], correctText, xOffset, minV:0.45f);
                 results.SelectMany(list => list).ToList().ForEach(t => characters.Add(t));
             }
             var groupedChars = characters.GroupBy(t => t.Character);

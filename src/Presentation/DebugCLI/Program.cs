@@ -30,16 +30,16 @@ namespace DebugCLI
                 Directory.CreateDirectory(outputDir);
 
             //TrainOnImages();
-            //MonitorChatLive();
+            MonitorChatLive();
             //var c = new ChatImageCleaner();
             //c.SaveGreyscaleImage(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png", @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input_white.png");
-            //var res = c.ConvertScreenshotToChatTextWithBitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png");
+            //var res = c.ConvertScreenshotToChatTextWithBitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png", minV:0.45f);
             //foreach (var line in res)
             //{
             //    if (line.Contains(":]"))
             //        Debugger.Break();
             //}
-            VerifyNoErrors(2);
+            //VerifyNoErrors(2);
             //var v = 0.5f;
 
             //TestDataSender();
@@ -143,9 +143,9 @@ namespace DebugCLI
                 var masterKeyFile = trainingImages[k];
                 var correctResults = File.ReadAllLines(trainingText[k]).Select(line => line.Trim()).ToArray();
                 var c = new ChatImageCleaner();
-                c.SaveGreyscaleImage(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name));
+                c.SaveGreyscaleImage(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name), minV:0.45f);
                 var smallOffset = 183;
-                var result = c.ConvertScreenshotToChatTextWithBitmap(masterKeyFile, xOffset: xOffset, smallText: false).ToArray();
+                var result = c.ConvertScreenshotToChatTextWithBitmap(masterKeyFile, xOffset: xOffset, smallText: false, minV:0.45f).ToArray();
 
                 Console.WriteLine("Expected");
                 Console.WriteLine("Recieved");
@@ -378,7 +378,13 @@ namespace DebugCLI
                     if (File.Exists(curFile))
                         File.Move(curFile, lastFile);
                 }
-                var image = _gameCapture.GetTradeChatImage(Path.Combine(config["DEBUG:ImageDirectory"], "capture_0.png"));
+                var image = string.Empty;
+                try
+                {
+                    image = _gameCapture.GetTradeChatImage(Path.Combine(config["DEBUG:ImageDirectory"], "capture_0.png"));
+                    
+                }
+                catch { continue; }
                 var imageTime = sw.Elapsed.TotalSeconds;
                 sw.Restart();
                 //var processedImagePath = c.ProcessChatImage(image, Environment.CurrentDirectory);
