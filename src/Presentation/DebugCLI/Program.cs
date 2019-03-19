@@ -12,6 +12,7 @@ using WFGameCapture;
 using WFImageParser;
 using DataStream;
 using Microsoft.Extensions.Configuration;
+using System.Text.RegularExpressions;
 
 namespace DebugCLI
 {
@@ -357,6 +358,7 @@ namespace DebugCLI
             string[] messageHistory = new string[100];
             var index = 0;
             var sw = new Stopwatch();
+            var badNameRegex = new Regex("[^-A-Za-z0-9._]");
             while (true)
             {
                 sw.Restart();
@@ -381,10 +383,12 @@ namespace DebugCLI
                 if (!Directory.Exists(config["DEBUG:ImageDirectory"]))
                     Directory.CreateDirectory(config["DEBUG:ImageDirectory"]);
                 var debugName = Path.Combine(config["DEBUG:ImageDirectory"], "debug_image_" + DateTime.Now.ToString("yyyy-dd-M--HH-mm-ss-fff") + ".png");
+                var newMessags = 0;
                 foreach (var message in messages)
                 {
                     if (!messageHistory.Contains(message))
                     {
+                        newMessags++;
                         Console.Write($"\r{parseTime:N2}s: {message}");
                         dataSender.SendChatMessage(message);
                         messageHistory[index++] = message;
@@ -392,7 +396,7 @@ namespace DebugCLI
                             index = 0;
                         var username = message.Substring(8);
                         username = username.Substring(0, username.IndexOf(":"));
-                        if (username.Contains(" "))
+                        if (username.Contains(" ") || username.Contains(@"\/") || username.Contains("]") || username.Contains("[") || badNameRegex.Match(username).Success)
                         {
                             dataSender.SendDebugMessage("Bad name: " + username + " see " + debugName);
                             saveImage = true;
@@ -405,7 +409,7 @@ namespace DebugCLI
                 }
                 var transmitTime = sw.Elapsed.TotalSeconds;
                 sw.Stop();
-                dataSender.SendTimers(imageTime, parseTime, transmitTime);
+                dataSender.SendTimers(imageTime, parseTime, transmitTime, newMessags);
             }
         }
 

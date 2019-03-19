@@ -62,10 +62,10 @@ namespace DataStream
                 _webSocket.Send(message);
         }
 
-        public void SendTimers(double imageTime, double parseTime, double transmitTime)
+        public void SendTimers(double imageTime, double parseTime, double transmitTime, int newMessageCount)
         {
             if (_debugMessagePrefix != null)
-                _webSocket.Send(_debugMessagePrefix + $"Image capture: {imageTime:00.00} Parse time: {parseTime:00.00} TransmitTime: {transmitTime:0.000}");
+                _webSocket.Send(_debugMessagePrefix + $"Image capture: {imageTime:00.00} Parse time: {parseTime:00.00} TransmitTime: {transmitTime:0.000} New messages {newMessageCount} {newMessageCount / parseTime}/s");
         }
 
         public void SendDebugMessage(string message)

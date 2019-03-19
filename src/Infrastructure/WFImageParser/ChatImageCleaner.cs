@@ -233,7 +233,7 @@ namespace WFImageParser
                     var line = ParseLineBitmapScan(minV, xOffset, converter, chatRect, rgbImage, lineHeight, offsets[i], spaceWidth);
                     if (regex.Match(line).Success)
                         results.Add(line);
-                    else if(results.Count > 0)
+                    else if (results.Count > 0)
                     {
                         var last = results.Last();
                         results.Remove(last);
@@ -393,7 +393,7 @@ namespace WFImageParser
                         var orig = bestFit.Item2;
                         bestFit = FindPartialMatch(minV, rgbImage, lineOffset, startX, endX, cleanTargetPixels, bestFit);
                     }
-                    else if(bestFit.Item1 < 0.7 && bestFit.Item2.Width > 4)
+                    else if (bestFit.Item1 < 0.7 && bestFit.Item2.Width > 4)
                     {
                         var fuzzyCharacter = cleanTargetPixels.Where(p => cleanTargetPixels.Count(p2 => p2.X == p.X) > 1 && cleanTargetPixels.Count(p2 => p2.Y == p.Y) > 1).ToList();
                         if (fuzzyCharacter.Count > 0)
@@ -517,7 +517,7 @@ namespace WFImageParser
                             var jaggyFreeChar = targetCharacterPixels.Where(p => targetCharacterPixels.Count(p2 => p2.X == p.X) > 1 && targetCharacterPixels.Count(p2 => p2.Y == p.Y) > 1).ToArray();
 
                             var pixelGap = jaggyFreeChar.Min(p => p.X) - jaggyFreePrev.Max(p => p.X) + 1;
-                            if (_gapPairs.ContainsKey(lastCharacterDetails.Name) 
+                            if (_gapPairs.ContainsKey(lastCharacterDetails.Name)
                                 && _gapPairs[lastCharacterDetails.Name].ContainsKey(bestFit.Item2.Name)
                                 && pixelGap > _gapPairs[lastCharacterDetails.Name][bestFit.Item2.Name] + spaceWidth)
                                 sb.Append(' ');
@@ -584,7 +584,7 @@ namespace WFImageParser
                                 characterPixelsMatched++;
                                 matchingPixels.Add(new Point(x + startX, y + lineOffset));
                             }
-                            else if(x + startX <= targetWidth / 3 + startX && !character.VMask[x,y] && p != Point.Empty)
+                            else if (x + startX <= targetWidth / 3 + startX && !character.VMask[x, y] && p != Point.Empty)
                             {
                                 characterPixelsMatched--;
                             }
@@ -616,7 +616,7 @@ namespace WFImageParser
             FindCharPixels(minV, converter, rgbImage, cleanTargetPixels, firstPixel, prevMatchedCharacters, lineOffset, lineHeight);
 
             var midX = (int)cleanTargetPixels.Average(p => p.X);
-            
+
             //Scan down from the initial midpoint for gap characters
             //Account for gaps such as in i or j
             for (int y = cleanTargetPixels.Where(p => p.X == midX).Max(p => p.Y); y < lineOffset + lineHeight; y++)
