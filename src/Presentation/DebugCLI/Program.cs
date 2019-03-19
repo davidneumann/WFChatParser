@@ -143,9 +143,9 @@ namespace DebugCLI
                 var masterKeyFile = trainingImages[k];
                 var correctResults = File.ReadAllLines(trainingText[k]).Select(line => line.Trim()).ToArray();
                 var c = new ChatImageCleaner();
-                c.SaveGreyscaleImage(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name), minV:0.45f);
+                c.SaveGreyscaleImage(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name), minV:0.44f);
                 var smallOffset = 183;
-                var result = c.ConvertScreenshotToChatTextWithBitmap(masterKeyFile, xOffset: xOffset, smallText: false, minV:0.45f).ToArray();
+                var result = c.ConvertScreenshotToChatTextWithBitmap(masterKeyFile, xOffset: xOffset, smallText: false, minV:0.44f).ToArray();
 
                 Console.WriteLine("Expected");
                 Console.WriteLine("Recieved");
@@ -397,7 +397,7 @@ namespace DebugCLI
                 var imageTime = sw.Elapsed.TotalSeconds;
                 sw.Restart();
                 //var processedImagePath = c.ProcessChatImage(image, Environment.CurrentDirectory);
-                var messages = c.ConvertScreenshotToChatTextWithBitmap(image);
+                var messages = c.ConvertScreenshotToChatTextWithBitmap(image, minV:0.44f);
                 var parseTime = sw.Elapsed.TotalSeconds;
                 sw.Restart();
                 //var text = t.ParseChatImage(processedImagePath);
