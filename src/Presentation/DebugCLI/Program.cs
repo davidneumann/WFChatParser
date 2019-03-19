@@ -339,19 +339,23 @@ namespace DebugCLI
             };
             dataSender.RequestSaveAll += (s, e) =>
             {
-                for (int i = 6; i >= 0; i--)
+                try
                 {
-                    var dir = Path.Combine(config["DEBUG:ImageDirectory"], "Saves");
-                    if (e.Name != null && e.Name.Length > 0)
-                        dir = Path.Combine(config["DEBUG:ImageDirectory"], "Saves", e.Name);
-                    if (!Directory.Exists(dir))
-                        Directory.CreateDirectory(dir);
+                    for (int i = 6; i >= 0; i--)
+                    {
+                        var dir = Path.Combine(config["DEBUG:ImageDirectory"], "Saves");
+                        if (e.Name != null && e.Name.Length > 0)
+                            dir = Path.Combine(config["DEBUG:ImageDirectory"], "Saves", e.Name);
+                        if (!Directory.Exists(dir))
+                            Directory.CreateDirectory(dir);
 
-                    var curFile = Path.Combine(config["DEBUG:ImageDirectory"], "capture_" + i + ".png");
-                    var copyFile = Path.Combine(dir, "capture_" + i + ".png");
-                    if (File.Exists(curFile))
-                        File.Copy(curFile, copyFile, true);
+                        var curFile = Path.Combine(config["DEBUG:ImageDirectory"], "capture_" + i + ".png");
+                        var copyFile = Path.Combine(dir, "capture_" + i + ".png");
+                        if (File.Exists(curFile))
+                            File.Copy(curFile, copyFile, true);
+                    }
                 }
+                catch { }
             };
 
             Console.WriteLine("Push enter and then switch to warframe");
@@ -371,12 +375,16 @@ namespace DebugCLI
                 sw.Restart();
                 for (int i = 6; i >= 0; i--)
                 {
-                    var curFile = Path.Combine(config["DEBUG:ImageDirectory"], "capture_" + i + ".png");
-                    var lastFile = Path.Combine(config["DEBUG:ImageDirectory"], "capture_" + (i + 1) + ".png");
-                    if (File.Exists(lastFile))
-                        File.Delete(lastFile);
-                    if (File.Exists(curFile))
-                        File.Move(curFile, lastFile);
+                    try
+                    {
+                        var curFile = Path.Combine(config["DEBUG:ImageDirectory"], "capture_" + i + ".png");
+                        var lastFile = Path.Combine(config["DEBUG:ImageDirectory"], "capture_" + (i + 1) + ".png");
+                        if (File.Exists(lastFile))
+                            File.Delete(lastFile);
+                        if (File.Exists(curFile))
+                            File.Move(curFile, lastFile);
+                    }
+                    catch { }
                 }
                 var image = string.Empty;
                 try
