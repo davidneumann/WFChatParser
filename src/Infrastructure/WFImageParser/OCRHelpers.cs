@@ -104,16 +104,37 @@ namespace WFImageParser
             }
         }
 
-        internal static bool[,] FindCharacterMask(Point firstPixel, Image<Rgba32> image, List<Point> blacklistedPoints, float minV, int minX, int maxX, int minY, int maxY)
+        internal static TargetMask FindCharacterMask(Point firstPixel, Image<Rgba32> image, List<Point> blacklistedPoints, float minV, int minX, int maxX, int minY, int maxY)
         {
             var points = FindCharacterPixelPoints(firstPixel, image, blacklistedPoints, minV, minX, maxX, minY, maxY);
             var minPointX = points.Min(p => p.X);
-            var mask = new bool[points.Max(p => p.X) - points.Min(p => p.X), maxY - minY];
+            var mask = new bool[points.Max(p => p.X) - points.Min(p => p.X)+1, maxY - minY];
+            var pixelCount = 0;
             foreach (var p in points)
             {
                 mask[p.X - minPointX, p.Y - minY] = true;
+                pixelCount++;
             }
-            return mask;
+            return new TargetMask(mask, points.Max(p => p.X), minPointX, points.Max(p => p.X) - minPointX + 1, pixelCount);
+        }
+
+        internal static int NeighborCount(TargetMask prevTargetMask, int x, int y)
+        {
+            var width = prevTargetMask.Mask.GetLength(0);
+            var height = prevTargetMask.Mask.GetLength(1);
+            var mask = prevTargetMask.Mask;
+            if (!prevTargetMask.Mask[x, y])
+                return 0;
+            var neighborCount = 0;
+            if (x - 1 > 0 && mask[x - 1, y])
+                neighborCount++;
+            if (x + 1 < width && mask[x + 1, y])
+                neighborCount++;
+            if (y - 1 > 0 && mask[x, y - 1])
+                neighborCount++;
+            if (y + 1 < height && mask[x, y + 1])
+                neighborCount++;
+            return neighborCount;
         }
     }
 }

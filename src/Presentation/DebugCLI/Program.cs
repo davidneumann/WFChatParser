@@ -29,7 +29,7 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            TrainOnImages();
+            //TrainOnImages();
             //MonitorChatLive();
             //var c = new ChatImageCleaner();
             //c.SaveGreyscaleImage(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png", @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input_white.png");
@@ -39,7 +39,7 @@ namespace DebugCLI
             //    if (line.Contains(":]"))
             //        Debugger.Break();
             //}
-            //VerifyNoErrors(2);
+            VerifyNoErrors(2);
             //var v = 0.5f;
 
             //TestDataSender();
@@ -122,7 +122,7 @@ namespace DebugCLI
                 _gameCapture.Dispose();
         }
 
-        private static int VerifyNoErrors(int verboseLevel = 0, bool fastFail = false, int xOffset = 4, float minV = 0.5f, int spaceWidth = 6)
+        private static int VerifyNoErrors(int verboseLevel = 0, bool fastFail = false, int xOffset = 4)
         {
             var trainingImages = new List<string>();
             Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Validation Inputs").Where(f => f.EndsWith(".png")).ToList().ForEach(f => trainingImages.Add(f));
@@ -143,9 +143,9 @@ namespace DebugCLI
                 var masterKeyFile = trainingImages[k];
                 var correctResults = File.ReadAllLines(trainingText[k]).Select(line => line.Trim()).ToArray();
                 var c = new ChatImageCleaner();
-                c.SaveGreyscaleImage(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name), minV);
+                c.SaveGreyscaleImage(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name));
                 var smallOffset = 183;
-                var result = c.ConvertScreenshotToChatTextWithBitmap(masterKeyFile, minV: minV, spaceWidth: spaceWidth, xOffset: xOffset, smallText: false).ToArray();
+                var result = c.ConvertScreenshotToChatTextWithBitmap(masterKeyFile, xOffset: xOffset, smallText: false).ToArray();
 
                 Console.WriteLine("Expected");
                 Console.WriteLine("Recieved");
@@ -210,7 +210,7 @@ namespace DebugCLI
 
             if (verboseLevel >= 2)
             {
-                Console.WriteLine("V: " + minV + " errors: " + errorCount);
+                Console.WriteLine("Errors: " + errorCount);
             }
             return errorCount;
         }
@@ -500,22 +500,22 @@ namespace DebugCLI
                     //    sb.Append(' ');
                     //}
                     //fout.WriteLine(sb.ToString().Trim());
-                    sb.Append('.');
-                    sb.Append('[');
-                    sb.Append(character);
-                    sb.AppendLine();
+                    //sb.Append('.');
+                    //sb.Append('[');
+                    //sb.Append(character);
+                    //sb.AppendLine();
                 }
-                fout.WriteLine(sb.ToString() + "[");
-                //for (int i = 0; i < count; i++)
-                //{
-                //    sb.Clear();
-                //    foreach (var character in chars.OrderBy(x => rand.Next()))
-                //    {
-                //        sb.Append(character);
-                //    }
-                //    Console.WriteLine(sb.ToString().Trim() + "[" + "\n");
-                //    fout.WriteLine(sb.ToString() + "[");
-                //}
+                //fout.WriteLine(sb.ToString() + " [");
+                for (int i = 0; i < count; i++)
+                {
+                    sb.Clear();
+                    foreach (var character in chars.OrderBy(x => rand.Next()))
+                    {
+                        sb.Append(character + " ");
+                    }
+                    Console.WriteLine(sb.ToString().Trim() + "[" + "\n");
+                    fout.WriteLine(sb.ToString() + "[");
+                }
             }
         }
 
