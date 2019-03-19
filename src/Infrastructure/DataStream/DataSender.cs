@@ -24,19 +24,20 @@ namespace DataStream
             _debugMessagePrefix = debugMessagePrefix;
             _shouldReconnect = shouldReconnect;
             _connectionStrings = connectionMessages;
-            ConnectWebsocket(connectionMessages);
-        }
 
-        private void ConnectWebsocket(IEnumerable<string> connectionMessages)
-        {
             _webSocket = new WebSocket(_websocketHostname.AbsoluteUri);
-
             _webSocket.OnMessage += _webSocket_OnMessage;
-            if(_shouldReconnect)
+
+            if (_shouldReconnect)
                 _webSocket.OnClose += _webSocket_OnClose;
 
+            ConnectWebsocket();
+        }
+
+        private void ConnectWebsocket()
+        {
             _webSocket.Connect();
-            foreach (var message in connectionMessages)
+            foreach (var message in _connectionStrings)
             {
                 _webSocket.Send(message);
             }
@@ -45,7 +46,7 @@ namespace DataStream
         private void _webSocket_OnClose(object sender, CloseEventArgs e)
         {
             if (_shouldReconnect)
-                ConnectWebsocket(_connectionStrings);
+                ConnectWebsocket();
         }
 
         private void _webSocket_OnMessage(object sender, MessageEventArgs e)
@@ -71,7 +72,7 @@ namespace DataStream
         public void SendChatMessage(string message)
         {
             if (!_webSocket.IsAlive && _shouldReconnect)
-                ConnectWebsocket(_connectionStrings);
+                ConnectWebsocket();
             if (_messagePrefix != null && _messagePrefix.Length > 0)
                 _webSocket.Send(_messagePrefix + message);
             else
@@ -81,7 +82,7 @@ namespace DataStream
         public void SendTimers(double imageTime, double parseTime, double transmitTime, int newMessageCount)
         {
             if (!_webSocket.IsAlive && _shouldReconnect)
-                ConnectWebsocket(_connectionStrings);
+                ConnectWebsocket();
             if (_debugMessagePrefix != null)
                 _webSocket.Send(_debugMessagePrefix + $"Image capture: {imageTime:00.00} Parse time: {parseTime:00.00} TransmitTime: {transmitTime:0.000} New messages {newMessageCount} {newMessageCount / parseTime}/s");
         }
@@ -89,7 +90,7 @@ namespace DataStream
         public void SendDebugMessage(string message)
         {
             if (!_webSocket.IsAlive && _shouldReconnect)
-                ConnectWebsocket(_connectionStrings);
+                ConnectWebsocket();
             if (_debugMessagePrefix != null)
                 _webSocket.Send(_debugMessagePrefix + message);
         }
