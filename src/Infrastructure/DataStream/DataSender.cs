@@ -17,6 +17,7 @@ namespace DataStream
 
         private bool _shouldReconnect;
 
+        private DateTimeOffset _lastReconnectTime = DateTimeOffset.MinValue;
         public DataSender(Uri websocketHostname, IEnumerable<string> connectionMessages, string messagePrefix, string debugMessagePrefix, bool shouldReconnect)
         {
             _websocketHostname = websocketHostname;
@@ -36,10 +37,16 @@ namespace DataStream
 
         private void ConnectWebsocket()
         {
+            if (DateTimeOffset.Now.Subtract(_lastReconnectTime).TotalSeconds < 5)
+                return;
+
             _webSocket.Connect();
-            foreach (var message in _connectionStrings)
+            if (_webSocket.ReadyState == WebSocketState.Open)
             {
-                _webSocket.Send(message);
+                foreach (var message in _connectionStrings)
+                {
+                    _webSocket.Send(message);
+                }
             }
         }
 
