@@ -381,7 +381,7 @@ namespace WFImageParser
                     cleanTargetPixels.RemoveAll(p => p.X >= endX);
                 }
 
-                if (endX > startX)
+                if (endX > startX && cleanTargetPixels.Count > 10)
                 {
                     var bestFit = new Tuple<float, CharacterDetails, List<Point>>(float.MinValue, null, null);
                     bestFit = GuessCharacter(minV, converter, rgbImage, lineOffset, startX, endX, cleanTargetPixels, bestFit);
@@ -1037,6 +1037,92 @@ namespace WFImageParser
                     onChar = false;
                 }
             }
+        }
+
+        public class TrainingSampleCharacter
+        {
+            public List<Point> Pixels;
+            public int Width;
+            public char Character;
+        }
+        public List<List<TrainingSampleCharacter>> TrainOnImage(string imagePath, List<char[]> referenceLines, int xOffset = 4, float minV = 0.5f)
+        {
+            var results = new List<List<TrainingSampleCharacter>>();
+            using (Image<Rgba32> rgbImage = Image.Load(imagePath))
+            {
+                var converter = new ColorSpaceConverter();
+                var chatRect = new Rectangle(4, 763, 3236, 1350);
+                var offsets = _lineOffsets;
+                var lineHeight = 36;
+                var refLineIndex = 0;
+                for (int i = 0; i < offsets.Length; i++)
+                {
+                    var line = TrainOnLine(minV, referenceLines[refLineIndex], xOffset, converter, chatRect, rgbImage, lineHeight, offsets[i]);
+                    if (line.Count > 0 && line.Count == referenceLines[i].Length)
+                    {
+                        results.Add(line);
+                        refLineIndex++;
+                    }
+                    else if (line.Count == referenceLines[i].Length)
+                    {
+                        throw new Exception("Reference lines do not match up with found characters");
+                    }
+                }
+            }
+
+            return results;
+        }
+
+        private List<TrainingSampleCharacter> TrainOnLine(float minV, char[] referenceCharacters, int xOffset, ColorSpaceConverter converter, Rectangle chatRect, Image<Rgba32> rgbImage, int lineHeight, int lineOffset)
+        {
+            var startX = xOffset;
+            var endX = xOffset;
+            List<Point> targetCharacterPixels = null;
+            var refIndex = 0;
+            var results = new List<TrainingSampleCharacter>();
+            for (int x = xOffset; x < chatRect.Right; x++)
+            {
+                targetCharacterPixels = new List<Point>();
+                //Advance until next pixel
+                var firstPixel = Point.Empty;
+                for (int i = endX; i < chatRect.Right; i++)
+                {
+                    var pixelFound = false;
+                    for (int y = lineOffset; y < lineOffset + lineHeight; y++)
+                    {
+                        if (converter.ToHsv(rgbImage[i, y]).V > minV)
+                        {
+                            x = i;
+                            pixelFound = true;
+                            firstPixel = new Point(i, y);
+                            break;
+                        }
+                    }
+
+                    if (pixelFound)
+                    {
+                        break;
+                    }
+                }
+
+                //Make sure we didn't escape
+                if (x >= chatRect.Right || firstPixel == Point.Empty)
+                    break;
+
+                startX = chatRect.Right;
+                FindCharacterPoints(minV, converter, ref chatRect, rgbImage, lineHeight, lineOffset, new List<Point>(), firstPixel, targetCharacterPixels);
+
+                targetCharacterPixels.ForEach(p => { if (p.X < startX) startX = p.X; if (p.X >= endX) endX = p.X + 1; });
+
+                results.Add(new TrainingSampleCharacter() { Pixels = targetCharacterPixels, Width = endX - startX, Character = referenceCharacters[refIndex++] });
+                x = endX;
+            }
+            if(referenceCharacters.Length > refIndex)
+            {
+                throw new Exception("Length missmatch on training line");
+            }
+
+            return results;
         }
 
         public string VerifyInput(string imagePath, float minV, int xOffset = 0)

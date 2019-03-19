@@ -29,7 +29,8 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            MonitorChatLive();
+            TrainOnImages();
+            //MonitorChatLive();
             //var c = new ChatImageCleaner();
             //c.SaveGreyscaleImage(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png", @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input_white.png");
             //var res = c.ConvertScreenshotToChatTextWithBitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png");
@@ -102,6 +103,24 @@ namespace DebugCLI
             //}
 
             //DoFullParse(0.49999999f);
+        }
+
+        private static void TrainOnImages()
+        {
+            var trainingImagePaths =
+                Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Training Inputs").Where(f => f.EndsWith(".png")).ToArray();
+            var trainingTextPaths =
+                Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Training Inputs").Where(f => f.EndsWith(".txt")).ToArray();
+
+            var c = new ChatImageCleaner();
+            var characters = new List<ChatImageCleaner.TrainingSampleCharacter>();
+            for (int i = 0; i < trainingImagePaths.Length; i++)
+            {
+                var correctText = File.ReadAllLines(trainingTextPaths[i]).Select(line => line.Replace(" ", "").ToArray()).ToList();
+                var results = c.TrainOnImage(trainingImagePaths[i], correctText, xOffset: 253);
+                results.SelectMany(list => list).ToList().ForEach(t => characters.Add(t));
+            }
+            var groupedChars = characters.GroupBy(t => t.Character);
         }
 
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
