@@ -30,10 +30,10 @@ namespace DebugCLI
                 Directory.CreateDirectory(outputDir);
 
             //TrainOnImages();
-            //MonitorChatLive();
-            var c = new ChatImageCleaner();
-            c.SaveGreyscaleImage(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png", @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input_white.png", 0.44f);
-            var res = c.ConvertScreenshotToChatTextWithBitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png", minV: 0.44f);
+            MonitorChatLive();
+            //var c = new ChatImageCleaner();
+            //c.SaveGreyscaleImage(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png", @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input_white.png", 0.44f);
+            //var res = c.ConvertScreenshotToChatTextWithBitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png", minV: 0.44f);
             //foreach (var line in res)
             //{
             //    if (line.Contains(":]"))

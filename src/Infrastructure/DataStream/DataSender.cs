@@ -28,22 +28,28 @@ namespace DataStream
 
             InitWebsocket();
 
-            if (_shouldReconnect)
-                _webSocket.OnClose += _webSocket_OnClose;
-
-            ConnectWebsocket();
+            //ConnectWebsocket();
         }
 
         private void InitWebsocket()
         {
+            if (DateTimeOffset.Now.Subtract(_lastReconnectTime).TotalSeconds < 5)
+                return;
+            _lastReconnectTime = DateTimeOffset.Now;
             if (_webSocket != null)
             {
-                _webSocket.Close();
-                ((IDisposable)_webSocket).Dispose();
+                if (_webSocket.ReadyState != WebSocketState.Closed)
+                {
+                    _webSocket.Close();
+                    ((IDisposable)_webSocket).Dispose();
+                }
             }
             _webSocket = new WebSocket(_websocketHostname.AbsoluteUri);
             _webSocket.OnMessage += _webSocket_OnMessage;
             _webSocket.OnOpen += _webSocket_OnOpen;
+            if (_shouldReconnect)
+                _webSocket.OnClose += _webSocket_OnClose;
+            _webSocket.Connect();
         }
 
         private void _webSocket_OnOpen(object sender, EventArgs e)
@@ -54,21 +60,24 @@ namespace DataStream
             }
         }
 
-        private void ConnectWebsocket()
-        {
-            if (DateTimeOffset.Now.Subtract(_lastReconnectTime).TotalSeconds < 5)
-                return;
-            _lastReconnectTime = DateTimeOffset.Now;
+        //private void ConnectWebsocket()
+        //{
+        //    if (DateTimeOffset.Now.Subtract(_lastReconnectTime).TotalSeconds < 5 || _webSocket.ReadyState == WebSocketState.Open)
+        //        return;
+        //    if(_webSocket.ReadyState != WebSocketState.Open && DateTimeOffset.Now.Subtract(_lastReconnectTime).TotalSeconds >= 5)
+        //    { 
+        //        InitWebsocket();
+        //    }
+        //    _lastReconnectTime = DateTimeOffset.Now;
 
-            _webSocket.Connect();
-        }
+        //    _webSocket.Connect();
+        //}
 
         private void _webSocket_OnClose(object sender, CloseEventArgs e)
         {
             if (_shouldReconnect)
             {
                 InitWebsocket();
-                ConnectWebsocket();
             }
         }
 
@@ -94,27 +103,24 @@ namespace DataStream
 
         public void SendChatMessage(string message)
         {
-            if (!_webSocket.IsAlive && _shouldReconnect)
-                ConnectWebsocket();
-            if (_messagePrefix != null && _messagePrefix.Length > 0)
-                _webSocket.Send(_messagePrefix + message);
-            else
-                _webSocket.Send(message);
+            if (_webSocket.ReadyState == WebSocketState.Open)
+            {
+                if (_messagePrefix != null && _messagePrefix.Length > 0)
+                    _webSocket.Send(_messagePrefix + message);
+                else
+                    _webSocket.Send(message);
+            }
         }
 
         public void SendTimers(double imageTime, double parseTime, double transmitTime, int newMessageCount)
         {
-            if (!_webSocket.IsAlive && _shouldReconnect)
-                ConnectWebsocket();
-            if (_debugMessagePrefix != null)
+            if (_debugMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
                 _webSocket.Send(_debugMessagePrefix + $"Image capture: {imageTime:00.00} Parse time: {parseTime:00.00} TransmitTime: {transmitTime:0.000} New messages {newMessageCount} {newMessageCount / parseTime}/s");
         }
 
         public void SendDebugMessage(string message)
         {
-            if (!_webSocket.IsAlive && _shouldReconnect)
-                ConnectWebsocket();
-            if (_debugMessagePrefix != null)
+            if (_debugMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
                 _webSocket.Send(_debugMessagePrefix + message);
         }
     }
