@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -24,6 +25,7 @@ namespace WFImageParser
         private int _maxCharWidth = 0;
 
         private static readonly string GAPSFILE = Path.Combine("ocrdata", "gaps.json");
+        private static readonly string[] _suffixes = new string[] { "ada]", "ata]", "bin]", "bo]", "cak]", "can]", "con]", "cron]", "cta]", "des]", "dex]", "do]", "dra]", "lis]", "mag]", "nak]", "nem]", "nent]", "nok]", "pha]", "sus]", "tak]", "tia]", "tin]", "tio]", "tis]", "ton]", "tor]", "tox]", "tron]" };
 
         public ChatParser()
         {
@@ -83,23 +85,27 @@ namespace WFImageParser
         //private int[] _lineOffsets = new int[] { 5, 55, 105, 154, 204, 253, 303, 352, 402, 452, 501, 551, 600, 650, 700, 749, 799, 848, 898, 948, 997, 1047, 1096, 1146, 1195, 1245, 1295 };
         //private int[] _lineOffsetsSmall = new int[] { 737, 776, 815, 853, 892, 931, 970, 1009, 1048, 1087, 1125, 1164, 1203, 1242, 1280, 1320, 1359, 1397, 1436, 1475, 1514, 1553, 1592, 1631, 1669, 1708, 1747, 1786, 1825, 1864, 1903, 1942, 1980, 2019, 2058 };
         private int[] _lineOffsets = new int[] { 768, 818, 868, 917, 967, 1016, 1066, 1115, 1165, 1215, 1264, 1314, 1363, 1413, 1463, 1512, 1562, 1611, 1661, 1711, 1760, 1810, 1859, 1909, 1958, 2008, 2058 };
-        
+
         public class SimpleGapPair
         {
             public string Left { get; set; }
             public string Right { get; set; }
             public int Gap { get; set; }
         }
-        
-        private string ParseLineBitmapScan(float minV, int xOffset, ColorSpaceConverter converter, Rectangle chatRect, Image<Rgba32> rgbImage, int lineHeight, int lineOffset, float spaceWidth)
+
+        private LineParseResult ParseLineBitmapScan(float minV, int xOffset, ColorSpaceConverter converter, Rectangle chatRect, Image<Rgba32> rgbImage, int lineHeight, int lineOffset, float spaceWidth)
         {
-            var sb = new System.Text.StringBuilder();
+            var rawMessage = new System.Text.StringBuilder();
+            var message = new StringBuilder();
             var startX = xOffset;
             var endX = xOffset;
             var lastCharacterEndX = startX;
             List<Point> prevMatchedCharacters = new List<Point>();
             TargetMask prevTargetMask = null;
             CharacterDetails lastCharacterDetails = null;
+            var wordStartX = -1;
+            var currentWord = new StringBuilder();
+            List<ClickPoint> clickPoints = new List<ClickPoint>();
             for (int x = xOffset; x < chatRect.Right; x++)
             {
                 //Advance until next pixel
@@ -129,6 +135,8 @@ namespace WFImageParser
                     break;
 
                 var targetMask = OCRHelpers.FindCharacterMask(firstPixel, rgbImage, prevMatchedCharacters, minV, chatRect.Left, chatRect.Right, lineOffset, lineOffset + lineHeight);
+                if (wordStartX < 0)
+                    wordStartX = targetMask.MinX;
 
                 startX = targetMask.MinX;
                 endX = targetMask.MaxX + 1;
@@ -220,11 +228,16 @@ namespace WFImageParser
                             if (_gapPairs.ContainsKey(lastCharacterDetails.Name)
                                 && _gapPairs[lastCharacterDetails.Name].ContainsKey(bestFit.Item2.Name)
                                 && pixelGap > _gapPairs[lastCharacterDetails.Name][bestFit.Item2.Name] + spaceWidth)
-                                sb.Append(' ');
+                            {
+                                AppendSpace(rgbImage, lineHeight, lineOffset, rawMessage, message, wordStartX, currentWord, clickPoints);
+                                wordStartX = targetMask.MinX;
+
+                            }
                         }
 
                         //Add character
-                        sb.Append(name);
+                        currentWord.Append(name);
+                        rawMessage.Append(name);
 
                         lastCharacterEndX = startX + bestFit.Item2.Width;
                         prevMatchedCharacters = bestFit.Item3;
@@ -239,7 +252,7 @@ namespace WFImageParser
                     }
                     else //failed to ID the character, skip it
                     {
-                        sb.Append(' ');
+                        AppendSpace(rgbImage, lineHeight, lineOffset, rawMessage, message, wordStartX, currentWord, clickPoints);
                         x = lastCharacterEndX = endX = targetMask.MaxX + 1;
                     }
                 }
@@ -248,22 +261,68 @@ namespace WFImageParser
                     endX = startX = Math.Max(endX + 1, targetMask.MaxX + 1);
                 }
             }
-            if (sb.Length > 0)
+            if (rawMessage.Length > 0)
             {
-                return sb.ToString().Trim();
+                AppendSpace(rgbImage, lineHeight, lineOffset, rawMessage, message, wordStartX, currentWord, clickPoints);
+                var result = new LineParseResult()
+                {
+                    ClickPoints = clickPoints,
+                    RawMessage = rawMessage.ToString(),
+                    Message = message.ToString()
+                };
+                return result;
             }
-            else return string.Empty;
+            else return new LineParseResult();
         }
+
+        private static void AppendSpace(Image<Rgba32> rgbImage, int lineHeight, int lineOffset, StringBuilder rawMessage, StringBuilder message, int wordStartX, StringBuilder currentWord, List<ClickPoint> clickPoints)
+        {
+            var foundRiven = CheckNewWordForRiven(lineHeight, lineOffset, wordStartX, currentWord.ToString(), clickPoints, rgbImage, message.Length);
+            if (foundRiven)
+                message.Append("[" + (clickPoints.Count - 1) + "]");
+            message.Append(currentWord.ToString() + ' ');
+            currentWord.Clear();
+            rawMessage.Append(' ');
+        }
+
+        private static bool CheckNewWordForRiven(int lineHeight, int lineOffset, int wordStartX, string currentWord, List<ClickPoint> clickPoints, Image<Rgba32> image, int wordIndex)
+        {
+            var foundRiven = false;
+            var converter = new ColorSpaceConverter();
+            if (_suffixes.Any(s => currentWord.Contains(s)))
+            {
+                Point point = Point.Empty;
+                for (int x = Math.Max(0, wordStartX - 5); x < wordStartX + 5 && x < image.Width; x++)
+                {
+                    for (int y = lineOffset + lineHeight / 2 - 5; y < lineOffset + lineHeight / 2 + 5 && y < image.Height; y++)
+                    {
+                        var hsvPixel = converter.ToHsv(image[x, y]);
+                        if (hsvPixel.V > 0.3f && hsvPixel.H >= 176.3 && hsvPixel.H <= 255)
+                        {
+                            foundRiven = true;
+                            point = new Point(x, y);
+                            break;
+                        }
+                    }
+                    if (foundRiven)
+                        break;
+                }
+                if (foundRiven)
+                    clickPoints.Add(new ClickPoint() { X = point.X, Y = point.Y, Index = wordIndex });
+            }
+            return foundRiven;
+        }
+
         private Tuple<float, CharacterDetails, List<Point>> FastGuessCharacter(TargetMask targetMask, int lineOffset)
         {
             var targetWidth = targetMask.Width;
 
             var cannidates = _scannedCharacters;
             //Try to only look at similiar sized characters when we are looking at a medium width character.
-            if (targetWidth <= _maxCharWidth / 2 && targetWidth > Math.Round(_maxCharWidth * 0.15))
+            if (targetWidth <= _maxCharWidth / 2 && targetWidth > Math.Ceiling(_maxCharWidth * 0.15))
                 cannidates = _scannedCharacters.Where(c => c.Width >= targetWidth * 0.8f && c.Width <= targetWidth * 1.2f).ToList();
-            else if (targetWidth <= Math.Round(_maxCharWidth * 0.15)) //Only smalls
-                cannidates = _scannedCharacters.Where(c => c.Width <= _maxCharWidth * 0.15).ToList();
+            else if (targetWidth <= Math.Ceiling(_maxCharWidth * 0.15)) //Only smalls
+                cannidates = _scannedCharacters.Where(c => c.Width <= Math.Ceiling(_maxCharWidth * 0.15)).ToList();
             //Else it will be anything as we may be dealing with a partial match
 
             var bestMatchConf = 0f;
@@ -403,26 +462,28 @@ namespace WFImageParser
                 var offsets = _lineOffsets;
                 var lineHeight = 36;
                 var endLine = offsets.Length;
-                var results = new List<string>();
+                var results = new List<LineParseResult>();
                 var regex = new Regex(@"^\[\d\d:\d\d\]", RegexOptions.Compiled);
                 //var results = new string[endLine - startLine];
                 for (int i = 0; i < endLine && i < offsets.Length; i++)
                 {
                     var line = ParseLineBitmapScan(0.44f, xOffset, converter, chatRect, rgbImage, lineHeight, offsets[i], 6);
-                    if (regex.Match(line).Success)
+                    if (regex.Match(line.RawMessage).Success)
                         results.Add(line);
                     else if (results.Count > 0)
                     {
                         var last = results.Last();
-                        results.Remove(last);
-                        results.Add(last + " " + line);
+                        //results.Remove(last);
+                        //results.Add(last + " " + line);
+                        last.Append(line);
                     }
                 }
 
                 var badNameRegex = new Regex("[^-A-Za-z0-9._]");
                 //[00:00] f: .
-                return results.Where(line => line.Length >= 10).Select(m =>
+                return results.Where(line => line.RawMessage.Length >= 10).Select(result =>
                 {
+                    var m = result.RawMessage;
                     string debugReason = null;
                     var timestamp = m.Substring(0, 7).Trim();
                     var username = m.Substring(8).Trim();
@@ -472,6 +533,49 @@ namespace WFImageParser
             public int Width { get; set; }
             public int Height { get; set; }
             public float TotalWeights { get; internal set; }
+        }
+
+        private class LineParseResult
+        {
+            public string RawMessage { get; set; }
+            public string Message { get; set; }
+            public List<ClickPoint> ClickPoints { get; set; }
+
+            public void Append(LineParseResult lineParseResult)
+            {
+                this.RawMessage = this.RawMessage.Trim();
+                lineParseResult.RawMessage = lineParseResult.RawMessage.Trim();
+                this.Message = this.Message.Trim();
+                lineParseResult.Message = lineParseResult.Message.Trim();
+
+                this.RawMessage += " " + lineParseResult.RawMessage;
+                var message = lineParseResult.Message;
+                var addedRivens = 0;
+                for (int i = 0; i < message.Length;)
+                {
+                    if (message[i] == '[' && i + 1 < message.Length && Char.IsDigit(message[i + 1]))
+                    {
+                        var id = Int32.Parse(message.Substring(i + 1, message.IndexOf(']', i + 1) - i - 1));
+                        var newId = this.ClickPoints.Count + addedRivens;
+                        message = message.Replace("[" + id + "]", "[" + newId + "]");
+                        var p = lineParseResult.ClickPoints[addedRivens];
+                        lineParseResult.ClickPoints[0] = new ClickPoint() { Index = this.Message.Length + i + 1, X = p.X, Y = p.Y };
+                        i = i + ("[" + newId + "]").ToString().Length;
+                        addedRivens++;
+                    }
+                    else
+                        i++;
+                }
+                this.ClickPoints.AddRange(lineParseResult.ClickPoints);
+                this.Message += " " + message;
+            }
+        }
+
+        public struct ClickPoint
+        {
+            public int X;
+            public int Y;
+            public int Index;
         }
     }
 }
