@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using WarframeDriver;
 using WFGameCapture;
 using WFImageParser;
 
@@ -66,7 +67,7 @@ namespace ChatLoggerCLI
                 catch { }
             };
 
-            var watcher = new ChatWatcher(dataSender, c, _gameCapture);
+            var watcher = new ChatWatcher(dataSender, c, _gameCapture, new MouseHelper());
             Task t =  Task.Run(() => watcher.MonitorLive(config["DEBUG:ImageDirectory"]));
             while(true)
             {
