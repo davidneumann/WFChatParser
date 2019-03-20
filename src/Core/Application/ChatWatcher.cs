@@ -18,14 +18,14 @@ namespace Application
         private IDataSender _dataSender;
         private IImageParser _chatParser;
         private IGameCapture _gameCapture;
-        private IMouseMover _mouseMover;
+        //private IMouseMover _mouseMover;
 
         public ChatWatcher(IDataSender dataSender, IImageParser chatParser, IGameCapture gameCapture, IMouseMover mouseMover)
         {
             this._dataSender = dataSender;
             this._chatParser = chatParser;
             this._gameCapture = gameCapture;
-            this._mouseMover = mouseMover;
+            //this._mouseMover = mouseMover;
         }
 
         public async Task MonitorLive(string debugImageDectory = null)
@@ -39,14 +39,14 @@ namespace Application
             var sentMessages = new Queue<ChatMessageModel>();
             while (true)
             {
-                _mouseMover.MoveTo(4, 768);
-                //Scroll down for new page of messages
-                for (int i = 0; i < 27; i++)
-                {
-                    _mouseMover.ScrollDown();
-                    await Task.Delay(16);
-                }
-                _mouseMover.ScrollUp();//Pause
+                //_mouseMover.MoveTo(4, 768);
+                ////Scroll down for new page of messages
+                //for (int i = 0; i < 27; i++)
+                //{
+                //    _mouseMover.ScrollDown();
+                //    await Task.Delay(16);
+                //}
+                //_mouseMover.ScrollUp();//Pause
 
                 sw.Restart();
                 if (debugImageDectory != null)
