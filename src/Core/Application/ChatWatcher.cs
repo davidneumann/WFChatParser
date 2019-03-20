@@ -70,13 +70,46 @@ namespace Application
                 var parseTime = sw.Elapsed.TotalSeconds;
                 sw.Restart();
                 string debugImageName = null;
-                if(debugImageDectory != null)
+                if (debugImageDectory != null)
                     debugImageName = Path.Combine(debugImageDectory, "debug_image_" + DateTime.Now.ToString("yyyy-dd-M--HH-mm-ss-fff") + ".png");
 
                 var newMessags = 0;
                 var shouldCopyImage = false;
-                foreach (var message in messages)
+                var badNameRegex = new Regex("[^-A-Za-z0-9._]");
+                //[00:00] f: .
+                var cms = messages.Where(line => line.RawMessage.Length >= 10).Select(result =>
                 {
+                    var m = result.RawMessage;
+                    string debugReason = null;
+                    var timestamp = m.Substring(0, 7).Trim();
+                    var username = m.Substring(8).Trim();
+                    if (username.IndexOf(":") > 0 && username.IndexOf(":") < username.IndexOf(" "))
+                        username = username.Substring(0, username.IndexOf(":"));
+                    else
+                    {
+                        username = username.Substring(0, username.IndexOf(" "));
+                        debugReason = "Bade name: " + username;
+                    }
+                    if (username.Contains(" ") || username.Contains(@"\/") || username.Contains("]") || username.Contains("[") || badNameRegex.Match(username).Success)
+                    {
+                        debugReason = "Bade name: " + username;
+                    }
+                    var cm = new ChatMessageModel()
+                    {
+                        Raw = m,
+                        Author = username,
+                        Timestamp = timestamp,
+                        SystemTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                    };
+                    if (debugReason != null)
+                    {
+                        cm.DEBUGREASON = debugReason;
+                    }
+                    return cm;
+                });
+                foreach (var message in cms)
+                {
+
                     if (!sentMessages.Any(i => i.Author == message.Author && i.Timestamp == message.Timestamp))
                     {
                         newMessags++;
@@ -92,7 +125,7 @@ namespace Application
 
                         await _dataSender.AsyncSendChatMessage(message);
                     }
-                    else if(sentMessages.Any(i => i.Timestamp == message.Timestamp && i.Author == i.Author && !String.Equals(i.Raw, message.Raw)))
+                    else if (sentMessages.Any(i => i.Timestamp == message.Timestamp && i.Author == i.Author && !String.Equals(i.Raw, message.Raw)))
                     {
                         if (message.DEBUGREASON == null)
                             message.DEBUGREASON = string.Empty;
