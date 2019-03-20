@@ -101,7 +101,7 @@ namespace WFImageParser
             var startX = xOffset;
             var endX = xOffset;
             var lastCharacterEndX = startX;
-            List<Point> prevMatchedCharacters = new List<Point>();
+            var prevMatchedCharacters = new CoordinateList();
             TargetMask prevTargetMask = null;
             CharacterDetails lastCharacterDetails = null;
             var wordStartX = -1;
@@ -162,7 +162,7 @@ namespace WFImageParser
 
                     //We can allow loose fits on smaller characters
                     if (bestFit.Item1 < 0.20f && bestFit.Item2 != null && bestFit.Item2.TotalWeights > 40)
-                        bestFit = bestFit = new Tuple<float, CharacterDetails, List<Point>>(float.MinValue, null, null);
+                        bestFit = new Tuple<float, CharacterDetails, CoordinateList>(float.MinValue, null, null);
 
                     if (bestFit.Item2 != null && endX != lastCharacterEndX)
                     {
@@ -314,7 +314,7 @@ namespace WFImageParser
             return foundRiven;
         }
 
-        private Tuple<float, CharacterDetails, List<Point>> FastGuessCharacter(TargetMask targetMask, int lineOffset)
+        private Tuple<float, CharacterDetails, CoordinateList> FastGuessCharacter(TargetMask targetMask, int lineOffset)
         {
             var targetWidth = targetMask.Width;
 
@@ -328,14 +328,14 @@ namespace WFImageParser
 
             var bestMatchConf = 0f;
             CharacterDetails bestMatchCharacter = null;
-            List<Point> bestMatchingPixels = null;
+            CoordinateList bestMatchingPixels = null;
             foreach (var character in cannidates)
             {
                 var characterPixelsMatched = 0f;
                 var dVMask = character.VMask;
                 var charWidth = character.Width;
 
-                var matchingPixels = new List<Point>();
+                var matchingPixels = new CoordinateList();
                 for (int x = 0; x < character.Width && x < targetMask.Width; x++)
                 {
                     for (int y = 0; y < character.Height; y++)
@@ -402,23 +402,23 @@ namespace WFImageParser
                 }
             }
 
-            return new Tuple<float, CharacterDetails, List<Point>>(bestMatchConf, bestMatchCharacter, bestMatchingPixels);
+            return new Tuple<float, CharacterDetails, CoordinateList>(bestMatchConf, bestMatchCharacter, bestMatchingPixels);
         }
 
-        private Tuple<float, CharacterDetails, List<Point>> FastGuessPartialCharacter(TargetMask targetMask, int lineOffset)
+        private Tuple<float, CharacterDetails, CoordinateList> FastGuessPartialCharacter(TargetMask targetMask, int lineOffset)
         {
             var targetWidth = targetMask.Width;
             foreach (var group in _scannedCharacters.Where(c => c.Width <= targetWidth + 2).OrderByDescending(c => c.Width).GroupBy(c => c.Width))
             {
                 var bestMatch = float.MinValue;
                 CharacterDetails bestCharacter = null;
-                List<Point> bestMatchingPixels = null;
+                CoordinateList bestMatchingPixels = null;
                 foreach (var character in group)
                 {
                     //Determine if 80%+ of pixels are covered in target
                     //If so return a new best fit with a conf of pixel coverage
                     var characterPixelsMatched = 0f;
-                    var matchingPixels = new List<Point>();
+                    var matchingPixels = new CoordinateList();
                     for (int x = 0; x < character.Width && x < targetMask.Width; x++)
                     {
                         for (int y = 0; y < character.Height; y++)
@@ -448,7 +448,7 @@ namespace WFImageParser
                 //var coverage = cleanTargetPixels.Where(p => p.X - startX > 0 && p.X - startX < character.Width && character.VMask[p.X - startX, p.Y - lineOffset] > minV).Count() / (float)character.PixelCount;
                 if (bestMatch > 0.7)
                 {
-                    return new Tuple<float, CharacterDetails, List<Point>>(bestMatch, bestCharacter, bestMatchingPixels);
+                    return new Tuple<float, CharacterDetails, CoordinateList>(bestMatch, bestCharacter, bestMatchingPixels);
                 }
             }
             return null;
