@@ -1,4 +1,5 @@
 ﻿using Application.ChatMessages.Model;
+using Application.interfaces;
 using Application.Interfaces;
 using Common;
 using System;
@@ -105,6 +106,7 @@ namespace Application
                     {
                         cm.DEBUGREASON = debugReason;
                     }
+                    cm.EnhancedMessage = result.EnhancedMessage;
                     return cm;
                 });
                 foreach (var message in cms)
