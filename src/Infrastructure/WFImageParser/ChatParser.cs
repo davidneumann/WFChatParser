@@ -1,5 +1,6 @@
 ﻿using Application.ChatMessages.Model;
 using Application.Interfaces;
+using Application.LineParseResult;
 using Newtonsoft.Json;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.ColorSpaces;
@@ -453,16 +454,16 @@ namespace WFImageParser
             return null;
         }
 
-        public ChatMessageModel[] ParseChatImage(string imagePath, int xOffset)
+        public LineParseResult[] ParseChatImage(string imagePath, int xOffset)
         {
             var converter = new ColorSpaceConverter();
             var chatRect = new Rectangle(4, 763, 3236, 1350);
+            var results = new List<LineParseResult>();
             using (Image<Rgba32> rgbImage = Image.Load(imagePath))
             {
                 var offsets = _lineOffsets;
                 var lineHeight = 36;
                 var endLine = offsets.Length;
-                var results = new List<LineParseResult>();
                 var regex = new Regex(@"^\[\d\d:\d\d\]", RegexOptions.Compiled);
                 //var results = new string[endLine - startLine];
                 for (int i = 0; i < endLine && i < offsets.Length; i++)
@@ -478,40 +479,9 @@ namespace WFImageParser
                         last.Append(line);
                     }
                 }
-
-                var badNameRegex = new Regex("[^-A-Za-z0-9._]");
-                //[00:00] f: .
-                return results.Where(line => line.RawMessage.Length >= 10).Select(result =>
-                {
-                    var m = result.RawMessage;
-                    string debugReason = null;
-                    var timestamp = m.Substring(0, 7).Trim();
-                    var username = m.Substring(8).Trim();
-                    if (username.IndexOf(":") > 0 && username.IndexOf(":") < username.IndexOf(" "))
-                        username = username.Substring(0, username.IndexOf(":"));
-                    else
-                    {
-                        username = username.Substring(0, username.IndexOf(" "));
-                        debugReason = "Bade name: " + username;
-                    }
-                    if (username.Contains(" ") || username.Contains(@"\/") || username.Contains("]") || username.Contains("[") || badNameRegex.Match(username).Success)
-                    {
-                        debugReason = "Bade name: " + username;
-                    }
-                    var cm = new ChatMessageModel()
-                    {
-                        Raw = m,
-                        Author = username,
-                        Timestamp = timestamp,
-                        SystemTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
-                    };
-                    if (debugReason != null)
-                    {
-                        cm.DEBUGREASON = debugReason;
-                    }
-                    return cm;
-                }).ToArray();
             }
+
+            return results.ToArray();
         }
 
         public string[] ParseRivenImage(string imagePath)
@@ -519,7 +489,7 @@ namespace WFImageParser
             throw new NotImplementedException();
         }
 
-        public ChatMessageModel[] ParseChatImage(string imagePath)
+        public LineParseResult[] ParseChatImage(string imagePath)
         {
             return ParseChatImage(imagePath, 4);
         }
@@ -533,49 +503,6 @@ namespace WFImageParser
             public int Width { get; set; }
             public int Height { get; set; }
             public float TotalWeights { get; internal set; }
-        }
-
-        private class LineParseResult
-        {
-            public string RawMessage { get; set; }
-            public string Message { get; set; }
-            public List<ClickPoint> ClickPoints { get; set; }
-
-            public void Append(LineParseResult lineParseResult)
-            {
-                this.RawMessage = this.RawMessage.Trim();
-                lineParseResult.RawMessage = lineParseResult.RawMessage.Trim();
-                this.Message = this.Message.Trim();
-                lineParseResult.Message = lineParseResult.Message.Trim();
-
-                this.RawMessage += " " + lineParseResult.RawMessage;
-                var message = lineParseResult.Message;
-                var addedRivens = 0;
-                for (int i = 0; i < message.Length;)
-                {
-                    if (message[i] == '[' && i + 1 < message.Length && Char.IsDigit(message[i + 1]))
-                    {
-                        var id = Int32.Parse(message.Substring(i + 1, message.IndexOf(']', i + 1) - i - 1));
-                        var newId = this.ClickPoints.Count + addedRivens;
-                        message = message.Replace("[" + id + "]", "[" + newId + "]");
-                        var p = lineParseResult.ClickPoints[addedRivens];
-                        lineParseResult.ClickPoints[0] = new ClickPoint() { Index = this.Message.Length + i + 1, X = p.X, Y = p.Y };
-                        i = i + ("[" + newId + "]").ToString().Length;
-                        addedRivens++;
-                    }
-                    else
-                        i++;
-                }
-                this.ClickPoints.AddRange(lineParseResult.ClickPoints);
-                this.Message += " " + message;
-            }
-        }
-
-        public struct ClickPoint
-        {
-            public int X;
-            public int Y;
-            public int Index;
         }
     }
 }

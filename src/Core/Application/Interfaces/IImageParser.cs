@@ -3,6 +3,7 @@ using Common;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Application.LineParseResult;
 
 namespace Application.Interfaces
 {
@@ -13,7 +14,7 @@ namespace Application.Interfaces
         /// </summary>
         /// <param name="imagePath">The path to the chat window image.</param>
         /// <returns>The chat window text and click points for rivens.</returns>
-        ChatMessageModel[] ParseChatImage(string imagePath);
+        LineParseResult.LineParseResult[] ParseChatImage(string imagePath);
 
         /// <summary>
         /// Extracts the text of a riven window.

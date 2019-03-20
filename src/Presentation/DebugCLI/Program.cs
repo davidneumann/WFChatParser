@@ -183,96 +183,96 @@ namespace DebugCLI
                 _gameCapture.Dispose();
         }
 
-        private static int VerifyNoErrors(int verboseLevel = 0, bool fastFail = false, int xOffset = 4)
-        {
-            var trainingImages = new List<string>();
-            Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Validation Inputs").Where(f => f.EndsWith(".png")).ToList().ForEach(f => trainingImages.Add(f));
-            //Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith(".png")).ToList().ForEach(f => trainingImages.Add(f));
-            var trainingText = new List<string>();
-            Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Validation Inputs").Where(f => f.EndsWith(".txt")).ToList().ForEach(f => trainingText.Add(f));
-            //Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith(".txt")).ToList().ForEach(f => trainingText.Add(f));
-            //var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".png")).ToArray();
-            //var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".txt")).ToArray();
-            //var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith("e1.png")).ToArray();
-            //var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith("e1.txt")).ToArray();
+        //private static int VerifyNoErrors(int verboseLevel = 0, bool fastFail = false, int xOffset = 4)
+        //{
+        //    var trainingImages = new List<string>();
+        //    Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Validation Inputs").Where(f => f.EndsWith(".png")).ToList().ForEach(f => trainingImages.Add(f));
+        //    //Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith(".png")).ToList().ForEach(f => trainingImages.Add(f));
+        //    var trainingText = new List<string>();
+        //    Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Validation Inputs").Where(f => f.EndsWith(".txt")).ToList().ForEach(f => trainingText.Add(f));
+        //    //Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith(".txt")).ToList().ForEach(f => trainingText.Add(f));
+        //    //var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".png")).ToArray();
+        //    //var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".txt")).ToArray();
+        //    //var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith("e1.png")).ToArray();
+        //    //var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith("e1.txt")).ToArray();
 
-            var errorCount = 0;
-            for (int k = 0; k < trainingImages.Count; k++)
-            {
-                var fileInfo = new FileInfo(trainingText[k]);
-                Console.WriteLine($"=={fileInfo.Name}==");
-                var masterKeyFile = trainingImages[k];
-                var correctResults = File.ReadAllLines(trainingText[k]).Select(line => line.Trim()).ToArray();
-                var c = new ChatParser();
-                var cleaner = new ImageCleaner();
-                cleaner.SaveGreyscaleImage(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name), minV:0.44f);
-                var result = c.ParseChatImage(masterKeyFile, xOffset: xOffset).ToArray();
+        //    var errorCount = 0;
+        //    for (int k = 0; k < trainingImages.Count; k++)
+        //    {
+        //        var fileInfo = new FileInfo(trainingText[k]);
+        //        Console.WriteLine($"=={fileInfo.Name}==");
+        //        var masterKeyFile = trainingImages[k];
+        //        var correctResults = File.ReadAllLines(trainingText[k]).Select(line => line.Trim()).ToArray();
+        //        var c = new ChatParser();
+        //        var cleaner = new ImageCleaner();
+        //        cleaner.SaveGreyscaleImage(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name), minV:0.44f);
+        //        var result = c.ParseChatImage(masterKeyFile, xOffset: xOffset).ToArray();
 
-                Console.WriteLine("Expected");
-                Console.WriteLine("Recieved");
-                Console.WriteLine();
+        //        Console.WriteLine("Expected");
+        //        Console.WriteLine("Recieved");
+        //        Console.WriteLine();
 
-                if (correctResults.Length != result.Length)
-                {
-                    errorCount += correctResults.Length;
-                    return errorCount;
-                }
-                for (int i = 0; i < result.Length; i++)
-                {
-                    if (verboseLevel >= 1)
-                    {
-                        Console.WriteLine(correctResults[i]);
-                        Console.WriteLine(result[i]);
-                    }
-                    if (verboseLevel >= 2)
-                    {
-                        if (Enumerable.SequenceEqual(correctResults[i], result[i].Raw))
-                        {
-                            Console.WriteLine("They match!");
-                        }
-                    }
-                    if (!String.Equals(correctResults[i].Trim(), result[i].Raw.Trim()))
-                    {
-                        if (verboseLevel >= 2)
-                        {
-                            if (correctResults[i].Length == result[i].Raw.Length)
-                            {
-                                for (int j = 0; j < correctResults[i].Length; j++)
-                                {
-                                    if (result[i].Raw[j] != correctResults[i][j])
-                                    {
-                                        Console.WriteLine("^");
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        Console.Write(" ");
-                                    }
-                                }
-                            }
-                            Console.WriteLine("They don't match");
-                        }
-                        errorCount++;
-                    }
+        //        if (correctResults.Length != result.Length)
+        //        {
+        //            errorCount += correctResults.Length;
+        //            return errorCount;
+        //        }
+        //        for (int i = 0; i < result.Length; i++)
+        //        {
+        //            if (verboseLevel >= 1)
+        //            {
+        //                Console.WriteLine(correctResults[i]);
+        //                Console.WriteLine(result[i]);
+        //            }
+        //            if (verboseLevel >= 2)
+        //            {
+        //                if (Enumerable.SequenceEqual(correctResults[i], result[i].Raw))
+        //                {
+        //                    Console.WriteLine("They match!");
+        //                }
+        //            }
+        //            if (!String.Equals(correctResults[i].Trim(), result[i].Raw.Trim()))
+        //            {
+        //                if (verboseLevel >= 2)
+        //                {
+        //                    if (correctResults[i].Length == result[i].Raw.Length)
+        //                    {
+        //                        for (int j = 0; j < correctResults[i].Length; j++)
+        //                        {
+        //                            if (result[i].Raw[j] != correctResults[i][j])
+        //                            {
+        //                                Console.WriteLine("^");
+        //                                break;
+        //                            }
+        //                            else
+        //                            {
+        //                                Console.Write(" ");
+        //                            }
+        //                        }
+        //                    }
+        //                    Console.WriteLine("They don't match");
+        //                }
+        //                errorCount++;
+        //            }
 
-                    if (verboseLevel >= 2)
-                    {
-                        Console.WriteLine();
-                    }
-                }
+        //            if (verboseLevel >= 2)
+        //            {
+        //                Console.WriteLine();
+        //            }
+        //        }
 
-                if (errorCount > 0 && fastFail)
-                {
-                    return errorCount;
-                }
-            }
+        //        if (errorCount > 0 && fastFail)
+        //        {
+        //            return errorCount;
+        //        }
+        //    }
 
-            if (verboseLevel >= 2)
-            {
-                Console.WriteLine("Errors: " + errorCount);
-            }
-            return errorCount;
-        }
+        //    if (verboseLevel >= 2)
+        //    {
+        //        Console.WriteLine("Errors: " + errorCount);
+        //    }
+        //    return errorCount;
+        //}
 
         private static void ProcessRivens()
         {
