@@ -12,7 +12,7 @@ using Tesseract;
 
 namespace ImageOCR
 {
-    public class ImageParser : IDisposable, IImageParser
+    public class ImageParser : IDisposable
     {
         private TessBaseAPI _tessBaseAPI = null;
 

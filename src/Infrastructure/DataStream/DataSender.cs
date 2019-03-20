@@ -1,11 +1,15 @@
-﻿using System;
+﻿using Application.ChatMessages.Model;
+using Application.Interfaces;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Threading.Tasks;
 using WebSocketSharp;
 
 namespace DataStream
 {
-    public class DataSender : IDisposable
+    public class DataSender : IDisposable, IDataSender
     {
         private readonly Uri _websocketHostname;
         private readonly string _messagePrefix;
@@ -19,13 +23,14 @@ namespace DataStream
         private bool _shouldReconnect;
 
         private DateTimeOffset _lastReconnectTime = DateTimeOffset.MinValue;
-        public DataSender(Uri websocketHostname, IEnumerable<string> connectionMessages, string messagePrefix, string debugMessagePrefix, bool shouldReconnect)
+        public DataSender(Uri websocketHostname, IEnumerable<string> connectionMessages, string messagePrefix, string debugMessagePrefix, bool shouldReconnect, string rawMessagePrefix)
         {
             _websocketHostname = websocketHostname;
             _messagePrefix = messagePrefix;
             _debugMessagePrefix = debugMessagePrefix;
             _shouldReconnect = shouldReconnect;
             _connectionStrings = connectionMessages;
+            _rawMessagePrefix = rawMessagePrefix;
 
             InitWebsocket();
 
@@ -75,6 +80,9 @@ namespace DataStream
         //}
 
         private BackgroundWorker _reconnectWorker = new BackgroundWorker();
+        private string _rawMessagePrefix;
+        private JsonSerializerSettings _jsonSettings = new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore };
+
         private void Reconnect()
         {
             if(!_reconnectWorker.IsBusy && (_webSocket == null || _webSocket.ReadyState == WebSocketState.Closed || _webSocket.ReadyState == WebSocketState.Closing))
@@ -119,28 +127,51 @@ namespace DataStream
             ((IDisposable)_webSocket).Dispose();
         }
 
-        public void SendChatMessage(string message)
+        //public void SendChatMessage(string message)
+        //{
+        //    if (_webSocket.ReadyState == WebSocketState.Open)
+        //    {
+        //        if (_messagePrefix != null && _messagePrefix.Length > 0)
+        //            _webSocket.Send(_messagePrefix + message);
+        //        else
+        //            _webSocket.Send(message);
+        //    }
+        //    else if (_shouldReconnect)
+        //        Reconnect();
+        //}
+
+        //public void SendTimers(double imageTime, double parseTime, double transmitTime, int newMessageCount)
+        //{
+        //    if (_debugMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
+        //        _webSocket.Send(_debugMessagePrefix + $"Image capture: {imageTime:00.00} Parse time: {parseTime:00.00} TransmitTime: {transmitTime:0.000} New messages {newMessageCount} {newMessageCount / parseTime}/s");
+        //    else if (_shouldReconnect)
+        //        Reconnect();
+        //}
+
+        //public void SendDebugMessage(string message)
+        //{
+        //    if (_debugMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
+        //        _webSocket.Send(_debugMessagePrefix + message);
+        //    else if (_shouldReconnect)
+        //        Reconnect();
+        //}
+
+        public async Task AsyncSendChatMessage(ChatMessageModel message)
         {
             if (_webSocket.ReadyState == WebSocketState.Open)
             {
                 if (_messagePrefix != null && _messagePrefix.Length > 0)
-                    _webSocket.Send(_messagePrefix + message);
+                    _webSocket.Send(_messagePrefix + JsonConvert.SerializeObject(message, Formatting.Indented, _jsonSettings));
                 else
-                    _webSocket.Send(message);
+                    _webSocket.Send(JsonConvert.SerializeObject(message, Formatting.Indented, _jsonSettings));
+                if (_rawMessagePrefix != null && _rawMessagePrefix.Length > 0)
+                    _webSocket.Send(_rawMessagePrefix + message.Raw);
             }
             else if (_shouldReconnect)
                 Reconnect();
         }
 
-        public void SendTimers(double imageTime, double parseTime, double transmitTime, int newMessageCount)
-        {
-            if (_debugMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
-                _webSocket.Send(_debugMessagePrefix + $"Image capture: {imageTime:00.00} Parse time: {parseTime:00.00} TransmitTime: {transmitTime:0.000} New messages {newMessageCount} {newMessageCount / parseTime}/s");
-            else if (_shouldReconnect)
-                Reconnect();
-        }
-
-        public void SendDebugMessage(string message)
+        public async Task AsyncSendDebugMessage(string message)
         {
             if (_debugMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
                 _webSocket.Send(_debugMessagePrefix + message);

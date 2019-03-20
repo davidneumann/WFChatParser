@@ -168,7 +168,7 @@ namespace WFImageParser
                 }
                 return new { i.Character, Pixels = arr };
             }).ToList();
-            var c = new ChatImageCleaner();
+            var c = new ImageCleaner();
             grayscalePixels.ForEach(i => c.MakeGreyscaleImageFromArray(outputDir, i.Character, i.Pixels));
         }
     }
