@@ -13,9 +13,9 @@ namespace WFImageParser
     {
         internal static int[] LineOffsets = new int[] { 768, 818, 868, 917, 967, 1016, 1066, 1115, 1165, 1215, 1264, 1314, 1363, 1413, 1463, 1512, 1562, 1611, 1661, 1711, 1760, 1810, 1859, 1909, 1958, 2008, 2058 };
 
-        internal static List<Point> FindCharacterPixelPoints(Point firstPixel, VCache image, List<Point> blacklistedPoints, float minV, int minX, int maxX, int minY, int maxY)
+        internal static List<Point> FindCharacterPixelPoints(Point firstPixel, VCache image, CoordinateList blacklistedPoints, float minV, int minX, int maxX, int minY, int maxY)
         {
-            var characterPoints = new List<Point>();
+            var characterPoints = new CoordinateList();
             AddConnectedPoints(characterPoints, firstPixel, image, blacklistedPoints, minV, minX, maxX, minY, maxY);
             
             var midX = (int)characterPoints.Average(p => p.X);
@@ -48,15 +48,15 @@ namespace WFImageParser
                 }
             } while (foundNewPixels);
 
-            return characterPoints;
+            return new List<Point>(characterPoints);
         }
 
-        private static void AddConnectedPoints(List<Point> existingPoints, Point firstPixel, VCache image, List<Point> blacklistedPoints, float minV, int minX, int maxX, int minY, int maxY)
+        private static void AddConnectedPoints(CoordinateList existingPoints, Point firstPixel, VCache image, CoordinateList blacklistedPoints, float minV, int minX, int maxX, int minY, int maxY)
         {
             if (image[firstPixel.X, firstPixel.Y] < minV)
                 return;
             var q = new Queue<Point>();
-            if (!existingPoints.Any(p => p.X == firstPixel.X && p.Y == firstPixel.Y))
+            if (!existingPoints.Exists(firstPixel))
             {
                 existingPoints.Add(firstPixel);
                 q.Enqueue(firstPixel);
@@ -66,8 +66,8 @@ namespace WFImageParser
                 var n = q.Dequeue();
                 if(n.X + 1 <= maxX &&
                     image[n.X + 1, n.Y] >= minV && 
-                    !existingPoints.Any(p => p.X == n.X + 1 && p.Y == n.Y) && 
-                    (blacklistedPoints == null || (blacklistedPoints != null && !blacklistedPoints.Any(p => p.X == n.X + 1 && p.Y == n.Y))) )
+                    !existingPoints.Exists(n.X + 1, n.Y) && 
+                    (blacklistedPoints == null || !blacklistedPoints.Exists(n.X + 1 , n.Y)))
                 {
                     var np = new Point(n.X + 1, n.Y);
                     existingPoints.Add(np);
@@ -75,35 +75,35 @@ namespace WFImageParser
                 }
                 if (n.X - 1 >= minX &&
                     image[n.X - 1, n.Y] >= minV &&
-                    !existingPoints.Any(p => p.X == n.X - 1 && p.Y == n.Y) &&
-                    (blacklistedPoints == null || (blacklistedPoints != null && !blacklistedPoints.Any(p => p.X == n.X - 1 && p.Y == n.Y))))
+                    !existingPoints.Exists(n.X - 1, n.Y) &&
+                    (blacklistedPoints == null || !blacklistedPoints.Exists(n.X - 1, n.Y)))
                 {
-                    Point np = new Point(n.X - 1, n.Y);
+                    var np = new Point(n.X - 1, n.Y);
                     existingPoints.Add(np);
                     q.Enqueue(np);
                 }
                 if (n.Y - 1 >= minY &&
                      image[n.X, n.Y - 1] >= minV &&
-                     !existingPoints.Any(p => p.X == n.X && p.Y == n.Y - 1) &&
-                     (blacklistedPoints == null || (blacklistedPoints != null && !blacklistedPoints.Any(p => p.X == n.X && p.Y == n.Y - 1))))
+                     !existingPoints.Exists(n.X, n.Y - 1) &&
+                     (blacklistedPoints == null || !blacklistedPoints.Exists(n.X, n.Y - 1)))
                 {
-                    Point np = new Point(n.X, n.Y - 1);
+                    var np = new Point(n.X, n.Y - 1);
                     existingPoints.Add(np);
                     q.Enqueue(np);
                 }
                 if (n.Y + 1 <= maxY &&
                      image[n.X, n.Y + 1] >= minV &&
-                     !existingPoints.Any(p => p.X == n.X && p.Y == n.Y + 1) &&
-                     (blacklistedPoints == null || (blacklistedPoints != null && !blacklistedPoints.Any(p => p.X == n.X && p.Y == n.Y + 1))))
+                     !existingPoints.Exists(n.X, n.Y + 1) &&
+                     (blacklistedPoints == null || !blacklistedPoints.Exists(n.X , n.Y + 1)))
                 {
-                    Point np = new Point(n.X, n.Y + 1);
+                    var np = new Point(n.X, n.Y + 1);
                     existingPoints.Add(np);
                     q.Enqueue(np);
                 }
             }
         }
 
-        internal static TargetMask FindCharacterMask(Point firstPixel, VCache image, List<Point> blacklistedPoints, float minV, int minX, int maxX, int minY, int maxY)
+        internal static TargetMask FindCharacterMask(Point firstPixel, VCache image, CoordinateList blacklistedPoints, float minV, int minX, int maxX, int minY, int maxY)
         {
             var points = FindCharacterPixelPoints(firstPixel, image, blacklistedPoints, minV, minX, maxX, minY, maxY);
             var minPointX = points.Min(p => p.X);
