@@ -13,6 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\WarframeDriver\WarframeDriver.csproj" />
     <ProjectReference Include="..\..\Infrastructure\DataStream\DataStream.csproj" />
     <ProjectReference Include="..\..\Infrastructure\ImageOCR\ImageOCR.csproj" />
     <ProjectReference Include="..\..\Infrastructure\WFGameCapture\WFGameCapture.csproj" />
