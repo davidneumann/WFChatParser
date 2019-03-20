@@ -94,7 +94,7 @@ namespace WFImageParser
             public int Gap { get; set; }
         }
 
-        private LineParseResult ParseLineBitmapScan(float minV, int xOffset, ColorSpaceConverter converter, Rectangle chatRect, Image<Rgba32> rgbImage, int lineHeight, int lineOffset, float spaceWidth)
+        private LineParseResult ParseLineBitmapScan(VCache image, float minV, int xOffset, Rectangle chatRect, int lineHeight, int lineOffset, float spaceWidth)
         {
             var rawMessage = new System.Text.StringBuilder();
             var message = new StringBuilder();
@@ -116,7 +116,7 @@ namespace WFImageParser
                     var pixelFound = false;
                     for (int y = lineOffset; y < lineOffset + lineHeight; y++)
                     {
-                        if (converter.ToHsv(rgbImage[i, y]).V > minV && !prevMatchedCharacters.Any(p => p.X == i && p.Y == y))
+                        if (image[i, y] > minV && !prevMatchedCharacters.Any(p => p.X == i && p.Y == y))
                         {
                             x = i;
                             pixelFound = true;
@@ -135,7 +135,7 @@ namespace WFImageParser
                 if (x >= chatRect.Right || firstPixel == Point.Empty)
                     break;
 
-                var targetMask = OCRHelpers.FindCharacterMask(firstPixel, rgbImage, prevMatchedCharacters, minV, chatRect.Left, chatRect.Right, lineOffset, lineOffset + lineHeight);
+                var targetMask = OCRHelpers.FindCharacterMask(firstPixel, image, prevMatchedCharacters, minV, chatRect.Left, chatRect.Right, lineOffset, lineOffset + lineHeight);
                 if (wordStartX < 0)
                     wordStartX = targetMask.MinX;
 
@@ -154,7 +154,7 @@ namespace WFImageParser
                     }
                     else if (bestFit.Item1 < 0.7)
                     {
-                        var fuzzyMask = OCRHelpers.FindCharacterMask(firstPixel, rgbImage, prevMatchedCharacters, minV - 0.2f, chatRect.Left, chatRect.Right, lineOffset, lineOffset + lineHeight);
+                        var fuzzyMask = OCRHelpers.FindCharacterMask(firstPixel, image, prevMatchedCharacters, minV - 0.2f, chatRect.Left, chatRect.Right, lineOffset, lineOffset + lineHeight);
                         var fuzzFit = FastGuessCharacter(targetMask, lineOffset);
                         if (fuzzFit.Item1 > bestFit.Item1)
                             bestFit = fuzzFit;
@@ -230,7 +230,7 @@ namespace WFImageParser
                                 && _gapPairs[lastCharacterDetails.Name].ContainsKey(bestFit.Item2.Name)
                                 && pixelGap > _gapPairs[lastCharacterDetails.Name][bestFit.Item2.Name] + spaceWidth)
                             {
-                                AppendSpace(rgbImage, lineHeight, lineOffset, rawMessage, message, wordStartX, currentWord, clickPoints);
+                                AppendSpace(image, lineHeight, lineOffset, rawMessage, message, wordStartX, currentWord, clickPoints);
                                 wordStartX = targetMask.MinX;
 
                             }
@@ -253,7 +253,7 @@ namespace WFImageParser
                     }
                     else //failed to ID the character, skip it
                     {
-                        AppendSpace(rgbImage, lineHeight, lineOffset, rawMessage, message, wordStartX, currentWord, clickPoints);
+                        AppendSpace(image, lineHeight, lineOffset, rawMessage, message, wordStartX, currentWord, clickPoints);
                         x = lastCharacterEndX = endX = targetMask.MaxX + 1;
                     }
                 }
@@ -264,7 +264,7 @@ namespace WFImageParser
             }
             if (rawMessage.Length > 0)
             {
-                AppendSpace(rgbImage, lineHeight, lineOffset, rawMessage, message, wordStartX, currentWord, clickPoints);
+                AppendSpace(image, lineHeight, lineOffset, rawMessage, message, wordStartX, currentWord, clickPoints);
                 var result = new LineParseResult()
                 {
                     ClickPoints = clickPoints,
@@ -276,9 +276,9 @@ namespace WFImageParser
             else return new LineParseResult();
         }
 
-        private static void AppendSpace(Image<Rgba32> rgbImage, int lineHeight, int lineOffset, StringBuilder rawMessage, StringBuilder message, int wordStartX, StringBuilder currentWord, List<ClickPoint> clickPoints)
+        private static void AppendSpace(VCache image, int lineHeight, int lineOffset, StringBuilder rawMessage, StringBuilder message, int wordStartX, StringBuilder currentWord, List<ClickPoint> clickPoints)
         {
-            var foundRiven = CheckNewWordForRiven(lineHeight, lineOffset, wordStartX, currentWord.ToString(), clickPoints, rgbImage, message.Length);
+            var foundRiven = CheckNewWordForRiven(lineHeight, lineOffset, wordStartX, currentWord.ToString(), clickPoints, image, message.Length);
             if (foundRiven)
                 message.Append("[" + (clickPoints.Count - 1) + "]");
             message.Append(currentWord.ToString() + ' ');
@@ -286,7 +286,7 @@ namespace WFImageParser
             rawMessage.Append(' ');
         }
 
-        private static bool CheckNewWordForRiven(int lineHeight, int lineOffset, int wordStartX, string currentWord, List<ClickPoint> clickPoints, Image<Rgba32> image, int wordIndex)
+        private static bool CheckNewWordForRiven(int lineHeight, int lineOffset, int wordStartX, string currentWord, List<ClickPoint> clickPoints, VCache image, int wordIndex)
         {
             var foundRiven = false;
             var converter = new ColorSpaceConverter();
@@ -297,7 +297,7 @@ namespace WFImageParser
                 {
                     for (int y = lineOffset + lineHeight / 2 - 5; y < lineOffset + lineHeight / 2 + 5 && y < image.Height; y++)
                     {
-                        var hsvPixel = converter.ToHsv(image[x, y]);
+                        var hsvPixel = image.GetHsv(x, y);
                         if (hsvPixel.V > 0.3f && hsvPixel.H >= 176.3 && hsvPixel.H <= 255)
                         {
                             foundRiven = true;
@@ -456,11 +456,11 @@ namespace WFImageParser
 
         public LineParseResult[] ParseChatImage(string imagePath, int xOffset)
         {
-            var converter = new ColorSpaceConverter();
             var chatRect = new Rectangle(4, 763, 3236, 1350);
             var results = new List<LineParseResult>();
             using (Image<Rgba32> rgbImage = Image.Load(imagePath))
             {
+                var cache = new VCache(rgbImage);
                 var offsets = _lineOffsets;
                 var lineHeight = 36;
                 var endLine = offsets.Length;
@@ -468,10 +468,10 @@ namespace WFImageParser
                 //var results = new string[endLine - startLine];
                 for (int i = 0; i < endLine && i < offsets.Length; i++)
                 {
-                    var line = ParseLineBitmapScan(0.44f, xOffset, converter, chatRect, rgbImage, lineHeight, offsets[i], 6);
-                    if (regex.Match(line.RawMessage).Success)
+                    var line = ParseLineBitmapScan(cache, 0.44f, xOffset, chatRect, lineHeight, offsets[i], 6);
+                    if (line.RawMessage != null && regex.Match(line.RawMessage).Success)
                         results.Add(line);
-                    else if (results.Count > 0)
+                    else if (results.Count > 0 && line.RawMessage != null)
                     {
                         var last = results.Last();
                         //results.Remove(last);

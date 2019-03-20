@@ -13,7 +13,7 @@ namespace WFImageParser
     {
         internal static int[] LineOffsets = new int[] { 768, 818, 868, 917, 967, 1016, 1066, 1115, 1165, 1215, 1264, 1314, 1363, 1413, 1463, 1512, 1562, 1611, 1661, 1711, 1760, 1810, 1859, 1909, 1958, 2008, 2058 };
 
-        internal static List<Point> FindCharacterPixelPoints(Point firstPixel, Image<Rgba32> image, List<Point> blacklistedPoints, float minV, int minX, int maxX, int minY, int maxY)
+        internal static List<Point> FindCharacterPixelPoints(Point firstPixel, VCache image, List<Point> blacklistedPoints, float minV, int minX, int maxX, int minY, int maxY)
         {
             var characterPoints = new List<Point>();
             AddConnectedPoints(characterPoints, firstPixel, image, blacklistedPoints, minV, minX, maxX, minY, maxY);
@@ -51,10 +51,9 @@ namespace WFImageParser
             return characterPoints;
         }
 
-        private static void AddConnectedPoints(List<Point> existingPoints, Point firstPixel, Image<Rgba32> image, List<Point> blacklistedPoints, float minV, int minX, int maxX, int minY, int maxY)
+        private static void AddConnectedPoints(List<Point> existingPoints, Point firstPixel, VCache image, List<Point> blacklistedPoints, float minV, int minX, int maxX, int minY, int maxY)
         {
-            var converter = new ColorSpaceConverter();
-            if (converter.ToHsv(image[firstPixel.X, firstPixel.Y]).V < minV)
+            if (image[firstPixel.X, firstPixel.Y] < minV)
                 return;
             var q = new Queue<Point>();
             if (!existingPoints.Any(p => p.X == firstPixel.X && p.Y == firstPixel.Y))
@@ -66,7 +65,7 @@ namespace WFImageParser
             {
                 var n = q.Dequeue();
                 if(n.X + 1 <= maxX &&
-                    converter.ToHsv(image[n.X + 1, n.Y]).V >= minV && 
+                    image[n.X + 1, n.Y] >= minV && 
                     !existingPoints.Any(p => p.X == n.X + 1 && p.Y == n.Y) && 
                     (blacklistedPoints == null || (blacklistedPoints != null && !blacklistedPoints.Any(p => p.X == n.X + 1 && p.Y == n.Y))) )
                 {
@@ -75,7 +74,7 @@ namespace WFImageParser
                     q.Enqueue(np);
                 }
                 if (n.X - 1 >= minX &&
-                    converter.ToHsv(image[n.X - 1, n.Y]).V >= minV &&
+                    image[n.X - 1, n.Y] >= minV &&
                     !existingPoints.Any(p => p.X == n.X - 1 && p.Y == n.Y) &&
                     (blacklistedPoints == null || (blacklistedPoints != null && !blacklistedPoints.Any(p => p.X == n.X - 1 && p.Y == n.Y))))
                 {
@@ -84,7 +83,7 @@ namespace WFImageParser
                     q.Enqueue(np);
                 }
                 if (n.Y - 1 >= minY &&
-                     converter.ToHsv(image[n.X, n.Y - 1]).V >= minV &&
+                     image[n.X, n.Y - 1] >= minV &&
                      !existingPoints.Any(p => p.X == n.X && p.Y == n.Y - 1) &&
                      (blacklistedPoints == null || (blacklistedPoints != null && !blacklistedPoints.Any(p => p.X == n.X && p.Y == n.Y - 1))))
                 {
@@ -93,7 +92,7 @@ namespace WFImageParser
                     q.Enqueue(np);
                 }
                 if (n.Y + 1 <= maxY &&
-                     converter.ToHsv(image[n.X, n.Y + 1]).V >= minV &&
+                     image[n.X, n.Y + 1] >= minV &&
                      !existingPoints.Any(p => p.X == n.X && p.Y == n.Y + 1) &&
                      (blacklistedPoints == null || (blacklistedPoints != null && !blacklistedPoints.Any(p => p.X == n.X && p.Y == n.Y + 1))))
                 {
@@ -104,7 +103,7 @@ namespace WFImageParser
             }
         }
 
-        internal static TargetMask FindCharacterMask(Point firstPixel, Image<Rgba32> image, List<Point> blacklistedPoints, float minV, int minX, int maxX, int minY, int maxY)
+        internal static TargetMask FindCharacterMask(Point firstPixel, VCache image, List<Point> blacklistedPoints, float minV, int minX, int maxX, int minY, int maxY)
         {
             var points = FindCharacterPixelPoints(firstPixel, image, blacklistedPoints, minV, minX, maxX, minY, maxY);
             var minPointX = points.Min(p => p.X);
