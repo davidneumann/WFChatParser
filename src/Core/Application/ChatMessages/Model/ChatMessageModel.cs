@@ -8,7 +8,7 @@ namespace Application.ChatMessages.Model
     {
         public string Timestamp { get; set; }
         public string Author { get; set; }
-        public string SpecialMessage { get; set; }
+        public string EnhancedMessage { get; set; }
         public string Raw { get; set; }
         public Riven[] Rivens { get; set; }
 

@@ -269,7 +269,7 @@ namespace WFImageParser
                 {
                     ClickPoints = clickPoints,
                     RawMessage = rawMessage.ToString(),
-                    Message = message.ToString()
+                    EnhancedMessage = message.ToString()
                 };
                 return result;
             }

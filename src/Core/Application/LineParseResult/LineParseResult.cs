@@ -7,18 +7,18 @@ namespace Application.LineParseResult
     public class LineParseResult
     {
         public string RawMessage { get; set; }
-        public string Message { get; set; }
+        public string EnhancedMessage { get; set; }
         public List<ClickPoint> ClickPoints { get; set; }
 
         public void Append(LineParseResult lineParseResult)
         {
             this.RawMessage = this.RawMessage.Trim();
             lineParseResult.RawMessage = lineParseResult.RawMessage.Trim();
-            this.Message = this.Message.Trim();
-            lineParseResult.Message = lineParseResult.Message.Trim();
+            this.EnhancedMessage = this.EnhancedMessage.Trim();
+            lineParseResult.EnhancedMessage = lineParseResult.EnhancedMessage.Trim();
 
             this.RawMessage += " " + lineParseResult.RawMessage;
-            var message = lineParseResult.Message;
+            var message = lineParseResult.EnhancedMessage;
             var addedRivens = 0;
             for (int i = 0; i < message.Length;)
             {
@@ -28,7 +28,7 @@ namespace Application.LineParseResult
                     var newId = this.ClickPoints.Count + addedRivens;
                     message = message.Replace("[" + id + "]", "[" + newId + "]");
                     var p = lineParseResult.ClickPoints[addedRivens];
-                    lineParseResult.ClickPoints[0] = new ClickPoint() { Index = this.Message.Length + i + 1, X = p.X, Y = p.Y };
+                    lineParseResult.ClickPoints[0] = new ClickPoint() { Index = this.EnhancedMessage.Length + i + 1, X = p.X, Y = p.Y };
                     i = i + ("[" + newId + "]").ToString().Length;
                     addedRivens++;
                 }
@@ -36,7 +36,7 @@ namespace Application.LineParseResult
                     i++;
             }
             this.ClickPoints.AddRange(lineParseResult.ClickPoints);
-            this.Message += " " + message;
+            this.EnhancedMessage += " " + message;
         }
     }
 }
