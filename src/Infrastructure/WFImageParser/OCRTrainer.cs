@@ -24,14 +24,14 @@ namespace WFImageParser
             var results = new List<List<TrainingSampleCharacter>>();
             using (Image<Rgba32> rgbImage = Image.Load(imagePath))
             {
-                var converter = new ColorSpaceConverter();
+                var cache = new VCache(rgbImage);
                 var chatRect = new Rectangle(4, 763, 3236, 1350);
                 var offsets = OCRHelpers.LineOffsets;
                 var lineHeight = 36;
                 var refLineIndex = 0;
                 for (int i = 0; i < offsets.Length; i++)
                 {
-                    var line = TrainOnLine(minV, referenceLines[refLineIndex], xOffset, converter, chatRect, rgbImage, lineHeight, offsets[i]);
+                    var line = TrainOnLine(minV, referenceLines[refLineIndex], xOffset, chatRect, cache, lineHeight, offsets[i]);
                     if (line.Count > 0 && line.Count == referenceLines[i].Length)
                     {
                         results.Add(line);
@@ -47,7 +47,7 @@ namespace WFImageParser
             return results;
         }
 
-        private List<TrainingSampleCharacter> TrainOnLine(float minV, char[] referenceCharacters, int xOffset, ColorSpaceConverter converter, Rectangle chatRect, Image<Rgba32> rgbImage, int lineHeight, int lineOffset)
+        private List<TrainingSampleCharacter> TrainOnLine(float minV, char[] referenceCharacters, int xOffset, Rectangle chatRect, VCache image, int lineHeight, int lineOffset)
         {
             var startX = xOffset;
             var endX = xOffset;
@@ -63,7 +63,7 @@ namespace WFImageParser
                     var pixelFound = false;
                     for (int y = lineOffset; y < lineOffset + lineHeight; y++)
                     {
-                        if (converter.ToHsv(rgbImage[i, y]).V > minV)
+                        if (image[i, y] > minV)
                         {
                             x = i;
                             pixelFound = true;
@@ -83,7 +83,7 @@ namespace WFImageParser
                     break;
 
                 startX = chatRect.Right;
-                targetCharacterPixels = OCRHelpers.FindCharacterPixelPoints(firstPixel, rgbImage, null, minV, chatRect.Left, chatRect.Right, lineOffset, lineOffset + lineHeight);
+                targetCharacterPixels = OCRHelpers.FindCharacterPixelPoints(firstPixel, image, null, minV, chatRect.Left, chatRect.Right, lineOffset, lineOffset + lineHeight);
 
                 startX = Math.Min(startX, targetCharacterPixels.Min(p => p.X));
                 endX = Math.Max(endX, targetCharacterPixels.Max(p => p.X + 1));
