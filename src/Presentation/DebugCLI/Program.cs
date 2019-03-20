@@ -15,6 +15,7 @@ using Microsoft.Extensions.Configuration;
 using System.Text.RegularExpressions;
 using Application.ChatMessages.Model;
 using WarframeDriver;
+using System.Threading.Tasks;
 
 namespace DebugCLI
 {
@@ -31,14 +32,21 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            //MouseTests();
+            MouseTests();
+            //var t = Task.Run(() => MouseTests());
+            //while(!t.IsCompleted)
+            //{
+            //    System.Threading.Thread.Sleep(1000);
+            //}
+            //if (t.IsFaulted)
+            //    Console.WriteLine(t.Exception);
 
             //JsonMessagerHelper();
             //TrainOnImages();
-            var c = new ChatParser();
-            var cleaner = new ImageCleaner();
-            cleaner.SaveGreyscaleImage(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png", @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input_white.png", 0.44f);
-            var res = c.ParseChatImage(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png");
+            //var c = new ChatParser();
+            //var cleaner = new ImageCleaner();
+            //cleaner.SaveGreyscaleImage(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png", @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input_white.png", 0.44f);
+            //var res = c.ParseChatImage(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png");
             //foreach (var line in res)
             //{
             //    if (line.Contains(":]"))
@@ -110,13 +118,35 @@ namespace DebugCLI
             //DoFullParse(0.49999999f);
         }
 
-        private static void MouseTests()
+        private static async void MouseTests()
         {
-            System.Threading.Thread.Sleep(5000);
-            var clicker = new Clicker();
+            System.Threading.Thread.Sleep(2000);
+            var clicker = new MouseHelper();
+
+            clicker.MoveTo(4, 768);
+            //Scroll down for new page of messages
+            for (int i = 0; i < 27; i++)
+            {
+                clicker.ScrollDown();
+                System.Threading.Thread.Sleep(16);
+            }
+            clicker.ScrollUp();//Pause
+            clicker.MoveTo(0, 0);
+
+            var g = new DShowCapture(4096, 2160);
+            System.Threading.Thread.Sleep(16);
+            g.GetTradeChatImage("debug.png");
+            var p = new ChatParser();
+            var r = p.ParseChatImage("debug.png");
+            var pos = r.SelectMany(l => l.ClickPoints).First();
+            clicker.MoveTo(pos.X, pos.Y);
+            clicker.Click(pos.X, pos.Y);
+
+            //clicker.Scroll(1);
+            //clicker.ScrollUp();
             //clicker.MoveCursorTo(0, 0);
-            System.Threading.Thread.Sleep(66);
-            clicker.MoveCursorTo(1920 / 2, 1080 / 2);
+            //System.Threading.Thread.Sleep(66);
+            //clicker.MoveCursorTo(1920 / 2, 1080 / 2);
         }
 
         private static void JsonMessagerHelper()
@@ -160,7 +190,7 @@ namespace DebugCLI
                 Author = "joeRivenMan",
                 Raw = "WTB ||| [Opticor Vandal] ||| WTS [Tonkor cri-shaboo] [[Lenz parti-maker] [Tonkor cri-shaboo] PMO",
                 Rivens = new Riven[] { r1, r2, r3 },
-                SpecialMessage = "WTB ||| [Opticor Vandal] ||| WTS [0][Tonkor cri-shaboo] [1][Lenz parti-maker] [2][Tonkor cri-shaboo] PMO"
+                EnhancedMessage = "WTB ||| [Opticor Vandal] ||| WTS [0][Tonkor cri-shaboo] [1][Lenz parti-maker] [2][Tonkor cri-shaboo] PMO"
             };
             var json = JsonConvert.SerializeObject(m);
             Console.WriteLine(json);
