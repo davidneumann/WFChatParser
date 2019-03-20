@@ -14,6 +14,7 @@ using DataStream;
 using Microsoft.Extensions.Configuration;
 using System.Text.RegularExpressions;
 using Application.ChatMessages.Model;
+using WarframeDriver;
 
 namespace DebugCLI
 {
@@ -29,6 +30,8 @@ namespace DebugCLI
 
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
+            
+            MouseTests();
 
             //JsonMessagerHelper();
             //TrainOnImages();
@@ -104,6 +107,15 @@ namespace DebugCLI
             //}
 
             //DoFullParse(0.49999999f);
+        }
+
+        private static void MouseTests()
+        {
+            System.Threading.Thread.Sleep(5000);
+            var clicker = new Clicker();
+            //clicker.MoveCursorTo(0, 0);
+            System.Threading.Thread.Sleep(66);
+            clicker.MoveCursorTo(1920 / 2, 1080 / 2);
         }
 
         private static void JsonMessagerHelper()
