@@ -316,14 +316,14 @@ namespace WFImageParser
 
         private Tuple<float, CharacterDetails, CoordinateList> FastGuessCharacter(TargetMask targetMask, int lineOffset)
         {
-            var targetWidth = targetMask.Width;
+            var targetWidth = targetMask.Width + 2;
 
             var cannidates = _scannedCharacters;
             //Try to only look at similiar sized characters when we are looking at a medium width character.
-            if (targetWidth <= _maxCharWidth / 2 && targetWidth > Math.Ceiling(_maxCharWidth * 0.15))
-                cannidates = _scannedCharacters.Where(c => c.Width >= targetWidth * 0.8f && c.Width <= targetWidth * 1.2f).ToList();
-            else if (targetWidth <= Math.Ceiling(_maxCharWidth * 0.15)) //Only smalls
-                cannidates = _scannedCharacters.Where(c => c.Width <= Math.Ceiling(_maxCharWidth * 0.15)).ToList();
+            //if (targetWidth <= _maxCharWidth / 2 && targetWidth > Math.Ceiling(_maxCharWidth * 0.15))
+            //    cannidates = _scannedCharacters.Where(c => c.Width >= targetWidth * 0.8f && c.Width <= targetWidth * 1.2f).ToList();
+            //else if (targetWidth <= Math.Ceiling(_maxCharWidth * 0.15)) //Only smalls
+            //    cannidates = _scannedCharacters.Where(c => c.Width <= Math.Ceiling(_maxCharWidth * 0.15)).ToList();
             //Else it will be anything as we may be dealing with a partial match
 
             var bestMatchConf = 0f;
@@ -408,7 +408,7 @@ namespace WFImageParser
         private Tuple<float, CharacterDetails, CoordinateList> FastGuessPartialCharacter(TargetMask targetMask, int lineOffset)
         {
             var targetWidth = targetMask.Width;
-            foreach (var group in _scannedCharacters.Where(c => c.Width <= targetWidth + 2).OrderByDescending(c => c.Width).GroupBy(c => c.Width))
+            foreach (var group in _scannedCharacters.Where(c => c.Width > 4 && c.Width <= targetWidth - 4).OrderByDescending(c => c.Width).GroupBy(c => c.Width))
             {
                 var bestMatch = float.MinValue;
                 CharacterDetails bestCharacter = null;
@@ -428,7 +428,7 @@ namespace WFImageParser
                                 characterPixelsMatched += character.WeightMappings[x, y];
                                 matchingPixels.Add(new Point(x + targetMask.MinX, y + lineOffset));
                             }
-                            else if (x <= targetWidth / 3 && !character.VMask[x, y] && targetMask.Mask[x, y]) //The first few pixels are most important. Punish missing them
+                            else if (targetWidth > _maxCharWidth * 0.75 && x <= targetWidth / 3 && !character.VMask[x, y] && targetMask.Mask[x, y]) //The first few pixels are most important. Punish missing them
                             {
                                 characterPixelsMatched--;
                             }
