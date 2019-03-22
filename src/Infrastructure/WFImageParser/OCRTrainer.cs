@@ -20,19 +20,22 @@ namespace WFImageParser
             public int Width;
             public char Character;
         }
-        public List<List<TrainingSampleCharacter>> TrainOnImage(string imagePath, List<char[]> referenceLines, int xOffset = 4, float minV = 0.44f)
+        public List<List<TrainingSampleCharacter>> TrainOnImage(string imagePath, List<char[]> referenceLines, int xOffset = 4)
         {
+            var cleaner = new ImageCleaner();
+            //cleaner.SaveChatColors(imagePath, "debug.png");
+
             var results = new List<List<TrainingSampleCharacter>>();
             using (Image<Rgba32> rgbImage = Image.Load(imagePath))
             {
-                var cache = new VCache(rgbImage);
+                var cache = new ImageCache(rgbImage);
                 var chatRect = new Rectangle(4, 763, 3236, 1350);
                 var offsets = OCRHelpers.LineOffsets;
                 var lineHeight = 36;
                 var refLineIndex = 0;
                 for (int i = 0; i < offsets.Length; i++)
                 {
-                    var line = TrainOnLine(minV, referenceLines[refLineIndex], xOffset, chatRect, cache, lineHeight, offsets[i]);
+                    var line = TrainOnLine(referenceLines[refLineIndex], xOffset, chatRect, cache, lineHeight, offsets[i]);
                     if (line.Count > 0 && line.Count == referenceLines[i].Length)
                     {
                         results.Add(line);
@@ -48,7 +51,7 @@ namespace WFImageParser
             return results;
         }
 
-        private List<TrainingSampleCharacter> TrainOnLine(float minV, char[] referenceCharacters, int xOffset, Rectangle chatRect, VCache image, int lineHeight, int lineOffset)
+        private List<TrainingSampleCharacter> TrainOnLine(char[] referenceCharacters, int xOffset, Rectangle chatRect, ImageCache image, int lineHeight, int lineOffset)
         {
             var startX = xOffset;
             var endX = xOffset;
@@ -64,7 +67,7 @@ namespace WFImageParser
                     var pixelFound = false;
                     for (int y = lineOffset; y < lineOffset + lineHeight; y++)
                     {
-                        if (image[i, y] > minV)
+                        if (image[i, y] > 0.3f)
                         {
                             x = i;
                             pixelFound = true;
@@ -84,19 +87,36 @@ namespace WFImageParser
                     break;
 
                 startX = chatRect.Right;
-                targetCharacterPixels = OCRHelpers.FindCharacterPixelPoints(firstPixel, image, null, minV, chatRect.Left, chatRect.Right, lineOffset, lineOffset + lineHeight);
-                var target = OCRHelpers.FindCharacterMask(firstPixel, image, null, minV, chatRect.Left, chatRect.Right, lineOffset, lineOffset + lineHeight);
+                //targetCharacterPixels = OCRHelpers.FindCharacterPixelPoints(firstPixel, image, null, chatRect.Left, chatRect.Right, lineOffset, lineOffset + lineHeight);
+                //var minX = targetCharacterPixels.Min(p => p.X);
+                //var minY = targetCharacterPixels.Min(p => p.Y);
+                //using (var image2 = new Image<Rgba32>(targetCharacterPixels.Max(p => p.X) - targetCharacterPixels.Min(p => p.X) + 1, targetCharacterPixels.Max(p => p.Y) - targetCharacterPixels.Min(p => p.Y) + 1))
+                //{
+                //    for (int x2 = 0; x2 < image2.Width; x2++)
+                //    {
+                //        for (int y2 = 0; y2 < image2.Height; y2++)
+                //        {
+                //            var p = targetCharacterPixels.FirstOrDefault(p2 => p2.X == x2 + minX  && p2.Y == y2 + minY);
+                //            if (p != null)
+                //                image2[x2, y2] = new Rgba32(image[p.X, p.Y], image[p.X, p.Y], image[p.X, p.Y]);
+                //            else
+                //                image2[x2, y2] = Rgba32.Black;
+                //        }
+                //    }
+                //    image2.Save("debug_target.png");
+                //}
+                var target = OCRHelpers.FindCharacterMask(firstPixel, image, null, chatRect.Left, chatRect.Right, lineOffset, lineOffset + lineHeight);
                 var mask = new float[target.Width, lineHeight];
                 for (int x2 = 0; x2 < target.Width; x2++)
                 {
                     for (int y2 = 0; y2 < lineHeight; y2++)
                     {
-                        mask[x2, y2] = Math.Max(0, (image[target.MinX + x2, y2+lineOffset] - minV) / (1 - minV));
+                        mask[x2, y2] = Math.Max(0, image[target.MinX + x2, y2+lineOffset]);
                     }
                 }
 
-                startX = Math.Min(startX, targetCharacterPixels.Min(p => p.X));
-                endX = Math.Max(endX, targetCharacterPixels.Max(p => p.X + 1));
+                startX = Math.Min(startX, target.MinX);
+                endX = Math.Max(endX, target.MaxX + 1);
 
                 results.Add(new TrainingSampleCharacter() { Mask = mask, Width = endX - startX, Character = referenceCharacters[refIndex++] });
                 x = endX;
@@ -119,13 +139,14 @@ namespace WFImageParser
             Console.WriteLine("Looking at training images");
             for (int i = 0; i < trainingImagePaths.Length; i++)
             {
+                Console.Write("\r" + trainingImagePaths[i]);
                 var correctText = File.ReadAllLines(trainingTextPaths[i]).Select(line => line.Replace(" ", "").ToArray()).ToList();
-                var results = TrainOnImage(trainingImagePaths[i], correctText, xOffset, minV:0.3f);
+                var results = TrainOnImage(trainingImagePaths[i], correctText, xOffset);
                 results.SelectMany(list => list).ToList().ForEach(t => characters.Add(t));
             }
             var groupedChars = characters.GroupBy(t => t.Character);
             //Get max widths
-            Console.WriteLine("Finding max widths");
+            Console.WriteLine("\nFinding max widths");
             var maxWidths = new Dictionary<char, int>();
             groupedChars.ToList().ForEach(g => maxWidths[g.Key] = g.Max(t => t.Width));
             //Turn all pixel lists into arrays of max width

@@ -121,6 +121,35 @@ namespace WFImageParser
             }
         }
 
+        public void SaveChatColors(string imagePath, string outputPath)
+        {
+            var converter = new ColorSpaceConverter();
+
+            using (Image<Rgba32> rgbImage = Image.Load(imagePath))
+            {
+                for (int i = 0; i < rgbImage.Width * rgbImage.Height; i++)
+                {
+                    var x = i % rgbImage.Width;
+                    var y = i / rgbImage.Width;
+                    var pixel = rgbImage[x, y];
+                    var hsvPixel = converter.ToHsv(pixel);
+                    var v = (hsvPixel.V - 0.21f) / (1f - 0.21f);
+                    //if (x == 369 && y == 1134)
+                    //    System.Diagnostics.Debugger.Break();
+                    if (hsvPixel.H >= 175 && hsvPixel.H <= 185 //green
+                        || hsvPixel.S < 0.3 //white
+                        || hsvPixel.H >= 190 && hsvPixel.H <= 210) //blue
+                    {
+                        rgbImage[x, y] = new Rgba32(v, v, v);
+                    }
+                    else
+                        rgbImage[x, y] = Rgba32.Black;
+                }
+
+                rgbImage.Save(outputPath);
+            }
+        }
+
         public void SaveGreyscaleImage(string imagePath, string outputPath, float minV, float maxV)
         {
             var converter = new ColorSpaceConverter();

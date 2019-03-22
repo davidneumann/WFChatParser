@@ -235,7 +235,7 @@ namespace DebugCLI
                 var correctResults = File.ReadAllLines(trainingText[k]).Select(line => line.Trim()).ToArray();
                 var c = new ChatParser();
                 var cleaner = new ImageCleaner();
-                cleaner.SaveGreyscaleImage(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name), minV: 0.44f);
+                cleaner.SaveChatColors(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name));
                 var result = c.ParseChatImage(masterKeyFile, xOffset: xOffset).Select(i => i.RawMessage.Trim()).ToArray();
 
                 Console.WriteLine("Expected");

@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using SixLabors.Primitives;
 
@@ -37,6 +38,19 @@ namespace WFImageParser
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
+        }
+
+        public void Remove(Point point)
+        {
+            _coordinates.Remove((point.X, point.Y));
+        }
+
+        internal void AddRange(CoordinateList items)
+        {
+            foreach (var item in items)
+            {
+                Add(item);
+            }
         }
     }
 }
