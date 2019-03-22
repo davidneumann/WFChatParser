@@ -154,7 +154,7 @@ namespace WFImageParser
                     }
                     else if (bestFit.Item1 < 0.7)
                     {
-                        var fuzzyMask = OCRHelpers.FindCharacterMask(firstPixel, image, prevMatchedCharacters, minV - 0.2f, chatRect.Left, chatRect.Right, lineOffset, lineOffset + lineHeight);
+                        var fuzzyMask = OCRHelpers.FindCharacterMask(firstPixel, image, prevMatchedCharacters, Math.Max(0.29f, minV - 0.2f), chatRect.Left, chatRect.Right, lineOffset, lineOffset + lineHeight);
                         var fuzzFit = FastGuessCharacter(targetMask, lineOffset);
                         if (fuzzFit.Item1 > bestFit.Item1)
                             bestFit = fuzzFit;
