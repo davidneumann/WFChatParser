@@ -24,6 +24,7 @@ namespace WFImageParser
         private List<CharacterDetails> _scannedCharacters = new List<CharacterDetails>();
         private Dictionary<string, Dictionary<string, int>> _gapPairs = new Dictionary<string, Dictionary<string, int>>();
         private int _maxCharWidth = 0;
+        private int _minCharWidth = int.MaxValue;
 
         private static readonly string GAPSFILE = Path.Combine("ocrdata", "gaps.json");
         private static readonly string[] _suffixes = new string[] { "ada]", "ata]", "bin]", "bo]", "cak]", "can]", "con]", "cron]", "cta]", "des]", "dex]", "do]", "dra]", "lis]", "mag]", "nak]", "nem]", "nent]", "nok]", "pha]", "sus]", "tak]", "tia]", "tin]", "tio]", "tis]", "ton]", "tor]", "tox]", "tron]" };
@@ -63,6 +64,8 @@ namespace WFImageParser
                         _scannedCharacters.Add(character);
                         if (character.Width > _maxCharWidth)
                             _maxCharWidth = character.Width;
+                        if (character.Width < _minCharWidth)
+                            _minCharWidth = character.Width;
                     }
                 }
 
@@ -136,6 +139,53 @@ namespace WFImageParser
                     break;
 
                 var targetMask = OCRHelpers.FindCharacterMask(firstPixel, image, prevMatchedCharacters, chatRect.Left, chatRect.Right, lineOffset, lineOffset + lineHeight);
+                var didRemove = false;
+                var newXFocus = targetMask.MinX;
+                for (int x2 = 0; x2 < targetMask.Width; x2++)
+                {
+                    var count = 0;
+                    var strength = 0f;
+                    for (int y2 = 0; y2 < lineHeight; y2++)
+                    {
+                        strength += targetMask.SoftMask[x2, y2];
+                        if (targetMask.SoftMask[x2, y2] > 0)
+                            count++;
+                    }
+                    if (strength / count < 0.12 && targetMask.Width > 6)
+                    {
+                        for (int y2 = 0; y2 < lineHeight; y2++)
+                        {
+                            prevMatchedCharacters.Add(new Point(targetMask.MinX + x2, lineOffset + y2));
+                            didRemove = true;
+                            newXFocus = x2 + targetMask.MinX;
+                        }
+                    }
+                    else
+                        break;
+                }
+                if (didRemove)
+                {
+                    for (int i = newXFocus; i < chatRect.Right; i++)
+                    {
+                        var pixelFound = false;
+                        for (int y = lineOffset; y < lineOffset + lineHeight; y++)
+                        {
+                            if (image[i, y] > minV && !prevMatchedCharacters.Any(p => p.X == i && p.Y == y))
+                            {
+                                x = i;
+                                pixelFound = true;
+                                firstPixel = new Point(i, y);
+                                break;
+                            }
+                        }
+
+                        if (pixelFound)
+                        {
+                            break;
+                        }
+                    }
+                    targetMask = OCRHelpers.FindCharacterMask(firstPixel, image, prevMatchedCharacters, chatRect.Left, chatRect.Right, lineOffset, lineOffset + lineHeight);
+                }
                 if (wordStartX < 0)
                     wordStartX = targetMask.MinX;
 
@@ -148,21 +198,23 @@ namespace WFImageParser
                     //Try shifting
                     if (bestFit == null)
                     {
-                        using (var debug = new Image<Rgba32>(targetMask.Width, targetMask.SoftMask.GetLength(1)))
-                        {
-                            for (int x2 = 0; x2 < debug.Width; x2++)
-                            {
-                                for (int y2 = 0; y2 < debug.Height; y2++)
-                                {
-                                    debug[x2, y2] = new Rgba32(targetMask.SoftMask[x2, y2], targetMask.SoftMask[x2, y2], targetMask.SoftMask[x2, y2]);
-                                }
-                            }
-                            debug.Save("debug_target.png");
-                        }
+                        //using (var debug = new Image<Rgba32>(targetMask.Width, targetMask.SoftMask.GetLength(1)))
+                        //{
+                        //    for (int x2 = 0; x2 < debug.Width; x2++)
+                        //    {
+                        //        for (int y2 = 0; y2 < debug.Height; y2++)
+                        //        {
+                        //            debug[x2, y2] = new Rgba32(targetMask.SoftMask[x2, y2], targetMask.SoftMask[x2, y2], targetMask.SoftMask[x2, y2]);
+                        //        }
+                        //    }
+                        //    debug.Save("debug_target.png");
+                        //}
 
                         var shiftyMask = targetMask;
-                        for (int i = 0; i < 2; i++)
+                        for (int i = 0; i < 2; i++)//Try trimming left
                         {
+                            if (shiftyMask.Width - 1 <= 0)
+                                break;
                             //PIVOT
                             var boolMask = new bool[shiftyMask.Width - 1, shiftyMask.Mask.GetLength(1)];
                             var hardCount = 0;
@@ -170,7 +222,7 @@ namespace WFImageParser
                             {
                                 for (int y2 = 0; y2 < boolMask.GetLength(1); y2++)
                                 {
-                                    boolMask[x2, y2] = shiftyMask.Mask[x2+1, y2];
+                                    boolMask[x2, y2] = shiftyMask.Mask[x2 + 1, y2];
                                     if (boolMask[x2, y2])
                                         hardCount++;
                                 }
@@ -181,7 +233,7 @@ namespace WFImageParser
                             {
                                 for (int y2 = 0; y2 < boolMask.GetLength(1); y2++)
                                 {
-                                    softMask[x2, y2] = shiftyMask.SoftMask[x2+1, y2];
+                                    softMask[x2, y2] = shiftyMask.SoftMask[x2 + 1, y2];
                                     softCount += softMask[x2, y2];
                                 }
                             }
@@ -189,17 +241,17 @@ namespace WFImageParser
                             var clippedMask = new TargetMask(boolMask, shiftyMask.MaxX, shiftyMask.MinX + 1, shiftyMask.Width - 1, hardCount, softCount, softMask);
                             shiftyMask = clippedMask;
 
-                            using (var debug = new Image<Rgba32>(shiftyMask.Width, shiftyMask.SoftMask.GetLength(1)))
-                            {
-                                for (int x2 = 0; x2 < debug.Width; x2++)
-                                {
-                                    for (int y2 = 0; y2 < debug.Height; y2++)
-                                    {
-                                        debug[x2, y2] = new Rgba32(shiftyMask.SoftMask[x2, y2], shiftyMask.SoftMask[x2, y2], shiftyMask.SoftMask[x2, y2]);
-                                    }
-                                }
-                                debug.Save("debug_shift.png");
-                            }
+                            //using (var debug = new Image<Rgba32>(shiftyMask.Width, shiftyMask.SoftMask.GetLength(1)))
+                            //{
+                            //    for (int x2 = 0; x2 < debug.Width; x2++)
+                            //    {
+                            //        for (int y2 = 0; y2 < debug.Height; y2++)
+                            //        {
+                            //            debug[x2, y2] = new Rgba32(shiftyMask.SoftMask[x2, y2], shiftyMask.SoftMask[x2, y2], shiftyMask.SoftMask[x2, y2]);
+                            //        }
+                            //    }
+                            //    debug.Save("debug_shift.png");
+                            //}
                             var partialMatch = FastGuessPartialCharacter(clippedMask, lineOffset);
                             //We need to be sure that this new match is solid and not just better than the existing one
                             if (partialMatch != null && partialMatch.Item1 > 0.7)
@@ -208,9 +260,60 @@ namespace WFImageParser
                                 break;
                             }
                         }
+                        if (bestFit == null)
+                        {
+                            shiftyMask = targetMask;
+                            for (int i = 1; i <= 2; i++)//Try padding left
+                            {
+                                //PIVOT
+                                var boolMask = new bool[shiftyMask.Width + i, shiftyMask.Mask.GetLength(1)];
+                                var hardCount = 0;
+                                for (int x2 = i; x2 < boolMask.GetLength(0); x2++)
+                                {
+                                    for (int y2 = 0; y2 < boolMask.GetLength(1); y2++)
+                                    {
+                                        boolMask[x2, y2] = shiftyMask.Mask[x2 - i, y2];
+                                        if (boolMask[x2, y2])
+                                            hardCount++;
+                                    }
+                                }
+                                var softCount = 0f;
+                                var softMask = new float[boolMask.GetLength(0), boolMask.GetLength(1)];
+                                for (int x2 = i; x2 < boolMask.GetLength(0); x2++)
+                                {
+                                    for (int y2 = 0; y2 < boolMask.GetLength(1); y2++)
+                                    {
+                                        softMask[x2, y2] = shiftyMask.SoftMask[x2 -i, y2];
+                                        softCount += softMask[x2, y2];
+                                    }
+                                }
+
+                                var clippedMask = new TargetMask(boolMask, shiftyMask.MaxX, shiftyMask.MinX, shiftyMask.Width + i, hardCount, softCount, softMask);
+                                shiftyMask = clippedMask;
+
+                                //using (var debug = new Image<Rgba32>(shiftyMask.Width, shiftyMask.SoftMask.GetLength(1)))
+                                //{
+                                //    for (int x2 = 0; x2 < debug.Width; x2++)
+                                //    {
+                                //        for (int y2 = 0; y2 < debug.Height; y2++)
+                                //        {
+                                //            debug[x2, y2] = new Rgba32(shiftyMask.SoftMask[x2, y2], shiftyMask.SoftMask[x2, y2], shiftyMask.SoftMask[x2, y2]);
+                                //        }
+                                //    }
+                                //    debug.Save("debug_shift.png");
+                                //}
+                                var partialMatch = FastGuessPartialCharacter(clippedMask, lineOffset);
+                                //We need to be sure that this new match is solid and not just better than the existing one
+                                if (partialMatch != null && partialMatch.Item1 > 0.7)
+                                {
+                                    bestFit = partialMatch;
+                                    break;
+                                }
+                            }
+                        }
                     }
                     //If all else has failed hope that we are on some sort of horrible overlap and take the best we can find
-                    if(bestFit == null)
+                    if (bestFit == null)
                     {
                         var boolMask = new bool[targetMask.Mask.GetLength(0), targetMask.Mask.GetLength(1)];
                         var hardCount = 0;
@@ -229,7 +332,7 @@ namespace WFImageParser
                         {
                             for (int y2 = 0; y2 < softMask.GetLength(1); y2++)
                             {
-                                softMask[x2, y2] = targetMask.SoftMask[x2, y2] > 0.5f ? targetMask.SoftMask[x2,y2] : 0f;
+                                softMask[x2, y2] = targetMask.SoftMask[x2, y2] > 0.5f ? targetMask.SoftMask[x2, y2] : 0f;
                                 softCount += softMask[x2, y2];
                             }
                         }
@@ -237,7 +340,7 @@ namespace WFImageParser
                         bestFit = FastGuessPartialCharacter(frontMask, lineOffset, true);
                         //Cleanup any lingering pixels
                         //We are in a bad state so be very aggressive
-                        if(bestFit != null)
+                        if (bestFit != null)
                         {
                             var columnHunting = true;
                             for (int x2 = targetMask.MinX; x2 <= targetMask.MaxX; x2++)
@@ -274,10 +377,10 @@ namespace WFImageParser
                     //}
 
                     //We can allow loose fits on smaller characters
-                    if (bestFit.Item1 < 0.20f && bestFit.Item2 != null && bestFit.Item2.TotalWeights > 40)
+                    if (bestFit != null && bestFit.Item1 < 0.20f && bestFit.Item2 != null && bestFit.Item2.TotalWeights > 40)
                         bestFit = new Tuple<float, CharacterDetails, CoordinateList>(float.MinValue, null, null);
 
-                    if (bestFit.Item2 != null && endX != lastCharacterEndX)
+                    if (bestFit != null && bestFit.Item2 != null && endX != lastCharacterEndX)
                     {
                         var name = bestFit.Item2.Name.Replace(".png", "").Replace(".txt", "").Replace("alt_", "");
                         if (name.EndsWith("_upper"))
@@ -353,7 +456,7 @@ namespace WFImageParser
                         currentWord.Append(name);
                         rawMessage.Append(name);
 
-                        lastCharacterEndX = startX + bestFit.Item2.Width;
+                        lastCharacterEndX = startX + bestFit.Item2.Width - 2;
                         prevMatchedCharacters.AddRange(bestFit.Item3);
                         prevTargetMask = targetMask;
                         lastCharacterDetails = bestFit.Item2;
@@ -366,7 +469,7 @@ namespace WFImageParser
                     }
                     else //failed to ID the character, skip it
                     {
-                        AppendSpace(image, lineHeight, lineOffset, rawMessage, message, wordStartX, currentWord, clickPoints);
+                        //AppendSpace(image, lineHeight, lineOffset, rawMessage, message, wordStartX, currentWord, clickPoints);
                         x = lastCharacterEndX = endX = targetMask.MaxX + 1;
                     }
                 }
@@ -561,7 +664,7 @@ namespace WFImageParser
                             for (int x = 0; x < character.Width && x < targetMask.Width; x++)
                             {
                                 characterPixelsMatched -= targetMask.SoftMask[x, y];
-                                if(character.TotalWeights < 51 && targetMask.Width <= character.Width) //Tiny characters really need to make sure their empty lines are empty
+                                if (character.TotalWeights < 51 && targetMask.Width <= character.Width) //Tiny characters really need to make sure their empty lines are empty
                                     characterPixelsMatched -= targetMask.SoftMask[x, y];
                             }
                         }

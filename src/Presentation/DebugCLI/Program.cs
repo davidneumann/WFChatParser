@@ -41,6 +41,8 @@ namespace DebugCLI
             //if (t.IsFaulted)
             //    Console.WriteLine(t.Exception);
 
+            //FixImages();
+            VerifyNoErrors(2);
             //JsonMessagerHelper();
             //TrainOnImages();
             //var c = new ChatParser();
@@ -52,70 +54,19 @@ namespace DebugCLI
             //    if (line.Contains(":]"))
             //        Debugger.Break();
             //}
-            VerifyNoErrors(2);
             //var v = 0.5f;
+        }
 
-            //TestDataSender();
-
-            //MonitorChatLive();
-
-            //GenerateCharStrings(27);
-            //SpaceTest(27);
-
-            //var minErrors = int.MaxValue;
-            //var minErrorsV = float.MaxValue;
-            //for (float v = 0.6f; v > 0.2f; v -= 0.1f)
-            //{
-            //MakeBitmapsSmall(v, false);
-            //AverageBitmapsSmall(v, false, 0.5f);//0.415f);
-            //    var sw = new Stopwatch();
-            //    sw.Start();
-            //    var errors = ParseWithBitmap(v, 11, verboseLevel:2);
-            //    sw.Stop();
-            //    Console.WriteLine("Ran in: " + sw.Elapsed.TotalSeconds);
-            //    Console.WriteLine("Found " + errors + " errors");
-            //    if (errors < minErrors)
-            //    {
-            //        minErrors = errors;
-            //        minErrorsV = v;
-            //        Console.WriteLine("New min errors: " + errors + " v: " + minErrorsV);
-            //    }
-            //}
-            //MakeBitmapsSmall();
-
-            //TrainOCR();
-            //TrainOCRSmall();
-            //VerifyOCR();
-            //AnalyseImages();
-            //ProcessChatLogs();
-            //ProcessRivens();^
-
-            //var minErrors = int.MaxValue;
-            //var goodSpaceWidth = int.MaxValue;
-            //for (int spaceWidth = 11; spaceWidth > 5; spaceWidth--)
-            //{
-            //var c = new ChatImageCleaner();
-            //c.SaveGreyscaleImage(@"C:\Users\david\Downloads\Untitled.png", @"C:\Users\david\Downloads\Untitled_grey.png", v);
-            //var spaceWidth = 6;
-            //Console.WriteLine("space width: " + spaceWidth);
-            //var sw = new Stopwatch();
-            //sw.Start();
-            //var errors = ParseWithBitmap(verboseLevel: 2, fastFail: false, xOffset: 0);
-            //sw.Stop();
-            //Console.WriteLine("Ran in: " + sw.Elapsed.TotalSeconds);
-            //Console.WriteLine("Found " + errors + " errors");
-            //if (errors < minErrors)
-            //{
-            //    minErrors = errorsz;
-            //    goodSpaceWidth = spaceWidth;
-            //    Console.WriteLine("New min errors: " + errors + " spaceWidth: " + goodSpaceWidth);
-
-            //    if (minErrors == 0)
-            //        break;
-            //}
-            //}
-
-            //DoFullParse(0.49999999f);
+        private static void FixImages()
+        {
+            var cleaner = new ImageCleaner();
+            cleaner.SaveChatColors(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png", @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input_white.png");
+            var p = new ChatParser();
+            var r = p.ParseChatImage(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png");
+            foreach (var line in r)
+            {
+                Console.WriteLine(line.RawMessage);
+            }
         }
 
         //private static async void MouseTests()
