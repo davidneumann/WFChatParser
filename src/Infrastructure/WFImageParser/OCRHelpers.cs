@@ -109,12 +109,14 @@ namespace WFImageParser
             var minPointX = points.Min(p => p.X);
             var mask = new bool[points.Max(p => p.X) - points.Min(p => p.X)+1, maxY - minY];
             var pixelCount = 0;
+            float softPixelCount = 0;
             foreach (var p in points)
             {
                 mask[p.X - minPointX, p.Y - minY] = true;
+                softPixelCount += (image[p.X, p.Y] - minV) / (1 - minV);
                 pixelCount++;
             }
-            return new TargetMask(mask, points.Max(p => p.X), minPointX, points.Max(p => p.X) - minPointX + 1, pixelCount);
+            return new TargetMask(mask, points.Max(p => p.X), minPointX, points.Max(p => p.X) - minPointX + 1, pixelCount, softPixelCount);
         }
 
         internal static int NeighborCount(TargetMask prevTargetMask, int x, int y)

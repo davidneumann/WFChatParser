@@ -393,7 +393,7 @@ namespace WFImageParser
                     }
                 }
 
-                var conf = (float)characterPixelsMatched / (float)(Math.Max(targetMask.PixelCount, character.TotalWeights));
+                var conf = (float)characterPixelsMatched / (float)(Math.Max(targetMask.SoftPixelCount, character.TotalWeights));
                 if (conf > bestMatchConf)
                 {
                     bestMatchConf = conf;
@@ -468,7 +468,7 @@ namespace WFImageParser
                 //var results = new string[endLine - startLine];
                 for (int i = 0; i < endLine && i < offsets.Length; i++)
                 {
-                    var line = ParseLineBitmapScan(cache, 0.44f, xOffset, chatRect, lineHeight, offsets[i], 6);
+                    var line = ParseLineBitmapScan(cache, 0.3f, xOffset, chatRect, lineHeight, offsets[i], 6);
                     if (line.RawMessage != null && regex.Match(line.RawMessage).Success)
                         results.Add(line);
                     else if (results.Count > 0 && line.RawMessage != null)

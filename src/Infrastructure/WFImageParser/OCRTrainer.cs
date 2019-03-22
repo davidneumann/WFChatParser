@@ -15,7 +15,8 @@ namespace WFImageParser
     {
         public class TrainingSampleCharacter
         {
-            public List<Point> Pixels;
+            internal float[,] Mask;
+            //public List<Point> Pixels;
             public int Width;
             public char Character;
         }
@@ -84,11 +85,20 @@ namespace WFImageParser
 
                 startX = chatRect.Right;
                 targetCharacterPixels = OCRHelpers.FindCharacterPixelPoints(firstPixel, image, null, minV, chatRect.Left, chatRect.Right, lineOffset, lineOffset + lineHeight);
+                var target = OCRHelpers.FindCharacterMask(firstPixel, image, null, minV, chatRect.Left, chatRect.Right, lineOffset, lineOffset + lineHeight);
+                var mask = new float[target.Width, lineHeight];
+                for (int x2 = 0; x2 < target.Width; x2++)
+                {
+                    for (int y2 = 0; y2 < lineHeight; y2++)
+                    {
+                        mask[x2, y2] = Math.Max(0, (image[target.MinX + x2, y2+lineOffset] - minV) / (1 - minV));
+                    }
+                }
 
                 startX = Math.Min(startX, targetCharacterPixels.Min(p => p.X));
                 endX = Math.Max(endX, targetCharacterPixels.Max(p => p.X + 1));
 
-                results.Add(new TrainingSampleCharacter() { Pixels = targetCharacterPixels.Select(p => new Point(p.X - startX, p.Y - lineOffset)).ToList(), Width = endX - startX, Character = referenceCharacters[refIndex++] });
+                results.Add(new TrainingSampleCharacter() { Mask = mask, Width = endX - startX, Character = referenceCharacters[refIndex++] });
                 x = endX;
             }
             if (referenceCharacters.Length > refIndex)
@@ -110,7 +120,7 @@ namespace WFImageParser
             for (int i = 0; i < trainingImagePaths.Length; i++)
             {
                 var correctText = File.ReadAllLines(trainingTextPaths[i]).Select(line => line.Replace(" ", "").ToArray()).ToList();
-                var results = TrainOnImage(trainingImagePaths[i], correctText, xOffset, minV:0.44f);
+                var results = TrainOnImage(trainingImagePaths[i], correctText, xOffset, minV:0.3f);
                 results.SelectMany(list => list).ToList().ForEach(t => characters.Add(t));
             }
             var groupedChars = characters.GroupBy(t => t.Character);
@@ -125,12 +135,12 @@ namespace WFImageParser
                 Console.Write("\rLooking at: " + g.Key);
                 return g.Select(t =>
                 {
-                    var arr = new bool[maxWidths[t.Character], 36];
-                    for (int x = 0; x < maxWidths[t.Character]; x++)
+                    var arr = new float[maxWidths[t.Character], 36];
+                    for (int x = 0; x < maxWidths[t.Character] && x < t.Width; x++)
                     {
                         for (int y = 0; y < 36; y++)
                         {
-                            arr[x, y] = t.Pixels.Any(p => p.X == x && p.Y == y);
+                            arr[x, y] = t.Mask[x, y];
                         }
                     }
                     return new { t.Character, Mask = arr };
@@ -141,15 +151,14 @@ namespace WFImageParser
             var pixelCounts = groupedCharArrays.Select(g =>
             {
                 Console.Write("\rLooking at: " + g.Key);
-                var arr = new int[maxWidths[g.Key], 36];
+                var arr = new float[maxWidths[g.Key], 36];
                 g.ToList().ForEach(t =>
                 {
                     for (int x = 0; x < maxWidths[g.Key]; x++)
                     {
                         for (int y = 0; y < 36; y++)
                         {
-                            if (t.Mask[x, y])
-                                arr[x, y]++;
+                            arr[x, y] += t.Mask[x, y];
                         }
                     }
                 });
@@ -163,7 +172,7 @@ namespace WFImageParser
                 {
                     for (int y = 0; y < arr.GetLength(1); y++)
                     {
-                        arr[x, y] = (byte)((float)i.PixelCounts[x, y] / (float)i.SampleCount * byte.MaxValue);
+                        arr[x, y] = (byte)(((float)i.PixelCounts[x, y] / (float)i.SampleCount) * byte.MaxValue);
                     }
                 }
                 return new { i.Character, Pixels = arr };
