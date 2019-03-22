@@ -138,15 +138,19 @@ namespace Application
 
                         await _dataSender.AsyncSendChatMessage(message);
                     }
-                    else if (sentMessages.Any(i => i.Timestamp == message.Timestamp && i.Author == i.Author && !String.Equals(i.Raw, message.Raw)))
+                    else if (sentMessages.Any(i => i.Timestamp == message.Timestamp && i.Author == message.Author && !String.Equals(i.Raw, message.Raw)))
                     {
                         if (message.DEBUGREASON == null)
                             message.DEBUGREASON = string.Empty;
                         else
                             message.DEBUGREASON = message.DEBUGREASON + " || ";
-                        message.DEBUGREASON += "Message parse differnet error, parse error!";
+                        var others = string.Empty;
+                        sentMessages.Where(i => i.Timestamp == message.Timestamp && i.Author == message.Author && !String.Equals(i.Raw, message.Raw)).Select(m => m.Raw).ToList().ForEach(str => others += str + "\n ");
+                        message.DEBUGREASON += "Message parse differnet error, parse error! Other(s):\n " + others;
                         shouldCopyImage = true;
                         message.DEBUGIMAGE = debugImageName;
+
+                        await _dataSender.AsyncSendChatMessage(message);
                     }
                 }
                 if (shouldCopyImage)
