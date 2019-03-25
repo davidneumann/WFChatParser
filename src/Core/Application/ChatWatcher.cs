@@ -73,7 +73,6 @@ namespace Application
                     {
                         File.Copy(image, Path.Combine(debugImageDectory, "capture_0.png"), true);
                     }
-
                 }
                 catch { continue; }
                 var imageTime = sw.Elapsed.TotalSeconds;
@@ -94,18 +93,23 @@ namespace Application
                     var m = result.RawMessage;
                     string debugReason = null;
                     var timestamp = m.Substring(0, 7).Trim();
-                    var username = m.Substring(8).Trim();
-                    if (username.IndexOf(":") > 0 && username.IndexOf(":") < username.IndexOf(" "))
-                        username = username.Substring(0, username.IndexOf(":"));
-                    else
+                    var username = "Unknown";
+                    try
                     {
-                        username = username.Substring(0, username.IndexOf(" "));
-                        debugReason = "Bade name: " + username;
+                        username = m.Substring(8).Trim();
+                        if (username.IndexOf(":") > 0 && username.IndexOf(":") < username.IndexOf(" "))
+                            username = username.Substring(0, username.IndexOf(":"));
+                        else
+                        {
+                            username = username.Substring(0, username.IndexOf(" "));
+                            debugReason = "Bade name: " + username;
+                        }
+                        if (username.Contains(" ") || username.Contains(@"\/") || username.Contains("]") || username.Contains("[") || badNameRegex.Match(username).Success)
+                        {
+                            debugReason = "Bade name: " + username;
+                        }
                     }
-                    if (username.Contains(" ") || username.Contains(@"\/") || username.Contains("]") || username.Contains("[") || badNameRegex.Match(username).Success)
-                    {
-                        debugReason = "Bade name: " + username;
-                    }
+                    catch { debugReason = "Bade name: " + username; }
                     var cm = new ChatMessageModel()
                     {
                         Raw = m,
@@ -149,6 +153,7 @@ namespace Application
                         message.DEBUGREASON += "Message parse differnet error, parse error! Other(s):\n " + others;
                         shouldCopyImage = true;
                         message.DEBUGIMAGE = debugImageName;
+                        sentMessages.Enqueue(message);
 
                         await _dataSender.AsyncSendChatMessage(message);
                     }
