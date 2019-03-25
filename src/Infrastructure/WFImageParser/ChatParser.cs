@@ -266,15 +266,18 @@ namespace WFImageParser
                             for (int i = 1; i <= 2; i++)//Try padding left
                             {
                                 //PIVOT
-                                var boolMask = new bool[shiftyMask.Width + i, shiftyMask.Mask.GetLength(1)];
+                                var boolMask = new bool[shiftyMask.Width + 1, shiftyMask.Mask.GetLength(1)];
                                 var hardCount = 0;
                                 for (int x2 = i; x2 < boolMask.GetLength(0); x2++)
                                 {
                                     for (int y2 = 0; y2 < boolMask.GetLength(1); y2++)
                                     {
-                                        boolMask[x2, y2] = shiftyMask.Mask[x2 - i, y2];
-                                        if (boolMask[x2, y2])
-                                            hardCount++;
+                                        if (shiftyMask.SoftMask[x2 - i, y2] > 0f)
+                                        {
+                                            boolMask[x2, y2] = shiftyMask.Mask[x2 - i, y2];
+                                            if (boolMask[x2, y2])
+                                                hardCount++;
+                                        }
                                     }
                                 }
                                 var softCount = 0f;
@@ -283,12 +286,15 @@ namespace WFImageParser
                                 {
                                     for (int y2 = 0; y2 < boolMask.GetLength(1); y2++)
                                     {
-                                        softMask[x2, y2] = shiftyMask.SoftMask[x2 -i, y2];
+                                        //if (shiftyMask.SoftMask[x2 - i, y2] > 0.3f)
+                                        //{
+                                        softMask[x2, y2] = shiftyMask.SoftMask[x2 - i, y2];
                                         softCount += softMask[x2, y2];
+                                        //}
                                     }
                                 }
 
-                                var clippedMask = new TargetMask(boolMask, shiftyMask.MaxX, shiftyMask.MinX, shiftyMask.Width + i, hardCount, softCount, softMask);
+                                var clippedMask = new TargetMask(boolMask, shiftyMask.MaxX, shiftyMask.MinX, shiftyMask.Width + 1, hardCount, softCount, softMask);
                                 shiftyMask = clippedMask;
 
                                 //using (var debug = new Image<Rgba32>(shiftyMask.Width, shiftyMask.SoftMask.GetLength(1)))
@@ -315,6 +321,20 @@ namespace WFImageParser
                     //If all else has failed hope that we are on some sort of horrible overlap and take the best we can find
                     if (bestFit == null)
                     {
+                        //var tmpBlacklist = new CoordinateList();
+                        //tmpBlacklist.AddRange(prevMatchedCharacters);
+                        //Point tmpPixel = Point.Empty;
+                        //for (int x2 = 0; x2 < targetMask.Width; x2++)
+                        //{
+                        //    for (int y2 = 0; y2 < lineHeight; y2++)
+                        //    {
+                        //        if (targetMask.SoftMask[x2, y2] < 0.3)
+                        //            tmpBlacklist.Add(new Point(x2 + targetMask.MinX, y2 + lineOffset));
+                        //        else if (tmpPixel == Point.Empty)
+                        //            tmpPixel = new Point(x2 + targetMask.MinX, y2 + lineOffset);
+                        //    }
+                        //}
+                        //var frontMask = OCRHelpers.FindCharacterMask(tmpPixel, image, tmpBlacklist, targetMask.MinX, targetMask.MaxX, lineOffset, lineOffset + lineHeight);
                         var boolMask = new bool[targetMask.Mask.GetLength(0), targetMask.Mask.GetLength(1)];
                         var hardCount = 0;
                         for (int x2 = 0; x2 < boolMask.GetLength(0); x2++)
@@ -348,13 +368,13 @@ namespace WFImageParser
                                 var columnCount = 0f;
                                 for (int y2 = lineOffset; y2 < lineOffset + lineHeight; y2++)
                                 {
-                                    if (image[x2, y2] < 0.5)
+                                    if (image[x2, y2] < 0.2)
                                         bestFit.Item3.Add(new Point(x2, y2));
                                     else
                                         columnCount += image[x2, y2];
                                 }
 
-                                if (columnHunting && columnCount < 3)
+                                if (columnHunting && columnCount < 1.5)
                                 {
                                     for (int y2 = lineOffset; y2 < lineOffset + lineHeight; y2++)
                                     {
@@ -625,7 +645,11 @@ namespace WFImageParser
         private Tuple<float, CharacterDetails, CoordinateList> FastGuessPartialCharacter(TargetMask targetMask, int lineOffset, bool takeLeastBad = false)
         {
             var targetWidth = targetMask.Width;
-            foreach (var group in _scannedCharacters.Where(c => c.Width <= targetWidth + 2).OrderByDescending(c => c.Width).GroupBy(c => c.Width))
+            var minWidth = takeLeastBad ? 0 : targetWidth * 0.5f;
+            var leastBadMatch = float.MinValue;
+            CharacterDetails leastBadCharacter = null;
+            CoordinateList leastBadMatchingPixels = null;
+            foreach (var group in _scannedCharacters.Where(c => c.Width >= minWidth && c.Width <= targetWidth + 2).OrderByDescending(c => c.Width).GroupBy(c => c.Width))
             {
                 var bestMatch = float.MinValue;
                 CharacterDetails bestCharacter = null;
@@ -648,9 +672,9 @@ namespace WFImageParser
                                 characterPixelsMatched += character.WeightMappings[x, y];// + targetMask.SoftMask[x,y];
                                 matchingPixels.Add(new Point(x + targetMask.MinX, y + lineOffset));
                             }
-                            else if (targetMask.Mask[x, y] && !character.VMask[x, y])
+                            else if (character.TotalWeights > 55 && targetMask.Mask[x, y] && !character.VMask[x, y])
                                 characterPixelsMatched -= targetMask.SoftMask[x, y] / 2;
-                            else if (character.VMask[x, y] && !targetMask.Mask[x, y])
+                            else if (character.TotalWeights > 55 && character.VMask[x, y] && !targetMask.Mask[x, y])
                                 characterPixelsMatched -= character.WeightMappings[x, y] / 4;
                             //else if (targetWidth > _maxCharWidth * 0.75 && x <= targetWidth / 3 && !character.VMask[x, y] && targetMask.Mask[x, y]) //The first few pixels are most important. Punish missing them
                             //{
@@ -679,13 +703,21 @@ namespace WFImageParser
                         bestCharacter = character;
                         bestMatchingPixels = matchingPixels;
                     }
+                    if (takeLeastBad && coverage > leastBadMatch && targetMask.Width > 4)
+                    {
+                        leastBadMatch = coverage;
+                        leastBadCharacter = character;
+                        leastBadMatchingPixels = matchingPixels;
+                    }
                 }
                 //var coverage = cleanTargetPixels.Where(p => p.X - startX > 0 && p.X - startX < character.Width && character.VMask[p.X - startX, p.Y - lineOffset] > minV).Count() / (float)character.PixelCount;
-                if (bestMatch > 0.85 || (bestMatch > 0.5 && takeLeastBad))
+                if (bestMatch > 0.85 || (bestMatch > 0.7 && takeLeastBad))
                 {
                     return new Tuple<float, CharacterDetails, CoordinateList>(bestMatch, bestCharacter, bestMatchingPixels);
                 }
             }
+            if (takeLeastBad && leastBadCharacter != null)
+                return new Tuple<float, CharacterDetails, CoordinateList>(leastBadMatch, leastBadCharacter, leastBadMatchingPixels);
             return null;
         }
 
