@@ -142,7 +142,8 @@ namespace Application
 
                         await _dataSender.AsyncSendChatMessage(message);
                     }
-                    else if (sentMessages.Any(i => i.Timestamp == message.Timestamp && i.Author == message.Author && !String.Equals(i.Raw, message.Raw)))
+                    else if (!sentMessages.Any(m => m.Timestamp == message.Timestamp && m.Author == message.Author && m.Raw == message.Raw)
+                        && sentMessages.Any(i => i.Timestamp == message.Timestamp && i.Author == message.Author && !String.Equals(i.Raw, message.Raw)))
                     {
                         if (message.DEBUGREASON == null)
                             message.DEBUGREASON = string.Empty;
