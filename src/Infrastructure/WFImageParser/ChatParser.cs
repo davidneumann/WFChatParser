@@ -732,10 +732,13 @@ namespace WFImageParser
                 var lineHeight = 36;
                 var endLine = offsets.Length;
                 var regex = new Regex(@"^\[\d\d:\d\d\]", RegexOptions.Compiled);
+                var kickRegex = new Regex(@"\w was kicked.", RegexOptions.Compiled);
                 //var results = new string[endLine - startLine];
                 for (int i = 0; i < endLine && i < offsets.Length; i++)
                 {
                     var line = ParseLineBitmapScan(cache, 0.3f, xOffset, chatRect, lineHeight, offsets[i], 6);
+                    if (kickRegex.Match(line.RawMessage).Success)
+                        continue;
                     if (line.RawMessage != null && regex.Match(line.RawMessage).Success)
                         results.Add(line);
                     else if (results.Count > 0 && line.RawMessage != null)
