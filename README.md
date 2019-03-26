@@ -2,6 +2,4 @@
 An OCR approach to parsing WF trade chat with riven data
 
 # Authorization
-Everything done in this project is done with DE's explicit permission to do so. Semlar has been kind enough to reach out to DE on my behalf to get this permission.
-
-![DE Reb giving authorization](https://raw.githubusercontent.com/davidneumann/WFChatParser/master/docs/authorization.png)
+Everything done in this project is done with DE's explicit permission. Semlar was able to contact [DE]Rebecca, through Discord on 03/11/2019, to get explicit permission for us to use OCR to read chat and riven information as well as to send mouse input to UI elements in an automated fashion.
