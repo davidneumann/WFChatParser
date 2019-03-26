@@ -42,8 +42,8 @@ namespace DebugCLI
             //    Console.WriteLine(t.Exception);
 
             //FixImages();
-            PrepareRivens();
-            //VerifyNoErrors(2);
+            //PrepareRivens();
+            VerifyNoErrors(2);
             //JsonMessagerHelper();
             //TrainOnImages();
             //var c = new ChatParser();

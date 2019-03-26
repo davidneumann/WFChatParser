@@ -412,7 +412,7 @@ namespace WFImageParser
                     //}
 
                     //We can allow loose fits on smaller characters
-                    if (bestFit != null && bestFit.Item1 < 0.20f && bestFit.Item2 != null && bestFit.Item2.TotalWeights > 40)
+                    if (bestFit != null && bestFit.Item1 < 0.20f && bestFit.Item2 != null)
                         bestFit = new Tuple<float, CharacterDetails, CoordinateList>(float.MinValue, null, null);
 
                     if (bestFit != null && bestFit.Item2 != null && endX != lastCharacterEndX)

@@ -54,7 +54,8 @@ namespace WFImageParser
             var hsvPixel = GetHsv(x, y);
 
 
-            if (hsvPixel.H >= 175 && hsvPixel.H <= 185) //green
+            if ((hsvPixel.H >= 175 && hsvPixel.H <= 190)
+                && hsvPixel.S > 0.1) //green
                 return ChatColor.ChatTimestampName;
             if (hsvPixel.S < 0.3) //white
                 return ChatColor.Text;
