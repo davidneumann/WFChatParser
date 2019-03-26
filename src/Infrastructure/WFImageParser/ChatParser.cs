@@ -515,9 +515,13 @@ namespace WFImageParser
         private static void AppendSpace(ImageCache image, int lineHeight, int lineOffset, StringBuilder rawMessage, StringBuilder message, int wordStartX, StringBuilder currentWord, List<ClickPoint> clickPoints)
         {
             var foundRiven = CheckNewWordForRiven(lineHeight, lineOffset, wordStartX, currentWord.ToString(), clickPoints, image, message.Length);
+            var word = currentWord.ToString() + ' ';
             if (foundRiven)
-                message.Append("[" + (clickPoints.Count - 1) + "]");
-            message.Append(currentWord.ToString() + ' ');
+            {
+                var index = word.IndexOf("]");
+                word = word.Substring(0, index+1) + "(" + (clickPoints.Count - 1) + ")" + word.Substring(index + 1);
+            }
+            message.Append(word);
             currentWord.Clear();
             rawMessage.Append(' ');
         }
