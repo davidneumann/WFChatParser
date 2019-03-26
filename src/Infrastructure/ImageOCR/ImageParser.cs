@@ -1,4 +1,5 @@
-﻿using Application.Interfaces;
+﻿using Application.ChatMessages.Model;
+using Application.Interfaces;
 using Common;
 using Leptonica;
 using System;
@@ -88,7 +89,7 @@ namespace ImageOCR
             };
         }
 
-        public string[] ParseRivenImage(string imagePath)
+        public Riven ParseRivenImage(string imagePath)
         {
             // Set the input image
             Pix pix = _tessBaseAPI.SetImage(imagePath);
@@ -100,16 +101,68 @@ namespace ImageOCR
 
             // Extract text from result iterator
             var rivenText = new List<string>();
+            var currentStep = Step.ReadingName;
+            var name = string.Empty;
+            var modis = new List<string>();
+            var drain = "0";
+            var mr = "0";
+            var rolls = "0";
+            var rawSb = new StringBuilder();
             PageIteratorLevel pageIteratorLevel = PageIteratorLevel.RIL_TEXTLINE;
             do
             {
-                var line = resultIterator.GetUTF8Text(pageIteratorLevel) + " ";
-                rivenText.Add(line);
+                var line = resultIterator.GetUTF8Text(pageIteratorLevel).Trim();
+                rawSb.AppendLine(line);
+                if (line.Length > 0 && !(line[0] == '+' || line[0] == '-') && currentStep == Step.ReadingName)
+                    name = (name + " " + line).Trim();
+                else if (line.Length > 0 && (line[0] == '+' || line[0] == '-') && (currentStep == Step.ReadingName || currentStep == Step.ReadingModifiers))
+                {
+                    currentStep = Step.ReadingModifiers;
+                    modis.Add(line);
+                }
+                else if (line.Length > 0 && !Char.IsDigit(line[0]) && currentStep == Step.ReadingModifiers)
+                {
+                    var last = modis.Last();
+                    modis.Remove(last);
+                    last = last + " " + line;
+                    modis.Add(last);
+                }
+                else if (line.Length > 0 && Char.IsDigit(line[0]) && currentStep == Step.ReadingModifiers)
+                {
+                    currentStep = Step.ReadingMRLine;
+                    drain = line;
+                }
+                else if (line.Length > 0 && currentStep == Step.ReadingMRLine)
+                {
+                    //MR o 16 D14
+                    var splits = line.Split(' ');
+                    if (splits.Length == 4)
+                        rolls = Regex.Match(splits[3], @"\d+").Value.TrimStart('0');
+                    mr = Regex.Match(splits[2], @"\d+").Value.TrimStart('0');
+                }
+
+                //rivenText.Add(line);
             } while (resultIterator.Next(pageIteratorLevel));
 
             pix.Dispose();
 
-            return rivenText.ToArray();
+            return new Riven()
+            {
+                Drain = drain,
+                MasteryRank = mr,
+                Modifiers = modis.ToArray(),
+                Name = name,
+                Polarity = Polarity.Unkown,
+                Rank = "Unknown",
+                Rolls = rolls
+            };
+        }
+
+        private enum Step
+        {
+            ReadingName,
+            ReadingModifiers,
+            ReadingMRLine
         }
     }
 }

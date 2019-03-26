@@ -42,7 +42,8 @@ namespace DebugCLI
             //    Console.WriteLine(t.Exception);
 
             //FixImages();
-            VerifyNoErrors(2);
+            PrepareRivens();
+            //VerifyNoErrors(2);
             //JsonMessagerHelper();
             //TrainOnImages();
             //var c = new ChatParser();
@@ -55,6 +56,34 @@ namespace DebugCLI
             //        Debugger.Break();
             //}
             //var v = 0.5f;
+        }
+
+        private static void PrepareRivens()
+        {
+            var r = new RivenPreparer();
+            var p = new ImageParser();
+
+            var totalSw = new Stopwatch();
+            var opSw = new Stopwatch();
+            var rivens = new List<Riven>();
+            foreach (var riven in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\").Where(f => !f.EndsWith("_white.png") && f.EndsWith(".png")))
+            {
+                Console.WriteLine("\n" + riven.Substring(riven.LastIndexOf("\\") + 1));
+                totalSw.Restart();
+                opSw.Restart();
+                r.PrepareRiven(riven, riven + "_white.png");
+                Console.WriteLine("cleanup: " + opSw.Elapsed.TotalSeconds + " seconds");
+                opSw.Restart();
+                var result = p.ParseRivenImage(riven + "_white.png");
+                rivens.Add(result);
+                Console.WriteLine("Parsed: " + opSw.Elapsed.TotalSeconds + " seconds");
+                opSw.Restart();
+                Console.WriteLine(JsonConvert.SerializeObject(result));
+                Console.WriteLine("Total: " + totalSw.Elapsed.TotalSeconds + " seconds");
+            }
+
+            Console.WriteLine("\n");
+            Console.WriteLine(JsonConvert.SerializeObject(rivens));
         }
 
         private static void FixImages()
@@ -100,52 +129,52 @@ namespace DebugCLI
         //    //clicker.MoveCursorTo(1920 / 2, 1080 / 2);
         //}
 
-        private static void JsonMessagerHelper()
-        {
-            var r1 = new Riven()
-            {
-                Drain = 18,
-                MasteryRank = 69,
-                Rolls = 7,
-                MessagePlacementId = 0,
-                Modifiers = new string[] { "+50% to skill", "17% fire rate" },
-                Polarity = Polarity.Madurai,
-                Rank = 8,
-                Name = "[Tonkor cri-shaboo]"
-            };
-            var r2 = new Riven()
-            {
-                Drain = 7,
-                MessagePlacementId = 1,
-                Modifiers = new string[] { "-100% damage", "+69% lens flare", "+12% particles" },
-                Polarity = Polarity.Naramon,
-                Rank = 0,
-                MasteryRank = 7,
-                Name = "[Lenz parti-maker]",
-                Rolls = 100
-            };
-            var r3 = new Riven()
-            {
-                Drain = 10,
-                MasteryRank = 5,
-                Rolls = 20,
-                MessagePlacementId = 2,
-                Modifiers = new string[] { "+50% to skill", "17% fire rate", "-25% likeability" },
-                Polarity = Polarity.VaZarin,
-                Rank = 2,
-                Name = "[Tonkor cri-shaboo]"
-            };
-            var m = new ChatMessageModel()
-            {
-                Timestamp = "[00:12]",
-                Author = "joeRivenMan",
-                Raw = "WTB ||| [Opticor Vandal] ||| WTS [Tonkor cri-shaboo] [[Lenz parti-maker] [Tonkor cri-shaboo] PMO",
-                Rivens = new Riven[] { r1, r2, r3 },
-                EnhancedMessage = "WTB ||| [Opticor Vandal] ||| WTS [0][Tonkor cri-shaboo] [1][Lenz parti-maker] [2][Tonkor cri-shaboo] PMO"
-            };
-            var json = JsonConvert.SerializeObject(m);
-            Console.WriteLine(json);
-        }
+        //private static void JsonMessagerHelper()
+        //{
+        //    var r1 = new Riven()
+        //    {
+        //        Drain = 18,
+        //        MasteryRank = 69,
+        //        Rolls = 7,
+        //        MessagePlacementId = 0,
+        //        Modifiers = new string[] { "+50% to skill", "17% fire rate" },
+        //        Polarity = Polarity.Madurai,
+        //        Rank = 8,
+        //        Name = "[Tonkor cri-shaboo]"
+        //    };
+        //    var r2 = new Riven()
+        //    {
+        //        Drain = 7,
+        //        MessagePlacementId = 1,
+        //        Modifiers = new string[] { "-100% damage", "+69% lens flare", "+12% particles" },
+        //        Polarity = Polarity.Naramon,
+        //        Rank = 0,
+        //        MasteryRank = 7,
+        //        Name = "[Lenz parti-maker]",
+        //        Rolls = 100
+        //    };
+        //    var r3 = new Riven()
+        //    {
+        //        Drain = 10,
+        //        MasteryRank = 5,
+        //        Rolls = 20,
+        //        MessagePlacementId = 2,
+        //        Modifiers = new string[] { "+50% to skill", "17% fire rate", "-25% likeability" },
+        //        Polarity = Polarity.VaZarin,
+        //        Rank = 2,
+        //        Name = "[Tonkor cri-shaboo]"
+        //    };
+        //    var m = new ChatMessageModel()
+        //    {
+        //        Timestamp = "[00:12]",
+        //        Author = "joeRivenMan",
+        //        Raw = "WTB ||| [Opticor Vandal] ||| WTS [Tonkor cri-shaboo] [[Lenz parti-maker] [Tonkor cri-shaboo] PMO",
+        //        Rivens = new Riven[] { r1, r2, r3 },
+        //        EnhancedMessage = "WTB ||| [Opticor Vandal] ||| WTS [0][Tonkor cri-shaboo] [1][Lenz parti-maker] [2][Tonkor cri-shaboo] PMO"
+        //    };
+        //    var json = JsonConvert.SerializeObject(m);
+        //    Console.WriteLine(json);
+        //}
 
         private static void TrainOnImages()
         {
@@ -253,28 +282,6 @@ namespace DebugCLI
                 Console.WriteLine("Errors: " + errorCount);
             }
             return errorCount;
-        }
-
-        private static void ProcessRivens()
-        {
-            var sw = new Stopwatch();
-            sw.Start();
-            var t = new ImageParser();
-            sw.Stop();
-            Console.WriteLine("Initialize finished in: " + sw.Elapsed.TotalSeconds + "s");
-            sw.Reset();
-
-            foreach (var file in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\"))
-            {
-                sw.Reset();
-                sw.Start();
-                var text = t.ParseChatImage(file);
-                var fileInfo = new FileInfo(file);
-                File.WriteAllLines(Path.Combine(outputDir, fileInfo.Name + ".txt"), text.ChatTextLines);
-                sw.Stop();
-                Console.WriteLine("Parsed riven in: " + sw.Elapsed.TotalSeconds + "s");
-                sw.Reset();
-            }
         }
 
         private static void GenerateCharStrings(int count = 35)
