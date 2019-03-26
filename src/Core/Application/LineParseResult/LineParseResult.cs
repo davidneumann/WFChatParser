@@ -9,7 +9,7 @@ namespace Application.LineParseResult
         public string RawMessage { get; set; }
         public string EnhancedMessage { get; set; }
         public List<ClickPoint> ClickPoints { get; set; }
-
+        public LineType LineType { get; set; } = LineType.Unknown;
         public void Append(LineParseResult lineParseResult)
         {
             this.RawMessage = this.RawMessage.Trim();

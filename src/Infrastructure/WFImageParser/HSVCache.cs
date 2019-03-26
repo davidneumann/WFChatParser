@@ -2,6 +2,7 @@
 using SixLabors.ImageSharp.ColorSpaces;
 using SixLabors.ImageSharp.ColorSpaces.Conversion;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.Primitives;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -31,11 +32,7 @@ namespace WFImageParser
                 {
                     var hsvPixel = _converter.ToHsv(_image[x, y]);
                     var v = Math.Max(0,(hsvPixel.V - 0.21f)) / (1f - 0.21f);
-                    if (hsvPixel.H >= 175 && hsvPixel.H <= 185 //green
-                                || hsvPixel.S < 0.3 //white
-                                || hsvPixel.H >= 190 && hsvPixel.H <= 210) //blue
-                        v = v;
-                    else
+                    if (GetColor(x,y) == ChatColor.Unkown)
                         v = 0;
                     _valueMap[x, y] = v;
                     _valueMapMask[x, y] = true;
@@ -50,6 +47,32 @@ namespace WFImageParser
         internal Hsv GetHsv(int x, int y)
         {
             return _converter.ToHsv(_image[x, y]);
+        }
+
+        internal ChatColor GetColor(int x, int y)
+        {
+            var hsvPixel = GetHsv(x, y);
+
+
+            if (hsvPixel.H >= 175 && hsvPixel.H <= 185) //green
+                return ChatColor.ChatTimestampName;
+            if (hsvPixel.S < 0.3) //white
+                return ChatColor.Text;
+            if (hsvPixel.H >= 190 && hsvPixel.H <= 210) // blue
+                return ChatColor.ItemLink;
+            if ((hsvPixel.H <= 1 || hsvPixel.H >= 359) && hsvPixel.S >= 0.7f && hsvPixel.S <= 0.8f)
+                return ChatColor.Redtext;
+
+            return ChatColor.Unkown;
+        }
+
+        internal enum ChatColor
+        {
+            ChatTimestampName,
+            Redtext,
+            Text,
+            ItemLink,
+            Unkown
         }
 
         //internal Hsv GetHsv(int x, int y)

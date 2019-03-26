@@ -15,6 +15,7 @@ namespace DataStream
         private readonly string _messagePrefix;
         private readonly string _debugMessagePrefix;
         private readonly IEnumerable<string> _connectionStrings;
+        private readonly object _redtextMessagePrefix;
         private WebSocket _webSocket;
 
         public event EventHandler RequestToKill;
@@ -23,7 +24,8 @@ namespace DataStream
         private bool _shouldReconnect;
 
         private DateTimeOffset _lastReconnectTime = DateTimeOffset.MinValue;
-        public DataSender(Uri websocketHostname, IEnumerable<string> connectionMessages, string messagePrefix, string debugMessagePrefix, bool shouldReconnect, string rawMessagePrefix)
+        public DataSender(Uri websocketHostname, IEnumerable<string> connectionMessages, string messagePrefix, string debugMessagePrefix, bool shouldReconnect, string rawMessagePrefix,
+            string redtextMessagePrefix)
         {
             _websocketHostname = websocketHostname;
             _messagePrefix = messagePrefix;
@@ -31,6 +33,7 @@ namespace DataStream
             _shouldReconnect = shouldReconnect;
             _connectionStrings = connectionMessages;
             _rawMessagePrefix = rawMessagePrefix;
+            _redtextMessagePrefix = redtextMessagePrefix;
 
             InitWebsocket();
 
@@ -175,6 +178,14 @@ namespace DataStream
         {
             if (_debugMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
                 _webSocket.Send(_debugMessagePrefix + message);
+            else if (_shouldReconnect)
+                Reconnect();
+        }
+
+        public async Task AsyncSendRedtext(string redtext)
+        {
+            if (_redtextMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
+                _webSocket.Send(_redtextMessagePrefix + redtext);
             else if (_shouldReconnect)
                 Reconnect();
         }

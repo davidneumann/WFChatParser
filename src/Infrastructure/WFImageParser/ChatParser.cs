@@ -97,7 +97,7 @@ namespace WFImageParser
             public int Gap { get; set; }
         }
 
-        private LineParseResult ParseLineBitmapScan(ImageCache image, float minV, int xOffset, Rectangle chatRect, int lineHeight, int lineOffset, float spaceWidth)
+        private LineParseResult ParseLineBitmapScan(ImageCache image, float minV, int xOffset, Rectangle chatRect, int lineHeight, int lineOffset, float spaceWidth, LineType prevLineType)
         {
             var rawMessage = new System.Text.StringBuilder();
             var message = new StringBuilder();
@@ -110,6 +110,7 @@ namespace WFImageParser
             var wordStartX = -1;
             var currentWord = new StringBuilder();
             List<ClickPoint> clickPoints = new List<ClickPoint>();
+            var currentLineType = LineType.Unknown;
             for (int x = xOffset; x < chatRect.Right; x++)
             {
                 //Advance until next pixel
@@ -137,6 +138,20 @@ namespace WFImageParser
                 //Make sure we didn't escape
                 if (x >= chatRect.Right || firstPixel == Point.Empty)
                     break;
+
+                if(currentLineType == LineType.Unknown)
+                {
+                    var color = image.GetColor(firstPixel.X, firstPixel.Y);
+                    if (color == ImageCache.ChatColor.Redtext)
+                        currentLineType = LineType.RedText;
+                    else if (color == ImageCache.ChatColor.Text || color == ImageCache.ChatColor.ItemLink)
+                        currentLineType = LineType.Continuation;
+                    else if (color == ImageCache.ChatColor.ChatTimestampName)
+                        currentLineType = LineType.NewMessage;
+
+                    if (currentLineType == LineType.Continuation && !(prevLineType == LineType.Continuation || prevLineType == LineType.NewMessage))
+                        return new LineParseResult();
+                }
 
                 var targetMask = OCRHelpers.FindCharacterMask(firstPixel, image, prevMatchedCharacters, chatRect.Left, chatRect.Right, lineOffset, lineOffset + lineHeight);
                 var didRemove = false;
@@ -505,7 +520,8 @@ namespace WFImageParser
                 {
                     ClickPoints = clickPoints,
                     RawMessage = rawMessage.ToString(),
-                    EnhancedMessage = message.ToString()
+                    EnhancedMessage = message.ToString(),
+                    LineType = currentLineType
                 };
                 return result;
             }
@@ -735,17 +751,22 @@ namespace WFImageParser
                 var offsets = _lineOffsets;
                 var lineHeight = 36;
                 var endLine = offsets.Length;
-                var regex = new Regex(@"^\[\d\d:\d\d\]", RegexOptions.Compiled);
+                var newMessageRegex = new Regex(@"^\[\d\d:\d\d\]", RegexOptions.Compiled);
                 var kickRegex = new Regex(@"\w was kicked.", RegexOptions.Compiled);
+                var prevType = LineType.Unknown;
                 //var results = new string[endLine - startLine];
                 for (int i = 0; i < endLine && i < offsets.Length; i++)
                 {
-                    var line = ParseLineBitmapScan(cache, 0.3f, xOffset, chatRect, lineHeight, offsets[i], 6);
+                    var line = ParseLineBitmapScan(cache, 0.3f, xOffset, chatRect, lineHeight, offsets[i], 6, prevType);
+                    if (line != null)
+                        prevType = line.LineType;
+                    else
+                        prevType = LineType.Unknown;
                     if (line != null && line.RawMessage != null && line.RawMessage.Length > 0 && kickRegex.Match(line.RawMessage).Success)
                         continue;
-                    if (line.RawMessage != null && regex.Match(line.RawMessage).Success)
+                    if (line.RawMessage != null && (newMessageRegex.Match(line.RawMessage).Success || line.LineType == LineType.RedText))
                         results.Add(line);
-                    else if (results.Count > 0 && line.RawMessage != null)
+                    else if (results.Count > 0 && line.RawMessage != null && line.LineType == LineType.Continuation)
                     {
                         var last = results.Last();
                         //results.Remove(last);

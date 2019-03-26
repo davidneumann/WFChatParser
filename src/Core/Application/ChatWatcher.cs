@@ -37,6 +37,7 @@ namespace Application
 
             var sw = new Stopwatch();
             var sentMessages = new Queue<ChatMessageModel>();
+            var sentRedtext = new Queue<string>();
             while (true)
             {
                 //_mouseMover.MoveTo(4, 768);
@@ -77,7 +78,7 @@ namespace Application
                 catch { continue; }
                 var imageTime = sw.Elapsed.TotalSeconds;
                 sw.Restart();
-                var messages = _chatParser.ParseChatImage(image);
+                var lines = _chatParser.ParseChatImage(image);
                 var parseTime = sw.Elapsed.TotalSeconds;
                 sw.Restart();
                 string debugImageName = null;
@@ -88,80 +89,55 @@ namespace Application
                 var shouldCopyImage = false;
                 var badNameRegex = new Regex("[^-A-Za-z0-9._]");
                 //[00:00] f: .
-                var cms = messages.Where(line => line.RawMessage.Length >= 10).Select(result =>
+                foreach (var line in lines)
                 {
-                    var m = result.RawMessage;
-                    string debugReason = null;
-                    var timestamp = m.Substring(0, 7).Trim();
-                    var username = "Unknown";
-                    try
+                    if(line.LineType == LineParseResult.LineType.RedText && !sentRedtext.Any(m => m == line.RawMessage))
                     {
-                        username = m.Substring(8).Trim();
-                        if (username.IndexOf(":") > 0 && username.IndexOf(":") < username.IndexOf(" "))
-                            username = username.Substring(0, username.IndexOf(":"));
-                        else
-                        {
-                            username = username.Substring(0, username.IndexOf(" "));
-                            debugReason = "Bade name: " + username;
-                        }
-                        if (username.Contains(" ") || username.Contains(@"\/") || username.Contains("]") || username.Contains("[") || badNameRegex.Match(username).Success)
-                        {
-                            debugReason = "Bade name: " + username;
-                        }
+                        await _dataSender.AsyncSendRedtext(line.RawMessage);
+                        sentRedtext.Enqueue(line.RawMessage);
+                        while (sentRedtext.Count > 20)
+                            sentRedtext.Dequeue();
                     }
-                    catch { debugReason = "Bade name: " + username; }
-                    var cm = new ChatMessageModel()
+                    else if (line.LineType == LineParseResult.LineType.NewMessage)
                     {
-                        Raw = m,
-                        Author = username,
-                        Timestamp = timestamp,
-                        SystemTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
-                    };
-                    if (debugReason != null)
-                    {
-                        cm.DEBUGREASON = debugReason;
-                    }
-                    cm.EnhancedMessage = result.EnhancedMessage;
-                    return cm;
-                });
-                foreach (var message in cms)
-                {
-                    if (!sentMessages.Any(i => i.Author == message.Author && i.Timestamp == message.Timestamp))
-                    {
-                        newMessags++;
-                        var time = String.Format("{0:N2}", parseTime);
-                        var str = message.Raw;
-                        if (str.Length + time.Length + 4 > Console.BufferWidth)
-                            str = str.Substring(0, Console.BufferWidth - time.Length - 4);
-                        Console.Write($"\r{parseTime:N2}s: {str}");
-                        // Write space to end of line, and then CR with no LF
-                        Console.Write("\r".PadLeft(Console.WindowWidth - Console.CursorLeft - 1));
-                        sentMessages.Enqueue(message);
-                        while (sentMessages.Count > 100)
-                            sentMessages.Dequeue();
-                        if (message.DEBUGREASON != null)
+                        var message = MakeChatModel(line, badNameRegex);
+                        if (!sentMessages.Any(i => i.Author == message.Author && i.Timestamp == message.Timestamp))
                         {
-                            message.DEBUGIMAGE = debugImageName;
+                            newMessags++;
+                            var time = String.Format("{0:N2}", parseTime);
+                            var str = message.Raw;
+                            if (str.Length + time.Length + 4 > Console.BufferWidth)
+                                str = str.Substring(0, Console.BufferWidth - time.Length - 4);
+                            Console.Write($"\r{parseTime:N2}s: {str}");
+                            // Write space to end of line, and then CR with no LF
+                            Console.Write("\r".PadLeft(Console.WindowWidth - Console.CursorLeft - 1));
+                            sentMessages.Enqueue(message);
+                            while (sentMessages.Count > 100)
+                                sentMessages.Dequeue();
+                            if (message.DEBUGREASON != null)
+                            {
+                                message.DEBUGIMAGE = debugImageName;
+                                shouldCopyImage = true;
+                            }
+
+                            await _dataSender.AsyncSendChatMessage(message);
+                        }
+                        else if (!sentMessages.Any(m => m.Timestamp == message.Timestamp && m.Author == message.Author && m.Raw == message.Raw)
+                            && sentMessages.Any(i => i.Timestamp == message.Timestamp && i.Author == message.Author && !String.Equals(i.Raw, message.Raw)))
+                        {
+                            if (message.DEBUGREASON == null)
+                                message.DEBUGREASON = string.Empty;
+                            else
+                                message.DEBUGREASON = message.DEBUGREASON + " || ";
+                            var others = string.Empty;
+                            sentMessages.Where(i => i.Timestamp == message.Timestamp && i.Author == message.Author && !String.Equals(i.Raw, message.Raw)).Select(m => m.Raw).ToList().ForEach(str => others += str + "\n ");
+                            message.DEBUGREASON += "Message parse differnet error, parse error! Other(s):\n " + others;
                             shouldCopyImage = true;
+                            message.DEBUGIMAGE = debugImageName;
+                            sentMessages.Enqueue(message);
+
+                            await _dataSender.AsyncSendChatMessage(message);
                         }
-
-                        await _dataSender.AsyncSendChatMessage(message);
-                    }
-                    else if (!sentMessages.Any(m => m.Timestamp == message.Timestamp && m.Author == message.Author && m.Raw == message.Raw)
-                        && sentMessages.Any(i => i.Timestamp == message.Timestamp && i.Author == message.Author && !String.Equals(i.Raw, message.Raw)))
-                    {
-                        if (message.DEBUGREASON == null)
-                            message.DEBUGREASON = string.Empty;
-                        else
-                            message.DEBUGREASON = message.DEBUGREASON + " || ";
-                        var others = string.Empty;
-                        sentMessages.Where(i => i.Timestamp == message.Timestamp && i.Author == message.Author && !String.Equals(i.Raw, message.Raw)).Select(m => m.Raw).ToList().ForEach(str => others += str + "\n ");
-                        message.DEBUGREASON += "Message parse differnet error, parse error! Other(s):\n " + others;
-                        shouldCopyImage = true;
-                        message.DEBUGIMAGE = debugImageName;
-                        sentMessages.Enqueue(message);
-
-                        await _dataSender.AsyncSendChatMessage(message);
                     }
                 }
                 if (shouldCopyImage)
@@ -173,6 +149,43 @@ namespace Application
                 var debugMessage = $"Image capture: {imageTime:00.00} Parse time: {parseTime:00.00} TransmitTime: {transmitTime:0.000} New messages {newMessags} {newMessags / parseTime}/s";
                 await _dataSender.AsyncSendDebugMessage(debugMessage);
             }
+        }
+
+        private static ChatMessageModel MakeChatModel(LineParseResult.LineParseResult line, Regex badNameRegex)
+        {
+            var m = line.RawMessage;
+            string debugReason = null;
+            var timestamp = m.Substring(0, 7).Trim();
+            var username = "Unknown";
+            try
+            {
+                username = m.Substring(8).Trim();
+                if (username.IndexOf(":") > 0 && username.IndexOf(":") < username.IndexOf(" "))
+                    username = username.Substring(0, username.IndexOf(":"));
+                else
+                {
+                    username = username.Substring(0, username.IndexOf(" "));
+                    debugReason = "Bade name: " + username;
+                }
+                if (username.Contains(" ") || username.Contains(@"\/") || username.Contains("]") || username.Contains("[") || badNameRegex.Match(username).Success)
+                {
+                    debugReason = "Bade name: " + username;
+                }
+            }
+            catch { debugReason = "Bade name: " + username; }
+            var cm = new ChatMessageModel()
+            {
+                Raw = m,
+                Author = username,
+                Timestamp = timestamp,
+                SystemTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+            };
+            if (debugReason != null)
+            {
+                cm.DEBUGREASON = debugReason;
+            }
+            cm.EnhancedMessage = line.EnhancedMessage;
+            return cm;
         }
     }
 }

@@ -7,5 +7,6 @@ namespace Application.Interfaces
     {
         Task AsyncSendChatMessage(ChatMessageModel message);
         Task AsyncSendDebugMessage(string message);
+        Task AsyncSendRedtext(string rawMessage);
     }
 }
