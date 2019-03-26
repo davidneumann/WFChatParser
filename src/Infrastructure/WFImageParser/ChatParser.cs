@@ -737,7 +737,7 @@ namespace WFImageParser
                 for (int i = 0; i < endLine && i < offsets.Length; i++)
                 {
                     var line = ParseLineBitmapScan(cache, 0.3f, xOffset, chatRect, lineHeight, offsets[i], 6);
-                    if (kickRegex.Match(line.RawMessage).Success)
+                    if (line != null && line.RawMessage != null && line.RawMessage.Length > 0 && kickRegex.Match(line.RawMessage).Success)
                         continue;
                     if (line.RawMessage != null && regex.Match(line.RawMessage).Success)
                         results.Add(line);

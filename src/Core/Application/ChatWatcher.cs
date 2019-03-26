@@ -126,11 +126,16 @@ namespace Application
                 });
                 foreach (var message in cms)
                 {
-
                     if (!sentMessages.Any(i => i.Author == message.Author && i.Timestamp == message.Timestamp))
                     {
                         newMessags++;
-                        Console.Write($"\r{parseTime:N2}s: {message.Raw}");
+                        var time = String.Format("{0:N2}", parseTime);
+                        var str = message.Raw;
+                        if (str.Length + time.Length + 4 > Console.BufferWidth)
+                            str = str.Substring(0, Console.BufferWidth - time.Length - 4);
+                        Console.Write($"\r{parseTime:N2}s: {str}");
+                        // Write space to end of line, and then CR with no LF
+                        Console.Write("\r".PadLeft(Console.WindowWidth - Console.CursorLeft - 1));
                         sentMessages.Enqueue(message);
                         while (sentMessages.Count > 100)
                             sentMessages.Dequeue();
