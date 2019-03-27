@@ -50,22 +50,22 @@ namespace Application
                 //_mouseMover.ScrollUp();//Pause
 
                 sw.Restart();
-                if (debugImageDectory != null)
-                {
-                    for (int i = 6; i >= 0; i--)
-                    {
-                        try
-                        {
-                            var curFile = Path.Combine(debugImageDectory, "capture_" + i + ".png");
-                            var lastFile = Path.Combine(debugImageDectory, "capture_" + (i + 1) + ".png");
-                            if (File.Exists(lastFile))
-                                File.Delete(lastFile);
-                            if (File.Exists(curFile))
-                                File.Move(curFile, lastFile);
-                        }
-                        catch { }
-                    }
-                }
+                //if (debugImageDectory != null)
+                //{
+                //    for (int i = 6; i >= 0; i--)
+                //    {
+                //        try
+                //        {
+                //            var curFile = Path.Combine(debugImageDectory, "capture_" + i + ".png");
+                //            var lastFile = Path.Combine(debugImageDectory, "capture_" + (i + 1) + ".png");
+                //            if (File.Exists(lastFile))
+                //                File.Delete(lastFile);
+                //            if (File.Exists(curFile))
+                //                File.Move(curFile, lastFile);
+                //        }
+                //        catch { }
+                //    }
+                //}
                 var image = string.Empty;
                 try
                 {
@@ -100,7 +100,7 @@ namespace Application
                     }
                     else if (line.LineType == LineParseResult.LineType.NewMessage)
                     {
-                        var message = MakeChatModel(line, badNameRegex);
+                        var message = MakeChatModel(line as LineParseResult.ChatMessageLineResult, badNameRegex);
                         if (!sentMessages.Any(i => i.Author == message.Author && i.Timestamp == message.Timestamp))
                         {
                             newMessags++;
@@ -151,7 +151,7 @@ namespace Application
             }
         }
 
-        private static ChatMessageModel MakeChatModel(LineParseResult.LineParseResult line, Regex badNameRegex)
+        private static ChatMessageModel MakeChatModel(LineParseResult.ChatMessageLineResult line, Regex badNameRegex)
         {
             var m = line.RawMessage;
             string debugReason = null;

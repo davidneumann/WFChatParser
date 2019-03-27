@@ -10,5 +10,6 @@ namespace Application.LineParseResult
         public LineType LineType { get; set; } = LineType.Unknown;
 
         public abstract string GetKey();
+        public abstract bool KeyReady();
     }
 }

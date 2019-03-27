@@ -15,5 +15,10 @@ namespace Application.LineParseResult
         {
             return this.RawMessage;
         }
+
+        public override bool KeyReady()
+        {
+            return false;
+        }
     }
 }

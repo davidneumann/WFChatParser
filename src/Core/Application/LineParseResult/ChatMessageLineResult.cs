@@ -4,13 +4,13 @@ using System.Text;
 
 namespace Application.LineParseResult
 {
-    public class LineParseResult
+    public class ChatMessageLineResult : BaseLineParseResult
     {
-        public string RawMessage { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string Timestamp { get; set; } = string.Empty;
         public string EnhancedMessage { get; set; }
         public List<ClickPoint> ClickPoints { get; set; }
-        public LineType LineType { get; set; } = LineType.Unknown;
-        public void Append(LineParseResult lineParseResult)
+        public void Append(ChatMessageLineResult lineParseResult)
         {
             this.RawMessage = this.RawMessage.Trim();
             lineParseResult.RawMessage = lineParseResult.RawMessage.Trim();
@@ -37,6 +37,16 @@ namespace Application.LineParseResult
             }
             this.ClickPoints.AddRange(lineParseResult.ClickPoints);
             this.EnhancedMessage += " " + message;
+        }
+
+        public override string GetKey()
+        {
+            return Timestamp + Username;
+        }
+
+        public override bool KeyReady()
+        {
+            return this.Timestamp != string.Empty & this.Username != string.Empty;
         }
     }
 }
