@@ -18,14 +18,14 @@ namespace Application
         private IDataSender _dataSender;
         private IImageParser _chatParser;
         private IGameCapture _gameCapture;
-        //private IMouseMover _mouseMover;
+        private IMouseMover _mouseMover;
 
         public ChatWatcher(IDataSender dataSender, IImageParser chatParser, IGameCapture gameCapture, IMouseMover mouseMover)
         {
             this._dataSender = dataSender;
             this._chatParser = chatParser;
             this._gameCapture = gameCapture;
-            //this._mouseMover = mouseMover;
+            this._mouseMover = mouseMover;
         }
 
         public async Task MonitorLive(string debugImageDectory = null)
@@ -38,18 +38,37 @@ namespace Application
             var sw = new Stopwatch();
             var sentMessages = new Queue<ChatMessageModel>();
             var sentRedtext = new Queue<string>();
+            var scrollbarFound = false;
             while (true)
             {
-                //_mouseMover.MoveTo(4, 768);
-                ////Scroll down for new page of messages
-                //for (int i = 0; i < 27; i++)
-                //{
-                //    _mouseMover.ScrollDown();
-                //    await Task.Delay(16);
-                //}
-                //_mouseMover.ScrollUp();//Pause
-
                 sw.Restart();
+                var image = string.Empty;
+                try
+                {
+                    image = _gameCapture.GetTradeChatImage(Path.Combine(Path.GetTempPath(), "wfchat", "capture_0.png"));
+                    if (debugImageDectory != null)
+                    {
+                        File.Copy(image, Path.Combine(debugImageDectory, "capture_0.png"), true);
+                    }
+                }
+                catch { continue; }
+                var imageTime = sw.Elapsed.TotalSeconds;
+                sw.Restart();
+
+                //Wait for scrollbar to be ready
+                if (!scrollbarFound)
+                {
+                    if(_chatParser.IsScrollbarPresent(image))
+                    {
+                        scrollbarFound = true;
+                        _mouseMover.MoveTo(3259, 658);
+                        await Task.Delay(33);
+                        _mouseMover.Click(3259, 658);
+                        await Task.Delay(33);
+                        continue;
+                    }
+                }
+
                 //if (debugImageDectory != null)
                 //{
                 //    for (int i = 6; i >= 0; i--)
@@ -66,21 +85,12 @@ namespace Application
                 //        catch { }
                 //    }
                 //}
-                var image = string.Empty;
-                try
-                {
-                    image = _gameCapture.GetTradeChatImage(Path.Combine(Path.GetTempPath(), "wfchat", "capture_0.png"));
-                    if (debugImageDectory != null)
-                    {
-                        File.Copy(image, Path.Combine(debugImageDectory, "capture_0.png"), true);
-                    }
-                }
-                catch { continue; }
-                var imageTime = sw.Elapsed.TotalSeconds;
+
                 sw.Restart();
                 var lines = _chatParser.ParseChatImage(image, true, false);
                 var parseTime = sw.Elapsed.TotalSeconds;
                 sw.Restart();
+
                 string debugImageName = null;
                 if (debugImageDectory != null)
                     debugImageName = Path.Combine(debugImageDectory, "debug_image_" + DateTime.Now.ToString("yyyy-dd-M--HH-mm-ss-fff") + ".png");
@@ -148,6 +158,17 @@ namespace Application
                 sw.Stop();
                 var debugMessage = $"Image capture: {imageTime:00.00} Parse time: {parseTime:00.00} TransmitTime: {transmitTime:0.000} New messages {newMessags} {newMessags / parseTime}/s";
                 await _dataSender.AsyncSendDebugMessage(debugMessage);
+
+                //Scroll down to get 27 more messages
+                _mouseMover.MoveTo(4, 768);
+                //Scroll down for new page of messages
+                for (int i = 0; i < 27; i++)
+                {
+                    _mouseMover.ScrollDown();
+                    await Task.Delay(16);
+                }
+                _mouseMover.ScrollUp();//Pause chat
+                await Task.Delay(33);
             }
         }
 

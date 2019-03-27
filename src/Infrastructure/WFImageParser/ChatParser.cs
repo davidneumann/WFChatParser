@@ -889,6 +889,21 @@ namespace WFImageParser
             return ParseChatImage(imagePath, 3, useCache, isScrolledUp);
         }
 
+        public bool IsScrollbarPresent(string imagePath)
+        {
+            using (Image<Rgba32> rgbImage = Image.Load(imagePath))
+            {
+                for (int y = 2097; y > 655; y--)
+                {
+                    var pixel = rgbImage[3256, y];
+                    if (pixel.R > 252 && pixel.G > 252 && pixel.B > 252)
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
         private class CharacterDetails
         {
             public bool[,] VMask { get; set; }

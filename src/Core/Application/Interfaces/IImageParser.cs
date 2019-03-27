@@ -22,5 +22,6 @@ namespace Application.Interfaces
         /// <param name="imagePath">The path to the image of the riven window.</param>
         /// <returns>The text of the riven card.</returns>
         string[] ParseRivenImage(string imagePath);
+        bool IsScrollbarPresent(string imagePath);
     }
 }
