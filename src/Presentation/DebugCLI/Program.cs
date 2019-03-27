@@ -18,6 +18,7 @@ using WarframeDriver;
 using System.Threading.Tasks;
 using System.Drawing;
 using System.Drawing.Imaging;
+using Application.LineParseResult;
 
 namespace DebugCLI
 {
@@ -45,7 +46,8 @@ namespace DebugCLI
 
             //FixImages();
             //PrepareRivens();
-            SimulateParseRiven();
+            TestRivenStuff();
+            //SimulateParseRiven();
             //VerifyNoErrors(2);
             //JsonMessagerHelper();
             //TrainOnImages();
@@ -61,6 +63,48 @@ namespace DebugCLI
             //var v = 0.5f;
         }
 
+        private static void TestRivenStuff()
+        {
+            var c = new DShowCapture(4096, 2160);
+
+            var image = "test.png";
+            c.GetTradeChatImage(image);
+
+            var p = new ChatParser();
+            var results = p.ParseChatImage(image, true, true).Where(r => r is ChatMessageLineResult).Cast<ChatMessageLineResult>();
+
+            var clean = new ImageCleaner();
+            var coords = new CoordinateList();
+            results.SelectMany(r => r.ClickPoints).ToList().ForEach(i => coords.Add(i.X, i.Y));
+            clean.SaveClickMarkers("test.png", "test_marked.png", coords);
+
+            var mouse = new MouseHelper();
+
+            var index = 0;
+            foreach (var clr in results.Where(r => r is ChatMessageLineResult).Cast<ChatMessageLineResult>())
+            {
+                foreach (var click in clr.ClickPoints)
+                {
+                    System.Threading.Thread.Sleep(1000);
+                    mouse.MoveTo(click.X, click.Y);
+                    System.Threading.Thread.Sleep(1000);
+                    mouse.Click(click.X, click.Y);
+                    System.Threading.Thread.Sleep(100);
+                    mouse.MoveTo(0, 0);
+                    System.Threading.Thread.Sleep(100);
+                    c.GetRivenImage(index.ToString() + ".png");
+                    System.Threading.Thread.Sleep(1000);
+                    mouse.MoveTo(3816, 2013);
+                    System.Threading.Thread.Sleep(1000);
+                    mouse.Click(3816, 2013);
+                    System.Threading.Thread.Sleep(100);
+                    mouse.MoveTo(0, 0);
+                    System.Threading.Thread.Sleep(100);
+                    index++;
+                }
+            }
+            c.Dispose();
+        }
         private static void SimulateParseRiven()
         {
             var rc = new RivenCleaner();

@@ -66,22 +66,22 @@ namespace Application
                 var imageTime = sw.Elapsed.TotalSeconds;
                 sw.Restart();
 
-                ////Wait for scrollbar to be ready
-                //if (!scrollbarFound)
-                //{
-                //    if (_chatParser.IsScrollbarPresent(image))
-                //    {
-                //        scrollbarFound = true;
-                //        _mouseMover.MoveTo(3259, 658);
-                //        await Task.Delay(33);
-                //        _mouseMover.Click(3259, 658);
-                //        await Task.Delay(33);
-                //        Console.Write("\rScrollbar found\n");
-                //        continue;
-                //    }
-                //    else
-                //        continue;
-                //}
+                //Wait for scrollbar to be ready
+                if (!scrollbarFound)
+                {
+                    if (_chatParser.IsScrollbarPresent(image))
+                    {
+                        scrollbarFound = true;
+                        _mouseMover.MoveTo(3259, 658);
+                        await Task.Delay(33);
+                        _mouseMover.Click(3259, 658);
+                        await Task.Delay(100);
+                        Console.Write("\rScrollbar found\n");
+                        continue;
+                    }
+                    else
+                        continue;
+                }
 
                 //if (debugImageDectory != null)
                 //{
@@ -101,7 +101,7 @@ namespace Application
                 //}
 
                 sw.Restart();
-                var lines = _chatParser.ParseChatImage(image, true, false);
+                var lines = _chatParser.ParseChatImage(image, true, true);
                 Console.Write("\rFound " + lines.Count() + " new lines");
                 var parseTime = sw.Elapsed.TotalSeconds;
                 sw.Restart();
@@ -142,10 +142,9 @@ namespace Application
                             rivenImage = Path.Combine(Path.GetTempPath(), "wfchat", "rivens", usernameHash.ToString() + "_" + i + ".png");
 
                             _mouseMover.MoveTo(clickpoint.X, clickpoint.Y);
-                            return;
-                            await Task.Delay(66);
+                            await Task.Delay(16);
                             _mouseMover.Click(clickpoint.X, clickpoint.Y);
-                            await Task.Delay(66);
+                            await Task.Delay(100);
                             _gameCapture.GetRivenImage(rivenImage);
                             _rivenCleaner.CleanRiven(rivenImage);
                             var riven = _rivenParser.ParseRivenImage(rivenImage);
@@ -156,6 +155,7 @@ namespace Application
 
                             _mouseMover.MoveTo(3798, 2005);
                             _mouseMover.Click(3798, 2005);
+                            await Task.Delay(16);
                         }
                         if (message.DEBUGREASON != null)
                         {
@@ -196,7 +196,7 @@ namespace Application
                 await Task.Delay(16);
                 _mouseMover.ScrollUp();//Pause chat
                 _mouseMover.MoveTo(0, 0);
-                await Task.Delay(66);
+                await Task.Delay(100);
             }
         }
 

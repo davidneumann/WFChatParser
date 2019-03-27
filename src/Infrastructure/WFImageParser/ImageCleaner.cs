@@ -174,5 +174,24 @@ namespace WFImageParser
             }
         }
 
+        public void SaveClickMarkers(string inputImage, string outputPath, CoordinateList clickPoints)
+        {
+            using (Image<Rgba32> image = Image.Load(inputImage))
+            {
+                foreach (var point in clickPoints)
+                {
+                    for (int x = -4; x <= 4; x++)
+                    {
+                        for (int y = -4; y <= 4; y++)
+                        {
+                            image[point.X + x, point.Y + y] = Rgba32.Red;
+                        }
+                    }
+                }
+
+                image.Save(outputPath);
+            }
+        }
+
     }
 }

@@ -52,5 +52,10 @@ namespace WFImageParser
                 Add(item);
             }
         }
+
+        public void Add(int x, int y)
+        {
+            Add(new Point(x, y));
+        }
     }
 }
