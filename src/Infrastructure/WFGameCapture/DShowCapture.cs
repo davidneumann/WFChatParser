@@ -39,19 +39,17 @@ namespace WFGameCapture
             _bitmap?.Dispose();
         }
 
-        public string GetTradeChatImage(string outputPath)
+        public Bitmap GetTradeChatImage()
         {
             var frame = GetFrame();
-            frame.Save(outputPath);
-            return outputPath;
+            return frame;
         }
 
-        public void GetRivenImage(string rivenImage)
+        public Bitmap GetRivenImage()
         {
             var frame = GetFrame();
             var cropped = frame.Clone(new Rectangle(1757, 463, 582, 831), frame.PixelFormat);
-            cropped.Save(rivenImage);
-            cropped.Dispose();
+            return cropped;
         }
     }
 }

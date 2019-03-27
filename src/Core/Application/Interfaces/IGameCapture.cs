@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Text;
 
 namespace Application.Interfaces
@@ -10,7 +11,7 @@ namespace Application.Interfaces
         /// Capture the game screen and crop it to the chat window
         /// </summary>
         /// <returns>The file path to the image of the chat window</returns>
-        string GetTradeChatImage(string outputPath);
-        void GetRivenImage(string rivenImage);
+        Bitmap GetTradeChatImage();
+        Bitmap GetRivenImage();
     }
 }

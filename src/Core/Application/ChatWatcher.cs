@@ -56,7 +56,10 @@ namespace Application
                 var image = string.Empty;
                 try
                 {
-                    image = _gameCapture.GetTradeChatImage(Path.Combine(Path.GetTempPath(), "wfchat", "capture_0.png"));
+                    var b = _gameCapture.GetTradeChatImage();
+                    b.Save(Path.Combine(Path.GetTempPath(), "wfchat", "capture_0.png"));
+                    b.Dispose();
+                    image = Path.Combine(Path.GetTempPath(), "wfchat", "capture_0.png");
                     if (debugImageDectory != null)
                     {
                         File.Copy(image, Path.Combine(debugImageDectory, "capture_0.png"), true);
@@ -145,7 +148,8 @@ namespace Application
                             await Task.Delay(16);
                             _mouseMover.Click(clickpoint.X, clickpoint.Y);
                             await Task.Delay(100);
-                            _gameCapture.GetRivenImage(rivenImage);
+                            var b = _gameCapture.GetRivenImage();
+                            b.Save(rivenImage);
                             _rivenCleaner.CleanRiven(rivenImage);
                             var riven = _rivenParser.ParseRivenImage(rivenImage);
                             riven.MessagePlacementId = clickpoint.Index;

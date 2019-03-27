@@ -4,6 +4,7 @@ using Common;
 using Leptonica;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -115,6 +116,44 @@ namespace ImageOCR
                 Rank = "Unknown",
                 Rolls = rolls
             };
+        }
+
+        public Bitmap CropToRiven(Bitmap bitmap)
+        {
+            return bitmap.Clone(new Rectangle(1757, 251, 582, 1043), bitmap.PixelFormat);
+        }
+
+        public bool IsRivenPresent(Bitmap bitmap)
+        {
+            if (bitmap.Width != 582 || bitmap.Height != 1043)
+                return false;
+
+            var p = bitmap.GetPixel(254, 27);
+            if (p.R > 100 || p.G > 100 || p.B > 100) //Not dark
+                return false;
+            p = bitmap.GetPixel(260, 27);
+            if (p.R < 200 || p.G < 200 || p.B < 200) //Not bright
+                return false;
+            p = bitmap.GetPixel(265, 29);
+            if (p.R > 100 || p.G > 100 || p.B > 100) //Not Dark
+                return false;
+            p = bitmap.GetPixel(271, 31);
+            if (p.R < 200 || p.G < 200 || p.B < 200) //Not bright
+                return false;
+            p = bitmap.GetPixel(275, 28);
+            if (p.R > 100 || p.G > 100 || p.B > 100) //Not dark
+                return false;
+            p = bitmap.GetPixel(247, 53);
+            if (p.R > 100 || p.G > 100 || p.B > 100) //Not dark
+                return false;
+            p = bitmap.GetPixel(252, 53);
+            if (p.R < 200 || p.G < 200 || p.B < 200) //Not bright
+                return false;
+            p = bitmap.GetPixel(258, 54);
+            if (p.R > 100 || p.G > 100 || p.B > 100) //Not dark
+                return false;
+
+            return true;
         }
 
         private enum Step

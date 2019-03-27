@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using System.Drawing;
 using System.Drawing.Imaging;
 using Application.LineParseResult;
+using Application.Enums;
 
 namespace DebugCLI
 {
@@ -46,6 +47,7 @@ namespace DebugCLI
 
             //FixImages();
             //PrepareRivens();
+            //TestScreenHandler();
             TestRivenStuff();
             //SimulateParseRiven();
             //VerifyNoErrors(2);
@@ -63,12 +65,31 @@ namespace DebugCLI
             //var v = 0.5f;
         }
 
+        private static void TestScreenHandler()
+        {
+            var c = new GameCapture();
+            var ss = new ScreenStateHandler();
+
+            Bitmap b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chat.png");
+            var isChat = ss.GetScreenState(b) == ScreenState.ChatWindow;
+            Console.WriteLine("Is chat: " + isChat + " should be true");
+
+            b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\riven.png");
+            var isRiven = ss.GetScreenState(b) == ScreenState.RivenWindow;
+            Console.WriteLine("Is riven: " + isRiven + " should be true");
+            b.Dispose();
+        }
+
         private static void TestRivenStuff()
         {
-            var c = new DShowCapture(4096, 2160);
+            var c = new GameCapture();
+            var rp = new RivenParser();
+            var ss = new ScreenStateHandler();
 
             var image = "test.png";
-            c.GetTradeChatImage(image);
+            var b = c.GetTradeChatImage();
+            b.Save("test.png");
+            b.Dispose();
 
             var p = new ChatParser();
             var results = p.ParseChatImage(image, true, true).Where(r => r is ChatMessageLineResult).Cast<ChatMessageLineResult>();
@@ -81,29 +102,76 @@ namespace DebugCLI
             var mouse = new MouseHelper();
 
             var index = 0;
+            var sw = new Stopwatch();
             foreach (var clr in results.Where(r => r is ChatMessageLineResult).Cast<ChatMessageLineResult>())
             {
                 foreach (var click in clr.ClickPoints)
                 {
-                    System.Threading.Thread.Sleep(1000);
-                    mouse.MoveTo(click.X, click.Y);
-                    System.Threading.Thread.Sleep(1000);
-                    mouse.Click(click.X, click.Y);
-                    System.Threading.Thread.Sleep(100);
+                    b = c.GetTradeChatImage();
+                    if (ss.GetScreenState(b) == ScreenState.ChatWindow)
+                    {
+                        //Hover over riven
+                        System.Threading.Thread.Sleep(17);
+                        mouse.MoveTo(click.X, click.Y);
+
+                        //Click riven
+                        System.Threading.Thread.Sleep(17);
+                        mouse.Click(click.X, click.Y);
+                        System.Threading.Thread.Sleep(17);
+                    }
+
+                    //Move mouse out of the way
                     mouse.MoveTo(0, 0);
-                    System.Threading.Thread.Sleep(100);
-                    c.GetRivenImage(index.ToString() + ".png");
-                    System.Threading.Thread.Sleep(1000);
+                    sw.Restart();
+                    var tries = 0;
+                    while (true)
+                    {
+                        try
+                        {
+                            var bitmap2 = c.GetTradeChatImage();
+                            if(ss.GetScreenState(bitmap2) == ScreenState.RivenWindow)
+                            {
+                                var crop = rp.CropToRiven(bitmap2);
+                                crop.Save(index.ToString() + ".png");
+                                crop.Dispose();
+                                bitmap2.Dispose();
+                                break;
+                            }
+                            bitmap2.Dispose();
+                        }
+                        catch { }
+                        tries++;
+                        if (tries > 15)
+                        {
+                            Console.WriteLine("Riven not detected! Abort!");
+                            break;
+                        }
+                    }
+                    Console.WriteLine("Got \"riven\" in " + sw.Elapsed.TotalSeconds + " seconds");
+
+                    //Hover over exit
+                    System.Threading.Thread.Sleep(33);
                     mouse.MoveTo(3816, 2013);
-                    System.Threading.Thread.Sleep(1000);
-                    mouse.Click(3816, 2013);
-                    System.Threading.Thread.Sleep(100);
+
+                    //Click exit
+                    var bitmap = c.GetTradeChatImage();
+                    if (ss.GetScreenState(bitmap) == ScreenState.RivenWindow)
+                    {
+                        System.Threading.Thread.Sleep(17);
+                        mouse.Click(3816, 2013);
+                        System.Threading.Thread.Sleep(17);
+                    }
+                    bitmap.Dispose();
+
+                    //Move mouse out of the way
+                    System.Threading.Thread.Sleep(17);
                     mouse.MoveTo(0, 0);
-                    System.Threading.Thread.Sleep(100);
+
+                    System.Threading.Thread.Sleep(17);
                     index++;
                 }
             }
-            c.Dispose();
+            //c.Dispose();
         }
         private static void SimulateParseRiven()
         {

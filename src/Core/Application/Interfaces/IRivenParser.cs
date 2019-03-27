@@ -1,4 +1,5 @@
 ﻿using Application.ChatMessages.Model;
+using System.Drawing;
 
 namespace Application.Interfaces
 {
@@ -10,5 +11,7 @@ namespace Application.Interfaces
         /// <param name="imagePath">The path to the image of the riven window.</param>
         /// <returns>The text of the riven card.</returns>
         Riven ParseRivenImage(string imagePath);
+
+        bool IsRivenPresent(Bitmap image);
     }
 }
