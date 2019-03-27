@@ -167,6 +167,7 @@ namespace Application
                     _mouseMover.ScrollDown();
                     await Task.Delay(16);
                 }
+                await Task.Delay(16);
                 _mouseMover.ScrollUp();//Pause chat
                 _mouseMover.MoveTo(0, 0);
                 await Task.Delay(66);
