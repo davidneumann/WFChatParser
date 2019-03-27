@@ -33,7 +33,7 @@ namespace ChatLoggerCLI
               .Build();
 
 
-            Console.WriteLine("Data sender connecting to: " + config["DataSender:HostName"]);
+            Console.WriteLine("Data sender connecting");
             var dataSender = new DataSender(new Uri(config["DataSender:HostName"]),
                 config.GetSection("DataSender:ConnectionMessages").GetChildren().Select(i => i.Value),
                 config["DataSender:MessagePrefix"],

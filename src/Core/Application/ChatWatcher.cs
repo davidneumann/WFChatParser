@@ -160,15 +160,16 @@ namespace Application
                 await _dataSender.AsyncSendDebugMessage(debugMessage);
 
                 //Scroll down to get 27 more messages
-                _mouseMover.MoveTo(4, 768);
+                _mouseMover.MoveTo(3250, 768);
                 //Scroll down for new page of messages
-                for (int i = 0; i < 27; i++)
+                for (int i = 0; i < 24; i++)
                 {
                     _mouseMover.ScrollDown();
                     await Task.Delay(16);
                 }
                 _mouseMover.ScrollUp();//Pause chat
-                await Task.Delay(33);
+                _mouseMover.MoveTo(0, 0);
+                await Task.Delay(66);
             }
         }
 
