@@ -19,6 +19,7 @@
     <ProjectReference Include="..\..\Common\Common\Common.csproj" />
     <ProjectReference Include="..\..\Core\Application\Application.csproj" />
     <ProjectReference Include="..\..\Infrastructure\DataStream\DataStream.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\ImageOCR\ImageOCR.csproj" />
     <ProjectReference Include="..\..\Infrastructure\WFGameCapture\WFGameCapture.csproj" />
     <ProjectReference Include="..\..\Infrastructure\WFImageParser\WFImageParser.csproj" />
   </ItemGroup>

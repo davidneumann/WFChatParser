@@ -10,7 +10,7 @@ namespace Application.ChatMessages.Model
         public string Author { get; set; }
         public string EnhancedMessage { get; set; }
         public string Raw { get; set; }
-        public Riven[] Rivens { get; set; }
+        public List<Riven> Rivens { get; set; } = new List<Riven>();
 
         public string DEBUGIMAGE { get; set; }
         public string DEBUGREASON { get; set; }

@@ -45,5 +45,13 @@ namespace WFGameCapture
             frame.Save(outputPath);
             return outputPath;
         }
+
+        public void GetRivenImage(string rivenImage)
+        {
+            var frame = GetFrame();
+            var cropped = frame.Clone(new Rectangle(1757, 463, 582, 831), frame.PixelFormat);
+            cropped.Save(rivenImage);
+            cropped.Dispose();
+        }
     }
 }

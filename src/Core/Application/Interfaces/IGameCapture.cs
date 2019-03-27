@@ -11,5 +11,6 @@ namespace Application.Interfaces
         /// </summary>
         /// <returns>The file path to the image of the chat window</returns>
         string GetTradeChatImage(string outputPath);
+        void GetRivenImage(string rivenImage);
     }
 }

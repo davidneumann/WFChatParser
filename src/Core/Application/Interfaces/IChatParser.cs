@@ -7,7 +7,7 @@ using Application.LineParseResult;
 
 namespace Application.Interfaces
 {
-    public interface IImageParser
+    public interface IChatParser
     {
         /// <summary>
         /// Extract the text of an image of the trade chat window and identifies x/y coordinate points to click for riven info.
@@ -16,12 +16,6 @@ namespace Application.Interfaces
         /// <returns>The chat window text and click points for rivens.</returns>
         LineParseResult.BaseLineParseResult[] ParseChatImage(string imagePath, bool useCache, bool isScrolledUp);
 
-        /// <summary>
-        /// Extracts the text of a riven window.
-        /// </summary>
-        /// <param name="imagePath">The path to the image of the riven window.</param>
-        /// <returns>The text of the riven card.</returns>
-        string[] ParseRivenImage(string imagePath);
         bool IsScrollbarPresent(string imagePath);
     }
 }

@@ -1,7 +1,9 @@
 ﻿using Application;
 using DataStream;
+using ImageOCR;
 using Microsoft.Extensions.Configuration;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,13 +15,17 @@ namespace ChatLoggerCLI
 {
     public class Program
     {
-        private static DShowCapture _gameCapture;
+        private static List<IDisposable> _disposables = new List<IDisposable>();
+
         public static void Main(string[] args)
         {
             Console.CancelKeyPress += Console_CancelKeyPress;
 
             Console.WriteLine("Starting up game capture");
-            _gameCapture = new DShowCapture(4096, 2160);
+            var gameCapture = new DShowCapture(4096, 2160);
+            _disposables.Add(gameCapture);
+            var rivenParser = new RivenParser();
+            _disposables.Add(rivenParser);
             //var c = new ChatImageCleaner(JsonConvert.DeserializeObject<CharInfo[]>("chars.json"));
             Console.WriteLine("Starting up image parser");
             var c = new ChatParser();
@@ -44,7 +50,7 @@ namespace ChatLoggerCLI
 
             dataSender.RequestToKill += (s, e) =>
             {
-                _gameCapture.Dispose();
+                gameCapture.Dispose();
                 Environment.Exit(0);
             };
             dataSender.RequestSaveAll += (s, e) =>
@@ -68,7 +74,7 @@ namespace ChatLoggerCLI
                 catch { }
             };
 
-            var watcher = new ChatWatcher(dataSender, c, _gameCapture, new MouseHelper());
+            var watcher = new ChatWatcher(dataSender, c, gameCapture, new MouseHelper(), new RivenCleaner(), rivenParser);
             Task t =  Task.Run(() => watcher.MonitorLive(config["DEBUG:ImageDirectory"]));
             while(true)
             {
@@ -91,8 +97,12 @@ namespace ChatLoggerCLI
 
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
         {
-            if(_gameCapture != null)
-                _gameCapture.Dispose();
+            foreach (var item in _disposables)
+            {
+                if(item != null)
+                    item.Dispose();
+            }
+            Environment.Exit(0);
         }
     }
 }

@@ -16,6 +16,8 @@ using System.Text.RegularExpressions;
 using Application.ChatMessages.Model;
 using WarframeDriver;
 using System.Threading.Tasks;
+using System.Drawing;
+using System.Drawing.Imaging;
 
 namespace DebugCLI
 {
@@ -43,7 +45,8 @@ namespace DebugCLI
 
             //FixImages();
             //PrepareRivens();
-            VerifyNoErrors(2);
+            SimulateParseRiven();
+            //VerifyNoErrors(2);
             //JsonMessagerHelper();
             //TrainOnImages();
             //var c = new ChatParser();
@@ -58,10 +61,25 @@ namespace DebugCLI
             //var v = 0.5f;
         }
 
+        private static void SimulateParseRiven()
+        {
+            var rc = new RivenCleaner();
+            var rp = new RivenParser();
+            //const string image = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\input.png";
+            //var srcBitmap = new Bitmap(image);
+            //var bitmap = srcBitmap.Clone(new Rectangle(1757, 463, 582, 831), PixelFormat.DontCare);
+            const string imageWhite = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\b2ef63f6434cae7af57a011a1e6645c1_0.png";
+            //bitmap.Save(imageWhite);
+            //srcBitmap.Dispose();
+            //bitmap.Dispose();
+            //rc.CleanRiven(imageWhite);
+            var riven = rp.ParseRivenImage(imageWhite);
+        }
+
         private static void PrepareRivens()
         {
-            var r = new RivenPreparer();
-            var p = new ImageParser();
+            var r = new RivenCleaner();
+            var p = new RivenParser();
 
             var totalSw = new Stopwatch();
             var opSw = new Stopwatch();
@@ -71,7 +89,7 @@ namespace DebugCLI
                 Console.WriteLine("\n" + riven.Substring(riven.LastIndexOf("\\") + 1));
                 totalSw.Restart();
                 opSw.Restart();
-                r.PrepareRiven(riven, riven + "_white.png");
+                r.PrepareRivenFromFullscreenImage(riven, riven + "_white.png");
                 Console.WriteLine("cleanup: " + opSw.Elapsed.TotalSeconds + " seconds");
                 opSw.Restart();
                 var result = p.ParseRivenImage(riven + "_white.png");

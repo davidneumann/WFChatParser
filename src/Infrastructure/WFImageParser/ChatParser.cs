@@ -19,7 +19,7 @@ using System.Threading.Tasks;
 
 namespace WFImageParser
 {
-    public class ChatParser : IImageParser
+    public class ChatParser : IChatParser
     {
         private List<CharacterDetails> _scannedCharacters = new List<CharacterDetails>();
         private Dictionary<string, Dictionary<string, int>> _gapPairs = new Dictionary<string, Dictionary<string, int>>();
@@ -891,12 +891,13 @@ namespace WFImageParser
 
         public bool IsScrollbarPresent(string imagePath)
         {
+            var threshold = (byte)252;
             using (Image<Rgba32> rgbImage = Image.Load(imagePath))
             {
                 for (int y = 2097; y > 655; y--)
                 {
                     var pixel = rgbImage[3256, y];
-                    if (pixel.R > 252 && pixel.G > 252 && pixel.B > 252)
+                    if (pixel.R > threshold && pixel.G > threshold && pixel.B > threshold)
                         return true;
                 }
             }

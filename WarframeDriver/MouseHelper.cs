@@ -39,7 +39,10 @@ namespace WarframeDriver
             POINT p;
             GetCursorPos(out p);
             if (p.X != x || p.Y != y)
+            {
                 MoveTo((int)x, (int)y);
+                System.Threading.Thread.Sleep(33);
+            }
             mouse_event(MOUSEEVENTF_LEFTDOWN, x, y, 0, (IntPtr)0);
             System.Threading.Thread.Sleep(33);
             mouse_event(MOUSEEVENTF_LEFTUP, x, y, 0, (IntPtr)0);

@@ -1,12 +1,14 @@
 ﻿using Application.ChatMessages.Model;
 using Application.interfaces;
 using Application.Interfaces;
+using Application.LineParseResult;
 using Common;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -16,16 +18,20 @@ namespace Application
     public class ChatWatcher
     {
         private IDataSender _dataSender;
-        private IImageParser _chatParser;
+        private IChatParser _chatParser;
         private IGameCapture _gameCapture;
         private IMouseMover _mouseMover;
+        private IRivenCleaner _rivenCleaner;
+        private IRivenParser _rivenParser;
 
-        public ChatWatcher(IDataSender dataSender, IImageParser chatParser, IGameCapture gameCapture, IMouseMover mouseMover)
+        public ChatWatcher(IDataSender dataSender, IChatParser chatParser, IGameCapture gameCapture, IMouseMover mouseMover, IRivenCleaner rivenCleaner, IRivenParser rivenParser)
         {
             this._dataSender = dataSender;
             this._chatParser = chatParser;
             this._gameCapture = gameCapture;
             this._mouseMover = mouseMover;
+            this._rivenCleaner = rivenCleaner;
+            this._rivenParser = rivenParser;
         }
 
         public async Task MonitorLive(string debugImageDectory = null)
@@ -34,11 +40,16 @@ namespace Application
                 Directory.CreateDirectory(debugImageDectory);
             if (!Directory.Exists(Path.Combine(Path.GetTempPath(), "wfchat")))
                 Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "wfchat"));
+            if (!Directory.Exists(Path.Combine(Path.GetTempPath(), "wfchat", "rivens")))
+                Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "wfchat", "rivens"));
+            foreach (var oldRiven in Directory.GetFiles(Path.Combine(Path.GetTempPath(), "wfchat", "rivens")))
+            {
+                File.Delete(oldRiven);
+            }
 
             var sw = new Stopwatch();
-            var sentMessages = new Queue<ChatMessageModel>();
-            var sentRedtext = new Queue<string>();
             var scrollbarFound = false;
+            Console.Write("Waiting for scrollbar");
             while (true)
             {
                 sw.Restart();
@@ -55,19 +66,22 @@ namespace Application
                 var imageTime = sw.Elapsed.TotalSeconds;
                 sw.Restart();
 
-                //Wait for scrollbar to be ready
-                if (!scrollbarFound)
-                {
-                    if(_chatParser.IsScrollbarPresent(image))
-                    {
-                        scrollbarFound = true;
-                        _mouseMover.MoveTo(3259, 658);
-                        await Task.Delay(33);
-                        _mouseMover.Click(3259, 658);
-                        await Task.Delay(33);
-                        continue;
-                    }
-                }
+                ////Wait for scrollbar to be ready
+                //if (!scrollbarFound)
+                //{
+                //    if (_chatParser.IsScrollbarPresent(image))
+                //    {
+                //        scrollbarFound = true;
+                //        _mouseMover.MoveTo(3259, 658);
+                //        await Task.Delay(33);
+                //        _mouseMover.Click(3259, 658);
+                //        await Task.Delay(33);
+                //        Console.Write("\rScrollbar found\n");
+                //        continue;
+                //    }
+                //    else
+                //        continue;
+                //}
 
                 //if (debugImageDectory != null)
                 //{
@@ -88,6 +102,7 @@ namespace Application
 
                 sw.Restart();
                 var lines = _chatParser.ParseChatImage(image, true, false);
+                Console.Write("\rFound " + lines.Count() + " new lines");
                 var parseTime = sw.Elapsed.TotalSeconds;
                 sw.Restart();
 
@@ -99,56 +114,67 @@ namespace Application
                 var shouldCopyImage = false;
                 var badNameRegex = new Regex("[^-A-Za-z0-9._]");
                 //[00:00] f: .
+                ChatMessageModel lastMessage = null;
+                var hasher = MD5.Create();
+                sw.Restart();
                 foreach (var line in lines)
                 {
-                    if(line.LineType == LineParseResult.LineType.RedText && !sentRedtext.Any(m => m == line.RawMessage))
+                    if (line.LineType == LineParseResult.LineType.RedText)
                     {
                         await _dataSender.AsyncSendRedtext(line.RawMessage);
-                        sentRedtext.Enqueue(line.RawMessage);
-                        while (sentRedtext.Count > 20)
-                            sentRedtext.Dequeue();
                     }
-                    else if (line.LineType == LineParseResult.LineType.NewMessage)
+                    else if (line.LineType == LineParseResult.LineType.NewMessage && line is ChatMessageLineResult)
                     {
+                        var clr = line as ChatMessageLineResult;
                         var message = MakeChatModel(line as LineParseResult.ChatMessageLineResult, badNameRegex);
-                        if (!sentMessages.Any(i => i.Author == message.Author && i.Timestamp == message.Timestamp))
-                        {
-                            newMessags++;
-                            var time = String.Format("{0:N2}", parseTime);
-                            var str = message.Raw;
-                            if (str.Length + time.Length + 4 > Console.BufferWidth)
-                                str = str.Substring(0, Console.BufferWidth - time.Length - 4);
-                            Console.Write($"\r{parseTime:N2}s: {str}");
-                            // Write space to end of line, and then CR with no LF
-                            Console.Write("\r".PadLeft(Console.WindowWidth - Console.CursorLeft - 1));
-                            sentMessages.Enqueue(message);
-                            while (sentMessages.Count > 100)
-                                sentMessages.Dequeue();
-                            if (message.DEBUGREASON != null)
-                            {
-                                message.DEBUGIMAGE = debugImageName;
-                                shouldCopyImage = true;
-                            }
+                        newMessags++;
 
-                            await _dataSender.AsyncSendChatMessage(message);
-                        }
-                        else if (!sentMessages.Any(m => m.Timestamp == message.Timestamp && m.Author == message.Author && m.Raw == message.Raw)
-                            && sentMessages.Any(i => i.Timestamp == message.Timestamp && i.Author == message.Author && !String.Equals(i.Raw, message.Raw)))
+                        for (int i = 0; i < clr.ClickPoints.Count; i++)
                         {
-                            if (message.DEBUGREASON == null)
-                                message.DEBUGREASON = string.Empty;
-                            else
-                                message.DEBUGREASON = message.DEBUGREASON + " || ";
-                            var others = string.Empty;
-                            sentMessages.Where(i => i.Timestamp == message.Timestamp && i.Author == message.Author && !String.Equals(i.Raw, message.Raw)).Select(m => m.Raw).ToList().ForEach(str => others += str + "\n ");
-                            message.DEBUGREASON += "Message parse differnet error, parse error! Other(s):\n " + others;
-                            shouldCopyImage = true;
+                            var clickpoint = clr.ClickPoints[i];
+
+                            var rivenImage = string.Empty;
+                            var originalBytes = Encoding.UTF8.GetBytes(clr.Username);
+                            var hashedBytes = hasher.ComputeHash(originalBytes);
+                            var usernameHash = new StringBuilder();
+                            foreach (Byte hashed in hashedBytes)
+                                usernameHash.AppendFormat("{0:x2}", hashed);
+                            rivenImage = Path.Combine(Path.GetTempPath(), "wfchat", "rivens", usernameHash.ToString() + "_" + i + ".png");
+
+                            _mouseMover.MoveTo(clickpoint.X, clickpoint.Y);
+                            return;
+                            await Task.Delay(66);
+                            _mouseMover.Click(clickpoint.X, clickpoint.Y);
+                            await Task.Delay(66);
+                            _gameCapture.GetRivenImage(rivenImage);
+                            _rivenCleaner.CleanRiven(rivenImage);
+                            var riven = _rivenParser.ParseRivenImage(rivenImage);
+                            riven.MessagePlacementId = clickpoint.Index;
+                            message.Rivens.Add(riven);
+
+                            File.Delete(rivenImage);
+
+                            _mouseMover.MoveTo(3798, 2005);
+                            _mouseMover.Click(3798, 2005);
+                        }
+                        if (message.DEBUGREASON != null)
+                        {
                             message.DEBUGIMAGE = debugImageName;
-                            sentMessages.Enqueue(message);
-
-                            await _dataSender.AsyncSendChatMessage(message);
+                            shouldCopyImage = true;
                         }
+
+                        await _dataSender.AsyncSendChatMessage(message);
                     }
+                }
+                if(lastMessage != null)
+                {
+                    var time = String.Format("{0:N2}", parseTime);
+                    var str = lastMessage.Raw;
+                    if (str.Length + time.Length + 4 > Console.BufferWidth)
+                        str = str.Substring(0, Console.BufferWidth - time.Length - 4);
+                    Console.Write($"\r{parseTime:N2}s: {str}");
+                    // Write space to end of line, and then CR with no LF
+                    Console.Write("\r".PadLeft(Console.WindowWidth - Console.CursorLeft));
                 }
                 if (shouldCopyImage)
                 {

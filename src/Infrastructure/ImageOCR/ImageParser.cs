@@ -13,13 +13,13 @@ using Tesseract;
 
 namespace ImageOCR
 {
-    public class ImageParser : IDisposable
+    public class RivenParser : IDisposable, IRivenParser
     {
         private TessBaseAPI _tessBaseAPI = null;
 
         private static readonly string[] _suffixes = new string[] { "ada]", "ata]", "bin]", "bo]", "cak]", "can]", "con]", "cron]", "cta]", "des]", "dex]", "do]", "dra]", "lis]", "mag]", "nak]", "nem]", "nent]", "nok]", "pha]", "sus]", "tak]", "tia]", "tin]", "tio]", "tis]", "ton]", "tor]", "tox]", "tron]" };
 
-        public ImageParser()
+        public RivenParser()
         {
             string dataPath = @"tessdata\";
             string language = "eng";
@@ -41,52 +41,6 @@ namespace ImageOCR
         public void Dispose()
         {
             _tessBaseAPI.Dispose();
-        }
-
-        public ImageParseResult ParseChatImage(string imagePath)
-        {
-            // Set the input image
-            Pix pix = _tessBaseAPI.SetImage(imagePath);
-
-            // Recognize image
-            _tessBaseAPI.Recognize();
-
-            ResultIterator resultIterator = _tessBaseAPI.GetIterator();
-
-            // Extract text from result iterator
-            StringBuilder stringBuilder = new StringBuilder();
-            var chatText = new List<string>();
-            PageIteratorLevel pageIteratorLevel = PageIteratorLevel.RIL_SYMBOL;
-            var clickPoints = new List<ClickPoint>();
-            var regex = new Regex(@"\[\d\d:\d\d\]", RegexOptions.Compiled);
-            var minConf = float.MaxValue;
-            do
-            {
-                var confidence = resultIterator.Confidence(pageIteratorLevel);
-                var word = resultIterator.GetUTF8Text(pageIteratorLevel);
-                if (confidence <= 90)
-                    word = "~~" + word + "~~";
-                if (confidence < minConf)
-                    minConf = confidence;
-                resultIterator.BoundingBox(pageIteratorLevel, out var left, out var top, out var right, out var bottom);
-                //if (word[0] != '[' && word.Contains(']') && _suffixes.Any(suffix => word.Contains(suffix)))
-                //    clickPoints.Add(new ClickPoint() { X = left, Y = (top + bottom) / 2 });
-                if (left < 10 && stringBuilder.Length > 0)// && regex.Match(word).Success)
-                {
-                    chatText.Add(stringBuilder.ToString());
-                    stringBuilder.Clear();
-                }
-                stringBuilder.Append(word);
-            } while (resultIterator.Next(pageIteratorLevel));
-            chatText.Add(stringBuilder.ToString());
-
-            pix.Dispose();
-
-            return new ImageParseResult()
-            {
-                ClickPoints = clickPoints.ToArray(),
-                ChatTextLines = chatText.ToArray()
-            };
         }
 
         public Riven ParseRivenImage(string imagePath)
@@ -111,7 +65,12 @@ namespace ImageOCR
             PageIteratorLevel pageIteratorLevel = PageIteratorLevel.RIL_TEXTLINE;
             do
             {
-                var line = resultIterator.GetUTF8Text(pageIteratorLevel).Trim();
+                var line = string.Empty;
+                try
+                {
+                    line = resultIterator.GetUTF8Text(pageIteratorLevel).Trim();
+                }
+                catch { return new Riven(); }
                 rawSb.AppendLine(line);
                 if (line.Length > 0 && !(line[0] == '+' || line[0] == '-') && currentStep == Step.ReadingName)
                     name = (name + " " + line).Trim();
