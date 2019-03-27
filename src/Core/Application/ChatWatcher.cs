@@ -78,7 +78,7 @@ namespace Application
                 catch { continue; }
                 var imageTime = sw.Elapsed.TotalSeconds;
                 sw.Restart();
-                var lines = _chatParser.ParseChatImage(image);
+                var lines = _chatParser.ParseChatImage(image, true, false);
                 var parseTime = sw.Elapsed.TotalSeconds;
                 sw.Restart();
                 string debugImageName = null;

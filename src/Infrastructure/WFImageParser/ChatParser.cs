@@ -143,7 +143,7 @@ namespace WFImageParser
                     break;
 
                 var targetMask = OCRHelpers.FindCharacterMask(firstPixel, image, prevMatchedCharacters, chatRect.Left, chatRect.Right, lineOffset, lineOffset + lineHeight);
-                
+
                 if (currentLineType == LineType.Unknown)
                 {
                     Point maxPoint = new Point(-1);
@@ -508,14 +508,14 @@ namespace WFImageParser
                                 && _gapPairs[lastCharacterDetails.Name].ContainsKey(bestFit.Item2.Name)
                                 && pixelGap > _gapPairs[lastCharacterDetails.Name][bestFit.Item2.Name] + spaceWidth)
                             {
-                                if(currentLineType == LineType.NewMessage && !checkedKey)
+                                if (currentLineType == LineType.NewMessage && !checkedKey)
                                 {
                                     var clr = (ChatMessageLineResult)result;
                                     if (clr.Timestamp == string.Empty)
                                         ((ChatMessageLineResult)result).Timestamp = currentWord.ToString().Trim();
                                     else if (clr.Username == string.Empty)
                                         ((ChatMessageLineResult)result).Username = currentWord.ToString().Trim().TrimEnd(':');
-                                    if(clr.KeyReady())
+                                    if (clr.KeyReady())
                                     {
                                         checkedKey = true;
                                         if (_sentItems.Any(i => i == clr.GetKey()))
@@ -583,7 +583,7 @@ namespace WFImageParser
             if (foundRiven)
             {
                 var index = word.IndexOf("]");
-                word = word.Substring(0, index+1) + "(" + (clickPoints.Count - 1) + ")" + word.Substring(index + 1);
+                word = word.Substring(0, index + 1) + "(" + (clickPoints.Count - 1) + ")" + word.Substring(index + 1);
             }
             message.Append(word);
             currentWord.Clear();
@@ -789,7 +789,7 @@ namespace WFImageParser
             return null;
         }
 
-        public BaseLineParseResult[] ParseChatImage(string imagePath, int xOffset, bool useCache)
+        public BaseLineParseResult[] ParseChatImage(string imagePath, int xOffset, bool useCache, bool isScrolledUp)
         {
             var chatRect = new Rectangle(4, 763, 3236, 1350);
             var results = new List<BaseLineParseResult>();
@@ -806,6 +806,8 @@ namespace WFImageParser
                 for (int i = 0; i < endLine && i < offsets.Length; i++)
                 {
                     var line = ParseLineBitmapScan(cache, 0.3f, xOffset, chatRect, lineHeight, offsets[i], 6, prevType);
+
+                    //Handle null results
                     if (line != null)
                         prevType = line.LineType;
                     else
@@ -813,29 +815,42 @@ namespace WFImageParser
                         prevType = LineType.Unknown;
                         continue;
                     }
-                    if(line != null && line.LineType == LineType.RedText && !_sentItems.Any(item => item == line.RawMessage))
+
+                    // There may be more to this chat message below the current scrolled amount when looking at the final line
+                    if (isScrolledUp)
                     {
-                        results.Add(line);
-                        if(useCache)
-                            _sentItems.Enqueue(line.GetKey());
+                        if (i == endLine - 1 && line != null && line.LineType == LineType.Continuation)
+                        {
+                            var last = results.Last();
+                            results.Remove(last);
+                        }
+                        else if (i == endLine - 1 && line != null && line.LineType == LineType.NewMessage)
+                            continue;
                     }
 
+                    //Add redtext to results
+                    if (line != null && line.LineType == LineType.RedText && !_sentItems.Any(item => item == line.RawMessage))
+                    {
+                        results.Add(line);
+                    }
+
+                    //Reset the known type when we hit a kick message to prevent accidently combining messages
                     if (line != null && line.RawMessage != null && line.RawMessage.Length > 0 && kickRegex.Match(line.RawMessage).Success)
                     {
                         prevType = LineType.Unknown;
                         continue;
                     }
 
+                    //Add new messages
                     if (line.RawMessage != null && line.LineType == LineType.NewMessage)
                     {
                         var clr = line as ChatMessageLineResult;
                         if (clr.Timestamp != string.Empty && clr.Username != string.Empty)
                         {
                             results.Add(line);
-                            if(useCache)
-                                _sentItems.Enqueue(line.GetKey());
                         }
                     }
+                    //Append continuation of messages onto last message
                     else if (results.Count > 0 && line.RawMessage != null && line.LineType == LineType.Continuation)
                     {
                         var last = results.Last() as ChatMessageLineResult;
@@ -843,10 +858,17 @@ namespace WFImageParser
                         //results.Add(last + " " + line);
                         last.Append(line as ChatMessageLineResult);
                     }
-
-                    while (_sentItems.Count > 100)
-                        _sentItems.Dequeue();
                 }
+            }
+
+            //Add results to cache
+            foreach (var result in results)
+            {
+                _sentItems.Enqueue(result.GetKey());
+            }
+            while (_sentItems.Count > 100)
+            {
+                _sentItems.Dequeue();
             }
 
             return results.ToArray();
@@ -859,7 +881,12 @@ namespace WFImageParser
 
         public BaseLineParseResult[] ParseChatImage(string imagePath)
         {
-            return ParseChatImage(imagePath, 4, true);
+            return ParseChatImage(imagePath, 3, true, false);
+        }
+
+        public BaseLineParseResult[] ParseChatImage(string imagePath, bool useCache, bool isScrolledUp)
+        {
+            return ParseChatImage(imagePath, 3, useCache, isScrolledUp);
         }
 
         private class CharacterDetails

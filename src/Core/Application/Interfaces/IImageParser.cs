@@ -14,7 +14,7 @@ namespace Application.Interfaces
         /// </summary>
         /// <param name="imagePath">The path to the chat window image.</param>
         /// <returns>The chat window text and click points for rivens.</returns>
-        LineParseResult.BaseLineParseResult[] ParseChatImage(string imagePath);
+        LineParseResult.BaseLineParseResult[] ParseChatImage(string imagePath, bool useCache, bool isScrolledUp);
 
         /// <summary>
         /// Extracts the text of a riven window.
