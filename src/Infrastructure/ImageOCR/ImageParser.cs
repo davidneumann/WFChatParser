@@ -59,9 +59,9 @@ namespace ImageOCR
             var currentStep = Step.ReadingName;
             var name = string.Empty;
             var modis = new List<string>();
-            var drain = "0";
-            var mr = "0";
-            var rolls = "0";
+            var drain = 0;
+            var mr = 0;
+            var rolls = 0;
             var rawSb = new StringBuilder();
             PageIteratorLevel pageIteratorLevel = PageIteratorLevel.RIL_TEXTLINE;
             do
@@ -90,15 +90,19 @@ namespace ImageOCR
                 else if (line.Length > 0 && Char.IsDigit(line[0]) && currentStep == Step.ReadingModifiers)
                 {
                     currentStep = Step.ReadingMRLine;
-                    drain = line;
+                    try
+                    {
+                        drain = Int32.Parse(line);
+                    }
+                    catch { }
                 }
                 else if (line.Length > 0 && currentStep == Step.ReadingMRLine)
                 {
                     //MR o 16 D14
                     var splits = line.Split(' ');
                     if (splits.Length == 4)
-                        rolls = Regex.Match(splits[3], @"\d+").Value.TrimStart('0');
-                    mr = Regex.Match(splits[2], @"\d+").Value.TrimStart('0');
+                        rolls = Int32.Parse(Regex.Match(splits[3], @"\d+").Value.TrimStart('0'));
+                    mr = Int32.Parse(Regex.Match(splits[2], @"\d+").Value.TrimStart('0'));
                 }
 
                 //rivenText.Add(line);
