@@ -38,82 +38,77 @@ namespace ImageOCR
             if (croppedRiven.Width != 560 && croppedRiven.Height != 740)
                 return null;
 
-            // Set the input image
-            var pix = PixConverter.ToPix(croppedRiven);
-            
-
-            // Extract text from result iterator
-            var rivenText = new List<string>();
-            var currentStep = Step.ReadingName;
-            var name = string.Empty;
-            var modis = new List<string>();
-            var drain = 0;
-            var mr = 0;
-            var rolls = 0;
-            var rawSb = new StringBuilder();
-            var number = 0;
-            PageIteratorLevel pageIteratorLevel = PageIteratorLevel.TextLine;
-            var page = _engine.Process(pix);
-            var iter = page.GetIterator();
-            do
+            Riven result = new Riven()
             {
-                var line = string.Empty;
-                try
-                {
-                    line = iter.GetText(pageIteratorLevel).Trim();
-                }
-                catch { return new Riven(); }
-                rawSb.AppendLine(line);
-                if (line.Length > 0 && !(line[0] == '+' || line[0] == '-') && currentStep == Step.ReadingName)
-                    name = (name + " " + line).Trim();
-                else if (line.Length > 0 && (line[0] == '+' || line[0] == '-') && (currentStep == Step.ReadingName || currentStep == Step.ReadingModifiers))
-                {
-                    currentStep = Step.ReadingModifiers;
-                    modis.Add(line);
-                }
-                else if (line.Length > 0 && !Char.IsDigit(line[0]) && currentStep == Step.ReadingModifiers)
-                {
-                    var last = modis.Last();
-                    modis.Remove(last);
-                    last = last + " " + line;
-                    modis.Add(last);
-                }
-                else if (line.Length > 0 && Char.IsDigit(line[0]) && currentStep == Step.ReadingModifiers)
-                {
-                    currentStep = Step.ReadingMRLine;
-                    if (Int32.TryParse(line, out number))
-                        drain = number;
-                }
-                else if (line.Length > 0 && currentStep == Step.ReadingMRLine)
-                {
-                    //MR o 16 D14
-                    var splits = line.Split(' ');
-                    if (splits.Length == 4)
-                    {
-                        if (Int32.TryParse(Regex.Match(splits[3], @"\d+").Value.TrimStart('0'), out number))
-                            rolls = number;
-                    }
-
-                    if (Int32.TryParse(Regex.Match(splits[2], @"\d+").Value.TrimStart('0'), out number))
-                        mr = number;
-                }
-
-                //rivenText.Add(line);
-            } while (iter.Next(pageIteratorLevel));
-
-            page.Dispose();
-            pix.Dispose();
-
-            return new Riven()
-            {
-                Drain = drain,
-                MasteryRank = mr,
-                Modifiers = modis.ToArray(),
-                Name = name,
                 Polarity = Polarity.Unkown,
                 Rank = "Unknown",
-                Rolls = rolls
             };
+
+            // Set the input image
+            using (var pix = PixConverter.ToPix(croppedRiven))
+            {
+                // Extract text from result iterator
+                var rivenText = new List<string>();
+                var currentStep = Step.ReadingName;
+                var name = string.Empty;
+                var modis = new List<string>();
+                var number = 0;
+                PageIteratorLevel pageIteratorLevel = PageIteratorLevel.TextLine;
+                using (var page = _engine.Process(pix))
+                {
+                    using (var iter = page.GetIterator())
+                    {
+                        do
+                        {
+                            var line = string.Empty;
+                            try
+                            {
+                                line = iter.GetText(pageIteratorLevel).Trim();
+                            }
+                            catch { continue; }
+                            if (line.Length > 0 && !(line[0] == '+' || line[0] == '-') && currentStep == Step.ReadingName)
+                                name = (name + " " + line).Trim();
+                            else if (line.Length > 0 && (line[0] == '+' || line[0] == '-') && (currentStep == Step.ReadingName || currentStep == Step.ReadingModifiers))
+                            {
+                                result.Name = name;
+                                currentStep = Step.ReadingModifiers;
+                                modis.Add(line);
+                            }
+                            else if (line.Length > 0 && !Char.IsDigit(line[0]) && currentStep == Step.ReadingModifiers)
+                            {
+                                var last = modis.Last();
+                                modis.Remove(last);
+                                last = last + " " + line;
+                                modis.Add(last);
+                            }
+                            else if (line.Length > 0 && Char.IsDigit(line[0]) && currentStep == Step.ReadingModifiers)
+                            {
+                                result.Modifiers = modis.ToArray();
+                                currentStep = Step.ReadingMRLine;
+                                if (Int32.TryParse(line, out number))
+                                    result.Drain = number;
+                            }
+                            else if (line.Length > 0 && currentStep == Step.ReadingMRLine)
+                            {
+                                //MR o 16 D14
+                                var splits = line.Split(' ');
+                                if (splits.Length == 4)
+                                {
+                                    if (Int32.TryParse(Regex.Match(splits[3], @"\d+").Value.TrimStart('0'), out number))
+                                        result.Rolls = number;
+                                }
+
+                                if (Int32.TryParse(Regex.Match(splits[2], @"\d+").Value.TrimStart('0'), out number))
+                                    result.MasteryRank = number;
+                            }
+
+                            //rivenText.Add(line);
+                        } while (iter.Next(pageIteratorLevel));
+                    }
+                }
+            }
+
+            return result;
         }
 
         public Bitmap CropToRiven(Bitmap bitmap)

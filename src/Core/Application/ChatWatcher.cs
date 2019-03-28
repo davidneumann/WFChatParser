@@ -165,13 +165,14 @@ namespace Application
                             b.Dispose();
                             await Task.Delay(17);
                             _mouseMover.MoveTo(0, 0);
-                            var tries = 0;
                             Bitmap crop = null;
-                            while (tries < 15)
+                            var foundRiven = false;
+                            for (int tries = 0; tries < 15; tries++)
                             {
                                 b = _gameCapture.GetFullImage();
                                 if(_screenStateHandler.GetScreenState(b) == ScreenState.RivenWindow)
                                 {
+                                    foundRiven = true;
                                     crop = _rivenParser.CropToRiven(b);
                                     b.Dispose();
 
@@ -182,22 +183,39 @@ namespace Application
                                     break;
                                 }
                                 b.Dispose();
-                                tries++;
                             }
-                            if (tries >= 15)
+                            if (!foundRiven || crop == null)
                                 continue;
-
-                            if (crop == null)
-                                continue;
-
+                            
                             var newC = _rivenCleaner.CleanRiven(crop);
                             crop.Dispose();
                             crop = newC;
                             var riven = _rivenParser.ParseRivenImage(crop);
+                            if (riven == null)
+                                continue;
                             riven.MessagePlacementId = clickpoint.Index;
                             message.Rivens.Add(riven);
 
                             File.Delete(rivenImage);
+
+                            for (int tries = 0; tries < 15; tries++)
+                            {
+                                b = _gameCapture.GetFullImage();
+                                var state = _screenStateHandler.GetScreenState(b);
+                                if (state == ScreenState.ChatWindow)
+                                {
+                                    b.Dispose();
+                                    break;
+                                }
+                                else if (state == ScreenState.RivenWindow)
+                                {
+                                    _mouseMover.Click(3816, 2013);
+                                    await Task.Delay(17);
+                                    _mouseMover.MoveTo(0, 0);
+                                    await Task.Delay(17);
+                                }
+                                b.Dispose();
+                            }
                         }
                         if (message.DEBUGREASON != null)
                         {
