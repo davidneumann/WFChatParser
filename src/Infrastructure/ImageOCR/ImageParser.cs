@@ -63,6 +63,7 @@ namespace ImageOCR
             var mr = 0;
             var rolls = 0;
             var rawSb = new StringBuilder();
+            var number = 0;
             PageIteratorLevel pageIteratorLevel = PageIteratorLevel.RIL_TEXTLINE;
             do
             {
@@ -90,19 +91,21 @@ namespace ImageOCR
                 else if (line.Length > 0 && Char.IsDigit(line[0]) && currentStep == Step.ReadingModifiers)
                 {
                     currentStep = Step.ReadingMRLine;
-                    try
-                    {
-                        drain = Int32.Parse(line);
-                    }
-                    catch { }
+                    if (Int32.TryParse(line, out number))
+                        drain = number;
                 }
                 else if (line.Length > 0 && currentStep == Step.ReadingMRLine)
                 {
                     //MR o 16 D14
                     var splits = line.Split(' ');
                     if (splits.Length == 4)
-                        rolls = Int32.Parse(Regex.Match(splits[3], @"\d+").Value.TrimStart('0'));
-                    mr = Int32.Parse(Regex.Match(splits[2], @"\d+").Value.TrimStart('0'));
+                    {
+                        if (Int32.TryParse(Regex.Match(splits[3], @"\d+").Value.TrimStart('0'), out number))
+                            rolls = number;
+                    }
+
+                    if (Int32.TryParse(Regex.Match(splits[2], @"\d+").Value.TrimStart('0'), out number))
+                        mr = number;
                 }
 
                 //rivenText.Add(line);
