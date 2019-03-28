@@ -130,6 +130,8 @@ namespace Application
                 ChatMessageModel lastMessage = null;
                 var hasher = MD5.Create();
                 sw.Restart();
+                var cachedRivens = new Queue<string>();
+                var cachedRivenValues = new Dictionary<string, Riven>();
                 foreach (var line in lines)
                 {
                     if (line.LineType == LineParseResult.LineType.RedText)
@@ -145,6 +147,23 @@ namespace Application
                         for (int i = 0; i < clr.ClickPoints.Count; i++)
                         {
                             var clickpoint = clr.ClickPoints[i];
+
+                            if(cachedRivenValues.ContainsKey(clickpoint.RivenName))
+                            {
+                                var cachedRiven = cachedRivenValues[clickpoint.RivenName];
+                                var copiedRiven = new Riven();
+                                copiedRiven.Drain = cachedRiven.Drain;
+                                copiedRiven.ImageID = cachedRiven.ImageID;
+                                copiedRiven.MasteryRank = cachedRiven.MasteryRank;
+                                copiedRiven.MessagePlacementId = clickpoint.Index;
+                                copiedRiven.Modifiers = cachedRiven.Modifiers;
+                                copiedRiven.Name = cachedRiven.Name;
+                                copiedRiven.Polarity = cachedRiven.Polarity;
+                                copiedRiven.Rank = cachedRiven.Rank;
+                                copiedRiven.Rolls = cachedRiven.Rolls;
+                                message.Rivens.Add(copiedRiven);
+                                continue;
+                            }
 
                             var rivenImage = string.Empty;
                             var originalBytes = Encoding.UTF8.GetBytes(clr.Username);
