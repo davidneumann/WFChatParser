@@ -248,14 +248,16 @@ namespace Application
                 //Scroll down to get 27 more messages
                 _mouseMover.MoveTo(3250, 768);
                 //Scroll down for new page of messages
-                for (int i = 0; i < 24; i++)
+                for (int i = 0; i < 27; i++)
                 {
                     _mouseMover.ScrollDown();
                     await Task.Delay(17);
                 }
-                await Task.Delay(17);
-                _mouseMover.ScrollUp();//Pause chat
-                await Task.Delay(17);
+                for (int i = 0; i < 3; i++)
+                {
+                    _mouseMover.ScrollUp();//Pause chat
+                    await Task.Delay(17);
+                }
                 _mouseMover.MoveTo(0, 0);
                 await Task.Delay(100);
             }
