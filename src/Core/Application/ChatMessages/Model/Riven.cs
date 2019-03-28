@@ -1,4 +1,6 @@
-﻿namespace Application.ChatMessages.Model
+﻿using System;
+
+namespace Application.ChatMessages.Model
 {
     public class Riven
     {
@@ -10,5 +12,6 @@
         public int MasteryRank { get; set; }
         public int Rolls { get; set; }
         public string Name { get; set; }
+        public Guid ImageID { get; set; } = Guid.Empty;
     }
 }

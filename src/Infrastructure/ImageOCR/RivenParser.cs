@@ -108,6 +108,7 @@ namespace ImageOCR
                 }
             }
 
+            result.ImageID = Guid.NewGuid();
             return result;
         }
 

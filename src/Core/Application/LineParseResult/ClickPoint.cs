@@ -9,5 +9,6 @@ namespace Application.LineParseResult
         public int X;
         public int Y;
         public int Index;
+        public string RivenName;
     }
 }

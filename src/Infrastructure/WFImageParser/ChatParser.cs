@@ -597,7 +597,7 @@ namespace WFImageParser
 
         private static void AppendSpace(ImageCache image, int lineHeight, int lineOffset, StringBuilder rawMessage, StringBuilder message, int wordStartX, StringBuilder currentWord, List<ClickPoint> clickPoints)
         {
-            var foundRiven = CheckNewWordForRiven(lineHeight, lineOffset, wordStartX, currentWord.ToString(), clickPoints, image);
+            var foundRiven = CheckNewWordForRiven(lineHeight, lineOffset, wordStartX, currentWord.ToString(), clickPoints, image, rawMessage);
             var word = currentWord.ToString() + ' ';
             if (foundRiven)
             {
@@ -609,7 +609,7 @@ namespace WFImageParser
             rawMessage.Append(' ');
         }
 
-        private static bool CheckNewWordForRiven(int lineHeight, int lineOffset, int wordStartX, string currentWord, List<ClickPoint> clickPoints, ImageCache image)
+        private static bool CheckNewWordForRiven(int lineHeight, int lineOffset, int wordStartX, string currentWord, List<ClickPoint> clickPoints, ImageCache image, StringBuilder rawMessage)
         {
             var foundRiven = false;
             var converter = new ColorSpaceConverter();
@@ -637,7 +637,11 @@ namespace WFImageParser
                             break;
                     }
                     if (foundRiven)
-                        clickPoints.Add(new ClickPoint() { X = point.X, Y = point.Y, Index = clickPoints.Count });
+                    {
+                        var str = rawMessage.ToString();
+                        str = str.Substring(str.LastIndexOf('[') + 1) + currentWord.Substring(0, currentWord.IndexOf(']'));
+                        clickPoints.Add(new ClickPoint() { X = point.X, Y = point.Y, Index = clickPoints.Count, RivenName = str.ToLower() });
+                    }
                 }
             }
             return foundRiven;

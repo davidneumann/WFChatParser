@@ -18,6 +18,7 @@ namespace DataStream
         private readonly IEnumerable<string> _connectionStrings;
         private readonly object _redtextMessagePrefix;
         private WebSocket _webSocket;
+        private string _rivenImageMessagePrefix;
 
         public event EventHandler RequestToKill;
         public event EventHandler<SaveEventArgs> RequestSaveAll;
@@ -26,7 +27,8 @@ namespace DataStream
 
         private DateTimeOffset _lastReconnectTime = DateTimeOffset.MinValue;
         public DataSender(Uri websocketHostname, IEnumerable<string> connectionMessages, string messagePrefix, string debugMessagePrefix, bool shouldReconnect, string rawMessagePrefix,
-            string redtextMessagePrefix)
+            string redtextMessagePrefix,
+            string rivenImageMessagePrefix)
         {
             _websocketHostname = websocketHostname;
             _messagePrefix = messagePrefix;
@@ -35,6 +37,7 @@ namespace DataStream
             _connectionStrings = connectionMessages;
             _rawMessagePrefix = rawMessagePrefix;
             _redtextMessagePrefix = redtextMessagePrefix;
+            _rivenImageMessagePrefix = rivenImageMessagePrefix;
 
             _jsonSettings.Converters.Add(new StringEnumConverter() { AllowIntegerValues = false });
 
@@ -88,6 +91,7 @@ namespace DataStream
         private BackgroundWorker _reconnectWorker = new BackgroundWorker();
         private string _rawMessagePrefix;
         private JsonSerializerSettings _jsonSettings = new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore, ContractResolver = new IgnoreEmptyEnumerablesResolver() };
+        
 
         private void Reconnect()
         {
@@ -189,6 +193,14 @@ namespace DataStream
         {
             if (_redtextMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
                 _webSocket.Send(_redtextMessagePrefix + redtext);
+            else if (_shouldReconnect)
+                Reconnect();
+        }
+
+        public async Task AsyncSendRivenImage(Guid imageID, string rivenBase64)
+        {
+            if (_rivenImageMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
+                _webSocket.Send(_rivenImageMessagePrefix + JsonConvert.SerializeObject(new { ImageID = imageID, Image = rivenBase64 }));
             else if (_shouldReconnect)
                 Reconnect();
         }

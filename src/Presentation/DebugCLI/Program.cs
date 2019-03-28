@@ -71,10 +71,10 @@ namespace DebugCLI
         private static void TestRivenParsing()
         {
             var rp = new RivenParser();
-            var bitmap = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\input.png");
-            var cropped = rp.CropToRiven(bitmap);
+            var cropped = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\input.png");
+            //var cropped = rp.CropToRiven(bitmap);
             cropped.Save("cropped.png");
-            bitmap.Dispose();
+            //bitmap.Dispose();
             var rc = new RivenCleaner();
             var clean = rc.CleanRiven(cropped);
             cropped.Dispose();

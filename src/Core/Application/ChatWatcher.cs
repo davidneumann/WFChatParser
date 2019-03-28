@@ -188,15 +188,26 @@ namespace Application
                                 continue;
                             
                             var newC = _rivenCleaner.CleanRiven(crop);
-                            crop.Dispose();
-                            crop = newC;
-                            var riven = _rivenParser.ParseRivenImage(crop);
+                            var riven = _rivenParser.ParseRivenImage(newC);
+                            newC.Dispose();
                             if (riven == null)
+                            {
+                                crop.Dispose();
                                 continue;
+                            }
+                            var memImage = new MemoryStream();
+                            crop.Save(memImage, System.Drawing.Imaging.ImageFormat.Jpeg);
+                            memImage.Seek(0, SeekOrigin.Begin);
+                            var rivenBase64 = Convert.ToBase64String(memImage.ToArray());
+                            crop.Dispose();
+                            memImage.Dispose();
+
                             riven.MessagePlacementId = clickpoint.Index;
                             message.Rivens.Add(riven);
 
                             File.Delete(rivenImage);
+
+                            await _dataSender.AsyncSendRivenImage(riven.ImageID, rivenBase64);
 
                             for (int tries = 0; tries < 15; tries++)
                             {

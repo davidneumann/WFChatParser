@@ -44,7 +44,9 @@ namespace WFImageParser
                         for (int y = 0; y < 630; y++)
                         {
                             var p = image[refX + x, refY + y];
-                            if (p.R == 172 && p.G == 131 && p.B == 213)
+                            if (p.R >= 170 && p.R <= 174
+                                && p.G >= 129 && p.G <= 133
+                                && p.B >= 211 && p.B <= 215)
                                 outputImage[x, y] = Rgba32.Black;
                         }
                     }
@@ -56,7 +58,9 @@ namespace WFImageParser
                         for (int y = 0; y < 45; y++)
                         {
                             var p = image[refX + x, refY + y];
-                            if (p.R == 172 && p.G == 131 && p.B == 213)
+                            if (p.R >= 170 && p.R <= 174
+                                && p.G >= 129 && p.G <= 133
+                                && p.B >= 211 && p.B <= 215)
                                 outputImage[x, y+630] = Rgba32.Black;
                         }
                     }
@@ -68,7 +72,9 @@ namespace WFImageParser
                         for (int y = 0; y < 45; y++)
                         {
                             var p = image[refX + x, refY + y];
-                            if (p.R == 172 && p.G == 131 && p.B == 213)
+                            if (p.R >= 170 && p.R <= 174
+                                && p.G >= 129 && p.G <= 133
+                                && p.B >= 211 && p.B <= 215)
                                 outputImage[x, y+630+45] = Rgba32.Black;
                         }
                     }
