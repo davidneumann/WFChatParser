@@ -866,7 +866,7 @@ namespace WFImageParser
                         }
                     }
                     //Append continuation of messages onto last message
-                    else if (results.Count > 0 && line.RawMessage != null && line.LineType == LineType.Continuation)
+                    else if (results.Count > 0 && line.RawMessage != null && line.LineType == LineType.Continuation && line.RawMessage != "Type /? to view available chat commands.")
                     {
                         var last = results.Last() as ChatMessageLineResult;
                         //results.Remove(last);
