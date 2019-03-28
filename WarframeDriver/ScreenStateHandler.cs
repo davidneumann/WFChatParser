@@ -3,6 +3,7 @@ using Application.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Text;
 
 namespace WarframeDriver
@@ -17,6 +18,29 @@ namespace WarframeDriver
                 return ScreenState.ChatWindow;
 
             return ScreenState.Unknown;
+        }
+
+        public bool IsExitable(Bitmap b)
+        {
+            var darkPixels = new Point[] { new Point(3788, 1998), new Point(3789, 2008), new Point(3776, 2013), new Point(3790, 2023), new Point(3787, 2034), new Point(3857, 1996), new Point(3850, 2013) };
+            var lightPixles = new Point[] { new Point(3790, 2002), new Point(3781, 2013), new Point(3789, 2015), new Point(3782, 2029), new Point(3815, 2016), new Point(3857, 2003) };
+            if (darkPixels.Any(p =>
+            {
+                var pixel = b.GetPixel(p.X, p.Y);
+                if (pixel.R > 100 || pixel.G > 100 || pixel.G > 100)
+                    return true;
+                return false;
+            }))
+                return false;
+            if(lightPixles.Any(p =>
+            {
+                var pixel = b.GetPixel(p.X, p.Y);
+                if (pixel.R < 180 || pixel.G < 180 || pixel.G < 180)
+                    return true;
+                return false;
+            }))
+                return false;
+            return true;
         }
 
         private bool isChat(Bitmap bitmap)

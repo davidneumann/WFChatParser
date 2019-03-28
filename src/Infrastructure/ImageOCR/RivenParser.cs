@@ -98,7 +98,9 @@ namespace ImageOCR
                                         result.Rolls = number;
                                 }
 
-                                if (Int32.TryParse(Regex.Match(splits[2], @"\d+").Value.TrimStart('0'), out number))
+                                if (splits.Length >= 3 && Int32.TryParse(Regex.Match(splits[2], @"\d+").Value.TrimStart('0'), out number))
+                                    result.MasteryRank = number;
+                                else if (splits.Length < 3 && Int32.TryParse(Regex.Match(line, @"\d+").Value.TrimStart('0'), out number))
                                     result.MasteryRank = number;
                             }
 

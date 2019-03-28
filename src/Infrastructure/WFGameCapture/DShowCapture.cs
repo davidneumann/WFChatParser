@@ -51,5 +51,12 @@ namespace WFGameCapture
             var cropped = frame.Clone(new Rectangle(1757, 463, 582, 831), frame.PixelFormat);
             return cropped;
         }
+
+        public Bitmap GetChatIcon()
+        {
+            var frame = GetFrame();
+            var cropped = frame.Clone(new Rectangle(128, 594, 66, 52), frame.PixelFormat);
+            return cropped;
+        }
     }
 }

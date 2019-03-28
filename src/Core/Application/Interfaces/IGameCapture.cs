@@ -13,5 +13,6 @@ namespace Application.Interfaces
         /// <returns>The file path to the image of the chat window</returns>
         Bitmap GetFullImage();
         Bitmap GetRivenImage();
+        Bitmap GetChatIcon();
     }
 }

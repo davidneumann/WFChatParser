@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Application.LineParseResult;
+using System.Drawing;
 
 namespace Application.Interfaces
 {
@@ -14,8 +15,10 @@ namespace Application.Interfaces
         /// </summary>
         /// <param name="imagePath">The path to the chat window image.</param>
         /// <returns>The chat window text and click points for rivens.</returns>
-        LineParseResult.BaseLineParseResult[] ParseChatImage(string imagePath, bool useCache, bool isScrolledUp);
+        LineParseResult.BaseLineParseResult[] ParseChatImage(string imagePath, bool useCache, bool isScrolledUp, int lineParseCount);
 
         bool IsScrollbarPresent(string imagePath);
+
+        bool IsChatFocused(Bitmap chatIconBitmap);
     }
 }

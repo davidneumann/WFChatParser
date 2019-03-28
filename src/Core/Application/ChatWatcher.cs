@@ -108,13 +108,20 @@ namespace Application
                 b = _gameCapture.GetFullImage();
                 if (_screenStateHandler.GetScreenState(b) != ScreenState.ChatWindow)
                 {
+                    if(_screenStateHandler.IsExitable(b))
+                    {
+                        //Click exit
+                        _mouseMover.Click(3814, 2014);
+                        await Task.Delay(30);
+                        continue;
+                    }
                     await _dataSender.AsyncSendDebugMessage("Help I'm stuck!");
                     await Task.Delay(5000);
                     b.Dispose();
                     continue;
                 }
                 b.Dispose();
-                var lines = _chatParser.ParseChatImage(image, true, true);
+                var lines = _chatParser.ParseChatImage(image, true, true, 27);
                 Console.Write("\rFound " + lines.Count() + " new lines");
                 var parseTime = sw.Elapsed.TotalSeconds;
                 sw.Restart();
@@ -148,9 +155,9 @@ namespace Application
                         {
                             var clickpoint = clr.ClickPoints[i];
 
-                            if(cachedRivenValues.ContainsKey(clickpoint.RivenName))
+                            if(cachedRivenValues.ContainsKey(clr.Username + clickpoint.RivenName))
                             {
-                                var cachedRiven = cachedRivenValues[clickpoint.RivenName];
+                                var cachedRiven = cachedRivenValues[clr.Username + clickpoint.RivenName];
                                 var copiedRiven = new Riven();
                                 copiedRiven.Drain = cachedRiven.Drain;
                                 copiedRiven.ImageID = cachedRiven.ImageID;
@@ -222,6 +229,18 @@ namespace Application
                             memImage.Dispose();
 
                             riven.MessagePlacementId = clickpoint.Index;
+
+                            if (riven.Drain > 0 && riven.MasteryRank > 0)
+                            {
+                                cachedRivens.Enqueue(clr.Username + clickpoint.RivenName);
+                                cachedRivenValues[clr.Username + clickpoint.RivenName] = riven;
+                                Console.WriteLine("adding: " + clr.Username + clickpoint.RivenName + " to cache");
+                                while (cachedRivens.Count > 1000)
+                                {
+                                    var removed = cachedRivens.Dequeue();
+                                    cachedRivenValues.Remove(removed);
+                                }
+                            }
                             message.Rivens.Add(riven);
 
                             File.Delete(rivenImage);
@@ -230,21 +249,33 @@ namespace Application
 
                             for (int tries = 0; tries < 15; tries++)
                             {
-                                b = _gameCapture.GetFullImage();
-                                var state = _screenStateHandler.GetScreenState(b);
-                                if (state == ScreenState.ChatWindow)
+                                if (tries == 0 || tries == 14)
                                 {
+                                    b = _gameCapture.GetFullImage();
+                                    var state = _screenStateHandler.GetScreenState(b);
+                                    if (state == ScreenState.ChatWindow)
+                                    {
+                                        b.Dispose();
+                                        break;
+                                    }
+                                    else if (state == ScreenState.RivenWindow)
+                                    {
+                                        _mouseMover.Click(3816, 2013);
+                                        await Task.Delay(17);
+                                        _mouseMover.MoveTo(0, 0);
+                                        await Task.Delay(17);
+                                    }
                                     b.Dispose();
-                                    break;
                                 }
-                                else if (state == ScreenState.RivenWindow)
+                                else
                                 {
-                                    _mouseMover.Click(3816, 2013);
-                                    await Task.Delay(17);
-                                    _mouseMover.MoveTo(0, 0);
-                                    await Task.Delay(17);
+                                    b = _gameCapture.GetChatIcon();
+                                    if(_chatParser.IsChatFocused(b))
+                                    {
+                                        b.Dispose();
+                                        break;
+                                    }
                                 }
-                                b.Dispose();
                             }
                         }
                         if (message.DEBUGREASON != null)
@@ -283,7 +314,7 @@ namespace Application
                     _mouseMover.ScrollDown();
                     await Task.Delay(17);
                 }
-                for (int i = 0; i < 3; i++)
+                for (int i = 0; i < 1; i++)
                 {
                     _mouseMover.ScrollUp();//Pause chat
                     await Task.Delay(17);

@@ -46,7 +46,8 @@ namespace DebugCLI
             //if (t.IsFaulted)
             //    Console.WriteLine(t.Exception);
 
-            TestRivenParsing();
+            TestCanExit();
+            //TestRivenParsing();
             //FixImages();
             //PrepareRivens();
             //VisualizeClickpoints();
@@ -67,6 +68,18 @@ namespace DebugCLI
             //}
             //var v = 0.5f;
             }
+
+        private static void TestCanExit()
+        {
+            var fullImage = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\Screenshot (117).png");
+            var ss = new ScreenStateHandler();
+            var isExitable = ss.IsExitable(fullImage);
+            fullImage.Dispose();
+
+            var chatIcon = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chaticon.png");
+            var cp = new ChatParser();
+            var isChat = cp.IsChatFocused(chatIcon);
+        }
 
         private static void TestRivenParsing()
         {
@@ -121,7 +134,7 @@ namespace DebugCLI
             b.Dispose();
 
             var p = new ChatParser();
-            var results = p.ParseChatImage(image, true, true).Where(r => r is ChatMessageLineResult).Cast<ChatMessageLineResult>();
+            var results = p.ParseChatImage(image, true, true, 27).Where(r => r is ChatMessageLineResult).Cast<ChatMessageLineResult>();
 
             var clean = new ImageCleaner();
             var coords = new CoordinateList();

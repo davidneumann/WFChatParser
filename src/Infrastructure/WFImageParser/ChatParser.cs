@@ -597,7 +597,7 @@ namespace WFImageParser
 
         private static void AppendSpace(ImageCache image, int lineHeight, int lineOffset, StringBuilder rawMessage, StringBuilder message, int wordStartX, StringBuilder currentWord, List<ClickPoint> clickPoints)
         {
-            var foundRiven = CheckNewWordForRiven(lineHeight, lineOffset, wordStartX, currentWord.ToString(), clickPoints, image, rawMessage);
+            var foundRiven = CheckNewWordForRiven(lineHeight, lineOffset, wordStartX, currentWord.ToString(), clickPoints, image, message);
             var word = currentWord.ToString() + ' ';
             if (foundRiven)
             {
@@ -639,7 +639,7 @@ namespace WFImageParser
                     if (foundRiven)
                     {
                         var str = rawMessage.ToString();
-                        str = str.Substring(str.LastIndexOf('[') + 1) + currentWord.Substring(0, currentWord.IndexOf(']'));
+                        str = str.Substring(str.LastIndexOf('[')+1) + currentWord.Substring(0, currentWord.IndexOf(']'));
                         clickPoints.Add(new ClickPoint() { X = point.X, Y = point.Y, Index = clickPoints.Count, RivenName = str.ToLower() });
                     }
                 }
@@ -818,7 +818,7 @@ namespace WFImageParser
             return null;
         }
 
-        public BaseLineParseResult[] ParseChatImage(string imagePath, int xOffset, bool useCache, bool isScrolledUp)
+        public BaseLineParseResult[] ParseChatImage(string imagePath, int xOffset, bool useCache, bool isScrolledUp, int lineParseCount = 27)
         {
             var chatRect = new Rectangle(4, 763, 3236, 1350);
             var results = new List<BaseLineParseResult>();
@@ -827,12 +827,12 @@ namespace WFImageParser
                 var cache = new ImageCache(rgbImage);
                 var offsets = _lineOffsets;
                 var lineHeight = 36;
-                var endLine = offsets.Length;
+                var endLine = Math.Min(offsets.Length, lineParseCount);
                 var newMessageRegex = new Regex(@"^\[\d\d:\d\d\]", RegexOptions.Compiled);
                 var kickRegex = new Regex(@"\w was kicked.", RegexOptions.Compiled);
                 var prevType = LineType.Unknown;
                 //var results = new string[endLine - startLine];
-                for (int i = 0; i < endLine && i < offsets.Length; i++)
+                for (int i = 0; i < offsets.Length; i++)
                 {
                     var line = ParseLineBitmapScan(cache, 0.3f, xOffset, chatRect, lineHeight, offsets[i], 6, prevType);
 
@@ -848,14 +848,17 @@ namespace WFImageParser
                     // There may be more to this chat message below the current scrolled amount when looking at the final line
                     if (isScrolledUp)
                     {
-                        if (i == endLine - 1 && line != null && line.LineType == LineType.Continuation && results.Count > 0)
+                        if (i == offsets.Length - 1 && line != null && line.LineType == LineType.Continuation && results.Count > 0)
                         {
                             var last = results.Last();
                             results.Remove(last);
                         }
-                        else if (i == endLine - 1 && line != null && line.LineType == LineType.NewMessage)
+                        else if (i == offsets.Length - 1 && line != null && line.LineType == LineType.NewMessage)
                             continue;
                     }
+
+                    if (i >= endLine && line.LineType != LineType.Continuation)
+                        break;
 
                     //Add redtext to results
                     if (line != null && line.LineType == LineType.RedText && !_sentItems.Any(item => item == line.RawMessage))
@@ -914,9 +917,9 @@ namespace WFImageParser
             return ParseChatImage(imagePath, 3, true, false);
         }
 
-        public BaseLineParseResult[] ParseChatImage(string imagePath, bool useCache, bool isScrolledUp)
+        public BaseLineParseResult[] ParseChatImage(string imagePath, bool useCache, bool isScrolledUp, int lineParseCount)
         {
-            return ParseChatImage(imagePath, 3, useCache, isScrolledUp);
+            return ParseChatImage(imagePath, 3, useCache, isScrolledUp, lineParseCount);
         }
 
         public bool IsScrollbarPresent(string imagePath)
@@ -933,6 +936,29 @@ namespace WFImageParser
             }
 
             return false;
+        }
+
+        public bool IsChatFocused(System.Drawing.Bitmap chatIconBitmap)
+        {
+            var darkPixels = new Point[] { new Point(23, 15), new Point(30, 35), new Point(37, 15), new Point(43, 35)};
+            var lightPixles = new Point[] { new Point(17, 25), new Point(24, 12), new Point(26, 19), new Point(32, 24), new Point(40, 32), new Point(30, 43)};
+            if (darkPixels.Any(p =>
+            {
+                var pixel = chatIconBitmap.GetPixel(p.X, p.Y);
+                if (pixel.R > 100 || pixel.G > 100 || pixel.G > 100)
+                    return true;
+                return false;
+            }))
+                return false;
+            if (lightPixles.Any(p =>
+            {
+                var pixel = chatIconBitmap.GetPixel(p.X, p.Y);
+                if (pixel.R < 180 || pixel.G < 180 || pixel.G < 180)
+                    return true;
+                return false;
+            }))
+                return false;
+            return true;
         }
 
         private class CharacterDetails

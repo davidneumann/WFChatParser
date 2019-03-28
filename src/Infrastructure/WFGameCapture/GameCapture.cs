@@ -181,5 +181,12 @@ namespace WFGameCapture
             var image = GetOutputAsBitmap(100);
             return image;
         }
+
+        public Bitmap GetChatIcon()
+        {
+            ClippingBounds = new Rectangle(128, 594, 66, 52);
+            var image = GetOutputAsBitmap(100);
+            return image;
+        }
     }
 }

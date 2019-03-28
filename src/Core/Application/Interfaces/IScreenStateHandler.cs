@@ -9,5 +9,6 @@ namespace Application.Interfaces
     public interface IScreenStateHandler
     {
         ScreenState GetScreenState(Bitmap bitmap);
+        bool IsExitable(Bitmap b);
     }
 }
