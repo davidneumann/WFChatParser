@@ -104,23 +104,6 @@ namespace Application
                     }
                 }
 
-                //if (debugImageDectory != null)
-                //{
-                //    for (int i = 6; i >= 0; i--)
-                //    {
-                //        try
-                //        {
-                //            var curFile = Path.Combine(debugImageDectory, "capture_" + i + ".png");
-                //            var lastFile = Path.Combine(debugImageDectory, "capture_" + (i + 1) + ".png");
-                //            if (File.Exists(lastFile))
-                //                File.Delete(lastFile);
-                //            if (File.Exists(curFile))
-                //                File.Move(curFile, lastFile);
-                //        }
-                //        catch { }
-                //    }
-                //}
-
                 sw.Restart();
                 b = _gameCapture.GetFullImage();
                 if (_screenStateHandler.GetScreenState(b) != ScreenState.ChatWindow)
@@ -246,10 +229,11 @@ namespace Application
                 for (int i = 0; i < 24; i++)
                 {
                     _mouseMover.ScrollDown();
-                    await Task.Delay(16);
+                    await Task.Delay(17);
                 }
-                await Task.Delay(16);
+                await Task.Delay(17);
                 _mouseMover.ScrollUp();//Pause chat
+                await Task.Delay(17);
                 _mouseMover.MoveTo(0, 0);
                 await Task.Delay(100);
             }
