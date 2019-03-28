@@ -64,7 +64,7 @@ namespace DebugCLI
             //        Debugger.Break();
             //}
             //var v = 0.5f;
-        }
+            }
 
         private static void VisualizeClickpoints()
         {
@@ -359,7 +359,11 @@ namespace DebugCLI
                 var c = new ChatParser();
                 var cleaner = new ImageCleaner();
                 cleaner.SaveChatColors(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name));
+                var sw = new Stopwatch();
+                sw.Restart();
                 var result = c.ParseChatImage(masterKeyFile, xOffset, false, false).Select(i => i.RawMessage.Trim()).ToArray();
+                Console.WriteLine("Parsed in: " + sw.Elapsed.TotalSeconds + " seconds");
+                sw.Stop();
 
                 Console.WriteLine("Expected");
                 Console.WriteLine("Recieved");

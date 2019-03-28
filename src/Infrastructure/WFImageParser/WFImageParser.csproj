@@ -185,6 +185,9 @@
     <None Update="ocrdata\L_upper.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="ocrdata\MessageBlacklists.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="ocrdata\m_lower.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

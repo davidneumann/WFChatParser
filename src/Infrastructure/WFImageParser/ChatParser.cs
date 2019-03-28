@@ -29,6 +29,7 @@ namespace WFImageParser
         private static readonly string GAPSFILE = Path.Combine("ocrdata", "gaps.json");
         //private static readonly string[] _suffixes = new string[] { "ada]", "ata]", "bin]", "bo]", "cak]", "can]", "con]", "cron]", "cta]", "des]", "dex]", "do]", "dra]", "lis]", "mag]", "nak]", "nem]", "nent]", "nok]", "pha]", "sus]", "tak]", "tia]", "tin]", "tio]", "tis]", "ton]", "tor]", "tox]", "tron]" };
         private static readonly List<string> _suffixes = new List<string>();
+        private static readonly List<Regex> _blacklistedRegex = new List<Regex>();
         public ChatParser()
         {
             //Load suffixes
@@ -37,6 +38,15 @@ namespace WFImageParser
                 foreach (var line in File.ReadAllLines(@"rivendata\affixcombos.txt"))
                 {
                     _suffixes.Add(line.Trim() + ']');
+                }
+            }
+
+            //Load blacklists
+            if (Directory.Exists("ocrdata") && File.Exists(@"ocrdata\MessageBlacklists.txt"))
+            {
+                foreach (var line in File.ReadAllLines(@"ocrdata\MessageBlacklists.txt"))
+                {
+                    _blacklistedRegex.Add(new Regex(line, RegexOptions.Compiled));
                 }
             }
 
@@ -866,7 +876,8 @@ namespace WFImageParser
                         }
                     }
                     //Append continuation of messages onto last message
-                    else if (results.Count > 0 && line.RawMessage != null && line.LineType == LineType.Continuation && line.RawMessage != "Type /? to view available chat commands.")
+                    else if (results.Count > 0 && line.RawMessage != null && line.LineType == LineType.Continuation
+                        && !_blacklistedRegex.Any(regex => regex.Match(line.RawMessage).Success))
                     {
                         var last = results.Last() as ChatMessageLineResult;
                         //results.Remove(last);
