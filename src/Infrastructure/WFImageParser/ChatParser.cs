@@ -27,10 +27,19 @@ namespace WFImageParser
         private int _minCharWidth = int.MaxValue;
 
         private static readonly string GAPSFILE = Path.Combine("ocrdata", "gaps.json");
-        private static readonly string[] _suffixes = new string[] { "ada]", "ata]", "bin]", "bo]", "cak]", "can]", "con]", "cron]", "cta]", "des]", "dex]", "do]", "dra]", "lis]", "mag]", "nak]", "nem]", "nent]", "nok]", "pha]", "sus]", "tak]", "tia]", "tin]", "tio]", "tis]", "ton]", "tor]", "tox]", "tron]" };
-
+        //private static readonly string[] _suffixes = new string[] { "ada]", "ata]", "bin]", "bo]", "cak]", "can]", "con]", "cron]", "cta]", "des]", "dex]", "do]", "dra]", "lis]", "mag]", "nak]", "nem]", "nent]", "nok]", "pha]", "sus]", "tak]", "tia]", "tin]", "tio]", "tis]", "ton]", "tor]", "tox]", "tron]" };
+        private static readonly List<string> _suffixes = new List<string>();
         public ChatParser()
         {
+            //Load suffixes
+            if (Directory.Exists("rivendata") && File.Exists(@"rivendata\affixcombos.txt"))
+            {
+                foreach (var line in File.ReadAllLines(@"rivendata\affixcombos.txt"))
+                {
+                    _suffixes.Add(line.Trim() + ']');
+                }
+            }
+
             var converter = new ColorSpaceConverter();
             if (Directory.Exists("ocrdata"))
             {
@@ -578,7 +587,7 @@ namespace WFImageParser
 
         private static void AppendSpace(ImageCache image, int lineHeight, int lineOffset, StringBuilder rawMessage, StringBuilder message, int wordStartX, StringBuilder currentWord, List<ClickPoint> clickPoints)
         {
-            var foundRiven = CheckNewWordForRiven(lineHeight, lineOffset, wordStartX, currentWord.ToString(), clickPoints, image, message.Length);
+            var foundRiven = CheckNewWordForRiven(lineHeight, lineOffset, wordStartX, currentWord.ToString(), clickPoints, image);
             var word = currentWord.ToString() + ' ';
             if (foundRiven)
             {
@@ -590,30 +599,36 @@ namespace WFImageParser
             rawMessage.Append(' ');
         }
 
-        private static bool CheckNewWordForRiven(int lineHeight, int lineOffset, int wordStartX, string currentWord, List<ClickPoint> clickPoints, ImageCache image, int wordIndex)
+        private static bool CheckNewWordForRiven(int lineHeight, int lineOffset, int wordStartX, string currentWord, List<ClickPoint> clickPoints, ImageCache image)
         {
             var foundRiven = false;
             var converter = new ColorSpaceConverter();
-            if (_suffixes.Any(s => currentWord.Contains(s)))
+            if (currentWord.Length > 0 && currentWord[0] != '[' && currentWord.IndexOf(']') > 0)
             {
-                Point point = Point.Empty;
-                for (int x = Math.Max(0, wordStartX - 5); x < wordStartX + 5 && x < image.Width; x++)
+                var rivenBit = currentWord.Substring(0, currentWord.IndexOf(']') + 1).ToLower();
+                if (rivenBit.IndexOf('-') > 0)
+                    rivenBit = rivenBit.Substring(rivenBit.IndexOf('-') + 1);
+                if (_suffixes.BinarySearch(rivenBit) > 0)
                 {
-                    for (int y = lineOffset + lineHeight / 2 - 5; y < lineOffset + lineHeight / 2 + 5 && y < image.Height; y++)
+                    Point point = Point.Empty;
+                    for (int y = lineOffset; y < lineOffset + lineHeight && y < image.Height; y++)
                     {
-                        var hsvPixel = image.GetHsv(x, y);
-                        if (hsvPixel.V > 0.3f && hsvPixel.H >= 176.3 && hsvPixel.H <= 255)
+                        for (int x = Math.Max(0, wordStartX - 5); x < wordStartX + 8 && x < image.Width; x++)
                         {
-                            foundRiven = true;
-                            point = new Point(x, y);
-                            break;
+                            var hsvPixel = image.GetHsv(x, y);
+                            if (image.GetColor(x,y) == ImageCache.ChatColor.ItemLink)
+                            {
+                                foundRiven = true;
+                                point = new Point(x, y);
+                                break;
+                            }
                         }
+                        if (foundRiven)
+                            break;
                     }
                     if (foundRiven)
-                        break;
+                        clickPoints.Add(new ClickPoint() { X = point.X, Y = point.Y, Index = clickPoints.Count });
                 }
-                if (foundRiven)
-                    clickPoints.Add(new ClickPoint() { X = point.X, Y = point.Y, Index = wordIndex });
             }
             return foundRiven;
         }

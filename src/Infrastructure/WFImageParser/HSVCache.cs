@@ -59,7 +59,7 @@ namespace WFImageParser
                 return ChatColor.ChatTimestampName;
             if (hsvPixel.S < 0.3) //white
                 return ChatColor.Text;
-            if (hsvPixel.H >= 190 && hsvPixel.H <= 210) // blue
+            if (hsvPixel.H >= 190 && hsvPixel.H <= 210 && hsvPixel.V >= 0.25) // blue
                 return ChatColor.ItemLink;
             if ((hsvPixel.H <= 1 || hsvPixel.H >= 359) && hsvPixel.S >= 0.7f && hsvPixel.S <= 0.8f)
                 return ChatColor.Redtext;

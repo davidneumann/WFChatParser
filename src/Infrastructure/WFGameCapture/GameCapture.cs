@@ -48,7 +48,7 @@ namespace WFGameCapture
 
             _duplicateOutput = output1.DuplicateOutput(Device);
 
-            GetOutputAsBitmap(0).Dispose();
+            GetOutputAsBitmap(100).Dispose();
         }
 
         public Texture2D GetOutput(int timeout = 10)

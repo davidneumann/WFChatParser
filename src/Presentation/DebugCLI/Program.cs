@@ -47,10 +47,11 @@ namespace DebugCLI
 
             //FixImages();
             //PrepareRivens();
+            //VisualizeClickpoints();
             //TestScreenHandler();
-            TestRivenStuff();
+            //TestRivenStuff();
             //SimulateParseRiven();
-            //VerifyNoErrors(2);
+            VerifyNoErrors(2);
             //JsonMessagerHelper();
             //TrainOnImages();
             //var c = new ChatParser();
@@ -63,6 +64,18 @@ namespace DebugCLI
             //        Debugger.Break();
             //}
             //var v = 0.5f;
+        }
+
+        private static void VisualizeClickpoints()
+        {
+            var cp = new ChatParser();
+            var r = cp.ParseChatImage(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Validation Inputs\error_1.png");
+            var list = new CoordinateList();
+            r.Where(r1 => r1 is ChatMessageLineResult).Cast<ChatMessageLineResult>().SelectMany(r1 => r1.ClickPoints).ToList().ForEach(p => list.Add(p.X, p.Y));
+            var ic = new ImageCleaner();
+            ic.SaveClickMarkers(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Validation Inputs\error_1.png",
+                Path.Combine(outputDir, "error_1_clicks.png"),
+                list);                
         }
 
         private static void TestScreenHandler()
