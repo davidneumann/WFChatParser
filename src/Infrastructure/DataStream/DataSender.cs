@@ -84,7 +84,7 @@ namespace DataStream
 
         private BackgroundWorker _reconnectWorker = new BackgroundWorker();
         private string _rawMessagePrefix;
-        private JsonSerializerSettings _jsonSettings = new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore, ContractResolver = new ChatMessageModelResolver() };
+        private JsonSerializerSettings _jsonSettings = new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore, ContractResolver = new IgnoreEmptyEnumerablesResolver() };
 
         private void Reconnect()
         {
