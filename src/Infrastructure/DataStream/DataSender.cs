@@ -1,6 +1,7 @@
 ﻿using Application.ChatMessages.Model;
 using Application.Interfaces;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -34,6 +35,8 @@ namespace DataStream
             _connectionStrings = connectionMessages;
             _rawMessagePrefix = rawMessagePrefix;
             _redtextMessagePrefix = redtextMessagePrefix;
+
+            _jsonSettings.Converters.Add(new StringEnumConverter() { AllowIntegerValues = false });
 
             InitWebsocket();
 

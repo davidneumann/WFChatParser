@@ -844,7 +844,7 @@ namespace WFImageParser
                     // There may be more to this chat message below the current scrolled amount when looking at the final line
                     if (isScrolledUp)
                     {
-                        if (i == endLine - 1 && line != null && line.LineType == LineType.Continuation)
+                        if (i == endLine - 1 && line != null && line.LineType == LineType.Continuation && results.Count > 0)
                         {
                             var last = results.Last();
                             results.Remove(last);
