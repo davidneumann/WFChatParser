@@ -120,7 +120,7 @@ namespace ImageOCR
 
         public Bitmap CropToRiven(Bitmap bitmap)
         {
-            return bitmap.Clone(new Rectangle(1757, 251, 582, 1043), bitmap.PixelFormat);
+            return bitmap.Clone(new Rectangle(1757, 463, 582, 831), bitmap.PixelFormat);
         }
 
         public bool IsRivenPresent(Bitmap bitmap)

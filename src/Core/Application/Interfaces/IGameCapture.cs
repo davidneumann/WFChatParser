@@ -11,7 +11,7 @@ namespace Application.Interfaces
         /// Capture the game screen and crop it to the chat window
         /// </summary>
         /// <returns>The file path to the image of the chat window</returns>
-        Bitmap GetTradeChatImage();
+        Bitmap GetFullImage();
         Bitmap GetRivenImage();
     }
 }

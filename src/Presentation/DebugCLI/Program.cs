@@ -87,7 +87,7 @@ namespace DebugCLI
             var ss = new ScreenStateHandler();
 
             var image = "test.png";
-            var b = c.GetTradeChatImage();
+            var b = c.GetFullImage();
             b.Save("test.png");
             b.Dispose();
 
@@ -107,7 +107,7 @@ namespace DebugCLI
             {
                 foreach (var click in clr.ClickPoints)
                 {
-                    b = c.GetTradeChatImage();
+                    b = c.GetFullImage();
                     if (ss.GetScreenState(b) == ScreenState.ChatWindow)
                     {
                         //Hover over riven
@@ -128,7 +128,7 @@ namespace DebugCLI
                     {
                         try
                         {
-                            var bitmap2 = c.GetTradeChatImage();
+                            var bitmap2 = c.GetFullImage();
                             if(ss.GetScreenState(bitmap2) == ScreenState.RivenWindow)
                             {
                                 var crop = rp.CropToRiven(bitmap2);
@@ -154,7 +154,7 @@ namespace DebugCLI
                     mouse.MoveTo(3816, 2013);
 
                     //Click exit
-                    var bitmap = c.GetTradeChatImage();
+                    var bitmap = c.GetFullImage();
                     if (ss.GetScreenState(bitmap) == ScreenState.RivenWindow)
                     {
                         System.Threading.Thread.Sleep(17);

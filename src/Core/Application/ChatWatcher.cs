@@ -1,4 +1,5 @@
 ﻿using Application.ChatMessages.Model;
+using Application.Enums;
 using Application.interfaces;
 using Application.Interfaces;
 using Application.LineParseResult;
@@ -6,6 +7,7 @@ using Common;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -23,8 +25,10 @@ namespace Application
         private IMouseMover _mouseMover;
         private IRivenCleaner _rivenCleaner;
         private IRivenParser _rivenParser;
+        private IScreenStateHandler _screenStateHandler;
 
-        public ChatWatcher(IDataSender dataSender, IChatParser chatParser, IGameCapture gameCapture, IMouseMover mouseMover, IRivenCleaner rivenCleaner, IRivenParser rivenParser)
+        public ChatWatcher(IDataSender dataSender, IChatParser chatParser, IGameCapture gameCapture, IMouseMover mouseMover, IRivenCleaner rivenCleaner, IRivenParser rivenParser,
+            IScreenStateHandler screenStateHandler)
         {
             this._dataSender = dataSender;
             this._chatParser = chatParser;
@@ -32,6 +36,7 @@ namespace Application
             this._mouseMover = mouseMover;
             this._rivenCleaner = rivenCleaner;
             this._rivenParser = rivenParser;
+            this._screenStateHandler = screenStateHandler;
         }
 
         public async Task MonitorLive(string debugImageDectory = null)
@@ -49,14 +54,16 @@ namespace Application
 
             var sw = new Stopwatch();
             var scrollbarFound = false;
+            Bitmap b = null;
             Console.Write("Waiting for scrollbar");
+            var scrollDots = 0;
             while (true)
             {
                 sw.Restart();
                 var image = string.Empty;
                 try
                 {
-                    var b = _gameCapture.GetTradeChatImage();
+                    b = _gameCapture.GetFullImage();
                     b.Save(Path.Combine(Path.GetTempPath(), "wfchat", "capture_0.png"));
                     b.Dispose();
                     image = Path.Combine(Path.GetTempPath(), "wfchat", "capture_0.png");
@@ -83,7 +90,18 @@ namespace Application
                         continue;
                     }
                     else
+                    {
+                        Console.Write("\rWaiting for scrollbar");
+                        for (int i = 0; i < scrollDots; i++)
+                        {
+                            Console.Write(".");
+                        }
+                        Console.Write("             ");
+                        scrollDots++;
+                        if (scrollDots > 4)
+                            scrollDots = 0;
                         continue;
+                    }
                 }
 
                 //if (debugImageDectory != null)
@@ -104,6 +122,15 @@ namespace Application
                 //}
 
                 sw.Restart();
+                b = _gameCapture.GetFullImage();
+                if (_screenStateHandler.GetScreenState(b) != ScreenState.ChatWindow)
+                {
+                    await _dataSender.AsyncSendDebugMessage("Help I'm stuck!");
+                    await Task.Delay(5000);
+                    b.Dispose();
+                    continue;
+                }
+                b.Dispose();
                 var lines = _chatParser.ParseChatImage(image, true, true);
                 Console.Write("\rFound " + lines.Count() + " new lines");
                 var parseTime = sw.Elapsed.TotalSeconds;
@@ -143,23 +170,47 @@ namespace Application
                             foreach (Byte hashed in hashedBytes)
                                 usernameHash.AppendFormat("{0:x2}", hashed);
                             rivenImage = Path.Combine(Path.GetTempPath(), "wfchat", "rivens", usernameHash.ToString() + "_" + i + ".png");
+                            b = _gameCapture.GetFullImage();
+                            if (_screenStateHandler.GetScreenState(b) == ScreenState.ChatWindow)
+                            {
+                                _mouseMover.MoveTo(clickpoint.X, clickpoint.Y);
+                                await Task.Delay(17);
+                                _mouseMover.Click(clickpoint.X, clickpoint.Y);
+                            }
+                            else
+                                continue;
+                            b.Dispose();
+                            await Task.Delay(17);
+                            _mouseMover.MoveTo(0, 0);
+                            var tries = 0;
+                            while (tries < 15)
+                            {
+                                b = _gameCapture.GetFullImage();
+                                if(_screenStateHandler.GetScreenState(b) == ScreenState.RivenWindow)
+                                {
+                                    var crop = _rivenParser.CropToRiven(b);
+                                    crop.Save(rivenImage);
+                                    crop.Dispose();
+                                    b.Dispose();
 
-                            _mouseMover.MoveTo(clickpoint.X, clickpoint.Y);
-                            await Task.Delay(16);
-                            _mouseMover.Click(clickpoint.X, clickpoint.Y);
-                            await Task.Delay(100);
-                            var b = _gameCapture.GetRivenImage();
-                            b.Save(rivenImage);
+                                    _mouseMover.Click(3816, 2013);
+                                    await Task.Delay(17);
+                                    _mouseMover.MoveTo(0, 0);
+                                    await Task.Delay(17);
+                                    break;
+                                }
+                                b.Dispose();
+                                tries++;
+                            }
+                            if (tries >= 15)
+                                continue;
+
                             _rivenCleaner.CleanRiven(rivenImage);
                             var riven = _rivenParser.ParseRivenImage(rivenImage);
                             riven.MessagePlacementId = clickpoint.Index;
                             message.Rivens.Add(riven);
 
                             File.Delete(rivenImage);
-
-                            _mouseMover.MoveTo(3798, 2005);
-                            _mouseMover.Click(3798, 2005);
-                            await Task.Delay(16);
                         }
                         if (message.DEBUGREASON != null)
                         {

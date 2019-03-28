@@ -39,7 +39,7 @@ namespace WFGameCapture
             _bitmap?.Dispose();
         }
 
-        public Bitmap GetTradeChatImage()
+        public Bitmap GetFullImage()
         {
             var frame = GetFrame();
             return frame;

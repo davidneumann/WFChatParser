@@ -51,13 +51,10 @@ namespace WFGameCapture
             GetOutputAsBitmap(0).Dispose();
         }
 
-        public Texture2D GetOutput(long minTime, int timeout = 10)
+        public Texture2D GetOutput(int timeout = 10)
         {
             try
             {
-                var time = long.MinValue;
-                //do
-                //{
                 try
                 {
                     _duplicateOutput.ReleaseFrame();
@@ -72,10 +69,6 @@ namespace WFGameCapture
                     Console.WriteLine("Screen resource busy. Aborted! Returning last image");
                     return _screenTexture;
                 }
-                //time = frameInfoRef.LastPresentTime;
-
-                //if (time > 0 && time < minTime)
-                //    continue;
 
                 var clip = ClippingBounds == Rectangle.Empty ? DisplayBounds : ClippingBounds;
 
@@ -98,7 +91,6 @@ namespace WFGameCapture
 
                 // return it
                 return _screenTexture;
-                //} while (true);
             }
             catch (SharpDXException e) when (e.ResultCode == SharpDX.DXGI.ResultCode.WaitTimeout)
             {
@@ -107,9 +99,9 @@ namespace WFGameCapture
             }
         }
 
-        public Bitmap GetOutputAsBitmap(long minTime, int timeout = 10)
+        public Bitmap GetOutputAsBitmap(int timeout = 10)
         {
-            var texture = GetOutput(minTime, timeout);
+            var texture = GetOutput(timeout);
 
             var clip = ClippingBounds == Rectangle.Empty ? DisplayBounds : ClippingBounds;
 
@@ -176,17 +168,17 @@ namespace WFGameCapture
             return new Texture2D(Device, textureDesc);
         }
 
-        public Bitmap GetTradeChatImage()
+        public Bitmap GetFullImage()
         {
             ClippingBounds = Rectangle.Empty;
-            var image = GetOutputAsBitmap(DateTime.Now.Ticks, 100);
+            var image = GetOutputAsBitmap(100);
             return image;
         }
 
         public Bitmap GetRivenImage()
         {
             ClippingBounds = new Rectangle(1757, 251, 582, 1043);
-            var image = GetOutputAsBitmap(DateTime.Now.Ticks, 100);
+            var image = GetOutputAsBitmap(100);
             return image;
         }
     }

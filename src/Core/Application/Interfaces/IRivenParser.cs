@@ -13,5 +13,6 @@ namespace Application.Interfaces
         Riven ParseRivenImage(string imagePath);
 
         bool IsRivenPresent(Bitmap image);
+        Bitmap CropToRiven(Bitmap b);
     }
 }

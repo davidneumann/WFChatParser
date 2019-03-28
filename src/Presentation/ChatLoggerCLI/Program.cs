@@ -20,10 +20,7 @@ namespace ChatLoggerCLI
         public static void Main(string[] args)
         {
             Console.CancelKeyPress += Console_CancelKeyPress;
-
-            Console.WriteLine("Starting up game capture");
-            var gameCapture = new DShowCapture(4096, 2160);
-            _disposables.Add(gameCapture);
+            
             var rivenParser = new RivenParser();
             _disposables.Add(rivenParser);
             //var c = new ChatImageCleaner(JsonConvert.DeserializeObject<CharInfo[]>("chars.json"));
@@ -50,8 +47,7 @@ namespace ChatLoggerCLI
 
             dataSender.RequestToKill += (s, e) =>
             {
-                gameCapture.Dispose();
-                Environment.Exit(0);
+                Console_CancelKeyPress(null, null);
             };
             dataSender.RequestSaveAll += (s, e) =>
             {
@@ -74,11 +70,11 @@ namespace ChatLoggerCLI
                 catch { }
             };
 
-            var watcher = new ChatWatcher(dataSender, c, gameCapture, new MouseHelper(), new RivenCleaner(), rivenParser);
+            var watcher = new ChatWatcher(dataSender, c, new GameCapture(), new MouseHelper(), new RivenCleaner(), rivenParser, new ScreenStateHandler());
             Task t =  Task.Run(() => watcher.MonitorLive(config["DEBUG:ImageDirectory"]));
             while(true)
             {
-                if(t.IsFaulted)
+                if (t.IsFaulted || t.Exception != null)
                 {
                     Console.WriteLine("\n" + t.Exception);
                     try
@@ -90,6 +86,8 @@ namespace ChatLoggerCLI
                     { }
                     break;
                 }
+                else if (t.IsCompleted || t.IsCanceled)
+                    break;
                 //var debug = progress.GetAwaiter().IsCompleted;
                 System.Threading.Thread.Sleep(1000);
             }
