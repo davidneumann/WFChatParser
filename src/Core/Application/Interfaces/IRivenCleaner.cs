@@ -1,7 +1,9 @@
-﻿namespace Application.Interfaces
+﻿using System.Drawing;
+
+namespace Application.Interfaces
 {
     public interface IRivenCleaner
     {
-        void CleanRiven(string imagePath);
+        Bitmap CleanRiven(Bitmap croppedRiven);
     }
 }

@@ -16,7 +16,7 @@ namespace ImageOCR
 {
     public class RivenParser : IDisposable, IRivenParser
     {
-        private TessBaseAPI _tessBaseAPI = null;
+        private TesseractEngine _engine = null;
 
         private static readonly string[] _suffixes = new string[] { "ada]", "ata]", "bin]", "bo]", "cak]", "can]", "con]", "cron]", "cta]", "des]", "dex]", "do]", "dra]", "lis]", "mag]", "nak]", "nem]", "nent]", "nok]", "pha]", "sus]", "tak]", "tia]", "tin]", "tio]", "tis]", "ton]", "tor]", "tox]", "tron]" };
 
@@ -24,35 +24,23 @@ namespace ImageOCR
         {
             string dataPath = @"tessdata\";
             string language = "eng";
-            OcrEngineMode oem = OcrEngineMode.DEFAULT;
-            PageSegmentationMode psm = PageSegmentationMode.SINGLE_BLOCK;
-
-            _tessBaseAPI = new TessBaseAPI();
-
-            var path = Path.Combine(Environment.CurrentDirectory, dataPath);
-            // Initialize tesseract-ocr 
-            if (!_tessBaseAPI.Init(path, language, oem, new string[] { "bazaar" }))
-            {
-                throw new Exception("Could not initialize tesseract.");
-            }
-            // Set the Page Segmentation mode
-            _tessBaseAPI.SetPageSegMode(psm);
+            _engine = new TesseractEngine(dataPath, language, EngineMode.Default, "bazaar");
+            _engine.DefaultPageSegMode = PageSegMode.SingleBlock;
         }
 
         public void Dispose()
         {
-            _tessBaseAPI.Dispose();
+            _engine.Dispose();
         }
 
-        public Riven ParseRivenImage(string imagePath)
+        public Riven ParseRivenImage(Bitmap croppedRiven)
         {
+            if (croppedRiven.Width != 560 && croppedRiven.Height != 740)
+                return null;
+
             // Set the input image
-            Pix pix = _tessBaseAPI.SetImage(imagePath);
-
-            // Recognize image
-            _tessBaseAPI.Recognize();
-
-            ResultIterator resultIterator = _tessBaseAPI.GetIterator();
+            var pix = PixConverter.ToPix(croppedRiven);
+            
 
             // Extract text from result iterator
             var rivenText = new List<string>();
@@ -64,13 +52,15 @@ namespace ImageOCR
             var rolls = 0;
             var rawSb = new StringBuilder();
             var number = 0;
-            PageIteratorLevel pageIteratorLevel = PageIteratorLevel.RIL_TEXTLINE;
+            PageIteratorLevel pageIteratorLevel = PageIteratorLevel.TextLine;
+            var page = _engine.Process(pix);
+            var iter = page.GetIterator();
             do
             {
                 var line = string.Empty;
                 try
                 {
-                    line = resultIterator.GetUTF8Text(pageIteratorLevel).Trim();
+                    line = iter.GetText(pageIteratorLevel).Trim();
                 }
                 catch { return new Riven(); }
                 rawSb.AppendLine(line);
@@ -109,8 +99,9 @@ namespace ImageOCR
                 }
 
                 //rivenText.Add(line);
-            } while (resultIterator.Next(pageIteratorLevel));
+            } while (iter.Next(pageIteratorLevel));
 
+            page.Dispose();
             pix.Dispose();
 
             return new Riven()

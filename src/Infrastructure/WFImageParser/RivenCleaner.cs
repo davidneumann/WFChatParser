@@ -1,11 +1,14 @@
 ﻿using Application.Interfaces;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.ColorSpaces.Conversion;
+using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.Primitives;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
 using System.Text;
 
 namespace WFImageParser
@@ -16,18 +19,22 @@ namespace WFImageParser
         {
 
             var converter = new ColorSpaceConverter();
-            using (Image<Rgba32> image = Image.Load(imagePath))
+            using (Image<Rgba32> image = SixLabors.ImageSharp.Image.Load(imagePath))
             {
-                image.Mutate(i => i.Crop(new Rectangle(1804, 464, 488, 746)).Resize(232, 373));
+                image.Mutate(i => i.Crop(new SixLabors.Primitives.Rectangle(1804, 464, 488, 746)).Resize(232, 373));
                 image.Save(outputPath);
             }
         }
 
-        public void CleanRiven(string imagePath)
+        public Bitmap CleanRiven(Bitmap croppedRiven)
         {
+            Bitmap result = null;
             using (Image<Rgba32> outputImage = new Image<Rgba32>(null, 540, 720, Rgba32.White))
             {
-                using (Image<Rgba32> image = Image.Load(imagePath))
+                var croppedAsMemory = new MemoryStream();
+                croppedRiven.Save(croppedAsMemory, System.Drawing.Imaging.ImageFormat.Bmp);
+                croppedAsMemory.Seek(0, SeekOrigin.Begin);
+                using (Image<Rgba32> image = SixLabors.ImageSharp.Image.Load(croppedAsMemory))
                 {
                     var refX = 21;
                     var refY = 63;
@@ -66,9 +73,17 @@ namespace WFImageParser
                         }
                     }
                 }
+                
                 outputImage.Mutate(i => i.Pad(outputImage.Width + 20, outputImage.Height + 20).BackgroundColor(Rgba32.White));
-                outputImage.Save(imagePath);
+
+                var mem = new MemoryStream();
+                outputImage.Save(mem, new PngEncoder());
+                result = new Bitmap(mem);
+                croppedAsMemory.Dispose();
+                mem.Dispose();
             }
+
+            return result;
         }
 
         public void PrepareRivenFromFullscreenImage(string imagePath, string outputPath)
@@ -76,7 +91,7 @@ namespace WFImageParser
             var converter = new ColorSpaceConverter();
             using (Image<Rgba32> outputImage = new Image<Rgba32>(null, 500, 765, Rgba32.White))
             {
-                using (Image<Rgba32> image = Image.Load(imagePath))
+                using (Image<Rgba32> image = SixLabors.ImageSharp.Image.Load(imagePath))
                 {
                     //Copy title/modis
                     for (int x = 1800; x < 2300; x++)

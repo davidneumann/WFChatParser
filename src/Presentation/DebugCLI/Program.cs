@@ -36,7 +36,7 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            VisualizeClickpoints();
+            //VisualizeClickpoints();
             //MouseTests();
             //var t = Task.Run(() => MouseTests());
             //while(!t.IsCompleted)
@@ -46,6 +46,7 @@ namespace DebugCLI
             //if (t.IsFaulted)
             //    Console.WriteLine(t.Exception);
 
+            TestRivenParsing();
             //FixImages();
             //PrepareRivens();
             //VisualizeClickpoints();
@@ -66,6 +67,20 @@ namespace DebugCLI
             //}
             //var v = 0.5f;
             }
+
+        private static void TestRivenParsing()
+        {
+            var rp = new RivenParser();
+            var bitmap = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\input.png");
+            var cropped = rp.CropToRiven(bitmap);
+            cropped.Save("cropped.png");
+            bitmap.Dispose();
+            var rc = new RivenCleaner();
+            var clean = rc.CleanRiven(cropped);
+            cropped.Dispose();
+            clean.Save("clean.png");
+            var result = rp.ParseRivenImage(clean);
+        }
 
         private static void VisualizeClickpoints()
         {
@@ -199,36 +214,36 @@ namespace DebugCLI
             //srcBitmap.Dispose();
             //bitmap.Dispose();
             //rc.CleanRiven(imageWhite);
-            var riven = rp.ParseRivenImage(imageWhite);
+            //var riven = rp.ParseRivenImage(imageWhite);
         }
 
-        private static void PrepareRivens()
-        {
-            var r = new RivenCleaner();
-            var p = new RivenParser();
+        //private static void PrepareRivens()
+        //{
+        //    var r = new RivenCleaner();
+        //    var p = new RivenParser();
 
-            var totalSw = new Stopwatch();
-            var opSw = new Stopwatch();
-            var rivens = new List<Riven>();
-            foreach (var riven in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\").Where(f => !f.EndsWith("_white.png") && f.EndsWith(".png")))
-            {
-                Console.WriteLine("\n" + riven.Substring(riven.LastIndexOf("\\") + 1));
-                totalSw.Restart();
-                opSw.Restart();
-                r.PrepareRivenFromFullscreenImage(riven, riven + "_white.png");
-                Console.WriteLine("cleanup: " + opSw.Elapsed.TotalSeconds + " seconds");
-                opSw.Restart();
-                var result = p.ParseRivenImage(riven + "_white.png");
-                rivens.Add(result);
-                Console.WriteLine("Parsed: " + opSw.Elapsed.TotalSeconds + " seconds");
-                opSw.Restart();
-                Console.WriteLine(JsonConvert.SerializeObject(result));
-                Console.WriteLine("Total: " + totalSw.Elapsed.TotalSeconds + " seconds");
-            }
+        //    var totalSw = new Stopwatch();
+        //    var opSw = new Stopwatch();
+        //    var rivens = new List<Riven>();
+        //    foreach (var riven in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\").Where(f => !f.EndsWith("_white.png") && f.EndsWith(".png")))
+        //    {
+        //        Console.WriteLine("\n" + riven.Substring(riven.LastIndexOf("\\") + 1));
+        //        totalSw.Restart();
+        //        opSw.Restart();
+        //        r.PrepareRivenFromFullscreenImage(riven, riven + "_white.png");
+        //        Console.WriteLine("cleanup: " + opSw.Elapsed.TotalSeconds + " seconds");
+        //        opSw.Restart();
+        //        var result = p.ParseRivenImage(riven + "_white.png");
+        //        rivens.Add(result);
+        //        Console.WriteLine("Parsed: " + opSw.Elapsed.TotalSeconds + " seconds");
+        //        opSw.Restart();
+        //        Console.WriteLine(JsonConvert.SerializeObject(result));
+        //        Console.WriteLine("Total: " + totalSw.Elapsed.TotalSeconds + " seconds");
+        //    }
 
-            Console.WriteLine("\n");
-            Console.WriteLine(JsonConvert.SerializeObject(rivens));
-        }
+        //    Console.WriteLine("\n");
+        //    Console.WriteLine(JsonConvert.SerializeObject(rivens));
+        //}
 
         private static void FixImages()
         {

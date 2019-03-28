@@ -166,14 +166,13 @@ namespace Application
                             await Task.Delay(17);
                             _mouseMover.MoveTo(0, 0);
                             var tries = 0;
+                            Bitmap crop = null;
                             while (tries < 15)
                             {
                                 b = _gameCapture.GetFullImage();
                                 if(_screenStateHandler.GetScreenState(b) == ScreenState.RivenWindow)
                                 {
-                                    var crop = _rivenParser.CropToRiven(b);
-                                    crop.Save(rivenImage);
-                                    crop.Dispose();
+                                    crop = _rivenParser.CropToRiven(b);
                                     b.Dispose();
 
                                     _mouseMover.Click(3816, 2013);
@@ -188,8 +187,13 @@ namespace Application
                             if (tries >= 15)
                                 continue;
 
-                            _rivenCleaner.CleanRiven(rivenImage);
-                            var riven = _rivenParser.ParseRivenImage(rivenImage);
+                            if (crop == null)
+                                continue;
+
+                            var newC = _rivenCleaner.CleanRiven(crop);
+                            crop.Dispose();
+                            crop = newC;
+                            var riven = _rivenParser.ParseRivenImage(crop);
                             riven.MessagePlacementId = clickpoint.Index;
                             message.Rivens.Add(riven);
 

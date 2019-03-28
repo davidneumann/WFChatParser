@@ -10,7 +10,7 @@ namespace Application.Interfaces
         /// </summary>
         /// <param name="imagePath">The path to the image of the riven window.</param>
         /// <returns>The text of the riven card.</returns>
-        Riven ParseRivenImage(string imagePath);
+        Riven ParseRivenImage(Bitmap croppedRiven);
 
         bool IsRivenPresent(Bitmap image);
         Bitmap CropToRiven(Bitmap b);
