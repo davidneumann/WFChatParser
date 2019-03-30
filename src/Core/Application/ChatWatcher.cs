@@ -434,8 +434,16 @@ namespace Application
                             }
 
                             var memImage = new MemoryStream();
-                            crop.Save(memImage, System.Drawing.Imaging.ImageFormat.Jpeg);
+                            crop.Save(memImage, System.Drawing.Imaging.ImageFormat.Png);
                             memImage.Seek(0, SeekOrigin.Begin);
+                            using (var webP = new MagickImage(memImage))
+                            {
+                                memImage.Seek(0, SeekOrigin.Begin);
+                                memImage.SetLength(0);
+                                webP.Write(memImage, MagickFormat.WebP);
+                                memImage.Seek(0, SeekOrigin.Begin);
+                                webP.Write("riven.png");
+                            }
                             var rivenBase64 = Convert.ToBase64String(memImage.ToArray());
                             crop.Dispose();
                             memImage.Dispose();
