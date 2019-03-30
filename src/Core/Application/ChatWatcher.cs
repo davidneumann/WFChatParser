@@ -15,6 +15,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Pastel;
+using ImageMagick;
 
 namespace Application
 {
@@ -30,7 +31,7 @@ namespace Application
         private List<string> _UIMessages = new List<string>();
         private string _UIThirdLine;
         private string _UISecondLine;
-        private string _UITopLine;
+        private string _UIFirstLine;
         private Riven _UILastRiven = null;
 
         public ChatWatcher(IDataSender dataSender, IChatParser chatParser, IGameCapture gameCapture, IMouseMover mouseMover, IRivenCleaner rivenCleaner, IRivenParser rivenParser,
@@ -49,80 +50,120 @@ namespace Application
             Console.SetWindowSize(147, 9);
             Console.CursorVisible = false;
             Console.Clear();
+            UpdateUI();
         }
 
         private string ColorString(string input) => input.Pastel("#bea966").PastelBg("#162027");
+        private void UpdateUILine(int line, string message, bool leftSide)
+        {
+            var maxWidth = Console.BufferWidth / 2;
+            if (line >= Console.BufferHeight)
+                return;
+            if (leftSide)
+                Console.SetCursorPosition(0, line);
+            else
+                Console.SetCursorPosition(maxWidth + 2, line);
+            //Draw left side
+            if (message != null && message.Length > 0)
+            {
+                message = message.Substring(0, Math.Min(message.Length, maxWidth));
+                Console.Write(ColorString(message));
+            }
+            var endPoint = leftSide ? maxWidth + 1 : Console.BufferWidth;
+            for (int x = Console.CursorLeft; x < endPoint; x++)
+            {
+                Console.Write(ColorString(" "));
+            }
+            Console.SetCursorPosition(0, 0);
+        }
+        private void UpdateUIFirstLine()
+        {
+            UpdateUILine(0, _UIFirstLine, true);
+        }
+        private void UpdateUISecondLine()
+        {
+            UpdateUILine(1, _UISecondLine, true);
+        }
+        private void UpdateUIThirdLine()
+        {
+            UpdateUILine(2, _UIThirdLine, true);
+        }
+        private void UpdateUIRiven(Riven riven)
+        {
+            var maxWidth = Console.BufferWidth / 2;
+            //Draw right side
+            if (riven != null)
+            {
+                UpdateUILine(0, riven.Name, false);
+                UpdateUILine(1, "Polarity: " + riven.Polarity, false);
+                UpdateUILine(2, "Rank: " + riven.Rank, false);
+                UpdateUILine(3, "Mastery rank: " + riven.MasteryRank, false);
+                UpdateUILine(4, "Rolls: " + riven.Rolls, false);
+                var line = 5;
+                foreach (var modi in riven.Modifiers)
+                {
+                    if (line >= Console.WindowHeight)
+                        return;
+                    UpdateUILine(line++, modi, false);
+                }
+                while (line < Console.WindowHeight)
+                {
+                    UpdateUILine(line++, "", false);
+                }
+            }
+            Console.SetCursorPosition(0, 0);
+        }
         private void UpdateUI()
         {
-            var maxWidth = Console.BufferWidth / 2 - 1;
+            var maxWidth = Console.BufferWidth / 2;
             Console.Clear();
-
             //Draw seperator
             for (int y = 0; y < Console.BufferHeight; y++)
             {
                 Console.SetCursorPosition(maxWidth + 1, y);
-                Console.Write(ColorString("|"));
+                Console.Write(ColorString("│"));
             }
+
+            //Draw message seperator
+            for (int x = 0; x < maxWidth + 1; x++)
+            {
+                Console.SetCursorPosition(x, 3);
+                Console.Write(ColorString("─"));
+            }
+            Console.SetCursorPosition(maxWidth + 1, 3);
+            Console.Write(ColorString("┤"));
 
             //Draw left side
-            if (_UITopLine != null && _UITopLine.Length > 0)
-            {
-                Console.SetCursorPosition(0, 0);
-                Console.Write(ColorString(_UITopLine.Substring(0, Math.Min(_UITopLine.Length, maxWidth))));
-            }
+            UpdateUIFirstLine();
+            UpdateUISecondLine();
+            UpdateUIThirdLine();
 
-            if (_UISecondLine != null && _UISecondLine.Length > 0)
-            {
-                Console.SetCursorPosition(0, 1);
-                Console.Write(ColorString(_UISecondLine.Substring(0, Math.Min(_UISecondLine.Length, maxWidth))));
-            }
-
-            if (_UIThirdLine != null && _UIThirdLine.Length > 0)
-            {
-                Console.SetCursorPosition(0, 1);
-                Console.Write(ColorString(_UIThirdLine.Substring(0, Math.Min(_UIThirdLine.Length, maxWidth))));
-            }
-
-            var line = 3;
-            _UIMessages = _UIMessages.Count > Console.BufferHeight - line ? _UIMessages.Skip(Console.BufferHeight - line).ToList() : _UIMessages;
-            foreach (var item in _UIMessages)
-            {
-                if (line >= Console.BufferHeight)
-                    break;
-                Console.SetCursorPosition(0, line);
-                Console.WriteLine(ColorString(item.Substring(0, Math.Min(item.Length, maxWidth))));
-                line++;
-            }
+            UpdateUIMessages();
 
             //Draw right side
-            if (_UILastRiven != null)
+            UpdateUIRiven(_UILastRiven);
+            Console.SetCursorPosition(0, 0);
+        }
+
+        private void UpdateUIMessages()
+        {
+            var maxWidth = Console.BufferWidth / 2;
+            var line = 4;
+            if (_UIMessages.Count > 0)
             {
-                if (_UILastRiven.Name != null && _UILastRiven.Name.Length > 0)
+                _UIMessages = _UIMessages.Skip(Math.Max(0, _UIMessages.Count - Console.BufferHeight - line)).ToList();
+                foreach (var item in _UIMessages)
                 {
-                    Console.SetCursorPosition(maxWidth + 2, 0);
-                    Console.Write(ColorString(_UILastRiven.Name.Substring(0, Math.Min(_UILastRiven.Name.Length, maxWidth))));
+                    UpdateUILine(line++, item, true);
                 }
-                Console.SetCursorPosition(maxWidth + 2, 1);
-                var input = "Polarity: " + _UILastRiven.Polarity;
-                Console.Write(SafeColorString(maxWidth, input));
-                input = "Rank: " + _UILastRiven.Rank;
-                Console.SetCursorPosition(maxWidth + 2, 2);
-                Console.Write(SafeColorString(maxWidth, input));
-                input = "Mastery rank: " + _UILastRiven.MasteryRank;
-                Console.SetCursorPosition(maxWidth + 2, 3);
-                Console.Write(SafeColorString(maxWidth, input));
-                input = "Rolls: " + _UILastRiven.Rolls;
-                Console.SetCursorPosition(maxWidth + 2, 4);
-                Console.Write(SafeColorString(maxWidth, input));
-                line = 5;
-                foreach (var modi in _UILastRiven.Modifiers)
-                {
-                    if (line >= Console.WindowHeight)
-                        return;
-                    Console.SetCursorPosition(maxWidth + 2, line);
-                    Console.Write(SafeColorString(maxWidth, modi));
-                    line++;
-                }
+            }
+            else
+            {
+                UpdateUILine(line++, "No chat messages", true);
+            }
+            while (line < Console.BufferHeight)
+            {
+                UpdateUILine(line++, "", true);
             }
         }
 
@@ -154,11 +195,14 @@ namespace Application
             while (true)
             {
                 _UISecondLine = null;
+                UpdateUISecondLine();
+                _UIThirdLine = null;
+                UpdateUIThirdLine();
                 if (!scrollbarFound)
-                    _UITopLine = "Finding scrollbar";
+                    _UIFirstLine = "Finding scrollbar";
                 else
-                    _UITopLine = "Getting image";
-                UpdateUI();
+                    _UIFirstLine = "Getting image";
+                UpdateUIFirstLine();
 
                 newSW.Restart();
                 sw.Restart();
@@ -182,16 +226,16 @@ namespace Application
                 var image = _gameCapture.GetFullImage();
                 if (image == null)
                 {
-                    _UITopLine = "Failed to get image";
-                    UpdateUI();
+                    _UIFirstLine = "Failed to get image";
+                    UpdateUIFirstLine();
                     continue;
                 }
                 if (_screenStateHandler.GetScreenState(image) != ScreenState.ChatWindow)
                 {
                     if (_screenStateHandler.IsExitable(image))
                     {
-                        _UITopLine = "RECOVERING: clickign exit";
-                        UpdateUI();
+                        _UIFirstLine = "RECOVERING: clickign exit";
+                        UpdateUIFirstLine();
 
                         //Click exit
                         _mouseMover.Click(3814, 2014);
@@ -229,10 +273,14 @@ namespace Application
                 sw.Restart();
                 newSW.Restart();
 
-                _UITopLine = "Parsing chat";
+                _UIFirstLine = "Parsing chat";
+                UpdateUIFirstLine();
                 newSW.Restart();
                 var lines = _chatParser.ParseChatImage(image, true, true, 27);
                 _UIMessages.AddRange(lines.Select(l => l.RawMessage));
+                _UIFirstLine = "Parsing chat: " + lines.Length + " new items";
+                UpdateUIFirstLine();
+                UpdateUIMessages();
                 var parseTime = sw.Elapsed.TotalSeconds;
                 sw.Restart();
 
@@ -255,7 +303,7 @@ namespace Application
                 foreach (var line in lines)
                 {
                     _UISecondLine = "Handling generic: " + line.RawMessage;
-                    UpdateUI();
+                    UpdateUISecondLine();
 
                     var lineSw = new Stopwatch();
                     lineSw.Start();
@@ -267,13 +315,13 @@ namespace Application
                     if (line.LineType == LineParseResult.LineType.RedText)
                     {
                         _UISecondLine = "Handing redtext: " + line.RawMessage;
-                        UpdateUI();
+                        UpdateUISecondLine();
                         await _dataSender.AsyncSendRedtext(line.RawMessage);
                     }
                     else if (line.LineType == LineParseResult.LineType.NewMessage && line is ChatMessageLineResult)
                     {
                         _UISecondLine = "Handing player msg: " + line.RawMessage;
-                        UpdateUI();
+                        UpdateUISecondLine();
 
                         var chatMessageSw = new Stopwatch();
                         chatMessageSw.Start();
@@ -290,7 +338,7 @@ namespace Application
                             var clickpoint = clr.ClickPoints[i];
 
                             _UIThirdLine = "Parsing riven: " + clickpoint.RivenName + " " + clickpoint.X + "," + clickpoint.Y;
-                            UpdateUI();
+                            UpdateUIThirdLine();
 
                             if (cachedRivenValues.ContainsKey(clr.Username + clickpoint.RivenName))
                             {
@@ -312,7 +360,8 @@ namespace Application
                                 await _dataSender.AsyncSendDebugMessage("Found a riven from cache: " + clr.Username + " " + clickpoint.RivenName);
                                 _UISecondLine = "Riven: " + clickpoint.RivenName + " found in cache";
                                 _UILastRiven = cachedRiven;
-                                UpdateUI();
+                                UpdateUISecondLine();
+                                //UpdateUIRiven(cachedRiven);
 
                                 continue;
                             }
@@ -406,7 +455,7 @@ namespace Application
                             message.Rivens.Add(riven);
 
                             _UILastRiven = riven;
-                            UpdateUI();
+                            UpdateUIRiven(riven);
 
                             File.Delete(rivenImage);
 
@@ -464,9 +513,10 @@ namespace Application
                 var debugMessage = $"Image capture: {imageTime:00.00} Parse time: {parseTime:00.00} TransmitTime: {transmitTime:0.000} New messages {newMessags} {newMessags / parseTime}/s";
                 await _dataSender.AsyncSendDebugMessage(debugMessage);
 
-                _UITopLine = "Scrolling";
+                _UIFirstLine = "Scrolling";
                 _UISecondLine = null;
-                UpdateUI();
+                UpdateUIFirstLine();
+                UpdateUISecondLine();
 
                 //Scroll down to get 27 more messages
                 _mouseMover.MoveTo(3250, 768);

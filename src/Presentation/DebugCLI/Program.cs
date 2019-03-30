@@ -96,7 +96,7 @@ namespace DebugCLI
             Console.SetWindowSize(1, 1);
             Console.SetBufferSize(147, 9);
             Console.SetWindowSize(147, 9);
-            var maxWidth = Console.BufferWidth / 2 - 1;
+            var maxWidth = Console.BufferWidth / 2;
             Console.CursorVisible = false;
 
             var background = " ".Pastel("#162027").PastelBg("#162027");
@@ -109,13 +109,6 @@ namespace DebugCLI
                 }
             }
             Console.Clear();
-
-            //Draw seperator
-            for (int y = 0; y < Console.BufferHeight; y++)
-            {
-                Console.SetCursorPosition(maxWidth + 1, y);
-                Console.Write(ColorString("|"));
-            }
 
             //Draw left side
             if (_UIMajorStep != null && _UIMajorStep.Length > 0)
@@ -130,7 +123,7 @@ namespace DebugCLI
                 Console.Write(ColorString(_UIMinorStep.Substring(0, Math.Min(_UIMinorStep.Length, maxWidth))));
             }
 
-            var line = 2;
+            var line = 3;
             var messages = _UIMessages.Count > 3 ? _UIMessages.Skip(_UIMessages.Count - 3).ToList() : _UIMessages;
             foreach (var item in messages)
             {
