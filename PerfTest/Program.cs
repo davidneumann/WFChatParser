@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using WFImageParser;
@@ -18,7 +19,7 @@ namespace PerfTest
             foreach (var file in Directory.EnumerateFiles("PerfImages"))
             {
                 sw.Restart();
-                var messages = c.ParseChatImage(file);
+                var messages = c.ParseChatImage(new Bitmap(file));
                 var time = sw.Elapsed;
                 times.Add(time);
                 Console.WriteLine($"{file}: {messages.Length} messages ({time.TotalMilliseconds:N2} ms)");

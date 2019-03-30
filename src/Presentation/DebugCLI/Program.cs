@@ -46,7 +46,8 @@ namespace DebugCLI
             //if (t.IsFaulted)
             //    Console.WriteLine(t.Exception);
 
-            TestCanExit();
+            SetupFilters();
+            //TestCanExit();
             //TestRivenParsing();
             //FixImages();
             //PrepareRivens();
@@ -67,7 +68,49 @@ namespace DebugCLI
             //        Debugger.Break();
             //}
             //var v = 0.5f;
+        }
+
+        [DllImport("user32.dll")]
+        static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, uint dwExtraInfo);
+        private static void SetupFilters()
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                Console.Write("\rSending a lot of ctr+v in " + (5 - i) + "...");
+                System.Threading.Thread.Sleep(1000);
             }
+
+            var mouse = new MouseHelper();
+            var filters = File.ReadAllLines("Affixcombos.txt");
+            TextCopy.Clipboard.SetText(filters.First());
+            mouse.Click(33, 678);
+            System.Threading.Thread.Sleep(100);
+            foreach (var filter in filters)
+            {
+                TextCopy.Clipboard.SetText(filter);
+
+                mouse.Click(2315, 804);
+                System.Threading.Thread.Sleep(66);
+
+                mouse.Click(1574, 811);
+                System.Threading.Thread.Sleep(66);
+
+                uint KEYEVENTF_KEYUP = 2;
+                byte VK_CONTROL = 0x11;
+                keybd_event(VK_CONTROL, 0, 0, 0);
+                System.Threading.Thread.Sleep(66);
+                keybd_event(0x56, 0, 0, 0);
+                System.Threading.Thread.Sleep(66);
+
+                keybd_event(0x56, 0, KEYEVENTF_KEYUP, 0);
+                System.Threading.Thread.Sleep(66);
+                keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, 0);// 'Left Control Up
+                System.Threading.Thread.Sleep(66);
+
+                mouse.Click(2424, 805);
+                System.Threading.Thread.Sleep(200);
+            }
+        }
 
         private static void TestCanExit()
         {
@@ -98,13 +141,13 @@ namespace DebugCLI
         private static void VisualizeClickpoints()
         {
             var cp = new ChatParser();
-            var r = cp.ParseChatImage(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\bad.png");
+            var r = cp.ParseChatImage(new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\bad.png"));
             var list = new CoordinateList();
             r.Where(r1 => r1 is ChatMessageLineResult).Cast<ChatMessageLineResult>().SelectMany(r1 => r1.ClickPoints).ToList().ForEach(p => list.Add(p.X, p.Y));
             var ic = new ImageCleaner();
             ic.SaveClickMarkers(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\bad.png",
                 Path.Combine(outputDir, "bad_clicks.png"),
-                list);                
+                list);
         }
 
         private static void TestScreenHandler()
@@ -134,7 +177,7 @@ namespace DebugCLI
             b.Dispose();
 
             var p = new ChatParser();
-            var results = p.ParseChatImage(image, true, true, 27).Where(r => r is ChatMessageLineResult).Cast<ChatMessageLineResult>();
+            var results = p.ParseChatImage(new Bitmap(image), true, true, 27).Where(r => r is ChatMessageLineResult).Cast<ChatMessageLineResult>();
 
             var clean = new ImageCleaner();
             var coords = new CoordinateList();
@@ -171,7 +214,7 @@ namespace DebugCLI
                         try
                         {
                             var bitmap2 = c.GetFullImage();
-                            if(ss.GetScreenState(bitmap2) == ScreenState.RivenWindow)
+                            if (ss.GetScreenState(bitmap2) == ScreenState.RivenWindow)
                             {
                                 var crop = rp.CropToRiven(bitmap2);
                                 crop.Save(index.ToString() + ".png");
@@ -263,7 +306,7 @@ namespace DebugCLI
             var cleaner = new ImageCleaner();
             cleaner.SaveChatColors(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png", @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input_white.png");
             var p = new ChatParser();
-            var r = p.ParseChatImage(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png");
+            var r = p.ParseChatImage(new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png"));
             foreach (var line in r)
             {
                 Console.WriteLine(line.RawMessage);
@@ -390,7 +433,7 @@ namespace DebugCLI
                 cleaner.SaveChatColors(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name));
                 var sw = new Stopwatch();
                 sw.Restart();
-                var result = c.ParseChatImage(masterKeyFile, xOffset, false, false).Select(i => i.RawMessage.Trim()).ToArray();
+                var result = c.ParseChatImage(new Bitmap(masterKeyFile), xOffset, false, false).Select(i => i.RawMessage.Trim()).ToArray();
                 Console.WriteLine("Parsed in: " + sw.Elapsed.TotalSeconds + " seconds");
                 sw.Stop();
 

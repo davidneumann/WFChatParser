@@ -818,78 +818,83 @@ namespace WFImageParser
             return null;
         }
 
-        public BaseLineParseResult[] ParseChatImage(string imagePath, int xOffset, bool useCache, bool isScrolledUp, int lineParseCount = 27)
+        public BaseLineParseResult[] ParseChatImage(System.Drawing.Bitmap bitmapImage, int xOffset, bool useCache, bool isScrolledUp, int lineParseCount = 27)
         {
             var chatRect = new Rectangle(4, 763, 3236, 1350);
             var results = new List<BaseLineParseResult>();
-            using (Image<Rgba32> rgbImage = Image.Load(imagePath))
+            using (var mem = new MemoryStream())
             {
-                var cache = new ImageCache(rgbImage);
-                var offsets = _lineOffsets;
-                var lineHeight = 36;
-                var endLine = Math.Min(offsets.Length, lineParseCount);
-                var newMessageRegex = new Regex(@"^\[\d\d:\d\d\]", RegexOptions.Compiled);
-                var kickRegex = new Regex(@"\w was kicked.", RegexOptions.Compiled);
-                var prevType = LineType.Unknown;
-                //var results = new string[endLine - startLine];
-                for (int i = 0; i < offsets.Length; i++)
+                bitmapImage.Save(mem, System.Drawing.Imaging.ImageFormat.Png);
+                mem.Seek(0, SeekOrigin.Begin);
+                using (Image<Rgba32> rgbImage = Image.Load(mem))
                 {
-                    var line = ParseLineBitmapScan(cache, 0.3f, xOffset, chatRect, lineHeight, offsets[i], 6, prevType);
-
-                    //Handle null results
-                    if (line != null)
-                        prevType = line.LineType;
-                    else
+                    var cache = new ImageCache(rgbImage);
+                    var offsets = _lineOffsets;
+                    var lineHeight = 36;
+                    var endLine = Math.Min(offsets.Length, lineParseCount);
+                    var newMessageRegex = new Regex(@"^\[\d\d:\d\d\]", RegexOptions.Compiled);
+                    var kickRegex = new Regex(@"\w was kicked.", RegexOptions.Compiled);
+                    var prevType = LineType.Unknown;
+                    //var results = new string[endLine - startLine];
+                    for (int i = 0; i < offsets.Length; i++)
                     {
-                        prevType = LineType.Unknown;
-                        continue;
-                    }
+                        var line = ParseLineBitmapScan(cache, 0.3f, xOffset, chatRect, lineHeight, offsets[i], 6, prevType);
 
-                    // There may be more to this chat message below the current scrolled amount when looking at the final line
-                    if (isScrolledUp)
-                    {
-                        if (i == offsets.Length - 1 && line != null && line.LineType == LineType.Continuation && results.Count > 0)
+                        //Handle null results
+                        if (line != null)
+                            prevType = line.LineType;
+                        else
                         {
-                            var last = results.Last();
-                            results.Remove(last);
-                        }
-                        else if (i == offsets.Length - 1 && line != null && line.LineType == LineType.NewMessage)
+                            prevType = LineType.Unknown;
                             continue;
-                    }
+                        }
 
-                    if (i >= endLine && line.LineType != LineType.Continuation)
-                        break;
+                        // There may be more to this chat message below the current scrolled amount when looking at the final line
+                        if (isScrolledUp)
+                        {
+                            if (i == offsets.Length - 1 && line != null && line.LineType == LineType.Continuation && results.Count > 0)
+                            {
+                                var last = results.Last();
+                                results.Remove(last);
+                            }
+                            else if (i == offsets.Length - 1 && line != null && line.LineType == LineType.NewMessage)
+                                continue;
+                        }
 
-                    //Add redtext to results
-                    if (line != null && line.LineType == LineType.RedText && !_sentItems.Any(item => item == line.RawMessage))
-                    {
-                        results.Add(line);
-                    }
+                        if (i >= endLine && line.LineType != LineType.Continuation)
+                            break;
 
-                    //Reset the known type when we hit a kick message to prevent accidently combining messages
-                    if (line != null && line.RawMessage != null && line.RawMessage.Length > 0 && kickRegex.Match(line.RawMessage).Success)
-                    {
-                        prevType = LineType.Unknown;
-                        continue;
-                    }
-
-                    //Add new messages
-                    if (line.RawMessage != null && line.LineType == LineType.NewMessage)
-                    {
-                        var clr = line as ChatMessageLineResult;
-                        if (clr.Timestamp != string.Empty && clr.Username != string.Empty)
+                        //Add redtext to results
+                        if (line != null && line.LineType == LineType.RedText && !_sentItems.Any(item => item == line.RawMessage))
                         {
                             results.Add(line);
                         }
-                    }
-                    //Append continuation of messages onto last message
-                    else if (results.Count > 0 && line.RawMessage != null && line.LineType == LineType.Continuation
-                        && !_blacklistedRegex.Any(regex => regex.Match(line.RawMessage).Success))
-                    {
-                        var last = results.Last() as ChatMessageLineResult;
-                        //results.Remove(last);
-                        //results.Add(last + " " + line);
-                        last.Append(line as ChatMessageLineResult);
+
+                        //Reset the known type when we hit a kick message to prevent accidently combining messages
+                        if (line != null && line.RawMessage != null && line.RawMessage.Length > 0 && kickRegex.Match(line.RawMessage).Success)
+                        {
+                            prevType = LineType.Unknown;
+                            continue;
+                        }
+
+                        //Add new messages
+                        if (line.RawMessage != null && line.LineType == LineType.NewMessage)
+                        {
+                            var clr = line as ChatMessageLineResult;
+                            if (clr.Timestamp != string.Empty && clr.Username != string.Empty)
+                            {
+                                results.Add(line);
+                            }
+                        }
+                        //Append continuation of messages onto last message
+                        else if (results.Count > 0 && line.RawMessage != null && line.LineType == LineType.Continuation
+                            && !_blacklistedRegex.Any(regex => regex.Match(line.RawMessage).Success))
+                        {
+                            var last = results.Last() as ChatMessageLineResult;
+                            //results.Remove(last);
+                            //results.Add(last + " " + line);
+                            last.Append(line as ChatMessageLineResult);
+                        }
                     }
                 }
             }
@@ -912,27 +917,27 @@ namespace WFImageParser
             throw new NotImplementedException();
         }
 
-        public BaseLineParseResult[] ParseChatImage(string imagePath)
+        public BaseLineParseResult[] ParseChatImage(System.Drawing.Bitmap image)
         {
-            return ParseChatImage(imagePath, 3, true, false);
+            return ParseChatImage(image, 3, true, false);
         }
 
-        public BaseLineParseResult[] ParseChatImage(string imagePath, bool useCache, bool isScrolledUp, int lineParseCount)
+        public BaseLineParseResult[] ParseChatImage(System.Drawing.Bitmap image, bool useCache, bool isScrolledUp, int lineParseCount)
         {
-            return ParseChatImage(imagePath, 3, useCache, isScrolledUp, lineParseCount);
+            return ParseChatImage(image, 3, useCache, isScrolledUp, lineParseCount);
         }
 
-        public bool IsScrollbarPresent(string imagePath)
+        public bool IsScrollbarPresent(System.Drawing.Bitmap screenImage)
         {
+            if (screenImage.Width != 4096 || screenImage.Height != 2160)
+                return false;
+
             var threshold = (byte)252;
-            using (Image<Rgba32> rgbImage = Image.Load(imagePath))
+            for (int y = 2097; y > 655; y--)
             {
-                for (int y = 2097; y > 655; y--)
-                {
-                    var pixel = rgbImage[3256, y];
-                    if (pixel.R > threshold && pixel.G > threshold && pixel.B > threshold)
-                        return true;
-                }
+                var pixel = screenImage.GetPixel(3256, y);
+                if (pixel.R > threshold && pixel.G > threshold && pixel.B > threshold)
+                    return true;
             }
 
             return false;
@@ -959,6 +964,12 @@ namespace WFImageParser
             }))
                 return false;
             return true;
+        }
+
+        public void InvalidCache(string key)
+        {
+            var duplicateCache = new Queue<string>(_sentItems.Where(i => i != key));
+            _sentItems = duplicateCache;
         }
 
         private class CharacterDetails

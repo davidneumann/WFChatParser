@@ -52,29 +52,61 @@ namespace Application
                 File.Delete(oldRiven);
             }
 
+            var newSW = new Stopwatch();
             var sw = new Stopwatch();
             var scrollbarFound = false;
             Bitmap b = null;
             Console.Write("Waiting for scrollbar");
             var scrollDots = 0;
+            var cachedRivens = new Queue<string>();
+            var cachedRivenValues = new Dictionary<string, Riven>();
             while (true)
             {
+                newSW.Restart();
+                Console.WriteLine("Starting loop");
                 sw.Restart();
-                var image = string.Empty;
-                try
-                {
-                    b = _gameCapture.GetFullImage();
-                    b.Save(Path.Combine(Path.GetTempPath(), "wfchat", "capture_0.png"));
-                    b.Dispose();
-                    image = Path.Combine(Path.GetTempPath(), "wfchat", "capture_0.png");
-                    if (debugImageDectory != null)
-                    {
-                        File.Copy(image, Path.Combine(debugImageDectory, "capture_0.png"), true);
-                    }
-                }
-                catch { continue; }
+                //var image = string.Empty;
+                //try
+                //{
+                //    newSW.Restart();
+                //    Console.Write("Getting image");
+                //    b = _gameCapture.GetFullImage();
+                //    b.Save(Path.Combine(Path.GetTempPath(), "wfchat", "capture_0.png"));
+                //    b.Dispose();
+                //    image = Path.Combine(Path.GetTempPath(), "wfchat", "capture_0.png");
+                //    if (debugImageDectory != null)
+                //    {
+                //        File.Copy(image, Path.Combine(debugImageDectory, "capture_0.png"), true);
+                //    }
+                //    Console.WriteLine(" took: " + newSW.Elapsed.TotalSeconds);
+                //}
+                //catch { continue; }
                 var imageTime = sw.Elapsed.TotalSeconds;
                 sw.Restart();
+
+                Console.Write("Getting image");
+                var image = _gameCapture.GetFullImage();
+                if (image == null)
+                {
+                    Console.WriteLine("Failed to get image");
+                    continue;
+                }
+                if (_screenStateHandler.GetScreenState(image) != ScreenState.ChatWindow)
+                {
+                    if (_screenStateHandler.IsExitable(image))
+                    {
+                        //Click exit
+                        _mouseMover.Click(3814, 2014);
+                        await Task.Delay(30);
+                        Console.WriteLine("Clicked exit to recover");
+                        continue;
+                    }
+                    await _dataSender.AsyncSendDebugMessage("Help I'm stuck!");
+                    await Task.Delay(5000);
+                    image.Dispose();
+                    continue;
+                }
+                Console.WriteLine(" took: " + newSW.Elapsed.TotalSeconds);
 
                 //Wait for scrollbar to be ready
                 if (!scrollbarFound)
@@ -100,29 +132,19 @@ namespace Application
                         scrollDots++;
                         if (scrollDots > 4)
                             scrollDots = 0;
+                        await Task.Delay(100);
                         continue;
                     }
                 }
 
                 sw.Restart();
-                b = _gameCapture.GetFullImage();
-                if (_screenStateHandler.GetScreenState(b) != ScreenState.ChatWindow)
-                {
-                    if(_screenStateHandler.IsExitable(b))
-                    {
-                        //Click exit
-                        _mouseMover.Click(3814, 2014);
-                        await Task.Delay(30);
-                        continue;
-                    }
-                    await _dataSender.AsyncSendDebugMessage("Help I'm stuck!");
-                    await Task.Delay(5000);
-                    b.Dispose();
-                    continue;
-                }
-                b.Dispose();
+                newSW.Restart();
+
+                Console.Write("Parsing chat lines");
+                newSW.Restart();
                 var lines = _chatParser.ParseChatImage(image, true, true, 27);
-                Console.Write("\rFound " + lines.Count() + " new lines");
+                Console.Write(" took: " + newSW.Elapsed.TotalSeconds);
+                Console.WriteLine("Found " + lines.Count() + " new lines");
                 var parseTime = sw.Elapsed.TotalSeconds;
                 sw.Restart();
 
@@ -137,26 +159,46 @@ namespace Application
                 ChatMessageModel lastMessage = null;
                 var hasher = MD5.Create();
                 sw.Restart();
-                var cachedRivens = new Queue<string>();
-                var cachedRivenValues = new Dictionary<string, Riven>();
+                var linesBad = false;
+                var rivenParseTime = 0.0;
+                var sendingTime = 0.0;
+                var rivenSW = new Stopwatch();
+                var sendingSW = new Stopwatch();
                 foreach (var line in lines)
                 {
+                    var lineSw = new Stopwatch();
+                    lineSw.Start();
+                    Console.WriteLine("Checking line ");
+                    if (linesBad)
+                    {
+                        lines.ToList().ForEach(l => _chatParser.InvalidCache(l.GetKey()));
+                        break;
+                    }
                     if (line.LineType == LineParseResult.LineType.RedText)
                     {
                         await _dataSender.AsyncSendRedtext(line.RawMessage);
                     }
                     else if (line.LineType == LineParseResult.LineType.NewMessage && line is ChatMessageLineResult)
                     {
+                        var chatMessageSw = new Stopwatch();
+                        chatMessageSw.Start();
+                        Console.WriteLine("Handling chat message. Cache count: " + cachedRivens.Count);
+                        newSW.Restart();
                         var clr = line as ChatMessageLineResult;
                         var message = MakeChatModel(line as LineParseResult.ChatMessageLineResult, badNameRegex);
                         newMessags++;
 
                         for (int i = 0; i < clr.ClickPoints.Count; i++)
                         {
+                            var clickPointSw = new Stopwatch();
+                            clickPointSw.Start();
+                            rivenSW.Restart();
                             var clickpoint = clr.ClickPoints[i];
 
-                            if(cachedRivenValues.ContainsKey(clr.Username + clickpoint.RivenName))
+                            if (cachedRivenValues.ContainsKey(clr.Username + clickpoint.RivenName))
                             {
+                                await _dataSender.AsyncSendDebugMessage("Found a riven from cache: " + clr.Username + " " + clickpoint.RivenName);
+                                Console.WriteLine("**Riven was retrieved from cache**");
                                 var cachedRiven = cachedRivenValues[clr.Username + clickpoint.RivenName];
                                 var copiedRiven = new Riven();
                                 copiedRiven.Drain = cachedRiven.Drain;
@@ -169,6 +211,7 @@ namespace Application
                                 copiedRiven.Rank = cachedRiven.Rank;
                                 copiedRiven.Rolls = cachedRiven.Rolls;
                                 message.Rivens.Add(copiedRiven);
+                                rivenParseTime += rivenSW.Elapsed.TotalSeconds;
                                 continue;
                             }
 
@@ -179,24 +222,30 @@ namespace Application
                             foreach (Byte hashed in hashedBytes)
                                 usernameHash.AppendFormat("{0:x2}", hashed);
                             rivenImage = Path.Combine(Path.GetTempPath(), "wfchat", "rivens", usernameHash.ToString() + "_" + i + ".png");
-                            b = _gameCapture.GetFullImage();
-                            if (_screenStateHandler.GetScreenState(b) == ScreenState.ChatWindow)
+                            b = _gameCapture.GetChatIcon();
+                            if (_chatParser.IsChatFocused(b))
                             {
                                 _mouseMover.MoveTo(clickpoint.X, clickpoint.Y);
-                                await Task.Delay(17);
+                                await Task.Delay(30);
                                 _mouseMover.Click(clickpoint.X, clickpoint.Y);
+                                await Task.Delay(17);
                             }
                             else
-                                continue;
+                            {
+                                _chatParser.InvalidCache(line.GetKey());
+                                linesBad = true;
+                                rivenParseTime += rivenSW.Elapsed.TotalSeconds;
+                                break;
+                            }
                             b.Dispose();
-                            await Task.Delay(17);
+
                             _mouseMover.MoveTo(0, 0);
                             Bitmap crop = null;
                             var foundRiven = false;
                             for (int tries = 0; tries < 15; tries++)
                             {
                                 b = _gameCapture.GetFullImage();
-                                if(_screenStateHandler.GetScreenState(b) == ScreenState.RivenWindow)
+                                if (_screenStateHandler.GetScreenState(b) == ScreenState.RivenWindow)
                                 {
                                     foundRiven = true;
                                     crop = _rivenParser.CropToRiven(b);
@@ -211,16 +260,28 @@ namespace Application
                                 b.Dispose();
                             }
                             if (!foundRiven || crop == null)
-                                continue;
-                            
+                            {
+                                linesBad = true;
+                                _chatParser.InvalidCache(line.GetKey());
+                                if (crop != null)
+                                    crop.Dispose();
+                                rivenParseTime += rivenSW.Elapsed.TotalSeconds;
+                                break;
+                            }
+
                             var newC = _rivenCleaner.CleanRiven(crop);
                             var riven = _rivenParser.ParseRivenImage(newC);
                             newC.Dispose();
+                            //crop.Dispose();
                             if (riven == null)
                             {
-                                crop.Dispose();
-                                continue;
+                                //crop.Dispose();
+                                _chatParser.InvalidCache(line.GetKey());
+                                linesBad = true;
+                                rivenParseTime += rivenSW.Elapsed.TotalSeconds;
+                                break;
                             }
+
                             var memImage = new MemoryStream();
                             crop.Save(memImage, System.Drawing.Imaging.ImageFormat.Jpeg);
                             memImage.Seek(0, SeekOrigin.Begin);
@@ -235,7 +296,7 @@ namespace Application
                                 cachedRivens.Enqueue(clr.Username + clickpoint.RivenName);
                                 cachedRivenValues[clr.Username + clickpoint.RivenName] = riven;
                                 Console.WriteLine("adding: " + clr.Username + clickpoint.RivenName + " to cache");
-                                while (cachedRivens.Count > 1000)
+                                while (cachedRivens.Count > 5000)
                                 {
                                     var removed = cachedRivens.Dequeue();
                                     cachedRivenValues.Remove(removed);
@@ -249,34 +310,28 @@ namespace Application
 
                             for (int tries = 0; tries < 15; tries++)
                             {
-                                if (tries == 0 || tries == 14)
+                                b = _gameCapture.GetFullImage();
+                                var state = _screenStateHandler.GetScreenState(b);
+                                if (state == ScreenState.ChatWindow)
                                 {
-                                    b = _gameCapture.GetFullImage();
-                                    var state = _screenStateHandler.GetScreenState(b);
-                                    if (state == ScreenState.ChatWindow)
-                                    {
-                                        b.Dispose();
-                                        break;
-                                    }
-                                    else if (state == ScreenState.RivenWindow)
-                                    {
-                                        _mouseMover.Click(3816, 2013);
-                                        await Task.Delay(17);
-                                        _mouseMover.MoveTo(0, 0);
-                                        await Task.Delay(17);
-                                    }
                                     b.Dispose();
+                                    break;
                                 }
-                                else
+                                else if (state == ScreenState.RivenWindow)
                                 {
-                                    b = _gameCapture.GetChatIcon();
-                                    if(_chatParser.IsChatFocused(b))
-                                    {
-                                        b.Dispose();
-                                        break;
-                                    }
+                                    _mouseMover.Click(3816, 2013);
+                                    await Task.Delay(17);
+                                    _mouseMover.MoveTo(0, 0);
+                                    await Task.Delay(17);
                                 }
+                                b.Dispose();
                             }
+                            Console.WriteLine("Click point " + (i + 1).ToString() + "/" + clr.ClickPoints.Count.ToString() + " handled in: " + clickPointSw.Elapsed.TotalSeconds);
+                        }
+                        if (linesBad)
+                        {
+                            lines.ToList().ForEach(l => _chatParser.InvalidCache(l.GetKey()));
+                            break;
                         }
                         if (message.DEBUGREASON != null)
                         {
@@ -284,10 +339,15 @@ namespace Application
                             shouldCopyImage = true;
                         }
 
+                        rivenParseTime += rivenSW.Elapsed.TotalSeconds;
+                        sendingSW.Restart();
                         await _dataSender.AsyncSendChatMessage(message);
+                        sendingTime += sendingSW.Elapsed.TotalSeconds;
+                        Console.WriteLine("Chat messsage handled in: " + chatMessageSw.Elapsed.TotalSeconds);
                     }
+                    Console.WriteLine("Line handled in: " + lineSw.Elapsed.TotalSeconds);
                 }
-                if(lastMessage != null)
+                if (lastMessage != null)
                 {
                     var time = String.Format("{0:N2}", parseTime);
                     var str = lastMessage.Raw;
@@ -297,10 +357,16 @@ namespace Application
                     // Write space to end of line, and then CR with no LF
                     Console.Write("\r".PadLeft(Console.WindowWidth - Console.CursorLeft));
                 }
-                if (shouldCopyImage)
+                if (shouldCopyImage && debugImageName != null && debugImageName.Length > 0)
                 {
-                    File.Copy(image, debugImageName);
+                    try
+                    {
+                        image.Save(debugImageName);
+                    }
+                    catch { }
+                    //File.Copy(image, debugImageName);
                 }
+                image.Dispose();
                 var transmitTime = sw.Elapsed.TotalSeconds;
                 sw.Stop();
                 var debugMessage = $"Image capture: {imageTime:00.00} Parse time: {parseTime:00.00} TransmitTime: {transmitTime:0.000} New messages {newMessags} {newMessags / parseTime}/s";
