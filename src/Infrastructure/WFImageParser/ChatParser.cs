@@ -595,7 +595,7 @@ namespace WFImageParser
             else return null;
         }
 
-        private static void AppendSpace(ImageCache image, int lineHeight, int lineOffset, StringBuilder rawMessage, StringBuilder message, int wordStartX, StringBuilder currentWord, List<ClickPoint> clickPoints)
+        private void AppendSpace(ImageCache image, int lineHeight, int lineOffset, StringBuilder rawMessage, StringBuilder message, int wordStartX, StringBuilder currentWord, List<ClickPoint> clickPoints)
         {
             var foundRiven = CheckNewWordForRiven(lineHeight, lineOffset, wordStartX, currentWord.ToString(), clickPoints, image, message);
             var word = currentWord.ToString() + ' ';
@@ -609,7 +609,7 @@ namespace WFImageParser
             rawMessage.Append(' ');
         }
 
-        private static bool CheckNewWordForRiven(int lineHeight, int lineOffset, int wordStartX, string currentWord, List<ClickPoint> clickPoints, ImageCache image, StringBuilder rawMessage)
+        private bool CheckNewWordForRiven(int lineHeight, int lineOffset, int wordStartX, string currentWord, List<ClickPoint> clickPoints, ImageCache image, StringBuilder rawMessage)
         {
             var foundRiven = false;
             var converter = new ColorSpaceConverter();
@@ -621,9 +621,9 @@ namespace WFImageParser
                 if (_suffixes.BinarySearch(rivenBit) > 0)
                 {
                     Point point = Point.Empty;
-                    for (int y = lineOffset; y < lineOffset + lineHeight && y < image.Height; y++)
+                    for (int y = lineOffset + (int)(lineHeight * 0.75f); y > lineOffset && y < 0; y--)
                     {
-                        for (int x = Math.Max(0, wordStartX - 5); x < wordStartX + 8 && x < image.Width; x++)
+                        for (int x = wordStartX + _minCharWidth; x < wordStartX + _maxCharWidth && x < image.Width; x++)
                         {
                             var hsvPixel = image.GetHsv(x, y);
                             if (image.GetColor(x,y) == ImageCache.ChatColor.ItemLink)
