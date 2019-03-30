@@ -53,23 +53,27 @@ namespace Application
             UpdateUI();
         }
 
-        private string ColorString(string input) => input.Pastel("#bea966").PastelBg("#162027");
+        private string ColorString(string input) => input.Pastel("#bea966").PastelBg("#151d27");
         private void UpdateUILine(int line, string message, bool leftSide)
         {
             var maxWidth = Console.BufferWidth / 2;
+            if (leftSide)
+                maxWidth = 88;
+            else
+                maxWidth = 44;
             if (line >= Console.BufferHeight)
                 return;
             if (leftSide)
                 Console.SetCursorPosition(0, line);
             else
-                Console.SetCursorPosition(maxWidth + 2, line);
+                Console.SetCursorPosition(103, line);
             //Draw left side
             if (message != null && message.Length > 0)
             {
                 message = message.Substring(0, Math.Min(message.Length, maxWidth));
                 Console.Write(ColorString(message));
             }
-            var endPoint = leftSide ? maxWidth + 1 : Console.BufferWidth;
+            var endPoint = leftSide ? maxWidth : Console.BufferWidth;
             for (int x = Console.CursorLeft; x < endPoint; x++)
             {
                 Console.Write(ColorString(" "));
@@ -115,22 +119,26 @@ namespace Application
         }
         private void UpdateUI()
         {
-            var maxWidth = Console.BufferWidth / 2;
             Console.Clear();
-            //Draw seperator
+            //Draw vertical seperators
             for (int y = 0; y < Console.BufferHeight; y++)
             {
-                Console.SetCursorPosition(maxWidth + 1, y);
+                Console.SetCursorPosition(88, y);
+                Console.Write(ColorString("│"));
+            }
+            for (int y = 0; y < Console.BufferHeight; y++)
+            {
+                Console.SetCursorPosition(102, y);
                 Console.Write(ColorString("│"));
             }
 
             //Draw message seperator
-            for (int x = 0; x < maxWidth + 1; x++)
+            for (int x = 0; x < 88; x++)
             {
                 Console.SetCursorPosition(x, 3);
                 Console.Write(ColorString("─"));
             }
-            Console.SetCursorPosition(maxWidth + 1, 3);
+            Console.SetCursorPosition(88, 3);
             Console.Write(ColorString("┤"));
 
             //Draw left side
@@ -278,7 +286,7 @@ namespace Application
                 newSW.Restart();
                 var lines = _chatParser.ParseChatImage(image, true, true, 27);
                 _UIMessages.AddRange(lines.Select(l => l.RawMessage));
-                _UIFirstLine = "Parsing chat: " + lines.Length + " new items";
+                _UIFirstLine = "Parsing chat: " + lines.Length + " new messages. Riven cache count: " + cachedRivens.Count;
                 UpdateUIFirstLine();
                 UpdateUIMessages();
                 var parseTime = sw.Elapsed.TotalSeconds;
@@ -320,7 +328,7 @@ namespace Application
                     }
                     else if (line.LineType == LineParseResult.LineType.NewMessage && line is ChatMessageLineResult)
                     {
-                        _UISecondLine = "Handing player msg: " + line.RawMessage;
+                        _UISecondLine = "Current msg: " + line.RawMessage;
                         UpdateUISecondLine();
 
                         var chatMessageSw = new Stopwatch();
@@ -435,6 +443,7 @@ namespace Application
 
                             var memImage = new MemoryStream();
                             crop.Save(memImage, System.Drawing.Imaging.ImageFormat.Png);
+                            crop.Save("riven.png");
                             memImage.Seek(0, SeekOrigin.Begin);
                             using (var webP = new MagickImage(memImage))
                             {
@@ -442,7 +451,6 @@ namespace Application
                                 memImage.SetLength(0);
                                 webP.Write(memImage, MagickFormat.WebP);
                                 memImage.Seek(0, SeekOrigin.Begin);
-                                webP.Write("riven.png");
                             }
                             var rivenBase64 = Convert.ToBase64String(memImage.ToArray());
                             crop.Dispose();
@@ -459,6 +467,8 @@ namespace Application
                                     var removed = cachedRivens.Dequeue();
                                     cachedRivenValues.Remove(removed);
                                 }
+                                _UIFirstLine = "Parsing chat: " + lines.Length + " new messages. Riven cache count: " + cachedRivens.Count;
+                                UpdateUIFirstLine();
                             }
                             message.Rivens.Add(riven);
 
@@ -523,8 +533,10 @@ namespace Application
 
                 _UIFirstLine = "Scrolling";
                 _UISecondLine = null;
+                _UIThirdLine = null;
                 UpdateUIFirstLine();
                 UpdateUISecondLine();
+                UpdateUIThirdLine();
 
                 //Scroll down to get 27 more messages
                 _mouseMover.MoveTo(3250, 768);

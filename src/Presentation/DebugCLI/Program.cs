@@ -48,6 +48,7 @@ namespace DebugCLI
             //if (t.IsFaulted)
             //    Console.WriteLine(t.Exception);
 
+            Console.WriteLine("👁");
             UpdateUI();
             //CLIUITests();
             //SetupFilters();
