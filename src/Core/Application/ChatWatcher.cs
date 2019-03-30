@@ -441,21 +441,6 @@ namespace Application
                                 break;
                             }
 
-                            var memImage = new MemoryStream();
-                            crop.Save(memImage, System.Drawing.Imaging.ImageFormat.Png);
-                            crop.Save("riven.png");
-                            memImage.Seek(0, SeekOrigin.Begin);
-                            using (var webP = new MagickImage(memImage))
-                            {
-                                memImage.Seek(0, SeekOrigin.Begin);
-                                memImage.SetLength(0);
-                                webP.Write(memImage, MagickFormat.WebP);
-                                memImage.Seek(0, SeekOrigin.Begin);
-                            }
-                            var rivenBase64 = Convert.ToBase64String(memImage.ToArray());
-                            crop.Dispose();
-                            memImage.Dispose();
-
                             riven.MessagePlacementId = clickpoint.Index;
 
                             if (riven.Drain > 0 && riven.MasteryRank > 0)
@@ -477,7 +462,10 @@ namespace Application
 
                             File.Delete(rivenImage);
 
-                            await _dataSender.AsyncSendRivenImage(riven.ImageID, rivenBase64);
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                            _dataSender.AsyncSendRivenImage(riven.ImageID, crop);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                            //await _dataSender.AsyncSendRivenImage(riven.ImageID, rivenBase64);
 
                             for (int tries = 0; tries < 15; tries++)
                             {

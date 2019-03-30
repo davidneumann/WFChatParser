@@ -1,10 +1,13 @@
 ﻿using Application.ChatMessages.Model;
 using Application.Interfaces;
+using ImageMagick;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Drawing;
+using System.IO;
 using System.Threading.Tasks;
 using WebSocketSharp;
 
@@ -203,6 +206,34 @@ namespace DataStream
                 _webSocket.Send(_rivenImageMessagePrefix + JsonConvert.SerializeObject(new { ImageID = imageID, Image = rivenBase64 }));
             else if (_shouldReconnect)
                 Reconnect();
+        }
+
+        public async Task AsyncSendRivenImage(Guid imageID, Bitmap image)
+        {
+            var b = new BackgroundWorker();
+            b.DoWork += (sender, e) =>
+            {
+                var memImage = new MemoryStream();
+                image.Save(memImage, System.Drawing.Imaging.ImageFormat.Png);
+                try
+                {
+                    image.Save("riven.png");
+                }
+                catch { }
+                memImage.Seek(0, SeekOrigin.Begin);
+                using (var webP = new MagickImage(memImage))
+                {
+                    memImage.Seek(0, SeekOrigin.Begin);
+                    memImage.SetLength(0);
+                    webP.Write(memImage, MagickFormat.WebP);
+                    memImage.Seek(0, SeekOrigin.Begin);
+                }
+                var rivenBase64 = Convert.ToBase64String(memImage.ToArray());
+                AsyncSendRivenImage(imageID, rivenBase64);
+                memImage.Dispose();
+                image.Dispose();
+            };
+            b.RunWorkerAsync();
         }
     }
 
