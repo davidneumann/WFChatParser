@@ -621,7 +621,7 @@ namespace WFImageParser
                 if (_suffixes.BinarySearch(rivenBit) > 0)
                 {
                     Point point = Point.Empty;
-                    for (int y = lineOffset + (int)(lineHeight * 0.75f); y > lineOffset && y < 0; y--)
+                    for (int y = lineOffset + (int)(lineHeight * 0.75f); y > lineOffset && y > 0; y--)
                     {
                         for (int x = wordStartX + _minCharWidth; x < wordStartX + _maxCharWidth && x < image.Width; x++)
                         {
