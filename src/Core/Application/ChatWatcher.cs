@@ -14,6 +14,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Pastel;
 
 namespace Application
 {
@@ -26,6 +27,11 @@ namespace Application
         private IRivenCleaner _rivenCleaner;
         private IRivenParser _rivenParser;
         private IScreenStateHandler _screenStateHandler;
+        private List<string> _UIMessages = new List<string>();
+        private string _UIThirdLine;
+        private string _UISecondLine;
+        private string _UITopLine;
+        private Riven _UILastRiven = null;
 
         public ChatWatcher(IDataSender dataSender, IChatParser chatParser, IGameCapture gameCapture, IMouseMover mouseMover, IRivenCleaner rivenCleaner, IRivenParser rivenParser,
             IScreenStateHandler screenStateHandler)
@@ -37,6 +43,92 @@ namespace Application
             this._rivenCleaner = rivenCleaner;
             this._rivenParser = rivenParser;
             this._screenStateHandler = screenStateHandler;
+
+            Console.SetWindowSize(1, 1);
+            Console.SetBufferSize(147, 9);
+            Console.SetWindowSize(147, 9);
+            Console.CursorVisible = false;
+            Console.Clear();
+        }
+
+        private string ColorString(string input) => input.Pastel("#bea966").PastelBg("#162027");
+        private void UpdateUI()
+        {
+            var maxWidth = Console.BufferWidth / 2 - 1;
+            Console.Clear();
+
+            //Draw seperator
+            for (int y = 0; y < Console.BufferHeight; y++)
+            {
+                Console.SetCursorPosition(maxWidth + 1, y);
+                Console.Write(ColorString("|"));
+            }
+
+            //Draw left side
+            if (_UITopLine != null && _UITopLine.Length > 0)
+            {
+                Console.SetCursorPosition(0, 0);
+                Console.Write(ColorString(_UITopLine.Substring(0, Math.Min(_UITopLine.Length, maxWidth))));
+            }
+
+            if (_UISecondLine != null && _UISecondLine.Length > 0)
+            {
+                Console.SetCursorPosition(0, 1);
+                Console.Write(ColorString(_UISecondLine.Substring(0, Math.Min(_UISecondLine.Length, maxWidth))));
+            }
+
+            if (_UIThirdLine != null && _UIThirdLine.Length > 0)
+            {
+                Console.SetCursorPosition(0, 1);
+                Console.Write(ColorString(_UIThirdLine.Substring(0, Math.Min(_UIThirdLine.Length, maxWidth))));
+            }
+
+            var line = 3;
+            _UIMessages = _UIMessages.Count > Console.BufferHeight - line ? _UIMessages.Skip(Console.BufferHeight - line).ToList() : _UIMessages;
+            foreach (var item in _UIMessages)
+            {
+                if (line >= Console.BufferHeight)
+                    break;
+                Console.SetCursorPosition(0, line);
+                Console.WriteLine(ColorString(item.Substring(0, Math.Min(item.Length, maxWidth))));
+                line++;
+            }
+
+            //Draw right side
+            if (_UILastRiven != null)
+            {
+                if (_UILastRiven.Name != null && _UILastRiven.Name.Length > 0)
+                {
+                    Console.SetCursorPosition(maxWidth + 2, 0);
+                    Console.Write(ColorString(_UILastRiven.Name.Substring(0, Math.Min(_UILastRiven.Name.Length, maxWidth))));
+                }
+                Console.SetCursorPosition(maxWidth + 2, 1);
+                var input = "Polarity: " + _UILastRiven.Polarity;
+                Console.Write(SafeColorString(maxWidth, input));
+                input = "Rank: " + _UILastRiven.Rank;
+                Console.SetCursorPosition(maxWidth + 2, 2);
+                Console.Write(SafeColorString(maxWidth, input));
+                input = "Mastery rank: " + _UILastRiven.MasteryRank;
+                Console.SetCursorPosition(maxWidth + 2, 3);
+                Console.Write(SafeColorString(maxWidth, input));
+                input = "Rolls: " + _UILastRiven.Rolls;
+                Console.SetCursorPosition(maxWidth + 2, 4);
+                Console.Write(SafeColorString(maxWidth, input));
+                line = 5;
+                foreach (var modi in _UILastRiven.Modifiers)
+                {
+                    if (line >= Console.WindowHeight)
+                        return;
+                    Console.SetCursorPosition(maxWidth + 2, line);
+                    Console.Write(SafeColorString(maxWidth, modi));
+                    line++;
+                }
+            }
+        }
+
+        private string SafeColorString(int maxWidth, string input)
+        {
+            return ColorString(input.Substring(0, Math.Min(input.Length, maxWidth)));
         }
 
         public async Task MonitorLive(string debugImageDectory = null)
@@ -56,20 +148,24 @@ namespace Application
             var sw = new Stopwatch();
             var scrollbarFound = false;
             Bitmap b = null;
-            Console.Write("Waiting for scrollbar");
             var scrollDots = 0;
             var cachedRivens = new Queue<string>();
             var cachedRivenValues = new Dictionary<string, Riven>();
             while (true)
             {
+                _UISecondLine = null;
+                if (!scrollbarFound)
+                    _UITopLine = "Finding scrollbar";
+                else
+                    _UITopLine = "Getting image";
+                UpdateUI();
+
                 newSW.Restart();
-                Console.WriteLine("Starting loop");
                 sw.Restart();
                 //var image = string.Empty;
                 //try
                 //{
                 //    newSW.Restart();
-                //    Console.Write("Getting image");
                 //    b = _gameCapture.GetFullImage();
                 //    b.Save(Path.Combine(Path.GetTempPath(), "wfchat", "capture_0.png"));
                 //    b.Dispose();
@@ -78,27 +174,28 @@ namespace Application
                 //    {
                 //        File.Copy(image, Path.Combine(debugImageDectory, "capture_0.png"), true);
                 //    }
-                //    Console.WriteLine(" took: " + newSW.Elapsed.TotalSeconds);
                 //}
                 //catch { continue; }
                 var imageTime = sw.Elapsed.TotalSeconds;
                 sw.Restart();
-
-                Console.Write("Getting image");
+                
                 var image = _gameCapture.GetFullImage();
                 if (image == null)
                 {
-                    Console.WriteLine("Failed to get image");
+                    _UITopLine = "Failed to get image";
+                    UpdateUI();
                     continue;
                 }
                 if (_screenStateHandler.GetScreenState(image) != ScreenState.ChatWindow)
                 {
                     if (_screenStateHandler.IsExitable(image))
                     {
+                        _UITopLine = "RECOVERING: clickign exit";
+                        UpdateUI();
+
                         //Click exit
                         _mouseMover.Click(3814, 2014);
                         await Task.Delay(30);
-                        Console.WriteLine("Clicked exit to recover");
                         continue;
                     }
                     await _dataSender.AsyncSendDebugMessage("Help I'm stuck!");
@@ -106,7 +203,6 @@ namespace Application
                     image.Dispose();
                     continue;
                 }
-                Console.WriteLine(" took: " + newSW.Elapsed.TotalSeconds);
 
                 //Wait for scrollbar to be ready
                 if (!scrollbarFound)
@@ -118,17 +214,10 @@ namespace Application
                         await Task.Delay(33);
                         _mouseMover.Click(3259, 658);
                         await Task.Delay(100);
-                        Console.Write("\rScrollbar found\n");
                         continue;
                     }
                     else
                     {
-                        Console.Write("\rWaiting for scrollbar");
-                        for (int i = 0; i < scrollDots; i++)
-                        {
-                            Console.Write(".");
-                        }
-                        Console.Write("             ");
                         scrollDots++;
                         if (scrollDots > 4)
                             scrollDots = 0;
@@ -140,11 +229,10 @@ namespace Application
                 sw.Restart();
                 newSW.Restart();
 
-                Console.Write("Parsing chat lines");
+                _UITopLine = "Parsing chat";
                 newSW.Restart();
                 var lines = _chatParser.ParseChatImage(image, true, true, 27);
-                Console.Write(" took: " + newSW.Elapsed.TotalSeconds);
-                Console.WriteLine("Found " + lines.Count() + " new lines");
+                _UIMessages.AddRange(lines.Select(l => l.RawMessage));
                 var parseTime = sw.Elapsed.TotalSeconds;
                 sw.Restart();
 
@@ -166,9 +254,11 @@ namespace Application
                 var sendingSW = new Stopwatch();
                 foreach (var line in lines)
                 {
+                    _UISecondLine = "Handling generic: " + line.RawMessage;
+                    UpdateUI();
+
                     var lineSw = new Stopwatch();
                     lineSw.Start();
-                    Console.WriteLine("Checking line ");
                     if (linesBad)
                     {
                         lines.ToList().ForEach(l => _chatParser.InvalidCache(l.GetKey()));
@@ -176,13 +266,17 @@ namespace Application
                     }
                     if (line.LineType == LineParseResult.LineType.RedText)
                     {
+                        _UISecondLine = "Handing redtext: " + line.RawMessage;
+                        UpdateUI();
                         await _dataSender.AsyncSendRedtext(line.RawMessage);
                     }
                     else if (line.LineType == LineParseResult.LineType.NewMessage && line is ChatMessageLineResult)
                     {
+                        _UISecondLine = "Handing player msg: " + line.RawMessage;
+                        UpdateUI();
+
                         var chatMessageSw = new Stopwatch();
                         chatMessageSw.Start();
-                        Console.WriteLine("Handling chat message. Cache count: " + cachedRivens.Count);
                         newSW.Restart();
                         var clr = line as ChatMessageLineResult;
                         var message = MakeChatModel(line as LineParseResult.ChatMessageLineResult, badNameRegex);
@@ -195,10 +289,12 @@ namespace Application
                             rivenSW.Restart();
                             var clickpoint = clr.ClickPoints[i];
 
+                            _UIThirdLine = "Parsing riven: " + clickpoint.RivenName + " " + clickpoint.X + "," + clickpoint.Y;
+                            UpdateUI();
+
                             if (cachedRivenValues.ContainsKey(clr.Username + clickpoint.RivenName))
                             {
-                                await _dataSender.AsyncSendDebugMessage("Found a riven from cache: " + clr.Username + " " + clickpoint.RivenName);
-                                Console.WriteLine("**Riven was retrieved from cache**");
+                                
                                 var cachedRiven = cachedRivenValues[clr.Username + clickpoint.RivenName];
                                 var copiedRiven = new Riven();
                                 copiedRiven.Drain = cachedRiven.Drain;
@@ -212,6 +308,12 @@ namespace Application
                                 copiedRiven.Rolls = cachedRiven.Rolls;
                                 message.Rivens.Add(copiedRiven);
                                 rivenParseTime += rivenSW.Elapsed.TotalSeconds;
+
+                                await _dataSender.AsyncSendDebugMessage("Found a riven from cache: " + clr.Username + " " + clickpoint.RivenName);
+                                _UISecondLine = "Riven: " + clickpoint.RivenName + " found in cache";
+                                _UILastRiven = cachedRiven;
+                                UpdateUI();
+
                                 continue;
                             }
 
@@ -295,7 +397,6 @@ namespace Application
                             {
                                 cachedRivens.Enqueue(clr.Username + clickpoint.RivenName);
                                 cachedRivenValues[clr.Username + clickpoint.RivenName] = riven;
-                                Console.WriteLine("adding: " + clr.Username + clickpoint.RivenName + " to cache");
                                 while (cachedRivens.Count > 5000)
                                 {
                                     var removed = cachedRivens.Dequeue();
@@ -303,6 +404,9 @@ namespace Application
                                 }
                             }
                             message.Rivens.Add(riven);
+
+                            _UILastRiven = riven;
+                            UpdateUI();
 
                             File.Delete(rivenImage);
 
@@ -326,7 +430,6 @@ namespace Application
                                 }
                                 b.Dispose();
                             }
-                            Console.WriteLine("Click point " + (i + 1).ToString() + "/" + clr.ClickPoints.Count.ToString() + " handled in: " + clickPointSw.Elapsed.TotalSeconds);
                         }
                         if (linesBad)
                         {
@@ -343,20 +446,9 @@ namespace Application
                         sendingSW.Restart();
                         await _dataSender.AsyncSendChatMessage(message);
                         sendingTime += sendingSW.Elapsed.TotalSeconds;
-                        Console.WriteLine("Chat messsage handled in: " + chatMessageSw.Elapsed.TotalSeconds);
                     }
-                    Console.WriteLine("Line handled in: " + lineSw.Elapsed.TotalSeconds);
                 }
-                if (lastMessage != null)
-                {
-                    var time = String.Format("{0:N2}", parseTime);
-                    var str = lastMessage.Raw;
-                    if (str.Length + time.Length + 4 > Console.BufferWidth)
-                        str = str.Substring(0, Console.BufferWidth - time.Length - 4);
-                    Console.Write($"\r{parseTime:N2}s: {str}");
-                    // Write space to end of line, and then CR with no LF
-                    Console.Write("\r".PadLeft(Console.WindowWidth - Console.CursorLeft));
-                }
+
                 if (shouldCopyImage && debugImageName != null && debugImageName.Length > 0)
                 {
                     try
@@ -371,6 +463,10 @@ namespace Application
                 sw.Stop();
                 var debugMessage = $"Image capture: {imageTime:00.00} Parse time: {parseTime:00.00} TransmitTime: {transmitTime:0.000} New messages {newMessags} {newMessags / parseTime}/s";
                 await _dataSender.AsyncSendDebugMessage(debugMessage);
+
+                _UITopLine = "Scrolling";
+                _UISecondLine = null;
+                UpdateUI();
 
                 //Scroll down to get 27 more messages
                 _mouseMover.MoveTo(3250, 768);

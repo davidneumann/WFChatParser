@@ -20,6 +20,8 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using Application.LineParseResult;
 using Application.Enums;
+using System.Collections.ObjectModel;
+using Pastel;
 
 namespace DebugCLI
 {
@@ -46,7 +48,9 @@ namespace DebugCLI
             //if (t.IsFaulted)
             //    Console.WriteLine(t.Exception);
 
-            SetupFilters();
+            UpdateUI();
+            //CLIUITests();
+            //SetupFilters();
             //TestCanExit();
             //TestRivenParsing();
             //FixImages();
@@ -68,6 +72,125 @@ namespace DebugCLI
             //        Debugger.Break();
             //}
             //var v = 0.5f;
+        }
+
+        private static string ColorString(string input) => input.Pastel("#bea966").PastelBg("#162027");
+        private static void UpdateUI()
+        {
+            var _UIMajorStep = "Test major step";
+            var _UIMinorStep = "Test minor step";
+            var _UIMessages = new List<String>(new string[] { "Test message 1", "Test message 2", "Test message 3" });
+            var _UILastRiven = new Riven()
+            {
+                Name = "Test riven name",
+                Drain = 50,
+                MasteryRank = 25,
+                Polarity = Polarity.VaZarin,
+                Rank = "5",
+                Rolls = 10,
+                Modifiers =
+                new string[]{ "Test modi 1", "Test modi 2", "Test modi 3"
+                }
+            };
+            
+            Console.SetWindowSize(1, 1);
+            Console.SetBufferSize(147, 9);
+            Console.SetWindowSize(147, 9);
+            var maxWidth = Console.BufferWidth / 2 - 1;
+            Console.CursorVisible = false;
+
+            var background = " ".Pastel("#162027").PastelBg("#162027");
+            for (int y = 0; y < Console.WindowHeight; y++)
+            {
+                for (int x = 0; x < Console.BufferWidth; x++)
+                {
+                    Console.SetCursorPosition(x, y);
+                    Console.Write(background);
+                }
+            }
+            Console.Clear();
+
+            //Draw seperator
+            for (int y = 0; y < Console.BufferHeight; y++)
+            {
+                Console.SetCursorPosition(maxWidth + 1, y);
+                Console.Write(ColorString("|"));
+            }
+
+            //Draw left side
+            if (_UIMajorStep != null && _UIMajorStep.Length > 0)
+            {
+                Console.SetCursorPosition(0, 0);
+                Console.Write(ColorString(_UIMajorStep.Substring(0, Math.Min(_UIMajorStep.Length, maxWidth))));
+            }
+
+            if (_UIMinorStep != null && _UIMinorStep.Length > 0)
+            {
+                Console.SetCursorPosition(0, 1);
+                Console.Write(ColorString(_UIMinorStep.Substring(0, Math.Min(_UIMinorStep.Length, maxWidth))));
+            }
+
+            var line = 2;
+            var messages = _UIMessages.Count > 3 ? _UIMessages.Skip(_UIMessages.Count - 3).ToList() : _UIMessages;
+            foreach (var item in messages)
+            {
+                Console.SetCursorPosition(0, line);
+                Console.WriteLine(ColorString(item.Substring(0, Math.Min(item.Length, maxWidth))));
+                line++;
+            }
+
+            //Draw right side
+            if (_UILastRiven != null)
+            {
+                if (_UILastRiven.Name != null && _UILastRiven.Name.Length > 0)
+                {
+                    Console.SetCursorPosition(maxWidth + 2, 0);
+                    Console.Write(ColorString(_UILastRiven.Name.Substring(0, Math.Min(_UILastRiven.Name.Length, maxWidth))));
+                }
+                Console.SetCursorPosition(maxWidth + 2, 1);
+                var input = "Polarity: " + _UILastRiven.Polarity;
+                Console.Write(SafeColorString(maxWidth, input));
+                input = "Rank: " + _UILastRiven.Rank;
+                Console.SetCursorPosition(maxWidth + 2, 2);
+                Console.Write(SafeColorString(maxWidth, input));
+                input = "Mastery rank: " + _UILastRiven.MasteryRank;
+                Console.SetCursorPosition(maxWidth + 2, 3);
+                Console.Write(SafeColorString(maxWidth, input));
+                input = "Rolls: " + _UILastRiven.Rolls;
+                Console.SetCursorPosition(maxWidth + 2, 4);
+                Console.Write(SafeColorString(maxWidth, input));
+                line = 5;
+                foreach (var modi in _UILastRiven.Modifiers)
+                {
+                    if (line >= Console.WindowHeight)
+                        return;
+                    Console.SetCursorPosition(maxWidth + 2, line);
+                    Console.Write(SafeColorString(maxWidth, modi));
+                    line++;
+                }
+            }
+        }
+
+        private static string SafeColorString(int maxWidth, string input)
+        {
+            return ColorString(input.Substring(0, Math.Min(input.Length, maxWidth)));
+        }
+
+        private static void CLIUITests()
+        {
+            Console.BackgroundColor = ConsoleColor.DarkCyan;
+            Console.Clear();
+            var test = "test".Pastel("#bea966").PastelBg("#162027");
+            Console.WriteLine(test);
+            foreach (var color in Enum.GetValues(typeof(ConsoleColor)).Cast<ConsoleColor>())
+            {
+                Console.ForegroundColor = color;
+                if (color == ConsoleColor.DarkCyan)
+                    Console.BackgroundColor = ConsoleColor.White;
+                else
+                    Console.BackgroundColor = ConsoleColor.DarkCyan;
+                Console.WriteLine("  " + color.ToString() + "  ");
+            }
         }
 
         [DllImport("user32.dll")]
