@@ -78,7 +78,7 @@ namespace ImageOCR
             _engine.Dispose();
         }
 
-        public Riven ParseRivenImage(Bitmap croppedRiven)
+        public Riven ParseRivenTextFromImage(Bitmap croppedRiven)
         {
             if (croppedRiven.Width != 560 && croppedRiven.Height != 740)
                 return null;
@@ -86,7 +86,7 @@ namespace ImageOCR
             Riven result = new Riven()
             {
                 Polarity = Polarity.Unkown,
-                Rank = "Unknown",
+                Rank = 0,
             };
 
             // Set the input image
@@ -155,14 +155,11 @@ namespace ImageOCR
                 }
             }
 
-            result.Polarity = GetPolarity(croppedRiven);
-            result.Drain = GetDrain(croppedRiven);
-
             result.ImageID = Guid.NewGuid();
             return result;
         }
 
-        private int GetDrain(Bitmap croppedRiven)
+        private int GetRank(Bitmap croppedRiven)
         {
             var width = 8;
             var startX = 178;
@@ -200,7 +197,7 @@ namespace ImageOCR
             else if (vMatches > _vPixels.Count * 0.9)
                 return Polarity.Madurai;
             else if (dMatches > _dashPixels.Count * 0.9)
-                return Polarity.VaZarin;
+                return Polarity.Vazarin;
             else
                 return Polarity.Unkown;
         }
@@ -241,6 +238,16 @@ namespace ImageOCR
                 return false;
 
             return true;
+        }
+
+        public Polarity ParseRivenPolarityFromColorImage(Bitmap croppedRiven)
+        {
+            return GetPolarity(croppedRiven);
+        }
+
+        public int ParseRivenRankFromColorImage(Bitmap croppedRiven)
+        {
+            return GetRank(croppedRiven);
         }
 
         private enum Step

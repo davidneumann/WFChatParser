@@ -9,7 +9,7 @@
         /// <summary>
         /// D
         /// </summary>
-        VaZarin,
+        Vazarin,
         /// <summary>
         /// --
         /// </summary>

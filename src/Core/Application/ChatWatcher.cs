@@ -429,7 +429,9 @@ namespace Application
                             }
 
                             var newC = _rivenCleaner.CleanRiven(crop);
-                            var riven = _rivenParser.ParseRivenImage(newC);
+                            var riven = _rivenParser.ParseRivenTextFromImage(newC);
+                            riven.Polarity = _rivenParser.ParseRivenPolarityFromColorImage(crop);
+                            riven.Rank = _rivenParser.ParseRivenRankFromColorImage(crop);
                             newC.Dispose();
                             //crop.Dispose();
                             if (riven == null)

@@ -38,6 +38,7 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
+            var r = GetPolarity(new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\riven2.png"));
             //VisualizeClickpoints();
             //MouseTests();
             //var t = Task.Run(() => MouseTests());
@@ -73,6 +74,70 @@ namespace DebugCLI
             //var v = 0.5f;
         }
 
+        private static bool PixelIsPurple(Point p, Bitmap bitmap)
+        {
+            var pixel = bitmap.GetPixel(p.X, p.Y);
+            return pixel.R > 155 && pixel.G > 110 && pixel.B > 187;
+        }
+        private static Polarity GetPolarity(Bitmap croppedRiven)
+        {
+            //Polarity pixels
+            var _dashPixels = new List<Point>();
+            for (int x = 537; x < 537 + 3; x++)
+            {
+                for (int y = 23; y < 23 + 4; y++)
+                {
+                    _dashPixels.Add(new Point(x, y));
+                }
+            }
+            for (int x = 560; x < 560 + 3; x++)
+            {
+                for (int y = 23; y < 23 + 4; y++)
+                {
+                    _dashPixels.Add(new Point(x, y));
+                }
+            }
+
+            var _dPixels = new List<Point>();
+            for (int x = 561; x < 561 + 4; x++)
+            {
+                for (int y = 32; y < 32 + 7; y++)
+                {
+                    _dPixels.Add(new Point(x, y));
+                }
+            }
+
+
+            var _vPixels = new List<Point>();
+            for (int x = 542; x < 542 + 1; x++)
+            {
+                for (int y = 29; y < 29 + 4; y++)
+                {
+                    _vPixels.Add(new Point(x, y));
+                }
+            }
+            for (int x = 542; x < 542 + 2; x++)
+            {
+                for (int y = 18; y < 18 + 3; y++)
+                {
+                    _vPixels.Add(new Point(x, y));
+                }
+            }
+
+            var dashMatches = _dashPixels.Count(p => PixelIsPurple(p, croppedRiven));
+            var vMatches = _vPixels.Count(p => PixelIsPurple(p, croppedRiven));
+            var dMatches = _dPixels.Count(p => PixelIsPurple(p, croppedRiven));
+
+            if (dashMatches > _dashPixels.Count * 0.9)
+                return Polarity.Naramon;
+            else if (vMatches > _vPixels.Count * 0.9)
+                return Polarity.Madurai;
+            else if (dMatches > _dashPixels.Count * 0.9)
+                return Polarity.Vazarin;
+            else
+                return Polarity.Unkown;
+        }
+
         private static string ColorString(string input) => input.Pastel("#bea966").PastelBg("#162027");
         private static void UpdateUI()
         {
@@ -84,8 +149,8 @@ namespace DebugCLI
                 Name = "Test riven name",
                 Drain = 50,
                 MasteryRank = 25,
-                Polarity = Polarity.VaZarin,
-                Rank = "5",
+                Polarity = Polarity.Vazarin,
+                Rank = 5,
                 Rolls = 10,
                 Modifiers =
                 new string[]{ "Test modi 1", "Test modi 2", "Test modi 3"
@@ -250,7 +315,7 @@ namespace DebugCLI
             var clean = rc.CleanRiven(cropped);
             cropped.Dispose();
             clean.Save("clean.png");
-            var result = rp.ParseRivenImage(clean);
+            var result = rp.ParseRivenTextFromImage(clean);
         }
 
         private static void VisualizeClickpoints()
