@@ -108,21 +108,6 @@ namespace Application
                 {
                     if (line >= Console.WindowHeight)
                         return;
-                    var message = modi;
-                    if (message.EndsWith("old") && message.IndexOf("%") > 0)
-                        message = message.Substring(0, message.IndexOf("%") + 1) + " Cold";
-                    else if (message.EndsWith("pact") && message.IndexOf("%") > 0)
-                        message = message.Substring(0, message.IndexOf("%") + 1) + " Impact";
-                    else if (message.EndsWith("lectricity") && message.IndexOf("%") > 0)
-                        message = message.Substring(0, message.IndexOf("%") + 1) + " Electricity";
-                    else if (message.EndsWith("ncture") && message.IndexOf("%") > 0)
-                        message = message.Substring(0, message.IndexOf("%") + 1) + " Puncture";
-                    else if (message.EndsWith("lash") && message.IndexOf("%") > 0)
-                        message = message.Substring(0, message.IndexOf("%") + 1) + " Slash";
-                    else if (message.EndsWith("eat") && message.IndexOf("%") > 0)
-                        message = message.Substring(0, message.IndexOf("%") + 1) + " Heat";
-                    else if (message.EndsWith("oxin") && message.IndexOf("%") > 0)
-                        message = message.Substring(0, message.IndexOf("%") + 1) + " Toxin";
                     UpdateUILine(line++, modi, false);
                 }
                 while (line < Console.WindowHeight)

@@ -117,7 +117,22 @@ namespace ImageOCR
                             {
                                 result.Name = name;
                                 currentStep = Step.ReadingModifiers;
-                                modis.Add(line);
+                                var modi = line;
+                                if (modi.EndsWith("old") && modi.IndexOf("%") > 0)
+                                    modi = modi.Substring(0, modi.IndexOf("%") + 1) + " Cold";
+                                else if (modi.EndsWith("pact") && modi.IndexOf("%") > 0)
+                                    modi = modi.Substring(0, modi.IndexOf("%") + 1) + " Impact";
+                                else if (modi.EndsWith("lectricity") && modi.IndexOf("%") > 0)
+                                    modi = modi.Substring(0, modi.IndexOf("%") + 1) + " Electricity";
+                                else if (modi.EndsWith("ncture") && modi.IndexOf("%") > 0)
+                                    modi = modi.Substring(0, modi.IndexOf("%") + 1) + " Puncture";
+                                else if (modi.EndsWith("lash") && modi.IndexOf("%") > 0)
+                                    modi = modi.Substring(0, modi.IndexOf("%") + 1) + " Slash";
+                                else if (modi.EndsWith("eat") && modi.IndexOf("%") > 0)
+                                    modi = modi.Substring(0, modi.IndexOf("%") + 1) + " Heat";
+                                else if (modi.EndsWith("oxin") && modi.IndexOf("%") > 0)
+                                    modi = modi.Substring(0, modi.IndexOf("%") + 1) + " Toxin";
+                                modis.Add(modi);
                             }
                             else if (line.Length > 0 && !Char.IsDigit(line[0]) && currentStep == Step.ReadingModifiers)
                             {
