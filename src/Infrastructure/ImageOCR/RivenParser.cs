@@ -19,6 +19,9 @@ namespace ImageOCR
         private TesseractEngine _engine = null;
 
         private static readonly string[] _suffixes = new string[] { "ada]", "ata]", "bin]", "bo]", "cak]", "can]", "con]", "cron]", "cta]", "des]", "dex]", "do]", "dra]", "lis]", "mag]", "nak]", "nem]", "nent]", "nok]", "pha]", "sus]", "tak]", "tia]", "tin]", "tio]", "tis]", "ton]", "tor]", "tox]", "tron]" };
+        private List<Point> _dashPixels = new List<Point>();
+        private List<Point> _dPixels = new List<Point>();
+        private List<Point> _vPixels = new List<Point>();
 
         public RivenParser()
         {
@@ -26,6 +29,48 @@ namespace ImageOCR
             string language = "eng";
             _engine = new TesseractEngine(dataPath, language, EngineMode.Default, "bazaar");
             _engine.DefaultPageSegMode = PageSegMode.SingleBlock;
+
+
+            //Polarity pixels
+            for (int x = 537; x < 537 + 3; x++)
+            {
+                for (int y = 23; y < 23 + 4; y++)
+                {
+                    _dashPixels.Add(new Point(x, y));
+                }
+            }
+            for (int x = 560; x < 560 + 3; x++)
+            {
+                for (int y = 23; y < 23 + 4; y++)
+                {
+                    _dashPixels.Add(new Point(x, y));
+                }
+            }
+
+
+            for (int x = 561; x < 561 + 4; x++)
+            {
+                for (int y = 32; y < 32 + 7; y++)
+                {
+                    _dPixels.Add(new Point(x, y));
+                }
+            }
+
+
+            for (int x = 542; x < 542 + 1; x++)
+            {
+                for (int y = 29; y < 29 + 4; y++)
+                {
+                    _vPixels.Add(new Point(x, y));
+                }
+            }
+            for (int x = 542; x < 542 + 2; x++)
+            {
+                for (int y = 18; y < 18 + 3; y++)
+                {
+                    _vPixels.Add(new Point(x, y));
+                }
+            }
         }
 
         public void Dispose()
@@ -110,8 +155,54 @@ namespace ImageOCR
                 }
             }
 
+            result.Polarity = GetPolarity(croppedRiven);
+            result.Drain = GetDrain(croppedRiven);
+
             result.ImageID = Guid.NewGuid();
             return result;
+        }
+
+        private int GetDrain(Bitmap croppedRiven)
+        {
+            var width = 8;
+            var startX = 178;
+            var gap = 31;
+            for (int i = 0; i < 8; i++)
+            {
+                var pixelValues = 0f;
+                for (int x = startX + i * gap; x < startX + i * gap + width; x++)
+                {
+                    for (int y = 818; y < 818 + 6; y++)
+                    {
+                        var pixel = croppedRiven.GetPixel(x, y);
+                        pixelValues += ((((float)pixel.R / 255f) + ((float)pixel.G / 255f) + ((float)pixel.B / 255f)) / 3f);
+                    }
+                }
+                if (pixelValues / 48f < 0.75f)
+                    return Math.Max(i, 0);
+            }
+            return 8;
+        }
+
+        private bool PixelIsPurple(Point p, Bitmap bitmap)
+        {
+            var pixel = bitmap.GetPixel(p.X, p.Y);
+            return pixel.R > 155 && pixel.G > 110 && pixel.B > 187;
+        }
+        private Polarity GetPolarity(Bitmap croppedRiven)
+        {
+            var dashMatches = _dashPixels.Count(p => PixelIsPurple(p, croppedRiven));
+            var vMatches = _vPixels.Count(p => PixelIsPurple(p, croppedRiven));
+            var dMatches = _dPixels.Count(p => PixelIsPurple(p, croppedRiven));
+
+            if (dashMatches > _dashPixels.Count * 0.9)
+                return Polarity.Naramon;
+            else if (vMatches > _vPixels.Count * 0.9)
+                return Polarity.Madurai;
+            else if (dMatches > _dashPixels.Count * 0.9)
+                return Polarity.VaZarin;
+            else
+                return Polarity.Unkown;
         }
 
         public Bitmap CropToRiven(Bitmap bitmap)

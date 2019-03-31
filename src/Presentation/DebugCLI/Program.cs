@@ -47,9 +47,7 @@ namespace DebugCLI
             //}
             //if (t.IsFaulted)
             //    Console.WriteLine(t.Exception);
-
-            Console.WriteLine("👁");
-            UpdateUI();
+            
             //CLIUITests();
             //SetupFilters();
             //TestCanExit();
@@ -93,7 +91,7 @@ namespace DebugCLI
                 new string[]{ "Test modi 1", "Test modi 2", "Test modi 3"
                 }
             };
-            
+
             Console.SetWindowSize(1, 1);
             Console.SetBufferSize(147, 9);
             Console.SetWindowSize(147, 9);
