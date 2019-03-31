@@ -38,7 +38,7 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            var r = GetPolarity(new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\riven2.png"));
+            testRivenSplit();
             //VisualizeClickpoints();
             //MouseTests();
             //var t = Task.Run(() => MouseTests());
@@ -72,6 +72,36 @@ namespace DebugCLI
             //        Debugger.Break();
             //}
             //var v = 0.5f;
+        }
+
+        private static void testRivenSplit()
+        {
+            foreach (var error in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs").Select(f => new FileInfo(f)).Where(f => f.Name.StartsWith("error4")))
+            {
+                using (var cropped = new Bitmap(error.FullName))
+                {
+                    var cleaner = new RivenCleaner();
+                    var rp = new RivenParser();
+                    //var cropped = rp.CropToRiven(new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\error.png"));
+                    using (var cleaned = cleaner.CleanRiven(cropped))
+                    {
+                        cleaned.Save("cleaned.png");
+                        var r = rp.ParseRivenTextFromImage(cleaned, null);
+                        Console.WriteLine(JsonConvert.SerializeObject(r, Formatting.Indented) + "\n");
+                    }
+                }
+            }
+            //var cropped = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\error.png");
+            //var cleaner = new RivenCleaner();
+            //var rp = new RivenParser();
+            ////var cropped = rp.CropToRiven(new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\error.png"));
+            //var cleaned = cleaner.CleanRiven(cropped);
+            //cleaned.Save("cleaned.png");
+            //var r = rp.ParseRivenTextFromImage(cleaned, "Akj Cri-vex");
+
+            ////var inputs = new string[] {"+2.6 Punch Through", "+78.7% Multishot", "-10.4% Puncture" };
+            ////var modis = inputs.Select(i => Modifier.ParseString(i));
+            ////Console.WriteLine(JsonConvert.SerializeObject(new { Modifiers = modis }));
         }
 
         private static bool PixelIsPurple(Point p, Bitmap bitmap)
@@ -151,10 +181,7 @@ namespace DebugCLI
                 MasteryRank = 25,
                 Polarity = Polarity.Vazarin,
                 Rank = 5,
-                Rolls = 10,
-                Modifiers =
-                new string[]{ "Test modi 1", "Test modi 2", "Test modi 3"
-                }
+                Rolls = 10
             };
 
             Console.SetWindowSize(1, 1);
@@ -222,7 +249,7 @@ namespace DebugCLI
                     if (line >= Console.WindowHeight)
                         return;
                     Console.SetCursorPosition(maxWidth + 2, line);
-                    Console.Write(SafeColorString(maxWidth, modi));
+                    Console.Write(SafeColorString(maxWidth, modi.ToString()));
                     line++;
                 }
             }
@@ -315,7 +342,7 @@ namespace DebugCLI
             var clean = rc.CleanRiven(cropped);
             cropped.Dispose();
             clean.Save("clean.png");
-            var result = rp.ParseRivenTextFromImage(clean);
+            var result = rp.ParseRivenTextFromImage(clean, "");
         }
 
         private static void VisualizeClickpoints()

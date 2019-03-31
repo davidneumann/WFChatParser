@@ -78,9 +78,9 @@ namespace ImageOCR
             _engine.Dispose();
         }
 
-        public Riven ParseRivenTextFromImage(Bitmap croppedRiven)
+        public Riven ParseRivenTextFromImage(Bitmap croppedRiven, string parsedName)
         {
-            if (croppedRiven.Width != 560 && croppedRiven.Height != 740)
+            if (croppedRiven.Width != 560 && croppedRiven.Height != 750)
                 return null;
 
             Riven result = new Riven()
@@ -89,7 +89,9 @@ namespace ImageOCR
                 Rank = 0,
             };
 
+            var newModiRegex = new Regex(@"[+-][\d]");
             // Set the input image
+            var debug = new StringBuilder();
             using (var pix = PixConverter.ToPix(croppedRiven))
             {
                 // Extract text from result iterator
@@ -109,30 +111,18 @@ namespace ImageOCR
                             try
                             {
                                 line = iter.GetText(pageIteratorLevel).Trim();
+                                debug.AppendLine(line);
                             }
                             catch { continue; }
-                            if (line.Length > 0 && !(line[0] == '+' || line[0] == '-') && currentStep == Step.ReadingName)
+                            if (line.Length > 0 && !(newModiRegex.Match(line).Success && line.Contains(' ')) && currentStep == Step.ReadingName)
                                 name = (name + " " + line).Trim();
-                            else if (line.Length > 0 && (line[0] == '+' || line[0] == '-') && (currentStep == Step.ReadingName || currentStep == Step.ReadingModifiers))
+                            else if (line.Length > 0 && (newModiRegex.Match(line).Success && line.Contains(' ')) && (currentStep == Step.ReadingName || currentStep == Step.ReadingModifiers))
                             {
                                 result.Name = name;
+                                if (parsedName != null)
+                                    result.Name = parsedName;
                                 currentStep = Step.ReadingModifiers;
-                                var modi = line;
-                                if (modi.EndsWith("old") && modi.IndexOf("%") > 0)
-                                    modi = modi.Substring(0, modi.IndexOf("%") + 1) + " Cold";
-                                else if (modi.EndsWith("pact") && modi.IndexOf("%") > 0)
-                                    modi = modi.Substring(0, modi.IndexOf("%") + 1) + " Impact";
-                                else if (modi.EndsWith("lectricity") && modi.IndexOf("%") > 0)
-                                    modi = modi.Substring(0, modi.IndexOf("%") + 1) + " Electricity";
-                                else if (modi.EndsWith("ncture") && modi.IndexOf("%") > 0)
-                                    modi = modi.Substring(0, modi.IndexOf("%") + 1) + " Puncture";
-                                else if (modi.EndsWith("lash") && modi.IndexOf("%") > 0)
-                                    modi = modi.Substring(0, modi.IndexOf("%") + 1) + " Slash";
-                                else if (modi.EndsWith("eat") && modi.IndexOf("%") > 0)
-                                    modi = modi.Substring(0, modi.IndexOf("%") + 1) + " Heat";
-                                else if (modi.EndsWith("oxin") && modi.IndexOf("%") > 0)
-                                    modi = modi.Substring(0, modi.IndexOf("%") + 1) + " Toxin";
-                                modis.Add(modi);
+                                modis.Add(line);
                             }
                             else if (line.Length > 0 && !Char.IsDigit(line[0]) && currentStep == Step.ReadingModifiers)
                             {
@@ -143,7 +133,17 @@ namespace ImageOCR
                             }
                             else if (line.Length > 0 && Char.IsDigit(line[0]) && currentStep == Step.ReadingModifiers)
                             {
-                                result.Modifiers = modis.ToArray();
+                                var modiObjects = modis.Select(m => Modifier.ParseString(m)).ToArray();
+                                //Handle curses
+                                if (name.Contains("-") && modiObjects.Length == 4)
+                                {
+                                    modiObjects[3].Curse = true;
+                                }
+                                else if(!name.Contains("-") && modiObjects.Length == 3)
+                                {
+                                    modiObjects[2].Curse = true;
+                                }
+                                result.Modifiers = modiObjects;
                                 currentStep = Step.ReadingMRLine;
                                 if (Int32.TryParse(line, out number))
                                     result.Drain = number;

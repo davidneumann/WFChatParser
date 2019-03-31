@@ -108,7 +108,7 @@ namespace Application
                 {
                     if (line >= Console.WindowHeight)
                         return;
-                    UpdateUILine(line++, modi, false);
+                    UpdateUILine(line++, modi.ToString(), false);
                 }
                 while (line < Console.WindowHeight)
                 {
@@ -429,7 +429,7 @@ namespace Application
                             }
 
                             var newC = _rivenCleaner.CleanRiven(crop);
-                            var riven = _rivenParser.ParseRivenTextFromImage(newC);
+                            var riven = _rivenParser.ParseRivenTextFromImage(newC, clickpoint.RivenName);
                             riven.Name = clickpoint.RivenName;
                             riven.Polarity = _rivenParser.ParseRivenPolarityFromColorImage(crop);
                             riven.Rank = _rivenParser.ParseRivenRankFromColorImage(crop);

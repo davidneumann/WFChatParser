@@ -80,7 +80,7 @@ namespace ChatLoggerCLI
                     Console.WriteLine("\n" + t.Exception);
                     try
                     {
-                        dataSender.AsyncSendDebugMessage(t.Exception.ToString());
+                        dataSender.AsyncSendDebugMessage(t.Exception.ToString()).RunSynchronously();
                         System.Threading.Thread.Sleep(2000);
                     }
                     catch

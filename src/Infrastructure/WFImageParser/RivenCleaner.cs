@@ -26,10 +26,20 @@ namespace WFImageParser
             }
         }
 
+        private bool IsPurple(Rgba32 p)
+        {
+            var color = Color.FromArgb(p.R, p.G, p.B);
+            var h = color.GetHue();
+            var v = color.GetBrightness();
+            if (h > 240 && h < 280
+                && v > 0.45)
+                return true;
+            return false;
+        }
         public Bitmap CleanRiven(Bitmap croppedRiven)
         {
             Bitmap result = null;
-            using (Image<Rgba32> outputImage = new Image<Rgba32>(null, 540, 720, Rgba32.White))
+            using (Image<Rgba32> outputImage = new Image<Rgba32>(null, 540, 730, Rgba32.White))
             {
                 var croppedAsMemory = new MemoryStream();
                 croppedRiven.Save(croppedAsMemory, System.Drawing.Imaging.ImageFormat.Bmp);
@@ -44,9 +54,7 @@ namespace WFImageParser
                         for (int y = 0; y < 630; y++)
                         {
                             var p = image[refX + x, refY + y];
-                            if (p.R >= 170 && p.R <= 174
-                                && p.G >= 129 && p.G <= 133
-                                && p.B >= 211 && p.B <= 215)
+                            if (IsPurple(p))
                                 outputImage[x, y] = Rgba32.Black;
                         }
                     }
@@ -58,10 +66,8 @@ namespace WFImageParser
                         for (int y = 0; y < 45; y++)
                         {
                             var p = image[refX + x, refY + y];
-                            if (p.R >= 170 && p.R <= 174
-                                && p.G >= 129 && p.G <= 133
-                                && p.B >= 211 && p.B <= 215)
-                                outputImage[x, y+630] = Rgba32.Black;
+                            if (IsPurple(p))
+                                outputImage[x, y + 640] = Rgba32.Black;
                         }
                     }
                     refX = 65;
@@ -72,14 +78,28 @@ namespace WFImageParser
                         for (int y = 0; y < 45; y++)
                         {
                             var p = image[refX + x, refY + y];
-                            if (p.R >= 170 && p.R <= 174
-                                && p.G >= 129 && p.G <= 133
-                                && p.B >= 211 && p.B <= 215)
-                                outputImage[x, y+630+45] = Rgba32.Black;
+                            if (IsPurple(p))
+                                outputImage[x, y + 640 + 45] = Rgba32.Black;
+                        }
+                    }
+
+                    //Clean up bottom corners
+                    for (int x = 0; x < 54; x++)
+                    {
+                        for (int y = 587; y < 587+48; y++)
+                        {
+                            outputImage[x, y] = Rgba32.White;
+                        }
+                    }
+                    for (int x = outputImage.Width - 54; x < outputImage.Width; x++)
+                    {
+                        for (int y = 587; y < 587 + 48; y++)
+                        {
+                            outputImage[x, y] = Rgba32.White;
                         }
                     }
                 }
-                
+
                 outputImage.Mutate(i => i.Pad(outputImage.Width + 20, outputImage.Height + 20).BackgroundColor(Rgba32.White));
 
                 var mem = new MemoryStream();

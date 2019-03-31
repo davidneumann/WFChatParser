@@ -10,7 +10,7 @@ namespace Application.Interfaces
         /// </summary>
         /// <param name="imagePath">The path to the image of the riven window.</param>
         /// <returns>The text of the riven card.</returns>
-        Riven ParseRivenTextFromImage(Bitmap cleanImage);
+        Riven ParseRivenTextFromImage(Bitmap cleanImage, string parsedName);
         Polarity ParseRivenPolarityFromColorImage(Bitmap croppedRiven);
         int ParseRivenRankFromColorImage(Bitmap croppedRiven);
 
