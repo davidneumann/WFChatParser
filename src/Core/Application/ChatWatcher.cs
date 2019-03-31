@@ -104,12 +104,17 @@ namespace Application
                 UpdateUILine(3, "Mastery rank: " + riven.MasteryRank, false);
                 UpdateUILine(4, "Rolls: " + riven.Rolls, false);
                 var line = 5;
-                foreach (var modi in riven.Modifiers)
+                if (riven.Modifiers != null)
                 {
-                    if (line >= Console.WindowHeight)
-                        return;
-                    UpdateUILine(line++, modi.ToString(), false);
+                    foreach (var modi in riven.Modifiers)
+                    {
+                        if (line >= Console.WindowHeight)
+                            return;
+                        UpdateUILine(line++, modi.ToString(), false);
+                    }
                 }
+                else
+                    _dataSender.AsyncSendDebugMessage("FATAL: Missing modifiers for: " + riven.ImageID).Wait();
                 while (line < Console.WindowHeight)
                 {
                     UpdateUILine(line++, "", false);
@@ -461,6 +466,7 @@ namespace Application
                             message.Rivens.Add(riven);
 
                             _UILastRiven = riven;
+                            crop.Save(riven.ImageID + ".png");
                             UpdateUIRiven(riven);
 
                             File.Delete(rivenImage);
