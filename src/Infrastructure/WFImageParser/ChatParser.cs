@@ -640,7 +640,7 @@ namespace WFImageParser
                     {
                         var str = rawMessage.ToString();
                         str = str.Substring(str.LastIndexOf('[')+1) + currentWord.Substring(0, currentWord.IndexOf(']'));
-                        clickPoints.Add(new ClickPoint() { X = point.X, Y = point.Y, Index = clickPoints.Count, RivenName = str.ToLower() });
+                        clickPoints.Add(new ClickPoint() { X = point.X, Y = point.Y, Index = clickPoints.Count, RivenName = str });
                     }
                 }
             }
