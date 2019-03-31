@@ -22,6 +22,7 @@ using Application.LineParseResult;
 using Application.Enums;
 using System.Collections.ObjectModel;
 using Pastel;
+using Application;
 
 namespace DebugCLI
 {
@@ -38,7 +39,8 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            testRivenSplit();
+            TestBot();
+            //testRivenSplit();
             //VisualizeClickpoints();
             //MouseTests();
             //var t = Task.Run(() => MouseTests());
@@ -72,6 +74,12 @@ namespace DebugCLI
             //        Debugger.Break();
             //}
             //var v = 0.5f;
+        }
+
+        private static void TestBot()
+        {
+            var bot = new ChatRivenBot(@"C:\Users\david\AppData\Local\Warframe\Downloaded\Public\Tools\Launcher.exe", new MouseHelper());
+            bot.AsyncRun(new System.Threading.CancellationToken()).Wait();
         }
 
         private static void testRivenSplit()
