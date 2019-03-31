@@ -84,14 +84,14 @@ namespace WFImageParser
                     }
 
                     //Clean up bottom corners
-                    for (int x = 0; x < 54; x++)
+                    for (int x = 0; x < 25; x++)
                     {
                         for (int y = 587; y < 587+48; y++)
                         {
                             outputImage[x, y] = Rgba32.White;
                         }
                     }
-                    for (int x = outputImage.Width - 54; x < outputImage.Width; x++)
+                    for (int x = outputImage.Width - 25; x < outputImage.Width; x++)
                     {
                         for (int y = 587; y < 587 + 48; y++)
                         {

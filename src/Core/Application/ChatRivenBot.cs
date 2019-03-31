@@ -17,6 +17,7 @@ namespace Application
             //Check if WF is running
             ////If not start launcher, click play until WF starts
             //Check if on login screen
+            ////https://github.com/Palakis/obs-websocket-dotnet black out the obs screen
             ////If so paste in password and click login
             //Check if on daily reward screen
             ////IF so cilck what ever the middle most item is

@@ -76,7 +76,7 @@ namespace DebugCLI
 
         private static void testRivenSplit()
         {
-            foreach (var error in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs").Select(f => new FileInfo(f)).Where(f => f.Name.StartsWith("error4")))
+            foreach (var error in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs").Select(f => new FileInfo(f)).Where(f => f.Name.StartsWith("error6")))
             {
                 using (var cropped = new Bitmap(error.FullName))
                 {
