@@ -72,4 +72,5 @@
 ^\S+ was kicked\.$
 ^\[<item>\] - Posts a link to <item>'s store page\. Typing 'Riven Mod' or 'Song' will open menus where you can select the desired mod/song to link\.$
 ^\[enter message\]$
-^\{<guild>\} - Posts a link to <guild>'s profile page\."$
+^\{<guild>\} - Posts a link to <guild>'s profile page\.
+^You have been playing for over an hour\. Please don't forget to take a break\.$

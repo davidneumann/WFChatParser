@@ -582,13 +582,13 @@ namespace WFImageParser
                 {
                     var clr = result as ChatMessageLineResult;
                     clr.ClickPoints = clickPoints;
-                    clr.RawMessage = rawMessage.ToString();
-                    clr.EnhancedMessage = message.ToString();
+                    clr.RawMessage = rawMessage.ToString().Trim();
+                    clr.EnhancedMessage = message.ToString().Trim();
                     return result;
                 }
                 else
                 {
-                    result.RawMessage = rawMessage.ToString();
+                    result.RawMessage = rawMessage.ToString().Trim();
                     return result;
                 }
             }

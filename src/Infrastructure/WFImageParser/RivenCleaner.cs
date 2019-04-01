@@ -39,7 +39,7 @@ namespace WFImageParser
         public Bitmap CleanRiven(Bitmap croppedRiven)
         {
             Bitmap result = null;
-            using (Image<Rgba32> outputImage = new Image<Rgba32>(null, 540, 730, Rgba32.White))
+            using (Image<Rgba32> outputImage = new Image<Rgba32>(null, 540, 740, Rgba32.White))
             {
                 var croppedAsMemory = new MemoryStream();
                 croppedRiven.Save(croppedAsMemory, System.Drawing.Imaging.ImageFormat.Bmp);
@@ -79,7 +79,7 @@ namespace WFImageParser
                         {
                             var p = image[refX + x, refY + y];
                             if (IsPurple(p))
-                                outputImage[x, y + 640 + 45] = Rgba32.Black;
+                                outputImage[x, y + 640 + 45 + 10] = Rgba32.Black;
                         }
                     }
 

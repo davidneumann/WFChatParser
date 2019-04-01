@@ -1,6 +1,6 @@
 ﻿using Application.ChatMessages.Model;
 using Application.Enums;
-using Application.interfaces;
+using Application.Interfaces;
 using Application.Interfaces;
 using Application.LineParseResult;
 using Common;

@@ -1,4 +1,4 @@
-﻿namespace Application.interfaces
+﻿namespace Application.Interfaces
 {
     public interface IMouseMover
     {

@@ -8,6 +8,8 @@ namespace Application.Enums
     {
         Unknown,
         RivenWindow,
-        ChatWindow
+        ChatWindow,
+        LoadingScreen,
+        LoginScreen
     }
 }
