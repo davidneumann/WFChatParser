@@ -21,8 +21,18 @@ namespace WarframeDriver
                 return ScreenState.LoadingScreen;
             if (IsLoginScreen(bitmap))
                 return ScreenState.LoginScreen;
+            if (IsDailyRewardScreen(bitmap))
+                return ScreenState.DailyRewardScreen;
 
             return ScreenState.Unknown;
+        }
+
+        private bool IsDailyRewardScreen(Bitmap bitmap)
+        {
+            var lightPixels = new Point[] { new Point(2706, 1875), new Point(2743, 1897), new Point(2776, 1897), new Point(2830, 1873), new Point(2956, 1885) };
+            var darkPixels = new Point[] { new Point(2766, 1894), new Point(2868, 1875), new Point(2963, 1879), new Point(3038, 1889), new Point(3162, 1885) };
+            return !lightPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value < 0.65f)
+                && !darkPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value > 0.4f);
         }
 
         private bool IsLoginScreen(Bitmap bitmap)

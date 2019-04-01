@@ -10,6 +10,7 @@ namespace Application.Enums
         RivenWindow,
         ChatWindow,
         LoadingScreen,
-        LoginScreen
+        LoginScreen,
+        DailyRewardScreen
     }
 }

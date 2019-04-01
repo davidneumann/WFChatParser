@@ -70,6 +70,7 @@ namespace Application
         public void AsyncRun(CancellationToken cancellationToken)
         {
             //Check if WF is running
+            var wfAlreadyRunning = System.Diagnostics.Process.GetProcessesByName("Warframe.x64").Length > 0;
             if (System.Diagnostics.Process.GetProcessesByName("Warframe.x64").Length == 0)
             {
                 ////If not start launcher, click play until WF starts
@@ -110,6 +111,7 @@ namespace Application
             while (true)
             {
                 SetForegroundWindow(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
+                _mouse.MoveTo(0, 0);
                 using (var screen = _gameCapture.GetFullImage())
                 {
                     screen.Save("screen.png");
@@ -123,9 +125,11 @@ namespace Application
                 }
             }
             var startTime = DateTime.Now;
-            while(DateTime.Now.Subtract(startTime).TotalMinutes < 1)
+            //We may have missed the loading screen. If we started WF then wait even longer to get to the login screen
+            while (!wfAlreadyRunning && DateTime.Now.Subtract(startTime).TotalMinutes < 1)
             {
                 SetForegroundWindow(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
+                _mouse.MoveTo(0, 0);
                 using (var screen = _gameCapture.GetFullImage())
                 {
                     screen.Save("screen.png");
@@ -141,6 +145,7 @@ namespace Application
 
             //Check if on login screen
             SetForegroundWindow(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
+            _mouse.MoveTo(0, 0);
             using (var screen = _gameCapture.GetFullImage())
             {
                 screen.Save("screen.png");
@@ -164,14 +169,25 @@ namespace Application
                     System.Threading.Thread.Sleep(66);
 
                     _mouse.Click(2945, 1333);
-                    System.Threading.Thread.Sleep(200);
-                    ////If so paste in password and click login
+                    //Give plenty of time for the screen to transition
+                    System.Threading.Thread.Sleep(5000);
                 }
             }
+            EnableWarframeGameCapture();
+
             //Check if on daily reward screen
-            ////IF so cilck what ever the middle most item is
+            SetForegroundWindow(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
+            _mouse.Click(0, 0);
+            using (var screen = _gameCapture.GetFullImage())
+            {
+                screen.Save("screen.png");
+                if (_screenStateHandler.GetScreenState(screen) == Enums.ScreenState.DailyRewardScreen)
+                {
+                    _mouse.Click(2908, 1592);
+                }
+            }
             //start an infinite loop
-            ////Check if is in Warframe controller mode / not in UI interaction mode
+            ////Check if is in Warframe movement mode / not in UI interaction mode
             //////If so open menu 
             //////      -> profile 
             //////      -> glyphs 
@@ -183,6 +199,18 @@ namespace Application
             ////Tell chat parser to parse and send the next page of results
         }
 
+        private void EnableWarframeGameCapture()
+        {
+            if (_obs != null)
+            {
+                var game = _obs.ListScenes().First().Items.First(i => i.SourceName.ToLower().Contains("warframe"));
+                var fields = new JObject();
+                fields.Add("item", game.SourceName);
+                fields.Add("visible", true);
+                _obs.SendRequest("SetSceneItemProperties", fields);
+            }
+        }
+
         private void DisableWarframeGameCapture()
         {
             if (_obs != null)
@@ -190,14 +218,14 @@ namespace Application
                 var game = _obs.ListScenes().First().Items.First(i => i.SourceName.ToLower().Contains("warframe"));
                 var fields = new JObject();
                 fields.Add("item", game.SourceName);
-                fields.Add("visible", "false");
+                fields.Add("visible", false);
                 _obs.SendRequest("SetSceneItemProperties", fields);
             }
         }
 
         public void Dispose()
         {
-            if(_obs != null)
+            if (_obs != null)
                 _obs.Disconnect();
         }
     }
