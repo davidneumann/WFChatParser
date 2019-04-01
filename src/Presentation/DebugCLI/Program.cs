@@ -23,6 +23,9 @@ using Application.Enums;
 using System.Collections.ObjectModel;
 using Pastel;
 using Application;
+using AdysTech.CredentialManager;
+using System.Security;
+using System.Security.Cryptography;
 
 namespace DebugCLI
 {
@@ -39,6 +42,7 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
+            //PasswordShim();
             //WinOcrTest();
             TestBot();
             //testRivenSplit();
@@ -77,6 +81,45 @@ namespace DebugCLI
             //var v = 0.5f;
         }
 
+        private static void PasswordShim()
+        {
+            using (MemoryStream ms = new MemoryStream())
+            {
+                PasswordDeriveBytes pdb = new PasswordDeriveBytes("xizuD7FLFSLPadxsIMqK", new byte[] { 0x32, 0x31, 0x37, 0x35, 0x32, 0x63, 0x31, 0x35, 0x61, 0x37 });
+                Aes aes = new AesManaged();
+                aes.Key = pdb.GetBytes(aes.KeySize / 8);
+                aes.IV = pdb.GetBytes(aes.BlockSize / 8);
+                using (CryptoStream cs = new CryptoStream(ms,
+                  aes.CreateEncryptor(), CryptoStreamMode.Write))
+                {
+                    var pass = Encoding.UTF8.GetBytes("password");
+                    cs.Write(pass, 0, pass.Length);
+                    cs.Close();
+                }
+                var encrypted = Convert.ToBase64String(ms.ToArray());
+
+                CredentialManager.SaveCredentials("Test system", new System.Net.NetworkCredential("test username", encrypted));
+            }
+
+
+            var r = CredentialManager.GetCredentials("test system", CredentialManager.CredentialType.Generic);
+            using (MemoryStream ms = new MemoryStream())
+            {
+                PasswordDeriveBytes pdb = new PasswordDeriveBytes("xizuD7FLFSLPadxsIMqK", new byte[] { 0x32, 0x31, 0x37, 0x35, 0x32, 0x63, 0x31, 0x35, 0x61, 0x37 });
+                Aes aes = new AesManaged();
+                aes.Key = pdb.GetBytes(aes.KeySize / 8);
+                aes.IV = pdb.GetBytes(aes.BlockSize / 8);
+                using (CryptoStream cs = new CryptoStream(ms,
+                  aes.CreateDecryptor(), CryptoStreamMode.Write))
+                {
+                    var input = Convert.FromBase64String(r.Password);
+                    cs.Write(input, 0, input.Length);
+                    cs.Close();
+                    var pass = Encoding.UTF8.GetString(ms.ToArray());
+                }
+            }
+        }
+
         private static void WinOcrTest()
         {
             var rp = new RivenParser();
@@ -111,14 +154,40 @@ namespace DebugCLI
             }
         }
 
+        private static string GetPassword(string key, string salt)
+        {
+            var r = CredentialManager.GetCredentials("WFChatBot", CredentialManager.CredentialType.Generic);
+            using (MemoryStream ms = new MemoryStream())
+            {
+                PasswordDeriveBytes pdb = new PasswordDeriveBytes(key, Encoding.UTF8.GetBytes(salt));
+                Aes aes = new AesManaged();
+                aes.Key = pdb.GetBytes(aes.KeySize / 8);
+                aes.IV = pdb.GetBytes(aes.BlockSize / 8);
+                using (CryptoStream cs = new CryptoStream(ms,
+                  aes.CreateDecryptor(), CryptoStreamMode.Write))
+                {
+                    var input = Convert.FromBase64String(r.Password);
+                    cs.Write(input, 0, input.Length);
+                    cs.Close();
+                    return Encoding.UTF8.GetString(ms.ToArray());
+                }
+            }
+        }
         private static void TestBot()
         {
+            IConfiguration config = new ConfigurationBuilder()
+                 .AddJsonFile("appsettings.json", true, true)
+                 .AddJsonFile("appsettings.development.json", true, true)
+                 .AddJsonFile("appsettings.production.json", true, true)
+                 .Build();
+
+            var password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"]);
             var gc = new GameCapture();
             var bot = new ChatRivenBot(@"C:\Users\david\AppData\Local\Warframe\Downloaded\Public\Tools\Launcher.exe", new MouseHelper(),
                 new ScreenStateHandler(),
                 gc,
-                new ObsSettings() { Url = "ws://localhost:4444/", Password = "password123" }
-                );
+                new ObsSettings() { Url = "ws://localhost:4444/", Password = "password123" },
+                password);
             bot.AsyncRun(new System.Threading.CancellationToken());
         }
 

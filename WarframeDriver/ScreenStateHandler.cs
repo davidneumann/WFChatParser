@@ -1,5 +1,6 @@
 ﻿using Application.Enums;
 using Application.Interfaces;
+using Application.Utils;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -18,8 +19,18 @@ namespace WarframeDriver
                 return ScreenState.ChatWindow;
             if (IsLoadingScreen(bitmap))
                 return ScreenState.LoadingScreen;
+            if (IsLoginScreen(bitmap))
+                return ScreenState.LoginScreen;
 
             return ScreenState.Unknown;
+        }
+
+        private bool IsLoginScreen(Bitmap bitmap)
+        {
+            var lightPixels = new Point[] { new Point(2885, 1324), new Point(2913, 1347), new Point(2928, 1325), new Point(2960, 1339), new Point(3005, 1346) };
+            var darkPixels = new Point[] { new Point(2878, 1336), new Point(2894, 1335), new Point(2921, 1335), new Point(2951, 1328), new Point(2994, 1346) };
+            return !lightPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value < 0.65f)
+                && !darkPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value > 0.4f);
         }
 
         public bool IsExitable(Bitmap b)

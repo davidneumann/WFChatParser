@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Security;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,16 +23,19 @@ namespace Application
         private readonly bool _usingOBS;
         private readonly ObsSettings _obsSettings;
         private OBSWebsocket _obs;
+        private static string _password;
 
         public ChatRivenBot(string launcherFullPath, IMouseMover mouseMover, IScreenStateHandler screenStateHandler,
             IGameCapture gameCapture,
-            ObsSettings obsSettings)
+            ObsSettings obsSettings,
+            string password)
         {
             _launcherPath = launcherFullPath;
             _mouse = mouseMover;
             _screenStateHandler = screenStateHandler;
             _gameCapture = gameCapture;
             _obsSettings = obsSettings;
+            _password = password;
 
             if (_obsSettings != null)
                 ConnectToObs();
@@ -51,6 +55,9 @@ namespace Application
 
         [DllImport("user32.dll")]
         public static extern bool GetWindowRect(IntPtr hwnd, ref Rect rectangle);
+
+        [DllImport("user32.dll")]
+        static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, uint dwExtraInfo);
 
         public struct Rect
         {
@@ -94,6 +101,7 @@ namespace Application
                     if (launcher.HasExited)
                     {
                         DisableWarframeGameCapture();
+                        System.Threading.Thread.Sleep(5000);
                         break;
                     }
                 }
@@ -114,17 +122,52 @@ namespace Application
                         break;
                 }
             }
+            var startTime = DateTime.Now;
+            while(DateTime.Now.Subtract(startTime).TotalMinutes < 1)
+            {
+                SetForegroundWindow(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
+                using (var screen = _gameCapture.GetFullImage())
+                {
+                    screen.Save("screen.png");
+                    if (_screenStateHandler.GetScreenState(screen) != Enums.ScreenState.LoginScreen)
+                    {
+                        //await Task.Delay(1000);
+                        System.Threading.Thread.Sleep(1000);
+                    }
+                    else
+                        break;
+                }
+            }
 
             //Check if on login screen
+            SetForegroundWindow(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
             using (var screen = _gameCapture.GetFullImage())
             {
+                screen.Save("screen.png");
                 if (_screenStateHandler.GetScreenState(screen) == Enums.ScreenState.LoginScreen)
                 {
                     DisableWarframeGameCapture();
+                    _mouse.Click(screen.Width, 0);
+                    _mouse.Click(2671, 1239);
+                    TextCopy.Clipboard.SetText(_password);
+
+                    uint KEYEVENTF_KEYUP = 2;
+                    byte VK_CONTROL = 0x11;
+                    keybd_event(VK_CONTROL, 0, 0, 0);
+                    System.Threading.Thread.Sleep(66);
+                    keybd_event(0x56, 0, 0, 0);
+                    System.Threading.Thread.Sleep(66);
+
+                    keybd_event(0x56, 0, KEYEVENTF_KEYUP, 0);
+                    System.Threading.Thread.Sleep(66);
+                    keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, 0);// 'Left Control Up
+                    System.Threading.Thread.Sleep(66);
+
+                    _mouse.Click(2945, 1333);
+                    System.Threading.Thread.Sleep(200);
+                    ////If so paste in password and click login
                 }
             }
-            ////https://github.com/Palakis/obs-websocket-dotnet black out the obs screen
-            ////If so paste in password and click login
             //Check if on daily reward screen
             ////IF so cilck what ever the middle most item is
             //start an infinite loop
