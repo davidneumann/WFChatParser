@@ -181,22 +181,29 @@ namespace Application
             using (var screen = _gameCapture.GetFullImage())
             {
                 screen.Save("screen.png");
-                if (_screenStateHandler.GetScreenState(screen) == Enums.ScreenState.DailyRewardScreen)
+                var state = _screenStateHandler.GetScreenState(screen);
+                if (state == Enums.ScreenState.DailyRewardScreenItem)
                 {
                     _mouse.Click(2908, 1592);
                 }
+                else if(state == Enums.ScreenState.DailyRewardScreenPlat)
+                    _mouse.Click(3325, 1951);
             }
             //start an infinite loop
-            ////Check if is in Warframe movement mode / not in UI interaction mode
-            //////If so open menu 
-            //////      -> profile 
-            //////      -> glyphs 
-            //////      -> Check if chat icon is in default location or already moved location
-            ////////         If already moved open chat
-            ////////         If in deafult location open chat and move it
-            ////////         If somewhere else, crash
-            //////      -> check if chat is in the default location and if so move it 
-            ////Tell chat parser to parse and send the next page of results
+            while(System.Diagnostics.Process.GetProcessesByName("Warframe.x64").Length > 0)
+            {
+                ////Check if is in Warframe movement mode / not in UI interaction mode
+                
+                //////If so open menu 
+                //////      -> profile 
+                //////      -> glyphs 
+                //////      -> Check if chat icon is in default location or already moved location
+                ////////         If already moved open chat
+                ////////         If in deafult location open chat and move it
+                ////////         If somewhere else, crash
+                //////      -> check if chat is in the default location and if so move it 
+                ////Tell chat parser to parse and send the next page of results
+            }
         }
 
         private void EnableWarframeGameCapture()

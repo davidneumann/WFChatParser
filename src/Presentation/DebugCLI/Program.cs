@@ -42,43 +42,8 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            //PasswordShim();
-            //WinOcrTest();
-            TestBot();
-            //testRivenSplit();
-            //VisualizeClickpoints();
-            //MouseTests();
-            //var t = Task.Run(() => MouseTests());
-            //while(!t.IsCompleted)
-            //{
-            //    System.Threading.Thread.Sleep(1000);
-            //}
-            //if (t.IsFaulted)
-            //    Console.WriteLine(t.Exception);
-
-            //CLIUITests();
-            //SetupFilters();
-            //TestCanExit();
-            //TestRivenParsing();
-            //FixImages();
-            //PrepareRivens();
-            //VisualizeClickpoints();
             //TestScreenHandler();
-            //TestRivenStuff();
-            //SimulateParseRiven();
-            //VerifyNoErrors(2);
-            //JsonMessagerHelper();
-            //TrainOnImages();
-            //var c = new ChatParser();
-            //var cleaner = new ImageCleaner();
-            //cleaner.SaveGreyscaleImage(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png", @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input_white.png", 0.44f);
-            //var res = c.ParseChatImage(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png");
-            //foreach (var line in res)
-            //{
-            //    if (line.Contains(":]"))
-            //        Debugger.Break();
-            //}
-            //var v = 0.5f;
+            TestBot();
         }
 
         private static void PasswordShim()
@@ -479,14 +444,23 @@ namespace DebugCLI
             var c = new GameCapture();
             var ss = new ScreenStateHandler();
 
-            Bitmap b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chat.png");
-            var isChat = ss.GetScreenState(b) == ScreenState.ChatWindow;
-            Console.WriteLine("Is chat: " + isChat + " should be true");
+            using (Bitmap b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chat.png"))
+            {
+                var isChat = ss.GetScreenState(b) == ScreenState.ChatWindow;
+                Console.WriteLine("Is chat: " + isChat + " should be true");
+            }
 
-            b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\riven.png");
-            var isRiven = ss.GetScreenState(b) == ScreenState.RivenWindow;
-            Console.WriteLine("Is riven: " + isRiven + " should be true");
-            b.Dispose();
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\riven.png"))
+            {
+                var isRiven = ss.GetScreenState(b) == ScreenState.RivenWindow;
+                Console.WriteLine("Is riven: " + isRiven + " should be true");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\plat_claim.png"))
+            {
+                var isPlat = ss.GetScreenState(b) == ScreenState.DailyRewardScreenPlat;
+                Console.WriteLine("Is plat: " + isPlat + " should be true");
+            }
         }
 
         private static void TestRivenStuff()

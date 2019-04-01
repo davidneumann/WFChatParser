@@ -11,6 +11,7 @@ namespace Application.Enums
         ChatWindow,
         LoadingScreen,
         LoginScreen,
-        DailyRewardScreen
+        DailyRewardScreenItem,
+        DailyRewardScreenPlat
     }
 }
