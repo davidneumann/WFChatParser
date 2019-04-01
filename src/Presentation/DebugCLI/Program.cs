@@ -39,6 +39,7 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
+            //WinOcrTest();
             TestBot();
             //testRivenSplit();
             //VisualizeClickpoints();
@@ -50,7 +51,7 @@ namespace DebugCLI
             //}
             //if (t.IsFaulted)
             //    Console.WriteLine(t.Exception);
-            
+
             //CLIUITests();
             //SetupFilters();
             //TestCanExit();
@@ -76,15 +77,54 @@ namespace DebugCLI
             //var v = 0.5f;
         }
 
+        private static void WinOcrTest()
+        {
+            var rp = new RivenParser();
+            var rc = new RivenCleaner();
+            if (!Directory.Exists("riven_stuff"))
+                Directory.CreateDirectory("riven_stuff");
+            foreach (var error in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs").Select(f => new FileInfo(f)).Where(f => f.Name.EndsWith(".png")))
+            {
+                using (var image = new Bitmap(error.FullName))
+                {
+                    Bitmap cropped = null;
+                    if (image.Width == 4096)
+                        cropped = rp.CropToRiven(image);
+                    else
+                        cropped = image;
+                    using (var cleaned = rc.CleanRiven(cropped))
+                    {
+                        var result = rp.ParseRivenTextFromImage(cleaned, null);
+                        var sb = new StringBuilder();
+                        sb.AppendLine(result.Name);
+                        foreach (var modi in result.Modifiers)
+                        {
+                            sb.AppendLine(modi.ToString());
+                        }
+                        sb.AppendLine(result.Drain.ToString());
+                        sb.AppendLine(result.MasteryRank + " " + result.Rolls);
+                        File.WriteAllText(Path.Combine("riven_stuff", error.Name.Replace(".png", ".txt")), sb.ToString());
+                        cleaned.Save(Path.Combine("riven_stuff", error.Name));
+                    }
+                    cropped.Dispose();
+                }
+            }
+        }
+
         private static void TestBot()
         {
-            var bot = new ChatRivenBot(@"C:\Users\david\AppData\Local\Warframe\Downloaded\Public\Tools\Launcher.exe", new MouseHelper());
-            bot.AsyncRun(new System.Threading.CancellationToken()).Wait();
+            var gc = new GameCapture();
+            var bot = new ChatRivenBot(@"C:\Users\david\AppData\Local\Warframe\Downloaded\Public\Tools\Launcher.exe", new MouseHelper(),
+                new ScreenStateHandler(),
+                gc,
+                new ObsSettings() { Url = "ws://localhost:4444/", Password = "password123" }
+                );
+            bot.AsyncRun(new System.Threading.CancellationToken());
         }
 
         private static void testRivenSplit()
         {
-            foreach (var error in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs").Select(f => new FileInfo(f)).Where(f => f.Name.StartsWith("error6")))
+            foreach (var error in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs").Select(f => new FileInfo(f)).Where(f => f.Name.StartsWith("test")))
             {
                 using (var cropped = new Bitmap(error.FullName))
                 {

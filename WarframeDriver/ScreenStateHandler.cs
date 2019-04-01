@@ -16,6 +16,8 @@ namespace WarframeDriver
                 return ScreenState.RivenWindow;
             if (isChat(bitmap))
                 return ScreenState.ChatWindow;
+            if (IsLoadingScreen(bitmap))
+                return ScreenState.LoadingScreen;
 
             return ScreenState.Unknown;
         }
@@ -41,6 +43,15 @@ namespace WarframeDriver
             }))
                 return false;
             return true;
+        }
+
+        private bool IsLoadingScreen(Bitmap bitmap)
+        {
+            var warframeLogoPoints = new Point[] { new Point(1885,1964), new Point(1956, 1973), new Point(2003, 2000), new Point(2022, 1985), new Point(2080, 1970), new Point(2116, 2003), new Point(2122, 1977), new Point(2209, 2003) };
+            var notWarframeLogoPoints = new Point[] { new Point(1900, 1969), new Point(1927, 1968), new Point(1956, 1999), new Point(1994, 1977), new Point(2037, 1996), new Point(2069, 1977), new Point(2100, 1996) };
+            var warframePointsPresent = !warframeLogoPoints.Any(p => bitmap.GetPixel(p.X, p.Y).GetBrightness() < 0.95);
+            var notWarframePointsDark = notWarframeLogoPoints.Select(p => bitmap.GetPixel(p.X, p.Y).GetBrightness()).Average() < 0.9;
+            return warframePointsPresent && notWarframePointsDark;
         }
 
         private bool isChat(Bitmap bitmap)
