@@ -61,7 +61,7 @@ namespace Application
                 maxWidth = 88;
             else
                 maxWidth = 44;
-            if (line >= Console.BufferHeight)
+            if (line >= Console.WindowHeight)
                 return;
             if (leftSide)
                 Console.SetCursorPosition(0, line);
@@ -144,18 +144,18 @@ namespace Application
             //Draw vertical seperators
             for (int x = 89; x < 102; x++)
             {
-                for (int y = 0; y < Console.BufferHeight; y++)
+                for (int y = 0; y < Console.WindowHeight; y++)
                 {
                     Console.SetCursorPosition(x, y);
                     Console.Write(ColorString(" "));
                 }
             }
-            for (int y = 0; y < Console.BufferHeight; y++)
+            for (int y = 0; y < Console.WindowHeight; y++)
             {
                 Console.SetCursorPosition(88, y);
                 Console.Write(ColorString("│"));
             }
-            for (int y = 0; y < Console.BufferHeight; y++)
+            for (int y = 0; y < Console.WindowHeight; y++)
             {
                 Console.SetCursorPosition(102, y);
                 Console.Write(ColorString("│"));
@@ -177,7 +177,7 @@ namespace Application
             var line = 4;
             if (_UIMessages.Count > 0)
             {
-                _UIMessages = _UIMessages.Skip(Math.Max(0, _UIMessages.Count - Console.BufferHeight - line)).ToList();
+                _UIMessages = _UIMessages.Skip(Math.Max(0, _UIMessages.Count - Console.WindowHeight - line)).ToList();
                 foreach (var item in _UIMessages)
                 {
                     UpdateUILine(line++, item, true);
@@ -187,7 +187,7 @@ namespace Application
             {
                 UpdateUILine(line++, "No chat messages", true);
             }
-            while (line < Console.BufferHeight)
+            while (line < Console.WindowHeight)
             {
                 UpdateUILine(line++, "", true);
             }
