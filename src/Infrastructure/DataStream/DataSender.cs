@@ -3,6 +3,7 @@ using Application.Interfaces;
 using ImageMagick;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -42,7 +43,7 @@ namespace DataStream
             _redtextMessagePrefix = redtextMessagePrefix;
             _rivenImageMessagePrefix = rivenImageMessagePrefix;
 
-            _jsonSettings.Converters.Add(new StringEnumConverter() { AllowIntegerValues = false });
+            _jsonSettings.Converters.Add(new StringEnumConverter() { AllowIntegerValues = false, NamingStrategy = new CamelCaseNamingStrategy() });
 
             InitWebsocket();
 
@@ -174,9 +175,9 @@ namespace DataStream
             if (_webSocket.ReadyState == WebSocketState.Open)
             {
                 if (_messagePrefix != null && _messagePrefix.Length > 0)
-                    _webSocket.Send(_messagePrefix + JsonConvert.SerializeObject(message, Formatting.Indented, _jsonSettings));
+                    _webSocket.Send(_messagePrefix + JsonConvert.SerializeObject(message, Formatting.None, _jsonSettings));
                 else
-                    _webSocket.Send(JsonConvert.SerializeObject(message, Formatting.Indented, _jsonSettings));
+                    _webSocket.Send(JsonConvert.SerializeObject(message, Formatting.None, _jsonSettings));
                 if (_rawMessagePrefix != null && _rawMessagePrefix.Length > 0)
                     _webSocket.Send(_rawMessagePrefix + message.Raw);
             }
