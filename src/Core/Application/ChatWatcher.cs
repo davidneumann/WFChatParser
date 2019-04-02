@@ -46,7 +46,7 @@ namespace Application
             this._screenStateHandler = screenStateHandler;
 
             Console.SetWindowSize(1, 1);
-            Console.SetBufferSize(147, 9);
+            Console.SetBufferSize(147, 10);
             Console.SetWindowSize(147, 9);
             Console.CursorVisible = false;
             Console.Clear();
@@ -125,7 +125,31 @@ namespace Application
         private void UpdateUI()
         {
             Console.Clear();
+            UpdateUISeperators();
+
+            //Draw left side
+            UpdateUIFirstLine();
+            UpdateUISecondLine();
+            UpdateUIThirdLine();
+
+            UpdateUIMessages();
+
+            //Draw right side
+            UpdateUIRiven(_UILastRiven);
+            Console.SetCursorPosition(0, 0);
+        }
+
+        private void UpdateUISeperators()
+        {
             //Draw vertical seperators
+            for (int x = 89; x < 102; x++)
+            {
+                for (int y = 0; y < Console.BufferHeight; y++)
+                {
+                    Console.SetCursorPosition(x, y);
+                    Console.Write(ColorString(" "));
+                }
+            }
             for (int y = 0; y < Console.BufferHeight; y++)
             {
                 Console.SetCursorPosition(88, y);
@@ -145,17 +169,6 @@ namespace Application
             }
             Console.SetCursorPosition(88, 3);
             Console.Write(ColorString("┤"));
-
-            //Draw left side
-            UpdateUIFirstLine();
-            UpdateUISecondLine();
-            UpdateUIThirdLine();
-
-            UpdateUIMessages();
-
-            //Draw right side
-            UpdateUIRiven(_UILastRiven);
-            Console.SetCursorPosition(0, 0);
         }
 
         private void UpdateUIMessages()
@@ -207,6 +220,7 @@ namespace Application
             var cachedRivenValues = new Dictionary<string, Riven>();
             while (true)
             {
+                UpdateUISeperators();
                 _UISecondLine = null;
                 UpdateUISecondLine();
                 _UIThirdLine = null;

@@ -64,6 +64,7 @@ namespace DataStream
                 }
             }
             _webSocket = new WebSocket(_websocketHostname.AbsoluteUri);
+            _webSocket.Log.Output = (_, __) => { };
             _webSocket.OnMessage += _webSocket_OnMessage;
             _webSocket.OnOpen += _webSocket_OnOpen;
             if (_shouldReconnect)
