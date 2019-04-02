@@ -13,7 +13,7 @@ using MapFlags = SharpDX.Direct3D11.MapFlags;
 
 namespace WFGameCapture
 {
-    public class GameCapture : IGameCapture
+    public class GameCapture : IGameCapture, IDisposable
     {
         private OutputDuplication _duplicateOutput;
         private Texture2D _screenTexture;
@@ -29,6 +29,11 @@ namespace WFGameCapture
         public Device Device { get; private set; }
 
         public GameCapture()
+        {
+            Init();
+        }
+
+        private void Init()
         {
             var factory = new Factory1();
 
@@ -51,7 +56,22 @@ namespace WFGameCapture
             GetOutputAsBitmap(100).Dispose();
         }
 
-        public Texture2D GetOutput(int timeout = 10)
+        public void Dispose()
+        {
+            try
+            {
+                _screenTexture?.Dispose();
+                _screenTexture = null;
+                Adapter.Dispose();
+                Device.Dispose();
+                _duplicateOutput.Dispose();
+            }
+            catch
+            {
+            }
+        }
+
+        public Texture2D GetOutput(int timeout = 50, int triesLeft = 5)
         {
             try
             {
@@ -60,14 +80,29 @@ namespace WFGameCapture
                     _duplicateOutput.ReleaseFrame();
                 }
                 catch (SharpDXException e) when (e.ResultCode == SharpDX.DXGI.ResultCode.InvalidCall) { }
+                catch (SharpDXException e) when (e.ResultCode == SharpDX.DXGI.ResultCode.AccessLost)
+                {
+                    Dispose();
+                    System.Threading.Thread.Sleep(300);
+                    Init();
+                    return GetOutput(timeout: timeout, triesLeft: triesLeft - 1);
+                }
                 var res = _duplicateOutput.TryAcquireNextFrame(timeout, out var frameInfoRef, out var screenResource);
                 if (screenResource == null)
                 {
-                    Console.WriteLine("Res.Code: " + res.Code);
-                    Console.WriteLine("Res.Failure: " + res.Failure);
-                    Console.WriteLine("Res.Success: " + res.Success);
-                    Console.WriteLine("Screen resource busy. Aborted! Returning last image");
-                    return _screenTexture;
+                    if (triesLeft > 0)
+                    {
+                        System.Threading.Thread.Sleep(50);
+                        return GetOutput(timeout: timeout, triesLeft: triesLeft - 1);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Res.Code: " + res.Code);
+                        Console.WriteLine("Res.Failure: " + res.Failure);
+                        Console.WriteLine("Res.Success: " + res.Success);
+                        Console.WriteLine("Screen resource busy. Aborted! Returning last image");
+                        return _screenTexture;
+                    }
                 }
 
                 var clip = ClippingBounds == Rectangle.Empty ? DisplayBounds : ClippingBounds;
@@ -99,7 +134,7 @@ namespace WFGameCapture
             }
         }
 
-        public Bitmap GetOutputAsBitmap(int timeout = 10)
+        public Bitmap GetOutputAsBitmap(int timeout = 50)
         {
             var texture = GetOutput(timeout);
 
