@@ -25,8 +25,18 @@ namespace WarframeDriver
                 return ScreenState.DailyRewardScreenItem;
             if (IsDailyRewardScreenPlat(bitmap))
                 return ScreenState.DailyRewardScreenPlat;
+            if (IsWarframeControl(bitmap))
+                return ScreenState.ControllingWarframe;
 
             return ScreenState.Unknown;
+        }
+
+        private bool IsWarframeControl(Bitmap bitmap)
+        {
+            var lightPixels = new Point[] { new Point(3831, 113), new Point(3874, 154), new Point(3868, 112), new Point(3825, 139), new Point(3825, 154) };
+            var darkPixels = new Point[] { new Point(3850, 112), new Point(3863, 157), new Point(3816, 156), new Point(3814, 111), new Point(3881, 118) };
+            return !lightPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value < 0.65f)
+                && !darkPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value > 0.4f);
         }
 
         private bool IsDailyRewardScreenPlat(Bitmap bitmap)

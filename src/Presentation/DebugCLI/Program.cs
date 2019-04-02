@@ -42,8 +42,8 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            //TestScreenHandler();
-            TestBot();
+            TestScreenHandler();
+            //TestBot();
         }
 
         private static void PasswordShim()
@@ -460,6 +460,18 @@ namespace DebugCLI
             {
                 var isPlat = ss.GetScreenState(b) == ScreenState.DailyRewardScreenPlat;
                 Console.WriteLine("Is plat: " + isPlat + " should be true");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\warframe_pilot1.png"))
+            {
+                var isPiloting = ss.GetScreenState(b) == ScreenState.ControllingWarframe;
+                Console.WriteLine("Is piloting warframe1: " + isPiloting + " should be true");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\warframe_pilot2.png"))
+            {
+                var isPiloting = ss.GetScreenState(b) == ScreenState.ControllingWarframe;
+                Console.WriteLine("Is piloting warframe2: " + isPiloting + " should be true");
             }
         }
 

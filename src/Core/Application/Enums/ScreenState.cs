@@ -12,6 +12,7 @@ namespace Application.Enums
         LoadingScreen,
         LoginScreen,
         DailyRewardScreenItem,
-        DailyRewardScreenPlat
+        DailyRewardScreenPlat,
+        ControllingWarframe
     }
 }
