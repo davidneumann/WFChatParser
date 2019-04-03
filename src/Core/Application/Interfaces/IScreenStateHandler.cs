@@ -10,5 +10,8 @@ namespace Application.Interfaces
     {
         ScreenState GetScreenState(Bitmap bitmap);
         bool IsExitable(Bitmap b);
+        bool IsChatCollapsed(Bitmap screen);
+        bool GlyphFiltersPresent(Bitmap screen);
+        bool IsChatOpen(Bitmap screen);
     }
 }

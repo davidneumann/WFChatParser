@@ -2,6 +2,7 @@
 using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace WarframeDriver
 {
@@ -46,6 +47,23 @@ namespace WarframeDriver
             mouse_event(MOUSEEVENTF_LEFTDOWN, x, y, 0, (IntPtr)0);
             System.Threading.Thread.Sleep(60);
             mouse_event(MOUSEEVENTF_LEFTUP, x, y, 0, (IntPtr)0);
+        }
+
+        public void ClickAndDrag(Point startPoint, Point finalPoint, int timeInMS)
+        {
+            int lerp(int a, int b, float t) => a + (int)((b - a) * t);
+            SetCursorPos(startPoint.X, startPoint.Y);
+            Thread.Sleep(17);
+            mouse_event(MOUSEEVENTF_LEFTDOWN, startPoint.X, startPoint.Y, 0, (IntPtr)0);
+            Thread.Sleep(17);
+            for (int x = 0; x < timeInMS; x+=17)
+            {
+                var t = (float)(x) / timeInMS;
+                SetCursorPos(lerp(startPoint.X, finalPoint.X, t), lerp(startPoint.Y, finalPoint.Y, t));
+                Thread.Sleep(17);
+            }
+            mouse_event(MOUSEEVENTF_LEFTUP, finalPoint.X, finalPoint.Y, 0, (IntPtr)0);
+            Thread.Sleep(17);
         }
     }
 

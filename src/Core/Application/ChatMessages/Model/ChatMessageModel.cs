@@ -14,6 +14,6 @@ namespace Application.ChatMessages.Model
 
         public string DEBUGIMAGE { get; set; }
         public string DEBUGREASON { get; set; }
-        public double SystemTimestamp { get; set; }
+        public long SystemTimestamp { get; set; }
     }
 }

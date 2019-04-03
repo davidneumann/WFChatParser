@@ -26,6 +26,8 @@ using Application;
 using AdysTech.CredentialManager;
 using System.Security;
 using System.Security.Cryptography;
+using System.Threading;
+using Application.Interfaces;
 
 namespace DebugCLI
 {
@@ -38,12 +40,12 @@ namespace DebugCLI
         static void Main(string[] args)
         {
             Console.CancelKeyPress += Console_CancelKeyPress;
-
+            
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            TestScreenHandler();
-            //TestBot();
+            //TestScreenHandler();
+            TestBot();
         }
 
         private static void PasswordShim()
@@ -152,7 +154,8 @@ namespace DebugCLI
                 new ScreenStateHandler(),
                 gc,
                 new ObsSettings() { Url = "ws://localhost:4444/", Password = "password123" },
-                password);
+                password,
+                new KeyboardHelper());
             bot.AsyncRun(new System.Threading.CancellationToken());
         }
 
@@ -416,7 +419,7 @@ namespace DebugCLI
         private static void TestRivenParsing()
         {
             var rp = new RivenParser();
-            var cropped = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\input.png");
+            var cropped = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\error9.png");
             //var cropped = rp.CropToRiven(bitmap);
             cropped.Save("cropped.png");
             //bitmap.Dispose();
@@ -424,7 +427,7 @@ namespace DebugCLI
             var clean = rc.CleanRiven(cropped);
             cropped.Dispose();
             clean.Save("clean.png");
-            var result = rp.ParseRivenTextFromImage(clean, "");
+            var result = rp.ParseRivenTextFromImage(clean, null);
         }
 
         private static void VisualizeClickpoints()
@@ -444,17 +447,25 @@ namespace DebugCLI
             var c = new GameCapture();
             var ss = new ScreenStateHandler();
 
-            using (Bitmap b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chat.png"))
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\loading.png"))
             {
-                var isChat = ss.GetScreenState(b) == ScreenState.ChatWindow;
-                Console.WriteLine("Is chat: " + isChat + " should be true");
+                var isLoading = ss.GetScreenState(b) == ScreenState.LoadingScreen;
+                Console.WriteLine("Is loading: " + isLoading + " should be true");
             }
 
-            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\riven.png"))
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\loading_nobar.png"))
             {
-                var isRiven = ss.GetScreenState(b) == ScreenState.RivenWindow;
-                Console.WriteLine("Is riven: " + isRiven + " should be true");
+                var isLoading = ss.GetScreenState(b) == ScreenState.LoadingScreen;
+                Console.WriteLine("Is loading: " + isLoading + " should be true");
             }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\login.png"))
+            {
+                var isLogin = ss.GetScreenState(b) == ScreenState.LoginScreen;
+                Console.WriteLine("Is login: " + isLogin + " should be true");
+            }
+
+            Console.WriteLine("MISSING TEST DATA FOR NORMAL CLAIM REWARDS SCREEN");
 
             using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\plat_claim.png"))
             {
@@ -472,6 +483,72 @@ namespace DebugCLI
             {
                 var isPiloting = ss.GetScreenState(b) == ScreenState.ControllingWarframe;
                 Console.WriteLine("Is piloting warframe2: " + isPiloting + " should be true");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\warframe_pilot3.png"))
+            {
+                var isPiloting = ss.GetScreenState(b) == ScreenState.ControllingWarframe;
+                Console.WriteLine("Is piloting warframe3: " + isPiloting + " should be true");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\main_menu.png"))
+            {
+                var isMainMenu = ss.GetScreenState(b) == ScreenState.MainMenu;
+                Console.WriteLine("Is main menu: " + isMainMenu + " should be true");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\main_menu2.png"))
+            {
+                var isMainMenu = ss.GetScreenState(b) == ScreenState.MainMenu;
+                Console.WriteLine("Is main menu2: " + isMainMenu + " should be true");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\profile_menu.png"))
+            {
+                var isProfileMenu = ss.GetScreenState(b) == ScreenState.ProfileMenu;
+                Console.WriteLine("Is isProfileMenu: " + isProfileMenu + " should be true");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\glyph_window.png"))
+            {
+                var isGlyphWindow = ss.GetScreenState(b) == ScreenState.GlyphWindow;
+                Console.WriteLine("Is glyph window: " + isGlyphWindow + " should be true");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\glyph_without_filters.png"))
+            {
+                var isNoFilters = !ss.GlyphFiltersPresent(b);
+                Console.WriteLine("Is glyph filters empty: " + isNoFilters + " should be true");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\glyph_with_filters.png"))
+            {
+                var isFilters = ss.GlyphFiltersPresent(b);
+                Console.WriteLine("Is glyph filters: " + isFilters + " should be true");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\chat_collapsed.png"))
+            {
+                var isChatCollapsed = ss.IsChatCollapsed(b);
+                Console.WriteLine("Is chat closed: " + isChatCollapsed + " should be true");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\chat_collapsed2.png"))
+            {
+                var isChatCollapsed = ss.IsChatCollapsed(b);
+                Console.WriteLine("Is chat closed2: " + isChatCollapsed + " should be true");
+            }
+
+            using (Bitmap b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chat.png"))
+            {
+                var isChat = ss.IsChatOpen(b);
+                Console.WriteLine("Is chat open: " + isChat + " should be true");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\riven.png"))
+            {
+                var isRiven = ss.GetScreenState(b) == ScreenState.RivenWindow;
+                Console.WriteLine("Is riven: " + isRiven + " should be true");
             }
         }
 
@@ -503,7 +580,7 @@ namespace DebugCLI
                 foreach (var click in clr.ClickPoints)
                 {
                     b = c.GetFullImage();
-                    if (ss.GetScreenState(b) == ScreenState.ChatWindow)
+                    if (ss.IsChatOpen(b))
                     {
                         //Hover over riven
                         System.Threading.Thread.Sleep(17);
@@ -866,6 +943,29 @@ namespace DebugCLI
                     fout.WriteLine(sb.ToString() + "[");
                 }
             }
+        }
+    }
+
+    class DummySender : IDataSender
+    {
+        public async Task AsyncSendChatMessage(ChatMessageModel message)
+        {
+        }
+
+        public async Task AsyncSendDebugMessage(string message)
+        {
+        }
+
+        public async Task AsyncSendRedtext(string rawMessage)
+        {
+        }
+
+        public async Task AsyncSendRivenImage(Guid imageID, Bitmap image)
+        {
+        }
+
+        public async Task AsyncSendRivenImage(Guid imageID, string rivenBase64)
+        {
         }
     }
 }

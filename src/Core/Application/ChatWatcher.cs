@@ -257,7 +257,7 @@ namespace Application
                     UpdateUIFirstLine();
                     continue;
                 }
-                if (_screenStateHandler.GetScreenState(image) != ScreenState.ChatWindow)
+                if (!_screenStateHandler.IsChatOpen(image))
                 {
                     if (_screenStateHandler.IsExitable(image))
                     {
@@ -494,7 +494,7 @@ namespace Application
                             {
                                 b = _gameCapture.GetFullImage();
                                 var state = _screenStateHandler.GetScreenState(b);
-                                if (state == ScreenState.ChatWindow)
+                                if (_screenStateHandler.IsChatOpen(b))
                                 {
                                     b.Dispose();
                                     break;

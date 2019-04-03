@@ -15,8 +15,6 @@ namespace WarframeDriver
         {
             if (IsRiven(bitmap))
                 return ScreenState.RivenWindow;
-            if (isChat(bitmap))
-                return ScreenState.ChatWindow;
             if (IsLoadingScreen(bitmap))
                 return ScreenState.LoadingScreen;
             if (IsLoginScreen(bitmap))
@@ -27,16 +25,46 @@ namespace WarframeDriver
                 return ScreenState.DailyRewardScreenPlat;
             if (IsWarframeControl(bitmap))
                 return ScreenState.ControllingWarframe;
+            if (IsMainMenu(bitmap))
+                return ScreenState.MainMenu;
+            if (IsProfileMenu(bitmap))
+                return ScreenState.ProfileMenu;
+            if (IsGlyphScreen(bitmap))
+                return ScreenState.GlyphWindow;
 
             return ScreenState.Unknown;
         }
 
-        private bool IsWarframeControl(Bitmap bitmap)
+        private bool IsGlyphScreen(Bitmap bitmap)
         {
-            var lightPixels = new Point[] { new Point(3831, 113), new Point(3874, 154), new Point(3868, 112), new Point(3825, 139), new Point(3825, 154) };
-            var darkPixels = new Point[] { new Point(3850, 112), new Point(3863, 157), new Point(3816, 156), new Point(3814, 111), new Point(3881, 118) };
+            var lightPixels = new Point[] { new Point(1953, 118), new Point(1983, 175), new Point(2045, 147), new Point(2118, 135), new Point(2185, 170) };
+            var darkPixels = new Point[] { new Point(1928, 142), new Point(1989, 163), new Point(2045, 119), new Point(2099, 133), new Point(2162, 159) };
             return !lightPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value < 0.65f)
                 && !darkPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value > 0.4f);
+        }
+
+        private bool IsProfileMenu(Bitmap bitmap)
+        {
+            var lightPixels = new Point[] { new Point(569, 929), new Point(585, 956), new Point(659, 980), new Point(673, 926), new Point(760, 951) };
+            var darkPixels = new Point[] { new Point(571, 957), new Point(647, 953), new Point(694, 932), new Point(749, 940), new Point(810, 932) };
+            return !lightPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value < 0.65f)
+                && !darkPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value > 0.4f);
+        }
+
+        private bool IsMainMenu(Bitmap bitmap)
+        {
+            var lightPixels = new Point[] { new Point(554, 959), new Point(650, 975), new Point(680, 933), new Point(778, 950), new Point(810, 977) };
+            var darkPixels = new Point[] { new Point(568, 942), new Point(626, 972), new Point(700, 948), new Point(771, 939), new Point(902, 956) };
+            return !lightPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value < 0.65f)
+                && !darkPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value > 0.4f);
+        }
+
+        private bool IsWarframeControl(Bitmap bitmap)
+        {
+            var miniProfileIconPoints = new Point[] { new Point(198, 172), new Point(208, 171), new Point(218, 170), new Point(228, 173), new Point(238, 174), new Point(248, 170) };
+            var largeProfileIconPoints = new Point[] { new Point(196, 194), new Point(206, 199), new Point(216, 195), new Point(226, 196), new Point(236, 197), new Point(246, 198) };
+            return !miniProfileIconPoints.Any(p => { var pixel = bitmap.GetPixel(p.X, p.Y); return pixel.R >= 178 && pixel.R <= 198 && pixel.G >= 155 && pixel.G <= 175 && pixel.B >= 91 && pixel.B <= 111; })
+                && !largeProfileIconPoints.Any(p => { var pixel = bitmap.GetPixel(p.X, p.Y); return pixel.R >= 178 && pixel.R <= 198 && pixel.G >= 155 && pixel.G <= 175 && pixel.B >= 91 && pixel.B <= 111; });
         }
 
         private bool IsDailyRewardScreenPlat(Bitmap bitmap)
@@ -75,20 +103,20 @@ namespace WarframeDriver
                 return false;
             }))
                 return false;
-            if(lightPixles.Any(p =>
-            {
-                var pixel = b.GetPixel(p.X, p.Y);
-                if (pixel.R < 180 || pixel.G < 180 || pixel.G < 180)
-                    return true;
-                return false;
-            }))
+            if (lightPixles.Any(p =>
+             {
+                 var pixel = b.GetPixel(p.X, p.Y);
+                 if (pixel.R < 180 || pixel.G < 180 || pixel.G < 180)
+                     return true;
+                 return false;
+             }))
                 return false;
             return true;
         }
 
         private bool IsLoadingScreen(Bitmap bitmap)
         {
-            var warframeLogoPoints = new Point[] { new Point(1885,1964), new Point(1956, 1973), new Point(2003, 2000), new Point(2022, 1985), new Point(2080, 1970), new Point(2116, 2003), new Point(2122, 1977), new Point(2209, 2003) };
+            var warframeLogoPoints = new Point[] { new Point(1885, 1964), new Point(1956, 1973), new Point(2003, 2000), new Point(2022, 1985), new Point(2080, 1970), new Point(2116, 2003), new Point(2122, 1977), new Point(2209, 2003) };
             var notWarframeLogoPoints = new Point[] { new Point(1900, 1969), new Point(1927, 1968), new Point(1956, 1999), new Point(1994, 1977), new Point(2037, 1996), new Point(2069, 1977), new Point(2100, 1996) };
             var warframePointsPresent = !warframeLogoPoints.Any(p => bitmap.GetPixel(p.X, p.Y).GetBrightness() < 0.95);
             var notWarframePointsDark = notWarframeLogoPoints.Select(p => bitmap.GetPixel(p.X, p.Y).GetBrightness()).Average() < 0.9;
@@ -116,7 +144,7 @@ namespace WarframeDriver
             if (p.R > 40 || p.G > 40 || p.B > 40) //Not super dark
                 return false;
             p = bitmap.GetPixel(76, 2122);
-            if (p.R < 65 || p.G < 65 || p.B < 65 || 
+            if (p.R < 65 || p.G < 65 || p.B < 65 ||
                 p.R > 95 || p.G > 95 || p.B > 95) //Not kinda darkish
                 return false;
 
@@ -151,6 +179,41 @@ namespace WarframeDriver
                 return false;
 
             return true;
+        }
+
+        public bool IsChatCollapsed(Bitmap screen)
+        {
+            //Already moved down pixels
+            var lightPixelsLower = new Point[] { new Point(151, 2115), new Point(158, 2136), new Point(166, 2115), new Point(173, 2124), new Point(171, 2136) };
+            var darkPixelsLower = new Point[] { new Point(156, 2120), new Point(168, 2131), new Point(172, 2110), new Point(146, 2118), new Point(176, 2133) };
+            var isLowerAndCollapsed = !lightPixelsLower.Any(p => screen.GetPixel(p.X, p.Y).ToHsv().Value <= 0.3f)
+                && !darkPixelsLower.Any(p => screen.GetPixel(p.X, p.Y).ToHsv().Value >= 0.15f);
+            if (isLowerAndCollapsed)
+                return true;
+
+            //Not yet moved down pixels
+            var lightPixelsHigher = lightPixelsLower.Select(p => new Point(p.X, p.Y - 27));
+            var darkPixelsHigher = darkPixelsLower.Select(p => new Point(p.X, p.Y - 27));
+            var isHigherAndCollapsed = !lightPixelsHigher.Any(p => screen.GetPixel(p.X, p.Y).ToHsv().Value <= 0.3f)
+                && !darkPixelsHigher.Any(p => screen.GetPixel(p.X, p.Y).ToHsv().Value >= 0.15f);
+
+            return isLowerAndCollapsed || isHigherAndCollapsed;
+        }
+
+        public bool GlyphFiltersPresent(Bitmap bitmap)
+        {
+            var lightPixels = new Point[] { new Point(367, 256), new Point(401, 275), new Point(427, 257), new Point(440, 272), new Point(456, 255) };
+            var darkPixels = new Point[] { new Point(369, 261), new Point(395, 271), new Point(419, 264), new Point(447, 251), new Point(460, 265) };
+            return !lightPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value <= 0.5f)
+                && !darkPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value >= 0.5f);
+        }
+
+        public bool IsChatOpen(Bitmap screen)
+        {
+            var lightPixels = new Point[] { new Point(147, 617), new Point(154, 617), new Point(170, 612), new Point(175, 629), new Point(153, 634) };
+            var darkPixels = new Point[] { new Point(151, 608), new Point(154, 630), new Point(170, 630), new Point(172, 608), new Point(162, 609) };
+            return !lightPixels.Any(p => screen.GetPixel(p.X, p.Y).ToHsv().Value <= 0.5f)
+                && !darkPixels.Any(p => screen.GetPixel(p.X, p.Y).ToHsv().Value >= 0.5f);
         }
     }
 }

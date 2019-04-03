@@ -8,11 +8,13 @@ namespace Application.Enums
     {
         Unknown,
         RivenWindow,
-        ChatWindow,
         LoadingScreen,
         LoginScreen,
         DailyRewardScreenItem,
         DailyRewardScreenPlat,
-        ControllingWarframe
+        ControllingWarframe,
+        MainMenu,
+        ProfileMenu,
+        GlyphWindow
     }
 }
