@@ -80,8 +80,8 @@ namespace ImageOCR
 
         public Riven ParseRivenTextFromImage(Bitmap croppedRiven, string parsedName)
         {
-            if (croppedRiven.Width != 560 && croppedRiven.Height != 760)
-                return null;
+            //if (croppedRiven.Width != 560 && croppedRiven.Height != 760)
+            //    return null;
 
             Riven result = new Riven()
             {

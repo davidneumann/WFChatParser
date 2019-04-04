@@ -86,7 +86,7 @@ namespace WFImageParser
                     //Clean up bottom corners
                     for (int x = 0; x < 25; x++)
                     {
-                        for (int y = 587; y < 587+48; y++)
+                        for (int y = 587; y < 587 + 48; y++)
                         {
                             outputImage[x, y] = Rgba32.White;
                         }
@@ -109,7 +109,9 @@ namespace WFImageParser
                 mem.Dispose();
             }
 
-            return result;
+            var smallCropped = result.Clone(new System.Drawing.Rectangle(0, 0, result.Width, result.Height - 1), System.Drawing.Imaging.PixelFormat.Format1bppIndexed);
+            result.Dispose();
+            return smallCropped;
         }
 
         public void PrepareRivenFromFullscreenImage(string imagePath, string outputPath)
