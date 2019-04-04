@@ -210,9 +210,10 @@ namespace DataStream
                 Reconnect();
         }
 
-        public async Task AsyncSendRivenImage(Guid imageID, Bitmap image)
+        public async Task AsyncSendRivenImage(Guid imageID, Bitmap bitmap)
         {
             var b = new BackgroundWorker();
+            var image = new Bitmap(bitmap);
             b.DoWork += (sender, e) =>
             {
                 var memImage = new MemoryStream();

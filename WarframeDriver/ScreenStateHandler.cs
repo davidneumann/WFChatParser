@@ -151,34 +151,20 @@ namespace WarframeDriver
             return true;
         }
 
+        private bool IsPurple(Color color)
+        {
+            var hsv = color.ToHsv();
+            var h = hsv.Hue;
+            var v = hsv.Value;
+            if (h > 240 && h < 280
+                && v > 0.45)
+                return true;
+            return false;
+        }
         private bool IsRiven(Bitmap bitmap)
         {
-            var p = bitmap.GetPixel(2009, 284);
-            if (p.R > 100 || p.G > 100 || p.B > 100) //Not dark
-                return false;
-            p = bitmap.GetPixel(2015, 285);
-            if (p.R < 200 || p.G < 200 || p.B < 200) //Not bright
-                return false;
-            p = bitmap.GetPixel(2022, 286);
-            if (p.R > 100 || p.G > 100 || p.B > 100) //Not Dark
-                return false;
-            p = bitmap.GetPixel(2028, 283);
-            if (p.R < 200 || p.G < 200 || p.B < 200) //Not bright
-                return false;
-            p = bitmap.GetPixel(2033, 282);
-            if (p.R > 100 || p.G > 100 || p.B > 100) //Not dark
-                return false;
-            p = bitmap.GetPixel(2005, 300);
-            if (p.R > 100 || p.G > 100 || p.B > 100) //Not dark
-                return false;
-            p = bitmap.GetPixel(2012, 298);
-            if (p.R < 200 || p.G < 200 || p.B < 200) //Not bright
-                return false;
-            p = bitmap.GetPixel(2021, 300);
-            if (p.R > 100 || p.G > 100 || p.B > 100) //Not dark
-                return false;
-
-            return true;
+            var purplePixelAnchors = new Point[] { new Point(1831, 1160), new Point(2262, 1160), new Point(2262, 459), new Point(2250, 517), new Point(1815, 432), new Point(2338, 896) };
+            return !purplePixelAnchors.Any(p => !IsPurple(bitmap.GetPixel(p.X, p.Y)));
         }
 
         public bool IsChatCollapsed(Bitmap screen)

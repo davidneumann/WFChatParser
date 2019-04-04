@@ -44,7 +44,7 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            AsyncRivenParsingShim();
+            //AsyncRivenParsingShim();
             //TestScreenHandler();
             TestBot();
         }
@@ -211,14 +211,28 @@ namespace DebugCLI
                  .AddJsonFile("appsettings.production.json", true, true)
                  .Build();
 
+            var dataSender = new DataSender(new Uri(config["DataSender:HostName"]),
+                config.GetSection("DataSender:ConnectionMessages").GetChildren().Select(i => i.Value),
+                config["DataSender:MessagePrefix"],
+                config["DataSender:DebugMessagePrefix"],
+                true,
+                config["DataSender:RawMessagePrefix"],
+                config["DataSender:RedtextMessagePrefix"],
+                config["DataSender:RivenImageMessagePrefix"]);
+
             var password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"]);
             var gc = new GameCapture();
+            //var obs = new ObsSettings() { Url = "ws://localhost:4444/", Password = "password123" };
             var bot = new ChatRivenBot(@"C:\Users\david\AppData\Local\Warframe\Downloaded\Public\Tools\Launcher.exe", new MouseHelper(),
                 new ScreenStateHandler(),
                 gc,
-                new ObsSettings() { Url = "ws://localhost:4444/", Password = "password123" },
+                null,
                 password,
-                new KeyboardHelper());
+                new KeyboardHelper(),
+                new ChatParser(),
+                dataSender,
+                new RivenCleaner(),
+                new RivenParserFactory());
             bot.AsyncRun(new System.Threading.CancellationToken());
         }
 

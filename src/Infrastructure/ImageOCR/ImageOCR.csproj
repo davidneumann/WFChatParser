@@ -52,6 +52,7 @@
   <ItemGroup>
     <Compile Include="RivenParser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RivenParserFactory.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

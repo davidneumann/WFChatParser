@@ -1,6 +1,8 @@
-﻿using Application.Enums;
+﻿using Application.ChatMessages.Model;
+using Application.Enums;
 using Application.Interfaces;
 using Application.Interfaces;
+using Application.LineParseResult;
 using Newtonsoft.Json.Linq;
 using OBSWebsocketDotNet;
 using System;
@@ -11,6 +13,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -23,7 +26,10 @@ namespace Application
         private readonly IScreenStateHandler _screenStateHandler;
         private readonly IGameCapture _gameCapture;
         private readonly IKeyboard _keyboard;
-        private readonly bool _usingOBS;
+        private readonly IChatParser _chatParser;
+        private readonly IDataSender _dataSender;
+        private readonly IRivenCleaner _rivenCleaner;
+        private readonly IRivenParserFactory _rivenParserFactory;
         private readonly ObsSettings _obsSettings;
         private OBSWebsocket _obs;
         private static string _password;
@@ -32,7 +38,11 @@ namespace Application
             IGameCapture gameCapture,
             ObsSettings obsSettings,
             string password,
-            IKeyboard keyboard)
+            IKeyboard keyboard,
+            IChatParser chatParser,
+            IDataSender dataSender,
+            IRivenCleaner rivenCleaner,
+            IRivenParserFactory rivenParserFactory)
         {
             _launcherPath = launcherFullPath;
             _mouse = mouseMover;
@@ -41,6 +51,10 @@ namespace Application
             _obsSettings = obsSettings;
             _password = password;
             _keyboard = keyboard;
+            _chatParser = chatParser;
+            _dataSender = dataSender;
+            _rivenCleaner = rivenCleaner;
+            _rivenParserFactory = rivenParserFactory;
 
             if (_obsSettings != null)
                 ConnectToObs();
@@ -84,7 +98,8 @@ namespace Application
 
             //Check if on daily reward screen
             ClaimDailyReward();
-            
+
+            var cropper = _rivenParserFactory.CreateRivenParser();
             //start an infinite loop
             while (System.Diagnostics.Process.GetProcessesByName("Warframe.x64").Length > 0)
             {
@@ -94,17 +109,207 @@ namespace Application
                 {
                     screen.Save("screen.png");
                     var state = _screenStateHandler.GetScreenState(screen);
-                    if (state == Enums.ScreenState.ControllingWarframe)
+                    if (state != Enums.ScreenState.GlyphWindow)
                     {
                         GoToGlyphScreenAndSetupFilters();
                     }
-                    else
+                    else if (state == ScreenState.GlyphWindow && _screenStateHandler.IsChatOpen(screen))
                     {
-                        ////Tell chat parser to parse and send the next page of results
+                        var chatLines = _chatParser.ParseChatImage(screen, true, true, 30);
+                        var workItems = new List<RivenParseTaskWorkItem>();
+                        foreach (var line in chatLines)
+                        {
+                            if (line.LineType == LineParseResult.LineType.RedText)
+                            {
+                                _dataSender.AsyncSendRedtext(line.RawMessage).Wait();
+                            }
+                            else if (line.LineType == LineParseResult.LineType.NewMessage && line is ChatMessageLineResult)
+                            {
+                                var clr = line as ChatMessageLineResult;
+                                var chatModel = MakeChatModel(line as LineParseResult.ChatMessageLineResult);
+                                if (clr.ClickPoints.Count == 0)
+                                    _dataSender.AsyncSendChatMessage(chatModel);
+                                else
+                                {
+                                    var crops = new List<RivenParseTaskWorkItemDetails>();
+                                    foreach (var clickpoint in clr.ClickPoints)
+                                    {
+                                        //Click riven
+                                        _mouse.MoveTo(clickpoint.X, clickpoint.Y);
+                                        Thread.Sleep(17);
+                                        _mouse.Click(clickpoint.X, clickpoint.Y);
+                                        Thread.Sleep(45);
+                                        _mouse.MoveTo(0, 0);
+                                        Thread.Sleep(45);
+
+                                        //Wait for riven to open
+                                        Bitmap crop = null;
+                                        var foundRiven = false;
+                                        for (int tries = 0; tries < 6; tries++)
+                                        {
+                                            var sw = new Stopwatch();
+                                            sw.Start();
+                                            using (var b = _gameCapture.GetFullImage())
+                                            {
+                                                Console.WriteLine("Got capture in: " + sw.Elapsed.TotalSeconds);
+                                                sw.Stop();
+                                                if (_screenStateHandler.GetScreenState(b) == ScreenState.RivenWindow)
+                                                {
+                                                    Console.WriteLine("found riven after: " + (tries + 1) + " tries");
+                                                    foundRiven = true;
+                                                    crop = cropper.CropToRiven(b);
+
+                                                    _mouse.Click(3816, 2013);
+                                                    Thread.Sleep(17);
+                                                    _mouse.MoveTo(0, 0);
+                                                    Thread.Sleep(17);
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        if (!foundRiven || crop == null)
+                                        {
+                                            _chatParser.InvalidCache(line.GetKey());
+                                            if (crop != null)
+                                                crop.Dispose();
+                                            break;
+                                        }
+                                        for (int tries = 0; tries < 6; tries++)
+                                        {
+                                            using (var b = _gameCapture.GetFullImage())
+                                            {
+                                                var subState = _screenStateHandler.GetScreenState(b);
+                                                if (_screenStateHandler.IsChatOpen(b))
+                                                {
+                                                    break;
+                                                }
+                                                else if (tries < 5 && subState == ScreenState.RivenWindow)
+                                                {
+                                                    Thread.Sleep(17);
+                                                    //_mouse.Click(3816, 2013);
+                                                    //Thread.Sleep(17);
+                                                    //_mouse.MoveTo(0, 0);
+                                                    //Thread.Sleep(80);
+                                                }
+                                                else if(tries >= 5 && _screenStateHandler.IsExitable(b))
+                                                {
+                                                    _mouse.Click(3816, 2013);
+                                                    Thread.Sleep(17);
+                                                    _mouse.MoveTo(0, 0);
+                                                    Thread.Sleep(17);
+                                                }
+                                            }
+                                        }
+                                        crops.Add(new RivenParseTaskWorkItemDetails() { RivenIndex = clickpoint.Index, RivenName = clickpoint.RivenName, CroppedRivenBitmap = crop });
+                                    }
+                                    workItems.Add(new RivenParseTaskWorkItem() { Model = chatModel, RivenWorkDetails = crops });
+                                }
+                            }
+                        }
+                        workItems.ForEach(item =>
+                        {
+                            var modelTask = new Task(() =>
+                            {
+                                var tasks = item.RivenWorkDetails.Select(r =>
+                                {
+                                    var t = new Task<Riven>(() =>
+                                    {
+                                        using (var cleaned = _rivenCleaner.CleanRiven(r.CroppedRivenBitmap))
+                                        {
+                                            var parser = _rivenParserFactory.CreateRivenParser();
+                                            var riven = parser.ParseRivenTextFromImage(cleaned, null);
+                                            riven.Polarity = parser.ParseRivenPolarityFromColorImage(r.CroppedRivenBitmap);
+                                            riven.Rank = parser.ParseRivenRankFromColorImage(r.CroppedRivenBitmap);
+                                            riven.MessagePlacementId = r.RivenIndex;
+                                            riven.Name = r.RivenName;
+                                            _dataSender.AsyncSendRivenImage(riven.ImageID, r.CroppedRivenBitmap);
+                                            //r.CroppedRivenBitmap.Dispose();
+
+                                            if (parser is IDisposable)
+                                                ((IDisposable)parser).Dispose();
+                                            return riven;
+                                        }
+                                    });
+                                    t.Start();
+                                    return t;
+                                });
+                                var rivens = Task.WhenAll(tasks).Result.ToList();
+                                rivens.ForEach(r => item.Model.Rivens.Add(r));
+                                _dataSender.AsyncSendChatMessage(item.Model);
+                            });
+                            modelTask.Start();
+                        });
                     }
                 }
-                break;
+                //Scroll down to get 27 more messages
+                _mouse.MoveTo(3250, 768);
+                //Scroll down for new page of messages
+                for (int i = 0; i < 27; i++)
+                {
+                    _mouse.ScrollDown();
+                    Thread.Sleep(17);
+                }
+                for (int i = 0; i < 1; i++)
+                {
+                    _mouse.ScrollUp();//Pause chat
+                    Thread.Sleep(17);
+                }
+                _mouse.MoveTo(0, 0);
+                Thread.Sleep(100);
             }
+            if (cropper is IDisposable)
+                ((IDisposable)cropper).Dispose();
+        }
+
+        private class RivenParseTaskWorkItem
+        {
+            public ChatMessageModel Model { get; set; }
+            public List<RivenParseTaskWorkItemDetails> RivenWorkDetails { get; set; } = new List<RivenParseTaskWorkItemDetails>();
+        }
+
+        private class RivenParseTaskWorkItemDetails
+        {
+            public string RivenName { get; set; }
+            public int RivenIndex { get; set; }
+            public Bitmap CroppedRivenBitmap { get; set; }
+        }
+
+        private static ChatMessageModel MakeChatModel(LineParseResult.ChatMessageLineResult line)
+        {
+            var badNameRegex = new Regex("[^-A-Za-z0-9._]");
+            var m = line.RawMessage;
+            string debugReason = null;
+            var timestamp = m.Substring(0, 7).Trim();
+            var username = "Unknown";
+            try
+            {
+                username = m.Substring(8).Trim();
+                if (username.IndexOf(":") > 0 && username.IndexOf(":") < username.IndexOf(" "))
+                    username = username.Substring(0, username.IndexOf(":"));
+                else
+                {
+                    username = username.Substring(0, username.IndexOf(" "));
+                    debugReason = "Bade name: " + username;
+                }
+                if (username.Contains(" ") || username.Contains(@"\/") || username.Contains("]") || username.Contains("[") || badNameRegex.Match(username).Success)
+                {
+                    debugReason = "Bade name: " + username;
+                }
+            }
+            catch { debugReason = "Bade name: " + username; }
+            var cm = new ChatMessageModel()
+            {
+                Raw = m,
+                Author = username,
+                Timestamp = timestamp,
+                SystemTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+            };
+            if (debugReason != null)
+            {
+                cm.DEBUGREASON = debugReason;
+            }
+            cm.EnhancedMessage = line.EnhancedMessage;
+            return cm;
         }
 
         private void GoToGlyphScreenAndSetupFilters()
@@ -291,7 +496,7 @@ namespace Application
                 }
                 else
                     throw new NavigationException(ScreenState.MainMenu);
-            }          
+            }
         }
 
         private void EnableWarframeGameCapture()
