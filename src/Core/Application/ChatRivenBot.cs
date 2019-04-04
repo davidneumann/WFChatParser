@@ -6,6 +6,7 @@ using Application.LineParseResult;
 using Newtonsoft.Json.Linq;
 using OBSWebsocketDotNet;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -58,6 +59,49 @@ namespace Application
 
             if (_obsSettings != null)
                 ConnectToObs();
+        }
+
+        private ConcurrentQueue<RivenParseTaskWorkItem> _rivenWorkQueue = new ConcurrentQueue<RivenParseTaskWorkItem>();
+
+        public static void ProcessRivenQueue(CancellationToken c, IRivenParserFactory factory, IDataSender dataSender, ConcurrentQueue<RivenParseTaskWorkItem> queue, IRivenCleaner cleaner)
+        {
+            var parser = factory.CreateRivenParser();
+            while (true)
+            {
+                if (c.IsCancellationRequested)
+                    break;
+                RivenParseTaskWorkItem item = null;
+                if (!queue.TryDequeue(out item) || item == null)
+                {
+                    Thread.Sleep(250);
+                    continue;
+                }
+                foreach (var r in item.RivenWorkDetails)
+                {
+                    using (var croppedCopy = new Bitmap(r.CroppedRivenBitmap))
+                    {
+                        using (var cleaned = cleaner.CleanRiven(croppedCopy))
+                        {
+                            using (var cleanedCopy = new Bitmap(cleaned))
+                            {
+                                var riven = parser.ParseRivenTextFromImage(cleanedCopy, null);
+                                riven.Polarity = parser.ParseRivenPolarityFromColorImage(croppedCopy);
+                                riven.Rank = parser.ParseRivenRankFromColorImage(croppedCopy);
+
+                                riven.MessagePlacementId = r.RivenIndex;
+                                riven.Name = r.RivenName;
+                                dataSender.AsyncSendRivenImage(riven.ImageID, croppedCopy);
+                                r.CroppedRivenBitmap.Dispose();
+
+                                if (parser is IDisposable)
+                                    ((IDisposable)parser).Dispose();
+                                item.Model.Rivens.Add(riven);
+                            }
+                        }
+                    }
+                    dataSender.AsyncSendChatMessage(item.Model);
+                }
+            }
         }
 
         private void ConnectToObs()
@@ -191,7 +235,7 @@ namespace Application
                                                     //_mouse.MoveTo(0, 0);
                                                     //Thread.Sleep(80);
                                                 }
-                                                else if(tries >= 5 && _screenStateHandler.IsExitable(b))
+                                                else if (tries >= 5 && _screenStateHandler.IsExitable(b))
                                                 {
                                                     _mouse.Click(3816, 2013);
                                                     Thread.Sleep(17);
@@ -261,13 +305,13 @@ namespace Application
                 ((IDisposable)cropper).Dispose();
         }
 
-        private class RivenParseTaskWorkItem
+        public class RivenParseTaskWorkItem
         {
             public ChatMessageModel Model { get; set; }
             public List<RivenParseTaskWorkItemDetails> RivenWorkDetails { get; set; } = new List<RivenParseTaskWorkItemDetails>();
         }
 
-        private class RivenParseTaskWorkItemDetails
+        public class RivenParseTaskWorkItemDetails
         {
             public string RivenName { get; set; }
             public int RivenIndex { get; set; }
