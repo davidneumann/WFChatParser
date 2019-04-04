@@ -40,12 +40,75 @@ namespace DebugCLI
         static void Main(string[] args)
         {
             Console.CancelKeyPress += Console_CancelKeyPress;
-            
+
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
+            AsyncRivenParsingShim();
             //TestScreenHandler();
             TestBot();
+        }
+
+        private static void AsyncRivenParsingShim()
+        {
+            var images = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\").SelectMany(f => new string[] { f, f, f, f, f, }).Where(f => f.EndsWith(".png")).ToArray();
+            Console.WriteLine("Riven inputs: " + images.Length);
+            var rc = new RivenCleaner();
+            var rp = new RivenParser();
+            var bitmaps = images.Select(f =>
+            {
+                var bitmap = new Bitmap(f);
+                if (bitmap.Width == 4096)
+                {
+                    var cropped = rp.CropToRiven(bitmap);
+                    bitmap.Dispose();
+                    return cropped;
+                }
+                else
+                    return bitmap;
+            }).Select(b =>
+            {
+                var cleaned = rc.CleanRiven(b);
+                return new { Cleaned = cleaned, Cropped = b };
+            }).ToArray();
+
+            var sw = new Stopwatch();
+            //var serialRivens = new List<Riven>();
+            //sw.Start();
+            //foreach (var bitmap in bitmaps)
+            //{
+            //    var riven = rp.ParseRivenTextFromImage(bitmap.Cleaned, null);
+            //    riven.Rank = rp.ParseRivenRankFromColorImage(bitmap.Cropped);
+            //    riven.Polarity = rp.ParseRivenPolarityFromColorImage(bitmap.Cropped);
+            //    serialRivens.Add(riven);
+            //}
+            //sw.Stop();
+            //Console.WriteLine("Serial parse time: " + sw.Elapsed.TotalSeconds);
+
+            Console.WriteLine("starting parallel parse");
+            sw.Restart();
+            var tasks = bitmaps.Select(b =>
+            {
+                var t = new Task<Riven>(() =>
+                {
+                    using (var parser = new RivenParser())
+                    {
+                        var riven = parser.ParseRivenTextFromImage(b.Cleaned, null);
+                        riven.Polarity = parser.ParseRivenPolarityFromColorImage(b.Cropped);
+                        riven.Rank = parser.ParseRivenRankFromColorImage(b.Cropped);
+                        Console.WriteLine("Task finished");
+                        return riven;
+                    }
+                });
+                t.Start();
+                return t;
+            }).ToArray();
+            Console.WriteLine("Starting sleep");
+            Thread.Sleep(28 * 1000);
+            Console.WriteLine("Sleep finished");
+            var done = Task.WhenAll(tasks).Result;
+            sw.Stop();
+            Console.WriteLine("Parallel parse time: " + sw.Elapsed.TotalSeconds);
         }
 
         private static void PasswordShim()
