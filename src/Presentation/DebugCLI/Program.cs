@@ -30,6 +30,7 @@ using System.Threading;
 using Application.Interfaces;
 using System.Collections.Concurrent;
 using static Application.ChatRivenBot;
+using Application.LogParser;
 
 namespace DebugCLI
 {
@@ -280,16 +281,7 @@ namespace DebugCLI
                 config["DataSender:RawMessagePrefix"],
                 config["DataSender:RedtextMessagePrefix"],
                 config["DataSender:RivenImageMessagePrefix"]);
-
-            dataSender.AsyncSendChatMessage(new ChatMessageModel()
-            {
-                Author = "Teacup",
-                Raw = "I'm a little tea cup short and stout",
-                Rivens = new List<Riven>()
-                {
-                    new Riven(){ Name = "Tea maximizer"}
-                }
-            }).Wait();
+            
             var password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"]);
             var gc = new GameCapture();
             //var obs = new ObsSettings() { Url = "ws://localhost:4444/", Password = "password123" };
@@ -1105,6 +1097,10 @@ namespace DebugCLI
         }
 
         public async Task AsyncSendRedtext(string rawMessage)
+        {
+        }
+
+        public async Task AsyncSendRedtext(RedTextMessage message)
         {
         }
 

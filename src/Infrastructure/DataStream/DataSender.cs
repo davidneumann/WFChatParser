@@ -1,5 +1,6 @@
 ﻿using Application.ChatMessages.Model;
 using Application.Interfaces;
+using Application.LogParser;
 using ImageMagick;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -95,7 +96,7 @@ namespace DataStream
 
         private BackgroundWorker _reconnectWorker = new BackgroundWorker();
         private string _rawMessagePrefix;
-        private JsonSerializerSettings _jsonSettings = new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore, ContractResolver = new IgnoreEmptyEnumerablesResolver() };
+        private JsonSerializerSettings _jsonSettings = new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore, ContractResolver = new CompactDataSenderResolver() };
         
 
         private void Reconnect()
@@ -194,13 +195,13 @@ namespace DataStream
                 Reconnect();
         }
 
-        public async Task AsyncSendRedtext(string redtext)
-        {
-            if (_redtextMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
-                _webSocket.Send(_redtextMessagePrefix + redtext);
-            else if (_shouldReconnect)
-                Reconnect();
-        }
+        //public async Task AsyncSendRedtext(string redtext)
+        //{
+        //    if (_redtextMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
+        //        _webSocket.Send(_redtextMessagePrefix + redtext);
+        //    else if (_shouldReconnect)
+        //        Reconnect();
+        //}
 
         public async Task AsyncSendRivenImage(Guid imageId, string rivenBase64)
         {
@@ -237,6 +238,14 @@ namespace DataStream
                 image.Dispose();
             };
             b.RunWorkerAsync();
+        }
+
+        public async Task AsyncSendRedtext(RedTextMessage message)
+        {
+            if (_redtextMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
+                _webSocket.Send(_redtextMessagePrefix + JsonConvert.SerializeObject(message, _jsonSettings));
+            else if (_shouldReconnect)
+                Reconnect();
         }
     }
 

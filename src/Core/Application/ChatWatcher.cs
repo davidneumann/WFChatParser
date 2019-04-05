@@ -205,7 +205,7 @@ namespace Application
 
         public async Task MonitorLive(string debugImageDectory = null)
         {
-            _redTextParser.OnRedText += async redtext => await _dataSender.AsyncSendRedtext(JsonConvert.SerializeObject(redtext));
+            _redTextParser.OnRedText += async redtext => await _dataSender.AsyncSendRedtext(redtext);
 
             if (debugImageDectory != null && !Directory.Exists(debugImageDectory))
                 Directory.CreateDirectory(debugImageDectory);

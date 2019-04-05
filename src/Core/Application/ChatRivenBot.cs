@@ -134,7 +134,7 @@ namespace Application
 
         public void AsyncRun(CancellationToken cancellationToken)
         {
-            _redTextParser.OnRedText += async redtext => await _dataSender.AsyncSendRedtext(JsonConvert.SerializeObject(redtext));
+            _redTextParser.OnRedText += async redtext => await _dataSender.AsyncSendRedtext(redtext);
 
             //Check if WF is running
             var wfAlreadyRunning = System.Diagnostics.Process.GetProcessesByName("Warframe.x64").Length > 0;

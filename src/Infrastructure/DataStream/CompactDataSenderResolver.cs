@@ -1,25 +1,36 @@
 ﻿/// Credit: Will Ray - https://stackoverflow.com/a/34903827
 
 using Application.ChatMessages.Model;
+using Application.LogParser;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
+using System;
 using System.Collections;
 using System.Reflection;
 
 namespace DataStream
 {
-    public class IgnoreEmptyEnumerablesResolver : DefaultContractResolver
+    public class CompactDataSenderResolver : DefaultContractResolver
     {
-        public new static readonly IgnoreEmptyEnumerablesResolver Instance = new IgnoreEmptyEnumerablesResolver();
+        public new static readonly CompactDataSenderResolver Instance = new CompactDataSenderResolver();
 
         protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
         {
-            NamingStrategy = new CamelCaseNamingStrategy();
             var property = base.CreateProperty(member, memberSerialization);
 
             if (property.PropertyType == typeof(string) && property.PropertyName == nameof(ChatMessageModel.Timestamp))
                 property.ShouldSerialize = Instance => false;
-            else if (property.PropertyType != typeof(string) &&
+
+            if (property.DeclaringType == typeof(RedTextMessage) && property.PropertyName == nameof(RedTextMessage.SentTime))
+                property.PropertyName = "sent";
+
+            if (property.PropertyType == typeof(DateTime) || property.PropertyType == typeof(DateTimeOffset))
+            {
+                property.Converter = new UnixDateTimeConverter();
+            }
+
+            if (property.PropertyType != typeof(string) &&
                 typeof(IEnumerable).IsAssignableFrom(property.PropertyType))
             {
                 property.ShouldSerialize = instance =>
@@ -60,6 +71,7 @@ namespace DataStream
                 };
             }
 
+            NamingStrategy = new CamelCaseNamingStrategy();
             return property;
         }
     }

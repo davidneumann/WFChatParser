@@ -71,7 +71,7 @@ namespace ChatLoggerCLI
                 catch { }
             };
 
-            var watcher = new ChatWatcher(dataSender, c, new GameCapture(), new MouseHelper(), new RivenCleaner(), rivenParser, new ScreenStateHandler());
+            var watcher = new ChatWatcher(dataSender, c, new GameCapture(), new MouseHelper(), new RivenCleaner(), rivenParser, new ScreenStateHandler(), new Application.LogParser.RedTextParser());
             //var bot = new ChatRivenBot()
             Task t =  Task.Run(() => watcher.MonitorLive(config["DEBUG:ImageDirectory"]));
             while(true)
