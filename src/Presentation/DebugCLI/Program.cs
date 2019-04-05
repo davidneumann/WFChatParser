@@ -46,14 +46,25 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            AsyncRivenParsingShim();
+            TestRedText();
+            //AsyncRivenParsingShim();
             //TestScreenHandler();
             //TestBot();
         }
 
+        private static void TestRedText()
+        {
+            var input = @"C:\Users\david\OneDrive\Documents\WFChatParser\ErrorImages\Screenshot (175).png";
+            var cleaner = new ImageCleaner();
+            cleaner.SaveChatColors(input, "test.png");
+            cleaner.SaveSoftMask(input, "test2.png");
+            var cp = new ChatParser();
+            var lines = cp.ParseChatImage(new Bitmap(input), false, false, 50);
+        }
+
         private static void AsyncRivenParsingShim()
         {
-            var images = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\").SelectMany(f => new string[] { f, f, f, f, f, }).Where(f => f.EndsWith(".png")).ToArray();
+            var images = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\")/*.SelectMany(f => new string[] { f, f, f, f, f, })*/.Where(f => f.EndsWith(".png")).ToArray();
             Console.WriteLine("Riven inputs: " + images.Length);
             var rc = new RivenCleaner();
             var rp = new RivenParser();

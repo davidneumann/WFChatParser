@@ -92,9 +92,6 @@ namespace Application
                                 riven.Name = r.RivenName;
                                 dataSender.AsyncSendRivenImage(riven.ImageID, croppedCopy);
                                 r.CroppedRivenBitmap.Dispose();
-
-                                if (parser is IDisposable)
-                                    ((IDisposable)parser).Dispose();
                                 item.Model.Rivens.Add(riven);
                             }
                         }
@@ -102,6 +99,9 @@ namespace Application
                     dataSender.AsyncSendChatMessage(item.Model);
                 }
             }
+
+            if (parser is IDisposable)
+                ((IDisposable)parser).Dispose();
         }
 
         private void ConnectToObs()
