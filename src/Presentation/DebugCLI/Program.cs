@@ -46,10 +46,26 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            WinOcrTest();
+            //ParseChatImage();
+            //GenerateCharStrings(150);
+            VerifyNoErrors(2);
+            //WinOcrTest();
             //AsyncRivenParsingShim();
             //TestScreenHandler();
             //TestBot();
+        }
+
+        private static void ParseChatImage()
+        {
+            using (var bitmap = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Validation Inputs\error_blurry1.png"))
+            {
+                var cp = new ChatParser();
+                var lines = cp.ParseChatImage(bitmap);
+                foreach (var line in lines)
+                {
+                    Console.WriteLine(line.RawMessage);
+                }
+            }
         }
 
         private static void TestRedText()
@@ -190,7 +206,7 @@ namespace DebugCLI
             var rc = new RivenCleaner();
             if (!Directory.Exists("riven_stuff"))
                 Directory.CreateDirectory("riven_stuff");
-            foreach (var error in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs").Select(f => new FileInfo(f)).Where(f => f.Name.EndsWith(".png")))
+            foreach (var error in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs").Select(f => new FileInfo(f)).Where(f => f.Name.EndsWith("13.png")))
             {
                 using (var image = new Bitmap(error.FullName))
                 {
@@ -209,6 +225,8 @@ namespace DebugCLI
                     {
                         cleaned.Save(Path.Combine("riven_stuff", error.Name));
                         var result = rp.ParseRivenTextFromImage(cleaned, null);
+                        result.Polarity = rp.ParseRivenPolarityFromColorImage(cropped);
+                        result.Rank = rp.ParseRivenRankFromColorImage(cropped);
                         var sb = new StringBuilder();
                         sb.AppendLine(result.Name);
                         if (result.Modifiers != null)
@@ -1041,7 +1059,7 @@ namespace DebugCLI
                         sb.Append(character + " ");
                     }
                     Console.WriteLine(sb.ToString().Trim() + "[" + "\n");
-                    fout.WriteLine(sb.ToString() + "[");
+                    fout.WriteLine(sb.ToString() + " [");
                 }
             }
         }

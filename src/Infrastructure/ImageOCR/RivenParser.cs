@@ -11,6 +11,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Tesseract;
+using Application.Utils;
 
 namespace ImageOCR
 {
@@ -196,16 +197,20 @@ namespace ImageOCR
             return 8;
         }
 
-        private bool PixelIsPurple(Point p, Bitmap bitmap)
+        private bool IsPurple(Point p, Bitmap bitmap)
         {
             var pixel = bitmap.GetPixel(p.X, p.Y);
-            return pixel.R > 155 && pixel.G > 110 && pixel.B > 187;
+            var hsv = pixel.ToHsv();
+            if (hsv.Hue >= 240 && hsv.Hue <= 280
+                && hsv.Value >= 0.4)
+                return true;
+            return false;
         }
         private Polarity GetPolarity(Bitmap croppedRiven)
         {
-            var dashMatches = _dashPixels.Count(p => PixelIsPurple(p, croppedRiven));
-            var vMatches = _vPixels.Count(p => PixelIsPurple(p, croppedRiven));
-            var dMatches = _dPixels.Count(p => PixelIsPurple(p, croppedRiven));
+            var dashMatches = _dashPixels.Count(p => IsPurple(p, croppedRiven));
+            var vMatches = _vPixels.Count(p => IsPurple(p, croppedRiven));
+            var dMatches = _dPixels.Count(p => IsPurple(p, croppedRiven));
 
             if (dashMatches > _dashPixels.Count * 0.9)
                 return Polarity.Naramon;
