@@ -362,6 +362,8 @@ namespace Application
                         newSW.Restart();
                         var clr = line as ChatMessageLineResult;
                         var message = MakeChatModel(line as LineParseResult.ChatMessageLineResult, badNameRegex);
+                        if (!Regex.Match(message.Raw, @"^(\[\d\d:\d\d\]) ([-A-Za-z0-9._]+):?\s+(.+)").Success)
+                            message.DEBUGREASON = "Invalid username or timestamp!";
                         newMessags++;
 
                         for (int i = 0; i < clr.ClickPoints.Count; i++)
