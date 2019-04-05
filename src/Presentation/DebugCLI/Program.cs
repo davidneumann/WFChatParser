@@ -47,7 +47,7 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            //ParseChatImage();
+            ParseChatImage();
             //GenerateCharStrings(150);
             //VerifyNoErrors(2);
             //WinOcrTest();
@@ -58,9 +58,11 @@ namespace DebugCLI
 
         private static void ParseChatImage()
         {
-            using (var bitmap = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Validation Inputs\error_blurry1.png"))
+            using (var bitmap = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\ErrorImages\debug_image_2019-05-4--11-30-03-684.png"))
             {
                 var cp = new ChatParser();
+                var ic = new ImageCleaner();
+                ic.SaveSoftMask(@"C:\Users\david\OneDrive\Documents\WFChatParser\ErrorImages\debug_image_2019-05-4--11-30-03-684.png", "test.png");
                 var lines = cp.ParseChatImage(bitmap);
                 foreach (var line in lines)
                 {

@@ -799,6 +799,7 @@ namespace WFImageParser
                     //Tiny elements have huge variance from random noise. Give them a boost.
                     //if (character.TotalWeights < 40)
                     //    coverage *= 1.2f;
+
                     if (coverage > bestMatch)
                     {
                         bestMatch = coverage;

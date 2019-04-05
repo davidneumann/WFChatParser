@@ -35,6 +35,8 @@ namespace WFImageParser
                     var color = GetColor(x, y);
                     if (color == ChatColor.Unknown || color == ChatColor.Redtext)
                         v = 0;
+                    else if (color == ChatColor.ChatTimestampName)
+                        v = Math.Min(1f, (v / 0.8f)); //Timestamps and username max out at 0.8
                     //else if (color == ChatColor.Redtext)
                     //    v += 0.3f;
                     _valueMap[x, y] = v;

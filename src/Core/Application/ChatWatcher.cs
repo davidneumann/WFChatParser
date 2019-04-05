@@ -203,12 +203,12 @@ namespace Application
             return ColorString(input.Substring(0, Math.Min(input.Length, maxWidth)));
         }
 
-        public async Task MonitorLive(string debugImageDectory = null)
+        public async Task MonitorLive(string debugImageDirectory = null)
         {
             _redTextParser.OnRedText += async redtext => await _dataSender.AsyncSendRedtext(redtext);
 
-            if (debugImageDectory != null && !Directory.Exists(debugImageDectory))
-                Directory.CreateDirectory(debugImageDectory);
+            if (debugImageDirectory != null && !Directory.Exists(debugImageDirectory))
+                Directory.CreateDirectory(debugImageDirectory);
             if (!Directory.Exists(Path.Combine(Path.GetTempPath(), "wfchat")))
                 Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "wfchat"));
             if (!Directory.Exists(Path.Combine(Path.GetTempPath(), "wfchat", "rivens")))
@@ -319,8 +319,8 @@ namespace Application
                 sw.Restart();
 
                 string debugImageName = null;
-                if (debugImageDectory != null)
-                    debugImageName = Path.Combine(debugImageDectory, "debug_image_" + DateTime.Now.ToString("yyyy-dd-M--HH-mm-ss-fff") + ".png");
+                if (debugImageDirectory != null)
+                    debugImageName = Path.Combine(debugImageDirectory, "debug_image_" + DateTime.Now.ToString("yyyy-dd-M--HH-mm-ss-fff") + ".png");
 
                 var newMessags = 0;
                 var shouldCopyImage = false;
