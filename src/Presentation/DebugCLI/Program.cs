@@ -46,7 +46,7 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            TestRedText();
+            WinOcrTest();
             //AsyncRivenParsingShim();
             //TestScreenHandler();
             //TestBot();
@@ -196,22 +196,31 @@ namespace DebugCLI
                 {
                     Bitmap cropped = null;
                     if (image.Width == 4096)
+                    {
                         cropped = rp.CropToRiven(image);
+                        var ss = new ScreenStateHandler();
+                        var state = ss.GetScreenState(image);
+                        if (state != ScreenState.RivenWindow)
+                            System.Diagnostics.Debugger.Break();
+                    }
                     else
                         cropped = image;
                     using (var cleaned = rc.CleanRiven(cropped))
                     {
+                        cleaned.Save(Path.Combine("riven_stuff", error.Name));
                         var result = rp.ParseRivenTextFromImage(cleaned, null);
                         var sb = new StringBuilder();
                         sb.AppendLine(result.Name);
-                        foreach (var modi in result.Modifiers)
+                        if (result.Modifiers != null)
                         {
-                            sb.AppendLine(modi.ToString());
+                            foreach (var modi in result.Modifiers)
+                            {
+                                sb.AppendLine(modi.ToString());
+                            }
                         }
                         sb.AppendLine(result.Drain.ToString());
                         sb.AppendLine(result.MasteryRank + " " + result.Rolls);
                         File.WriteAllText(Path.Combine("riven_stuff", error.Name.Replace(".png", ".txt")), sb.ToString());
-                        cleaned.Save(Path.Combine("riven_stuff", error.Name));
                     }
                     cropped.Dispose();
                 }
@@ -361,7 +370,7 @@ namespace DebugCLI
             else if (dMatches > _dashPixels.Count * 0.9)
                 return Polarity.Vazarin;
             else
-                return Polarity.Unkown;
+                return Polarity.Unknown;
         }
 
         private static string ColorString(string input) => input.Pastel("#bea966").PastelBg("#162027");

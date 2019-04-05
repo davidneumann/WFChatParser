@@ -17,6 +17,6 @@
         Zenurik,
         Precept,
         Unairu,
-        Unkown
+        Unknown
     }
 }

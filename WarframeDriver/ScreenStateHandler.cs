@@ -157,13 +157,13 @@ namespace WarframeDriver
             var h = hsv.Hue;
             var v = hsv.Value;
             if (h > 240 && h < 280
-                && v > 0.45)
+                && v > 0.65)
                 return true;
             return false;
         }
         private bool IsRiven(Bitmap bitmap)
         {
-            var purplePixelAnchors = new Point[] { new Point(1831, 1160), new Point(2262, 1160), new Point(2262, 459), new Point(2250, 517), new Point(1815, 432), new Point(2338, 896) };
+            var purplePixelAnchors = new Point[] { new Point(1831, 1160), new Point(2262, 1160), new Point(2262, 459), new Point(2337, 1061), new Point(1815, 432), new Point(2338, 896) };
             return !purplePixelAnchors.Any(p => !IsPurple(bitmap.GetPixel(p.X, p.Y)));
         }
 

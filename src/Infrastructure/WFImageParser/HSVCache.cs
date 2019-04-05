@@ -33,7 +33,7 @@ namespace WFImageParser
                     var hsvPixel = _converter.ToHsv(_image[x, y]);
                     var v = Math.Max(0,(hsvPixel.V - 0.21f)) / (1f - 0.21f);
                     var color = GetColor(x, y);
-                    if (color == ChatColor.Unkown)
+                    if (color == ChatColor.Unknown)
                         v = 0;
                     else if (color == ChatColor.Redtext)
                         v += 0.3f;
@@ -67,7 +67,7 @@ namespace WFImageParser
             if ((hsvPixel.H <= 1 || hsvPixel.H >= 359) && hsvPixel.S >= 0.7f && hsvPixel.S <= 0.8f)
                 return ChatColor.Redtext;
 
-            return ChatColor.Unkown;
+            return ChatColor.Unknown;
         }
 
         internal enum ChatColor
@@ -76,7 +76,7 @@ namespace WFImageParser
             Redtext,
             Text,
             ItemLink,
-            Unkown
+            Unknown
         }
 
         //internal Hsv GetHsv(int x, int y)

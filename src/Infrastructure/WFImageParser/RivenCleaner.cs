@@ -1,4 +1,5 @@
 ﻿using Application.Interfaces;
+using Application.Utils;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.ColorSpaces.Conversion;
 using SixLabors.ImageSharp.Formats.Png;
@@ -29,10 +30,9 @@ namespace WFImageParser
         private bool IsPurple(Rgba32 p)
         {
             var color = Color.FromArgb(p.R, p.G, p.B);
-            var h = color.GetHue();
-            var v = color.GetBrightness();
-            if (h > 240 && h < 280
-                && v > 0.45)
+            var hsv = color.ToHsv();
+            if (hsv.Hue >= 240 && hsv.Hue <= 280
+                && hsv.Value >= 0.4)
                 return true;
             return false;
         }

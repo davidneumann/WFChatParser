@@ -85,7 +85,7 @@ namespace ImageOCR
 
             Riven result = new Riven()
             {
-                Polarity = Polarity.Unkown,
+                Polarity = Polarity.Unknown,
                 Rank = 0,
             };
 
@@ -214,7 +214,7 @@ namespace ImageOCR
             else if (dMatches > _dashPixels.Count * 0.9)
                 return Polarity.Vazarin;
             else
-                return Polarity.Unkown;
+                return Polarity.Unknown;
         }
 
         public Bitmap CropToRiven(Bitmap bitmap)
