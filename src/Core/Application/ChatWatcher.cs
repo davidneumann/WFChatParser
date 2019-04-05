@@ -601,7 +601,7 @@ namespace Application
                 Raw = m,
                 Author = username,
                 Timestamp = timestamp,
-                SystemTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                SystemTimestamp = DateTimeOffset.UtcNow
             };
             if (debugReason != null)
             {
