@@ -16,6 +16,8 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Pastel;
 using ImageMagick;
+using Application.LogParser;
+using Newtonsoft.Json;
 
 namespace Application
 {
@@ -33,9 +35,11 @@ namespace Application
         private string _UISecondLine;
         private string _UIFirstLine;
         private Riven _UILastRiven = null;
+        private RedTextParser _redTextParser;
 
         public ChatWatcher(IDataSender dataSender, IChatParser chatParser, IGameCapture gameCapture, IMouseMover mouseMover, IRivenCleaner rivenCleaner, IRivenParser rivenParser,
-            IScreenStateHandler screenStateHandler)
+            IScreenStateHandler screenStateHandler,
+            RedTextParser redTextParser)
         {
             this._dataSender = dataSender;
             this._chatParser = chatParser;
@@ -44,6 +48,7 @@ namespace Application
             this._rivenCleaner = rivenCleaner;
             this._rivenParser = rivenParser;
             this._screenStateHandler = screenStateHandler;
+            _redTextParser = redTextParser;
 
             Console.SetWindowSize(1, 1);
             Console.SetBufferSize(147, 10);
@@ -200,6 +205,8 @@ namespace Application
 
         public async Task MonitorLive(string debugImageDectory = null)
         {
+            _redTextParser.OnRedText += async redtext => await _dataSender.AsyncSendRedtext(JsonConvert.SerializeObject(redtext));
+
             if (debugImageDectory != null && !Directory.Exists(debugImageDectory))
                 Directory.CreateDirectory(debugImageDectory);
             if (!Directory.Exists(Path.Combine(Path.GetTempPath(), "wfchat")))
@@ -339,13 +346,13 @@ namespace Application
                         lines.ToList().ForEach(l => _chatParser.InvalidCache(l.GetKey()));
                         break;
                     }
-                    if (line.LineType == LineParseResult.LineType.RedText)
-                    {
-                        _UISecondLine = "Handing redtext: " + line.RawMessage;
-                        UpdateUISecondLine();
-                        //await _dataSender.AsyncSendRedtext(line.RawMessage);
-                    }
-                    else if (line.LineType == LineParseResult.LineType.NewMessage && line is ChatMessageLineResult)
+                    //if (line.LineType == LineParseResult.LineType.RedText)
+                    //{
+                    //    _UISecondLine = "Handing redtext: " + line.RawMessage;
+                    //    UpdateUISecondLine();
+                    //    //await _dataSender.AsyncSendRedtext(line.RawMessage);
+                    //}
+                    if (line.LineType == LineParseResult.LineType.NewMessage && line is ChatMessageLineResult)
                     {
                         _UISecondLine = "Current msg: " + line.RawMessage;
                         UpdateUISecondLine();

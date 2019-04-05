@@ -181,12 +181,16 @@ namespace WFImageParser
                     }
 
                     var color = image.GetColor(maxPoint.X, maxPoint.Y);
-                    if (color == ImageCache.ChatColor.Redtext)
+                    if(color == ImageCache.ChatColor.Ignored)
                     {
-                        result = new RedtextLineResult();
-                        currentLineType = LineType.RedText;
+                        return null;
                     }
-                    else if (color == ImageCache.ChatColor.Text || color == ImageCache.ChatColor.ItemLink)
+                    //if (color == ImageCache.ChatColor.Redtext)
+                    //{
+                    //    result = new RedtextLineResult();
+                    //    currentLineType = LineType.RedText;
+                    //}
+                    if (color == ImageCache.ChatColor.Text || color == ImageCache.ChatColor.ItemLink)
                     {
                         result = new ChatMessageLineResult();
                         currentLineType = LineType.Continuation;
@@ -865,18 +869,18 @@ namespace WFImageParser
                         if (i >= endLine && line.LineType != LineType.Continuation)
                             break;
 
-                        //Add redtext to results
-                        if (line != null && line.LineType == LineType.RedText && !_sentItems.Any(item => item == line.RawMessage))
-                        {
-                            if(results.Count > 0 && results.Last().LineType == LineType.RedText)
-                            {
-                                var last = results.Last();
-                                _sentItems.Enqueue(last.RawMessage);
-                                _sentItems.Enqueue(line.RawMessage);
-                                last.RawMessage += " " + line.RawMessage;
-                            }
-                            results.Add(line);
-                        }
+                        ////Add redtext to results
+                        //if (line != null && line.LineType == LineType.RedText && !_sentItems.Any(item => item == line.RawMessage))
+                        //{
+                        //    if(results.Count > 0 && results.Last().LineType == LineType.RedText)
+                        //    {
+                        //        var last = results.Last();
+                        //        _sentItems.Enqueue(last.RawMessage);
+                        //        _sentItems.Enqueue(line.RawMessage);
+                        //        last.RawMessage += " " + line.RawMessage;
+                        //    }
+                        //    results.Add(line);
+                        //}
 
                         //Reset the known type when we hit a kick message to prevent accidently combining messages
                         if (line != null && line.RawMessage != null && line.RawMessage.Length > 0 && kickRegex.Match(line.RawMessage).Success)

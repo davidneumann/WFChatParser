@@ -170,11 +170,11 @@ namespace Application
                         var workItems = new List<RivenParseTaskWorkItem>();
                         foreach (var line in chatLines)
                         {
-                            if (line.LineType == LineParseResult.LineType.RedText)
-                            {
-                                //_dataSender.AsyncSendRedtext(line.RawMessage).Wait();
-                            }
-                            else if (line.LineType == LineParseResult.LineType.NewMessage && line is ChatMessageLineResult)
+                            //if (line.LineType == LineParseResult.LineType.RedText)
+                            //{
+                            //    //_dataSender.AsyncSendRedtext(line.RawMessage).Wait();
+                            //}
+                            if (line.LineType == LineParseResult.LineType.NewMessage && line is ChatMessageLineResult)
                             {
                                 var clr = line as ChatMessageLineResult;
                                 var chatModel = MakeChatModel(line as LineParseResult.ChatMessageLineResult);

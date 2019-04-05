@@ -33,10 +33,10 @@ namespace WFImageParser
                     var hsvPixel = _converter.ToHsv(_image[x, y]);
                     var v = Math.Max(0,(hsvPixel.V - 0.21f)) / (1f - 0.21f);
                     var color = GetColor(x, y);
-                    if (color == ChatColor.Unknown)
+                    if (color == ChatColor.Unknown || color == ChatColor.Redtext)
                         v = 0;
-                    else if (color == ChatColor.Redtext)
-                        v += 0.3f;
+                    //else if (color == ChatColor.Redtext)
+                    //    v += 0.3f;
                     _valueMap[x, y] = v;
                     _valueMapMask[x, y] = true;
                 }
@@ -64,19 +64,20 @@ namespace WFImageParser
                 return ChatColor.Text;
             if (hsvPixel.H >= 190 && hsvPixel.H <= 210 && hsvPixel.V >= 0.25) // blue
                 return ChatColor.ItemLink;
-            if ((hsvPixel.H <= 1 || hsvPixel.H >= 359) && hsvPixel.S >= 0.7f && hsvPixel.S <= 0.8f)
-                return ChatColor.Redtext;
+            if ((hsvPixel.H <= 1 || hsvPixel.H >= 359) && hsvPixel.S >= 0.7f && hsvPixel.S <= 0.8f) //redtext
+                return ChatColor.Ignored;
 
             return ChatColor.Unknown;
         }
 
         internal enum ChatColor
         {
+            Unknown,
             ChatTimestampName,
             Redtext,
             Text,
             ItemLink,
-            Unknown
+            Ignored
         }
 
         //internal Hsv GetHsv(int x, int y)
