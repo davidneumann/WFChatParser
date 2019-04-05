@@ -17,6 +17,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Application.LogParser;
+using Newtonsoft.Json;
 
 namespace Application
 {
@@ -32,6 +34,7 @@ namespace Application
         private readonly IRivenCleaner _rivenCleaner;
         private readonly IRivenParserFactory _rivenParserFactory;
         private readonly ObsSettings _obsSettings;
+        private readonly RedTextParser _redTextParser;
         private OBSWebsocket _obs;
         private static string _password;
 
@@ -43,7 +46,8 @@ namespace Application
             IChatParser chatParser,
             IDataSender dataSender,
             IRivenCleaner rivenCleaner,
-            IRivenParserFactory rivenParserFactory)
+            IRivenParserFactory rivenParserFactory,
+            RedTextParser redTextParser)
         {
             _launcherPath = launcherFullPath;
             _mouse = mouseMover;
@@ -56,6 +60,7 @@ namespace Application
             _dataSender = dataSender;
             _rivenCleaner = rivenCleaner;
             _rivenParserFactory = rivenParserFactory;
+            _redTextParser = redTextParser;
 
             if (_obsSettings != null)
                 ConnectToObs();
@@ -129,6 +134,8 @@ namespace Application
 
         public void AsyncRun(CancellationToken cancellationToken)
         {
+            _redTextParser.OnRedText += async redtext => await _dataSender.AsyncSendRedtext(JsonConvert.SerializeObject(redtext));
+
             //Check if WF is running
             var wfAlreadyRunning = System.Diagnostics.Process.GetProcessesByName("Warframe.x64").Length > 0;
             if (System.Diagnostics.Process.GetProcessesByName("Warframe.x64").Length == 0)
@@ -165,7 +172,7 @@ namespace Application
                         {
                             if (line.LineType == LineParseResult.LineType.RedText)
                             {
-                                _dataSender.AsyncSendRedtext(line.RawMessage).Wait();
+                                //_dataSender.AsyncSendRedtext(line.RawMessage).Wait();
                             }
                             else if (line.LineType == LineParseResult.LineType.NewMessage && line is ChatMessageLineResult)
                             {
