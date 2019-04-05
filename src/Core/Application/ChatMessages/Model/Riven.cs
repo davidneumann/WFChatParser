@@ -12,6 +12,6 @@ namespace Application.ChatMessages.Model
         public int MasteryRank { get; set; }
         public int Rolls { get; set; }
         public string Name { get; set; }
-        public Guid ImageID { get; set; } = Guid.Empty;
+        public Guid ImageId { get; set; } = Guid.Empty;
     }
 }

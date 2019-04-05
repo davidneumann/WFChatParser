@@ -14,6 +14,7 @@ namespace DataStream
 
         protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
         {
+            NamingStrategy = new CamelCaseNamingStrategy();
             var property = base.CreateProperty(member, memberSerialization);
 
             if (property.PropertyType == typeof(string) && property.PropertyName == nameof(ChatMessageModel.Timestamp))

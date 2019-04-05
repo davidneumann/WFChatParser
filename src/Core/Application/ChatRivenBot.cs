@@ -95,7 +95,7 @@ namespace Application
 
                                 riven.MessagePlacementId = r.RivenIndex;
                                 riven.Name = r.RivenName;
-                                dataSender.AsyncSendRivenImage(riven.ImageID, croppedCopy);
+                                dataSender.AsyncSendRivenImage(riven.ImageId, croppedCopy);
                                 r.CroppedRivenBitmap.Dispose();
                                 item.Model.Rivens.Add(riven);
                             }
@@ -273,7 +273,7 @@ namespace Application
                                             riven.Rank = parser.ParseRivenRankFromColorImage(r.CroppedRivenBitmap);
                                             riven.MessagePlacementId = r.RivenIndex;
                                             riven.Name = r.RivenName;
-                                            _dataSender.AsyncSendRivenImage(riven.ImageID, r.CroppedRivenBitmap);
+                                            _dataSender.AsyncSendRivenImage(riven.ImageId, r.CroppedRivenBitmap);
                                             //r.CroppedRivenBitmap.Dispose();
 
                                             if (parser is IDisposable)

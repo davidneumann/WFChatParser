@@ -48,11 +48,11 @@ namespace DebugCLI
 
             //ParseChatImage();
             //GenerateCharStrings(150);
-            VerifyNoErrors(2);
+            //VerifyNoErrors(2);
             //WinOcrTest();
             //AsyncRivenParsingShim();
             //TestScreenHandler();
-            //TestBot();
+            TestBot();
         }
 
         private static void ParseChatImage()
@@ -281,6 +281,15 @@ namespace DebugCLI
                 config["DataSender:RedtextMessagePrefix"],
                 config["DataSender:RivenImageMessagePrefix"]);
 
+            dataSender.AsyncSendChatMessage(new ChatMessageModel()
+            {
+                Author = "Teacup",
+                Raw = "I'm a little tea cup short and stout",
+                Rivens = new List<Riven>()
+                {
+                    new Riven(){ Name = "Tea maximizer"}
+                }
+            }).Wait();
             var password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"]);
             var gc = new GameCapture();
             //var obs = new ObsSettings() { Url = "ws://localhost:4444/", Password = "password123" };
@@ -293,7 +302,8 @@ namespace DebugCLI
                 new ChatParser(),
                 dataSender,
                 new RivenCleaner(),
-                new RivenParserFactory());
+                new RivenParserFactory(),
+                new Application.LogParser.RedTextParser());
             bot.AsyncRun(new System.Threading.CancellationToken());
         }
 

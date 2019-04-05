@@ -119,7 +119,7 @@ namespace Application
                     }
                 }
                 else
-                    _dataSender.AsyncSendDebugMessage("FATAL: Missing modifiers for: " + riven.ImageID).Wait();
+                    _dataSender.AsyncSendDebugMessage("FATAL: Missing modifiers for: " + riven.ImageId).Wait();
                 while (line < Console.WindowHeight)
                 {
                     UpdateUILine(line++, "", false);
@@ -380,7 +380,7 @@ namespace Application
                                 var cachedRiven = cachedRivenValues[clr.Username + clickpoint.RivenName];
                                 var copiedRiven = new Riven();
                                 copiedRiven.Drain = cachedRiven.Drain;
-                                copiedRiven.ImageID = cachedRiven.ImageID;
+                                copiedRiven.ImageId = cachedRiven.ImageId;
                                 copiedRiven.MasteryRank = cachedRiven.MasteryRank;
                                 copiedRiven.MessagePlacementId = clickpoint.Index;
                                 copiedRiven.Modifiers = cachedRiven.Modifiers;
@@ -487,13 +487,13 @@ namespace Application
                             message.Rivens.Add(riven);
 
                             _UILastRiven = riven;
-                            crop.Save(riven.ImageID + ".png");
+                            crop.Save(riven.ImageId + ".png");
                             UpdateUIRiven(riven);
 
                             File.Delete(rivenImage);
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                            _dataSender.AsyncSendRivenImage(riven.ImageID, crop);
+                            _dataSender.AsyncSendRivenImage(riven.ImageId, crop);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                             //await _dataSender.AsyncSendRivenImage(riven.ImageID, rivenBase64);
 

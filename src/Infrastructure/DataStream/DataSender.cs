@@ -202,10 +202,10 @@ namespace DataStream
                 Reconnect();
         }
 
-        public async Task AsyncSendRivenImage(Guid imageID, string rivenBase64)
+        public async Task AsyncSendRivenImage(Guid imageId, string rivenBase64)
         {
             if (_rivenImageMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
-                _webSocket.Send(_rivenImageMessagePrefix + JsonConvert.SerializeObject(new { ImageID = imageID, Image = rivenBase64 }));
+                _webSocket.Send(_rivenImageMessagePrefix + JsonConvert.SerializeObject(new { ImageId = imageId, Image = rivenBase64 }, _jsonSettings));
             else if (_shouldReconnect)
                 Reconnect();
         }

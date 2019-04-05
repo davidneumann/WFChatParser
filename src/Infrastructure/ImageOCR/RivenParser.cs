@@ -171,7 +171,7 @@ namespace ImageOCR
                 }
             }
 
-            result.ImageID = Guid.NewGuid();
+            result.ImageId = Guid.NewGuid();
             return result;
         }
 
