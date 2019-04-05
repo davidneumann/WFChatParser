@@ -1,4 +1,5 @@
 ﻿using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.ColorSpaces;
 using SixLabors.ImageSharp.ColorSpaces.Conversion;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
@@ -53,6 +54,25 @@ namespace WFImageParser
                 var outputPath = Path.Combine(outputDirectory, file.Name);
                 rgbImage.Save(outputPath);
                 return outputPath;
+            }
+        }
+
+        public void SaveSoftMask(string input, string outputPath)
+        {
+            using (var rgbImage = Image.Load(input))
+            {
+                using (var output = new Image<Rgba32>(rgbImage.Width, rgbImage.Height))
+                {
+                    var cache = new ImageCache(rgbImage);
+                    for (int x = 0; x < rgbImage.Width; x++)
+                    {
+                        for (int y = 0; y < rgbImage.Height; y++)
+                        {
+                            output[x, y] = new Rgba32(cache[x, y], cache[x, y], cache[x, y]);
+                        }
+                    }
+                    output.Save(outputPath);
+                }
             }
         }
 
@@ -121,6 +141,21 @@ namespace WFImageParser
             }
         }
 
+        internal bool IsChatColor(Hsv hsvPixel)
+        {
+            if ((hsvPixel.H >= 175 && hsvPixel.H <= 190)
+                && hsvPixel.S > 0.1) //green
+                return true;
+            if (hsvPixel.S < 0.3) //white
+                return true;
+            if (hsvPixel.H >= 190 && hsvPixel.H <= 210 && hsvPixel.V >= 0.25) // blue
+                return true;
+            if ((hsvPixel.H <= 1 || hsvPixel.H >= 359) && hsvPixel.S >= 0.7f && hsvPixel.S <= 0.8f)
+                return true;
+
+            return false;
+        }
+
         public void SaveChatColors(string imagePath, string outputPath)
         {
             var converter = new ColorSpaceConverter();
@@ -136,9 +171,7 @@ namespace WFImageParser
                     var v = (hsvPixel.V - 0.21f) / (1f - 0.21f);
                     //if (x == 369 && y == 1134)
                     //    System.Diagnostics.Debugger.Break();
-                    if (hsvPixel.H >= 175 && hsvPixel.H <= 185 //green
-                        || hsvPixel.S < 0.3 //white
-                        || hsvPixel.H >= 190 && hsvPixel.H <= 210) //blue
+                    if (IsChatColor(hsvPixel))
                     {
                         rgbImage[x, y] = new Rgba32(v, v, v);
                     }

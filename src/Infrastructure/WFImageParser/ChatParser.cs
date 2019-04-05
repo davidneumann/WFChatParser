@@ -867,6 +867,13 @@ namespace WFImageParser
                         //Add redtext to results
                         if (line != null && line.LineType == LineType.RedText && !_sentItems.Any(item => item == line.RawMessage))
                         {
+                            if(results.Count > 0 && results.Last().LineType == LineType.RedText)
+                            {
+                                var last = results.Last();
+                                _sentItems.Enqueue(last.RawMessage);
+                                _sentItems.Enqueue(line.RawMessage);
+                                last.RawMessage += " " + line.RawMessage;
+                            }
                             results.Add(line);
                         }
 
