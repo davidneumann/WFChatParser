@@ -343,7 +343,7 @@ namespace Application
                     {
                         _UISecondLine = "Handing redtext: " + line.RawMessage;
                         UpdateUISecondLine();
-                        await _dataSender.AsyncSendRedtext(line.RawMessage);
+                        //await _dataSender.AsyncSendRedtext(line.RawMessage);
                     }
                     else if (line.LineType == LineParseResult.LineType.NewMessage && line is ChatMessageLineResult)
                     {
