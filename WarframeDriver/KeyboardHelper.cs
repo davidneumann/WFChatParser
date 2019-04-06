@@ -43,5 +43,13 @@ namespace WarframeDriver
             //Keyboard.SendUp(Keyboard.ScanCodeShort.CONTROL);
             //Thread.Sleep(100);
         }
+
+        public void SendSpace()
+        {
+            keybd_event(0x20, 0, 0, 0);
+            System.Threading.Thread.Sleep(66);
+            keybd_event(0x20, 0, KEYEVENTF_KEYUP, 0);
+            System.Threading.Thread.Sleep(66);
+        }
     }
 }

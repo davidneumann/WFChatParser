@@ -487,6 +487,8 @@ namespace Application
                 GetWindowRect(launcher.MainWindowHandle, ref launcherRect);
                 _mouse.Click(launcherRect.Left + (int)((launcherRect.Right - launcherRect.Left) * 0.7339181286549708f),
                     launcherRect.Top + (int)((launcherRect.Bottom - launcherRect.Top) * 0.9252336448598131f));
+                System.Threading.Thread.Sleep(17);
+                _keyboard.SendSpace();
                 System.Threading.Thread.Sleep(1000);
                 if (launcher.HasExited)
                 {

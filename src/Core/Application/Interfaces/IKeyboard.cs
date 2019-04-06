@@ -8,5 +8,6 @@ namespace Application.Interfaces
     {
         void SendEscape();
         void SendPaste(string text);
+        void SendSpace();
     }
 }
