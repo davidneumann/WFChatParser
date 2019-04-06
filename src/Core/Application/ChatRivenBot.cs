@@ -250,6 +250,9 @@ namespace Application
                             {
                                 _mouse.ClickAndDrag(new Point(3263, 2085), new Point(3263, 2121), 200);
                                 Thread.Sleep(100);
+                                _mouse.MoveTo(3250, 768);
+                                _mouse.ScrollUp();//Pause chat
+                                Thread.Sleep(30);
                                 firstParse = false;
                                 continue;
                             }
