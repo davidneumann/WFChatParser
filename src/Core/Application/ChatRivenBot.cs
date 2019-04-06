@@ -156,7 +156,7 @@ namespace Application
             }
 
             var cropper = _rivenParserFactory.CreateRivenParser();
-            while (System.Diagnostics.Process.GetProcessesByName("Warframe.x64").Length > 0 && !cancellationToken.IsCancellationRequested)
+            while (!cancellationToken.IsCancellationRequested)
             {
                 //Check if WF is running
                 var wfAlreadyRunning = System.Diagnostics.Process.GetProcessesByName("Warframe.x64").Length > 0;
@@ -179,21 +179,26 @@ namespace Application
                 //Close any annoying windows it opened
                 using (var screen = _gameCapture.GetFullImage())
                 {
-                    if(_screenStateHandler.IsExitable(screen))
+                    if (_screenStateHandler.IsExitable(screen))
+                    {
                         _mouse.Click(3816, 2013);
+                        Thread.Sleep(30);
+                    }
                 }
 
                 //Keep parsing chat as long as we are in a good state.
                 var lastMessage = DateTime.Now;
+                var firstParse = true;
                 while (System.Diagnostics.Process.GetProcessesByName("Warframe.x64").Length > 0 && !cancellationToken.IsCancellationRequested)
                 {
+                    //Close and try again if no messages in 5 minutes
                     if(DateTime.Now.Subtract(lastMessage).TotalMinutes > 5)
                     {
                         CloseWarframe();
                         break;
                     }
 
-                    //Get to Glyph screen if not already there
+                    //Try doing a parse
                     SetForegroundWindow(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
                     using (var screen = _gameCapture.GetFullImage())
                     {
@@ -219,6 +224,36 @@ namespace Application
                         }
                         else if (state == ScreenState.GlyphWindow && _screenStateHandler.IsChatOpen(screen))
                         {
+                            //Wait for the scroll bar before even trying to parse
+                            if(!_chatParser.IsScrollbarPresent(screen))
+                            {
+                                Thread.Sleep(100);
+                                continue;
+                            }
+
+                            //On first parse of a new instance scroll to the top
+                            if(firstParse && !wfAlreadyRunning)
+                            {
+                                //Click top of scroll bar to pause chat
+                                if (_chatParser.IsScrollbarPresent(screen))
+                                {
+                                    _mouse.MoveTo(3259, 658);
+                                    Thread.Sleep(33);
+                                    _mouse.Click(3259, 658);
+                                    Thread.Sleep(100);
+                                    firstParse = false;
+                                    continue;
+                                }
+                            }
+                            //On first parse of existing image jump to bottom and pause
+                            else if(firstParse && wfAlreadyRunning)
+                            {
+                                _mouse.ClickAndDrag(new Point(3263, 2085), new Point(3263, 2121), 200);
+                                Thread.Sleep(100);
+                                firstParse = false;
+                                continue;
+                            }
+
                             var chatLines = _chatParser.ParseChatImage(screen, true, true, 30);
                             foreach (var line in chatLines)
                             {
