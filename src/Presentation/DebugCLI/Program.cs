@@ -156,8 +156,8 @@ namespace DebugCLI
                 var group = bitmaps.Skip(i * 5).Take(5);
                 queue.Enqueue(new RivenParseTaskWorkItem()
                 {
-                    Model = new ChatMessageModel(),
-                    RivenWorkDetails = group.Select(image => new RivenParseTaskWorkItemDetails() { RivenIndex = 0, RivenName = null, CroppedRivenBitmap = image.Cropped }).ToList()
+                    Message = new ChatMessageModel(),
+                    RivenWorkDetails = group.Select(image => new RivenParseTaskWorkItemDetail() { RivenIndex = 0, RivenName = null, CroppedRivenBitmap = image.Cropped }).ToList()
                 });
             }
 
