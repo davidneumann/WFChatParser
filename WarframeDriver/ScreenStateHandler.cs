@@ -93,25 +93,19 @@ namespace WarframeDriver
 
         public bool IsExitable(Bitmap b)
         {
-            var darkPixels = new Point[] { new Point(3788, 1998), new Point(3789, 2008), new Point(3776, 2013), new Point(3790, 2023), new Point(3787, 2034), new Point(3857, 1996), new Point(3850, 2013) };
-            var lightPixles = new Point[] { new Point(3790, 2002), new Point(3781, 2013), new Point(3789, 2015), new Point(3782, 2029), new Point(3815, 2016), new Point(3857, 2003) };
-            if (darkPixels.Any(p =>
-            {
-                var pixel = b.GetPixel(p.X, p.Y);
-                if (pixel.R > 100 || pixel.G > 100 || pixel.G > 100)
-                    return true;
-                return false;
-            }))
-                return false;
-            if (lightPixles.Any(p =>
-             {
-                 var pixel = b.GetPixel(p.X, p.Y);
-                 if (pixel.R < 180 || pixel.G < 180 || pixel.G < 180)
-                     return true;
-                 return false;
-             }))
-                return false;
-            return true;
+            var exitDarkPixels = new Point[] { new Point(3788, 1998), new Point(3789, 2008), new Point(3776, 2013), new Point(3790, 2023), new Point(3787, 2034), new Point(3857, 1996), new Point(3850, 2013) };
+            var exitLightPixels = new Point[] { new Point(3790, 2002), new Point(3781, 2013), new Point(3789, 2015), new Point(3782, 2029), new Point(3815, 2016), new Point(3857, 2003) };
+            var isExitButton = !exitDarkPixels.Any(p => b.GetPixel(p.X, p.Y).ToHsv().Value >= 0.4)
+                && !exitLightPixels.Any(p => b.GetPixel(p.X, p.Y).ToHsv().Value <= 0.6);
+            if (isExitButton)
+                return true;
+
+            var closeDarkPixels = new Point[] { new Point(3744, 2014), new Point(3773, 2015), new Point(3799, 2016), new Point(3829, 2009), new Point(3828, 2023), new Point(3860, 2008), new Point(3860, 2023) };
+            var closeLightPixels = new Point[] { new Point(3735, 2015), new Point(3765, 2003), new Point(3764, 2029), new Point(3777, 2029), new Point(3792, 2006), new Point(3836, 2027), new Point(3858, 2015) };
+            var isCloseButton = !closeDarkPixels.Any(p => b.GetPixel(p.X, p.Y).ToHsv().Value >= 0.6) //Noisy background may be pretty bright
+                && !closeLightPixels.Any(p => b.GetPixel(p.X, p.Y).ToHsv().Value <= 0.85); //Be stricter on white/light pixels to account for background
+
+            return isExitButton || isCloseButton;
         }
 
         private bool IsLoadingScreen(Bitmap bitmap)

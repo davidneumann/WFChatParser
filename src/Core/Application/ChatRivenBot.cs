@@ -172,6 +172,17 @@ namespace Application
 
                 //Check if on daily reward screen
                 ClaimDailyReward();
+
+                //Wait 45 seconds for all of the notifications to clear out.
+                Thread.Sleep(45 * 1000);
+
+                //Close any annoying windows it opened
+                using (var screen = _gameCapture.GetFullImage())
+                {
+                    if(_screenStateHandler.IsExitable(screen))
+                        _mouse.Click(3816, 2013);
+                }
+
                 //Keep parsing chat as long as we are in a good state.
                 while (System.Diagnostics.Process.GetProcessesByName("Warframe.x64").Length > 0)
                 {

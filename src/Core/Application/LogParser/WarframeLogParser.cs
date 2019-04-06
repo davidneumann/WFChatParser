@@ -74,6 +74,7 @@ namespace Application.LogParser
                 {
                     _previousPosition = 0;
                     _reader.BaseStream.Seek(0, SeekOrigin.Begin);
+                    _foundStartTime = false;
                 }
 
                 string line;

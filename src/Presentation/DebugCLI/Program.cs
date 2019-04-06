@@ -47,14 +47,8 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            TestRivenParsing();
-            //ParseChatImage();
-            //GenerateCharStrings(150);
-            //VerifyNoErrors(2);
-            //WinOcrTest();
-            //AsyncRivenParsingShim();
             //TestScreenHandler();
-            TestBot();
+            //TestBot();
         }
 
         private static void ParseChatImage()
@@ -597,19 +591,19 @@ namespace DebugCLI
             var c = new GameCapture();
             var ss = new ScreenStateHandler();
 
-            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\loading.png"))
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\loading.png"))
             {
                 var isLoading = ss.GetScreenState(b) == ScreenState.LoadingScreen;
                 Console.WriteLine("Is loading: " + isLoading + " should be true");
             }
 
-            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\loading_nobar.png"))
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\loading_nobar.png"))
             {
                 var isLoading = ss.GetScreenState(b) == ScreenState.LoadingScreen;
                 Console.WriteLine("Is loading: " + isLoading + " should be true");
             }
 
-            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\login.png"))
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\login.png"))
             {
                 var isLogin = ss.GetScreenState(b) == ScreenState.LoginScreen;
                 Console.WriteLine("Is login: " + isLogin + " should be true");
@@ -617,73 +611,73 @@ namespace DebugCLI
 
             Console.WriteLine("MISSING TEST DATA FOR NORMAL CLAIM REWARDS SCREEN");
 
-            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\plat_claim.png"))
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\plat_claim.png"))
             {
                 var isPlat = ss.GetScreenState(b) == ScreenState.DailyRewardScreenPlat;
                 Console.WriteLine("Is plat: " + isPlat + " should be true");
             }
 
-            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\warframe_pilot1.png"))
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\warframe_pilot1.png"))
             {
                 var isPiloting = ss.GetScreenState(b) == ScreenState.ControllingWarframe;
                 Console.WriteLine("Is piloting warframe1: " + isPiloting + " should be true");
             }
 
-            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\warframe_pilot2.png"))
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\warframe_pilot2.png"))
             {
                 var isPiloting = ss.GetScreenState(b) == ScreenState.ControllingWarframe;
                 Console.WriteLine("Is piloting warframe2: " + isPiloting + " should be true");
             }
 
-            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\warframe_pilot3.png"))
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\warframe_pilot3.png"))
             {
                 var isPiloting = ss.GetScreenState(b) == ScreenState.ControllingWarframe;
                 Console.WriteLine("Is piloting warframe3: " + isPiloting + " should be true");
             }
 
-            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\main_menu.png"))
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\main_menu.png"))
             {
                 var isMainMenu = ss.GetScreenState(b) == ScreenState.MainMenu;
                 Console.WriteLine("Is main menu: " + isMainMenu + " should be true");
             }
 
-            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\main_menu2.png"))
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\main_menu2.png"))
             {
                 var isMainMenu = ss.GetScreenState(b) == ScreenState.MainMenu;
                 Console.WriteLine("Is main menu2: " + isMainMenu + " should be true");
             }
 
-            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\profile_menu.png"))
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\profile_menu.png"))
             {
                 var isProfileMenu = ss.GetScreenState(b) == ScreenState.ProfileMenu;
                 Console.WriteLine("Is isProfileMenu: " + isProfileMenu + " should be true");
             }
 
-            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\glyph_window.png"))
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\glyph_window.png"))
             {
                 var isGlyphWindow = ss.GetScreenState(b) == ScreenState.GlyphWindow;
                 Console.WriteLine("Is glyph window: " + isGlyphWindow + " should be true");
             }
 
-            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\glyph_without_filters.png"))
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\glyph_without_filters.png"))
             {
                 var isNoFilters = !ss.GlyphFiltersPresent(b);
                 Console.WriteLine("Is glyph filters empty: " + isNoFilters + " should be true");
             }
 
-            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\glyph_with_filters.png"))
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\glyph_with_filters.png"))
             {
                 var isFilters = ss.GlyphFiltersPresent(b);
                 Console.WriteLine("Is glyph filters: " + isFilters + " should be true");
             }
 
-            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\chat_collapsed.png"))
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\chat_collapsed.png"))
             {
                 var isChatCollapsed = ss.IsChatCollapsed(b);
                 Console.WriteLine("Is chat closed: " + isChatCollapsed + " should be true");
             }
 
-            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Screen States\chat_collapsed2.png"))
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\chat_collapsed2.png"))
             {
                 var isChatCollapsed = ss.IsChatCollapsed(b);
                 Console.WriteLine("Is chat closed2: " + isChatCollapsed + " should be true");
@@ -699,6 +693,12 @@ namespace DebugCLI
             {
                 var isRiven = ss.GetScreenState(b) == ScreenState.RivenWindow;
                 Console.WriteLine("Is riven: " + isRiven + " should be true");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\inbox_open.png"))
+            {
+                var isExitable = ss.IsExitable(b);
+                Console.WriteLine("Is inbox closeable: " + isExitable + " should be true");
             }
         }
 
