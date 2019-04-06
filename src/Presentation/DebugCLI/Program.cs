@@ -47,7 +47,8 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            ParseChatImage();
+            TestRivenParsing();
+            //ParseChatImage();
             //GenerateCharStrings(150);
             //VerifyNoErrors(2);
             //WinOcrTest();
@@ -568,7 +569,7 @@ namespace DebugCLI
         private static void TestRivenParsing()
         {
             var rp = new RivenParser();
-            var cropped = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\error9.png");
+            var cropped = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\error14b.png");
             //var cropped = rp.CropToRiven(bitmap);
             cropped.Save("cropped.png");
             //bitmap.Dispose();

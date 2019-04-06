@@ -134,17 +134,6 @@ namespace ImageOCR
                             }
                             else if (line.Length > 0 && Char.IsDigit(line[0]) && currentStep == Step.ReadingModifiers)
                             {
-                                var modiObjects = modis.Select(m => Modifier.ParseString(m)).ToArray();
-                                //Handle curses
-                                if (name.Contains("-") && modiObjects.Length == 4)
-                                {
-                                    modiObjects[3].Curse = true;
-                                }
-                                else if(!name.Contains("-") && modiObjects.Length == 3)
-                                {
-                                    modiObjects[2].Curse = true;
-                                }
-                                result.Modifiers = modiObjects;
                                 currentStep = Step.ReadingMRLine;
                                 if (Int32.TryParse(line, out number))
                                     result.Drain = number;
@@ -169,8 +158,22 @@ namespace ImageOCR
                         } while (iter.Next(pageIteratorLevel));
                     }
                 }
+                if (modis.Count > 0)
+                {
+                    var modiObjects = modis.Select(m => Modifier.ParseString(m)).ToArray();
+                    //Handle curses
+                    if (name.Contains("-") && modiObjects.Length == 4)
+                    {
+                        modiObjects[3].Curse = true;
+                    }
+                    else if (!name.Contains("-") && modiObjects.Length == 3)
+                    {
+                        modiObjects[2].Curse = true;
+                    }
+                    result.Modifiers = modiObjects;
+                }
             }
-
+            
             result.ImageId = Guid.NewGuid();
             return result;
         }
