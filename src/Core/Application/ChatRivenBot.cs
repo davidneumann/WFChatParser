@@ -184,8 +184,15 @@ namespace Application
                 }
 
                 //Keep parsing chat as long as we are in a good state.
+                var lastMessage = DateTime.Now;
                 while (System.Diagnostics.Process.GetProcessesByName("Warframe.x64").Length > 0 && !cancellationToken.IsCancellationRequested)
                 {
+                    if(DateTime.Now.Subtract(lastMessage).TotalMinutes > 5)
+                    {
+                        CloseWarframe();
+                        break;
+                    }
+
                     //Get to Glyph screen if not already there
                     SetForegroundWindow(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
                     using (var screen = _gameCapture.GetFullImage())
@@ -215,6 +222,7 @@ namespace Application
                             var chatLines = _chatParser.ParseChatImage(screen, true, true, 30);
                             foreach (var line in chatLines)
                             {
+                                lastMessage = DateTime.Now;
                                 if (line is ChatMessageLineResult)
                                 {
                                     ProcessChatMessageLineResult(cropper, line);
@@ -226,7 +234,8 @@ namespace Application
                         else
                         {
                             //We have no idea what state we are in. Kill the game and pray the next iteration has better luck.
-                            System.Diagnostics.Process.GetProcessesByName("Warframe.x64").ToList().ForEach(p => p.Kill());
+                            CloseWarframe();
+                            break;
                         }
                     }
 
@@ -255,6 +264,11 @@ namespace Application
 
             if (cropper is IDisposable)
                 ((IDisposable)cropper).Dispose();
+        }
+
+        private static void CloseWarframe()
+        {
+            System.Diagnostics.Process.GetProcessesByName("Warframe.x64").ToList().ForEach(p => p.Kill());
         }
 
         private static ChatMessageModel MakeChatModel(LineParseResult.ChatMessageLineResult line)
