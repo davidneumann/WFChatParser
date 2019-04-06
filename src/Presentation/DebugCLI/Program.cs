@@ -47,7 +47,7 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            //TestScreenHandler();
+            TestScreenHandler();
             //TestBot();
         }
 
@@ -699,6 +699,18 @@ namespace DebugCLI
             {
                 var isExitable = ss.IsExitable(b);
                 Console.WriteLine("Is inbox closeable: " + isExitable + " should be true");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\hotfix_prompt.png"))
+            {
+                var isPrompt = ss.IsPromptOpen(b);
+                Console.WriteLine("Is hotfix prompt open: " + isPrompt + " should be true");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\fake_hotfix_prompt.png"))
+            {
+                var isPrompt = ss.IsPromptOpen(b);
+                Console.WriteLine("Is fake hotfix prompt open: " + isPrompt + " should be true");
             }
         }
 

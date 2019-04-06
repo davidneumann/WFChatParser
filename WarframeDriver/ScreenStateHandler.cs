@@ -195,5 +195,13 @@ namespace WarframeDriver
             return !lightPixels.Any(p => screen.GetPixel(p.X, p.Y).ToHsv().Value <= 0.5f)
                 && !darkPixels.Any(p => screen.GetPixel(p.X, p.Y).ToHsv().Value >= 0.5f);
         }
+
+        public bool IsPromptOpen(Bitmap screen)
+        {
+            var lightPixels = new Point[] { new Point(2021, 1231), new Point(2031, 1218), new Point(2042, 1230), new Point(2031, 1245), new Point(2053, 1217), new Point(2057, 1231), new Point(2053, 1245), new Point(2069, 1217), new Point(2070, 1245) };
+            var darkPixels = new Point[] { new Point(2031, 1231), new Point(2060, 1218), new Point(2071, 1230), new Point(2060, 1243), new Point(2045, 1218), new Point(2045, 1245) };
+            return !lightPixels.Any(p => screen.GetPixel(p.X, p.Y).ToHsv().Value <= 0.5f)
+                && !darkPixels.Any(p => screen.GetPixel(p.X, p.Y).ToHsv().Value >= 0.5f);
+        }
     }
 }

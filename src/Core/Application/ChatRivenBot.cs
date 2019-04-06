@@ -156,7 +156,7 @@ namespace Application
             }
 
             var cropper = _rivenParserFactory.CreateRivenParser();
-            while (System.Diagnostics.Process.GetProcessesByName("Warframe.x64").Length > 0)
+            while (System.Diagnostics.Process.GetProcessesByName("Warframe.x64").Length > 0 && !cancellationToken.IsCancellationRequested)
             {
                 //Check if WF is running
                 var wfAlreadyRunning = System.Diagnostics.Process.GetProcessesByName("Warframe.x64").Length > 0;
@@ -184,17 +184,31 @@ namespace Application
                 }
 
                 //Keep parsing chat as long as we are in a good state.
-                while (System.Diagnostics.Process.GetProcessesByName("Warframe.x64").Length > 0)
+                while (System.Diagnostics.Process.GetProcessesByName("Warframe.x64").Length > 0 && !cancellationToken.IsCancellationRequested)
                 {
                     //Get to Glyph screen if not already there
                     SetForegroundWindow(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
                     using (var screen = _gameCapture.GetFullImage())
                     {
+                        _mouse.MoveTo(0, 0);
+                        Thread.Sleep(17);
                         screen.Save("screen.png");
                         var state = _screenStateHandler.GetScreenState(screen);
+
+                        //Check if we have some weird OK prompt (hotfixes, etc)
+                        if(_screenStateHandler.IsPromptOpen(screen))
+                        {
+                            _mouse.Click(screen.Width / 2, (int)(screen.Height * 0.57));
+                            Thread.Sleep(30);
+                            continue;
+                        }
+
+                        //If we somehow got off the glyph screen get back on it
                         if (state != Enums.ScreenState.GlyphWindow)
                         {
                             GoToGlyphScreenAndSetupFilters();
+                            Thread.Sleep(30);
+                            continue;
                         }
                         else if (state == ScreenState.GlyphWindow && _screenStateHandler.IsChatOpen(screen))
                         {

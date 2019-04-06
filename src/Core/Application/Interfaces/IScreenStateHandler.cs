@@ -13,5 +13,6 @@ namespace Application.Interfaces
         bool IsChatCollapsed(Bitmap screen);
         bool GlyphFiltersPresent(Bitmap screen);
         bool IsChatOpen(Bitmap screen);
+        bool IsPromptOpen(Bitmap screen);
     }
 }
