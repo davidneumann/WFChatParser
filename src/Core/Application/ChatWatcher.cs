@@ -258,6 +258,7 @@ namespace Application
                 sw.Restart();
                 
                 var image = _gameCapture.GetFullImage();
+                image.Save("image.png");
                 if (image == null)
                 {
                     _UIFirstLine = "Failed to get image";
@@ -415,7 +416,7 @@ namespace Application
                                 _mouseMover.MoveTo(clickpoint.X, clickpoint.Y);
                                 await Task.Delay(30);
                                 _mouseMover.Click(clickpoint.X, clickpoint.Y);
-                                await Task.Delay(17);
+                                await Task.Delay(80);
                             }
                             else
                             {
@@ -439,7 +440,7 @@ namespace Application
                                     b.Dispose();
 
                                     _mouseMover.Click(3816, 2013);
-                                    await Task.Delay(17);
+                                    await Task.Delay(160);
                                     _mouseMover.MoveTo(0, 0);
                                     await Task.Delay(17);
                                     break;
@@ -508,13 +509,15 @@ namespace Application
                                     b.Dispose();
                                     break;
                                 }
-                                else if (state == ScreenState.RivenWindow)
+                                else if (tries > 10 && state == ScreenState.RivenWindow)
                                 {
                                     _mouseMover.Click(3816, 2013);
-                                    await Task.Delay(17);
+                                    await Task.Delay(250);
                                     _mouseMover.MoveTo(0, 0);
                                     await Task.Delay(17);
                                 }
+                                else
+                                    await Task.Delay(80);
                                 b.Dispose();
                             }
                         }
@@ -540,10 +543,10 @@ namespace Application
                 {
                     try
                     {
+                        File.Copy("image.png", debugImageName);
                         image.Save(debugImageName);
                     }
                     catch { }
-                    //File.Copy(image, debugImageName);
                 }
                 image.Dispose();
                 var transmitTime = sw.Elapsed.TotalSeconds;

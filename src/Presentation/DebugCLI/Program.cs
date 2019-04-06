@@ -58,15 +58,22 @@ namespace DebugCLI
 
         private static void ParseChatImage()
         {
-            using (var bitmap = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\ErrorImages\debug_image_2019-05-4--11-30-03-684.png"))
+            //var filePath = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Validation Inputs\error_blurry1.png";
+            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\ErrorImages\line_offsets\new\"))
             {
-                var cp = new ChatParser();
-                var ic = new ImageCleaner();
-                ic.SaveSoftMask(@"C:\Users\david\OneDrive\Documents\WFChatParser\ErrorImages\debug_image_2019-05-4--11-30-03-684.png", "test.png");
-                var lines = cp.ParseChatImage(bitmap);
-                foreach (var line in lines)
+                using (var bitmap = new Bitmap(filePath))
                 {
-                    Console.WriteLine(line.RawMessage);
+                    var cp = new ChatParser();
+                    var ic = new ImageCleaner();
+                    //ic.SaveSoftMask(filePath, "error_blurry1_white.png");
+                    ic.SaveSoftMask(filePath, filePath.Replace(".png", "_white.png"));
+                    var lines = cp.ParseChatImage(bitmap);
+                    var sb = new StringBuilder();
+                    foreach (var line in lines)
+                    {
+                        sb.AppendLine(line.RawMessage);
+                    }
+                    File.WriteAllText(filePath.Replace(".png", ".txt"), sb.ToString());
                 }
             }
         }
