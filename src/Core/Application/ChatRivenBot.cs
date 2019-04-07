@@ -306,6 +306,9 @@ namespace Application
                                     var processedCorrectly = ProcessChatMessageLineResult(cropper, line);
                                     if (!processedCorrectly)
                                     {
+                                        var path = SaveScreenToDebug(screen);
+                                        if(path != null)
+                                            _dataSender.AsyncSendDebugMessage("Failed to parse correctly. See: " + path);
                                         _chatParser.InvalidCache(line.GetKey());
                                         break;
                                     }
@@ -350,6 +353,15 @@ namespace Application
 
             if (cropper is IDisposable)
                 ((IDisposable)cropper).Dispose();
+        }
+
+        private string SaveScreenToDebug(Bitmap screen)
+        {
+            if (!System.IO.Directory.Exists("debug"))
+                System.IO.Directory.CreateDirectory("debug");
+            var filePath = System.IO.Path.Combine("debug", DateTime.Now.ToFileTime() + ".png");
+            try { screen.Save(filePath); return filePath; }
+            catch { return null; }
         }
 
         private void ScrollToBottomAndPause()
@@ -426,6 +438,8 @@ namespace Application
             }
 
             var chatMessage = MakeChatModel(line as LineParseResult.ChatMessageLineResult);
+            if (chatMessage.DEBUGREASON != null && chatMessage.DEBUGREASON.Length > 0)
+                return false;
             if (clr.ClickPoints.Count == 0)
                 _dataSender.AsyncSendChatMessage(chatMessage);
             else
