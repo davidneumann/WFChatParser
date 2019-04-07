@@ -47,6 +47,7 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
+            TestRivenParsing();
             VerifyNoErrors(2);
             //TestScreenHandler();
             //TestBot();
@@ -597,15 +598,17 @@ namespace DebugCLI
         private static void TestRivenParsing()
         {
             var rp = new RivenParser();
-            var cropped = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\error14b.png");
+            var cropped = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\error9.png");
             //var cropped = rp.CropToRiven(bitmap);
             cropped.Save("cropped.png");
             //bitmap.Dispose();
             var rc = new RivenCleaner();
             var clean = rc.CleanRiven(cropped);
-            cropped.Dispose();
             clean.Save("clean.png");
             var result = rp.ParseRivenTextFromImage(clean, null);
+            result.Rank = rp.ParseRivenRankFromColorImage(cropped);
+            result.Polarity = rp.ParseRivenPolarityFromColorImage(cropped);
+            cropped.Dispose();
         }
 
         private static void VisualizeClickpoints()

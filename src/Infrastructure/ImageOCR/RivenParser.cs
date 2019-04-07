@@ -141,19 +141,25 @@ namespace ImageOCR
                             else if (line.Length > 0 && currentStep == Step.ReadingMRLine)
                             {
                                 //MR o 16 D14
-                                var splits = line.Split(' ');
-                                if (splits.Length == 4)
+                                //MR 6 10 . 02
+                                var matches = Regex.Match(line, @"MR\s+\S*\s+(\d+)[^\d]*(\d+)?");
+                                if (matches.Success)
                                 {
-                                    if (Int32.TryParse(Regex.Match(splits[3], @"\d+").Value.TrimStart('0'), out number))
-                                        result.Rolls = number;
-                                }
-                                else
-                                    result.Rolls = 0;
+                                    if (matches.Groups[2].Success)
+                                    {
 
-                                if (splits.Length >= 3 && Int32.TryParse(Regex.Match(splits[2], @"\d+").Value.TrimStart('0'), out number))
-                                    result.MasteryRank = number;
-                                else if (splits.Length < 3 && Int32.TryParse(Regex.Match(line, @"\d+").Value.TrimStart('0'), out number))
-                                    result.MasteryRank = number;
+                                        if (Int32.TryParse(matches.Groups[2].Value, out number))
+                                            result.Rolls = number;
+                                    }
+                                    else
+                                        result.Rolls = 0;
+
+                                    if (matches.Groups[1].Success)
+                                    {
+                                        if (Int32.TryParse(matches.Groups[1].Value, out number))
+                                            result.MasteryRank = number;
+                                    }
+                                }
                             }
 
                             //rivenText.Add(line);
