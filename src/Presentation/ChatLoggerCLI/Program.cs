@@ -105,10 +105,12 @@ namespace ChatLoggerCLI
                         System.Threading.Thread.Sleep(2000);
                     }
                     catch
-                    { }
+                    {
+                        _cancellationSource.Cancel();
+                    }
                     break;
                 }
-                else if (t.IsCompleted || t.IsCanceled)
+                else if (t.IsCompleted || t.IsCanceled || t.IsFaulted)
                     break;
                 //var debug = progress.GetAwaiter().IsCompleted;
                 System.Threading.Thread.Sleep(1000);

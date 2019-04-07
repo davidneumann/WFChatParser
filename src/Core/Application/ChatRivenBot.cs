@@ -176,8 +176,11 @@ namespace Application
                 ClaimDailyReward();
 
                 //Wait 45 seconds for all of the notifications to clear out.
-                Log("Waiting for talking");
-                Thread.Sleep(45 * 1000);
+                if (!wfAlreadyRunning)
+                {
+                    Log("Waiting for talking");
+                    Thread.Sleep(45 * 1000);
+                }
 
                 //Close any annoying windows it opened
                 using (var screen = _gameCapture.GetFullImage())
@@ -337,7 +340,7 @@ namespace Application
                     for (int i = 0; i < 1; i++)
                     {
                         _mouse.ScrollUp();//Pause chat
-                        Thread.Sleep(30);
+                        Thread.Sleep(90);
                     }
                     _mouse.MoveTo(0, 0);
                     Thread.Sleep(17);
@@ -658,7 +661,7 @@ namespace Application
                     if (state != Enums.ScreenState.ControllingWarframe)
                     {
                         _keyboard.SendEscape();
-                        System.Threading.Thread.Sleep(300);
+                        System.Threading.Thread.Sleep(600);
                     }
                     else
                         break;
