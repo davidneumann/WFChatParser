@@ -121,8 +121,8 @@ namespace Application
                             }
                         }
                     }
-                    dataSender.AsyncSendChatMessage(item.Message);
                 }
+                dataSender.AsyncSendChatMessage(item.Message);
             }
 
             if (parser is IDisposable)
