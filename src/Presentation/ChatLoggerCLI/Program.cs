@@ -1,4 +1,5 @@
-﻿using Application;
+﻿using AdysTech.CredentialManager;
+using Application;
 using DataStream;
 using ImageOCR;
 using Microsoft.Extensions.Configuration;
@@ -6,6 +7,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using WarframeDriver;
 using WFGameCapture;
@@ -16,6 +20,7 @@ namespace ChatLoggerCLI
     public class Program
     {
         private static List<IDisposable> _disposables = new List<IDisposable>();
+        private static CancellationTokenSource _cancellationSource;
 
         public static void Main(string[] args)
         {
@@ -71,9 +76,24 @@ namespace ChatLoggerCLI
                 catch { }
             };
 
-            var watcher = new ChatWatcher(dataSender, c, new GameCapture(), new MouseHelper(), new RivenCleaner(), rivenParser, new ScreenStateHandler(), new Application.LogParser.RedTextParser());
-            //var bot = new ChatRivenBot()
-            Task t =  Task.Run(() => watcher.MonitorLive(config["DEBUG:ImageDirectory"]));
+            var password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"]);
+            
+            var gc = new GameCapture();
+            var obs = GetObsSettings(config["Credentials:Key"], config["Credentials:Salt"]);
+            var bot = new ChatRivenBot(config["LauncherPath"], new MouseHelper(),
+                new ScreenStateHandler(),
+                gc,
+                obs,
+                password,
+                new KeyboardHelper(),
+                new ChatParser(),
+                dataSender,
+                new RivenCleaner(),
+                new RivenParserFactory(),
+                new Application.LogParser.RedTextParser());
+
+            _cancellationSource = new CancellationTokenSource();
+            Task t =  Task.Run(() => bot.AsyncRun(_cancellationSource.Token));
             while(true)
             {
                 if (t.IsFaulted || t.Exception != null)
@@ -95,14 +115,75 @@ namespace ChatLoggerCLI
             }
         }
 
+        private static string GetPassword(string key, string salt)
+        {
+            var r = CredentialManager.GetCredentials("WFChatBot", CredentialManager.CredentialType.Generic);
+            using (MemoryStream ms = new MemoryStream())
+            {
+                PasswordDeriveBytes pdb = new PasswordDeriveBytes(key, Encoding.UTF8.GetBytes(salt));
+                Aes aes = new AesManaged();
+                aes.Key = pdb.GetBytes(aes.KeySize / 8);
+                aes.IV = pdb.GetBytes(aes.BlockSize / 8);
+                using (CryptoStream cs = new CryptoStream(ms,
+                  aes.CreateDecryptor(), CryptoStreamMode.Write))
+                {
+                    var input = Convert.FromBase64String(r.Password);
+                    cs.Write(input, 0, input.Length);
+                    cs.Close();
+                    return Encoding.UTF8.GetString(ms.ToArray());
+                }
+            }
+        }
+        private static ObsSettings GetObsSettings(string key, string salt)
+        {
+            var r = CredentialManager.GetCredentials("OBS", CredentialManager.CredentialType.Generic);
+            string password = null;
+            string url = null;
+            using (MemoryStream ms = new MemoryStream())
+            {
+                PasswordDeriveBytes pdb = new PasswordDeriveBytes(key, Encoding.UTF8.GetBytes(salt));
+                Aes aes = new AesManaged();
+                aes.Key = pdb.GetBytes(aes.KeySize / 8);
+                aes.IV = pdb.GetBytes(aes.BlockSize / 8);
+                using (CryptoStream cs = new CryptoStream(ms,
+                  aes.CreateDecryptor(), CryptoStreamMode.Write))
+                {
+                    var input = Convert.FromBase64String(r.Password);
+                    cs.Write(input, 0, input.Length);
+                    cs.Close();
+                    password = Encoding.UTF8.GetString(ms.ToArray());
+                }
+            }
+
+            using (MemoryStream ms = new MemoryStream())
+            {
+                PasswordDeriveBytes pdb = new PasswordDeriveBytes(key, Encoding.UTF8.GetBytes(salt));
+                Aes aes = new AesManaged();
+                aes.Key = pdb.GetBytes(aes.KeySize / 8);
+                aes.IV = pdb.GetBytes(aes.BlockSize / 8);
+                using (CryptoStream cs = new CryptoStream(ms,
+                  aes.CreateDecryptor(), CryptoStreamMode.Write))
+                {
+                    var input = Convert.FromBase64String(r.UserName);
+                    cs.Write(input, 0, input.Length);
+                    cs.Close();
+                    url = Encoding.UTF8.GetString(ms.ToArray());
+                }
+            }
+            if (password != null && url != null)
+                return new ObsSettings() { Url = url, Password = password };
+            else
+                return null;
+        }
+
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
         {
             foreach (var item in _disposables)
             {
                 if(item != null)
                     item.Dispose();
+                _cancellationSource.Cancel();
             }
-            Environment.Exit(0);
         }
     }
 }

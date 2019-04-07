@@ -47,7 +47,7 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            //TestScreenHandler();
+            TestScreenHandler();
             TestBot();
         }
 
@@ -166,18 +166,18 @@ namespace DebugCLI
                 Thread.Sleep(1000);
         }
 
-        private static void PasswordShim()
+        private static void PasswordShim(string key, string salt, string password)
         {
             using (MemoryStream ms = new MemoryStream())
             {
-                PasswordDeriveBytes pdb = new PasswordDeriveBytes("xizuD7FLFSLPadxsIMqK", new byte[] { 0x32, 0x31, 0x37, 0x35, 0x32, 0x63, 0x31, 0x35, 0x61, 0x37 });
+                PasswordDeriveBytes pdb = new PasswordDeriveBytes(key, Encoding.UTF8.GetBytes(salt));
                 Aes aes = new AesManaged();
                 aes.Key = pdb.GetBytes(aes.KeySize / 8);
                 aes.IV = pdb.GetBytes(aes.BlockSize / 8);
                 using (CryptoStream cs = new CryptoStream(ms,
                   aes.CreateEncryptor(), CryptoStreamMode.Write))
                 {
-                    var pass = Encoding.UTF8.GetBytes("password");
+                    var pass = Encoding.UTF8.GetBytes(password);
                     cs.Write(pass, 0, pass.Length);
                     cs.Close();
                 }
@@ -187,10 +187,10 @@ namespace DebugCLI
             }
 
 
-            var r = CredentialManager.GetCredentials("test system", CredentialManager.CredentialType.Generic);
+            var r = CredentialManager.GetCredentials("Test system", CredentialManager.CredentialType.Generic);
             using (MemoryStream ms = new MemoryStream())
             {
-                PasswordDeriveBytes pdb = new PasswordDeriveBytes("xizuD7FLFSLPadxsIMqK", new byte[] { 0x32, 0x31, 0x37, 0x35, 0x32, 0x63, 0x31, 0x35, 0x61, 0x37 });
+                PasswordDeriveBytes pdb = new PasswordDeriveBytes(key, Encoding.UTF8.GetBytes(salt));
                 Aes aes = new AesManaged();
                 aes.Key = pdb.GetBytes(aes.KeySize / 8);
                 aes.IV = pdb.GetBytes(aes.BlockSize / 8);
@@ -269,6 +269,36 @@ namespace DebugCLI
                 }
             }
         }
+        private static ObsSettings GetObsSettings(string key, string salt)
+        {
+            var r = CredentialManager.GetCredentials("OBS", CredentialManager.CredentialType.Generic);
+            using (MemoryStream ms = new MemoryStream())
+            {
+                PasswordDeriveBytes pdb = new PasswordDeriveBytes(key, Encoding.UTF8.GetBytes(salt));
+                Aes aes = new AesManaged();
+                aes.Key = pdb.GetBytes(aes.KeySize / 8);
+                aes.IV = pdb.GetBytes(aes.BlockSize / 8);
+                using (CryptoStream cs = new CryptoStream(ms,
+                  aes.CreateDecryptor(), CryptoStreamMode.Write))
+                {
+                    var input = Convert.FromBase64String(r.Password);
+                    cs.Write(input, 0, input.Length);
+                    var password = Encoding.UTF8.GetString(ms.ToArray());
+
+                    ms.Seek(0, SeekOrigin.Begin);
+                    ms.SetLength(0);
+                    input = Convert.FromBase64String(r.UserName);
+                    cs.Seek(0, SeekOrigin.Begin);
+                    cs.SetLength(0);
+                    cs.Write(input, 0, input.Length);
+                    var url = Encoding.UTF8.GetString(ms.ToArray());
+                    return new ObsSettings() { Url = url, Password = password };
+                }
+            }
+
+            return null;
+        }
+
         private static void TestBot()
         {
             IConfiguration config = new ConfigurationBuilder()
@@ -285,14 +315,17 @@ namespace DebugCLI
                 config["DataSender:RawMessagePrefix"],
                 config["DataSender:RedtextMessagePrefix"],
                 config["DataSender:RivenImageMessagePrefix"]);
-            
+
+            var pass = Console.ReadLine().Trim();
+            PasswordShim(config["Credentials:Key"], config["Credentials:Salt"], pass);
+
             var password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"]);
             var gc = new GameCapture();
-            //var obs = new ObsSettings() { Url = "ws://localhost:4444/", Password = "password123" };
-            var bot = new ChatRivenBot(@"C:\Users\david\AppData\Local\Warframe\Downloaded\Public\Tools\Launcher.exe", new MouseHelper(),
+            var obs = GetObsSettings(config["Credentials:Key"], config["Credentials:Salt"]);
+            var bot = new ChatRivenBot(config["LauncherPath"], new MouseHelper(),
                 new ScreenStateHandler(),
                 gc,
-                null,
+                obs,
                 password,
                 new KeyboardHelper(),
                 new ChatParser(),
@@ -711,6 +744,12 @@ namespace DebugCLI
             {
                 var isPrompt = ss.IsPromptOpen(b);
                 Console.WriteLine("Is fake hotfix prompt open: " + isPrompt + " should be true");
+            }
+            //glyph_no_chat.png
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\glyph_no_chat.png"))
+            {
+                var isChatCollapsed = ss.IsChatCollapsed(b);
+                Console.WriteLine("Is chat collapsed icon found: " + isChatCollapsed + " should be true");
             }
         }
 

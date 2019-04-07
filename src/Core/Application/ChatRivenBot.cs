@@ -87,7 +87,7 @@ namespace Application
             public int Bottom { get; set; }
         }
         #endregion
-        
+
         public static void ProcessRivenQueue(CancellationToken c, IRivenParserFactory factory, IDataSender dataSender, ConcurrentQueue<RivenParseTaskWorkItem> queue, IRivenCleaner cleaner)
         {
             var parser = factory.CreateRivenParser();
@@ -131,6 +131,7 @@ namespace Application
                 
         public void AsyncRun(CancellationToken cancellationToken)
         {
+            Log("Running");
             if (!_isRunning)
                 _isRunning = true;
             else
@@ -162,6 +163,7 @@ namespace Application
                 var wfAlreadyRunning = System.Diagnostics.Process.GetProcessesByName("Warframe.x64").Length > 0;
                 if (System.Diagnostics.Process.GetProcessesByName("Warframe.x64").Length == 0)
                 {
+                    Log("Starting warframe");
                     StartWarframe();
                 }
 
@@ -174,6 +176,7 @@ namespace Application
                 ClaimDailyReward();
 
                 //Wait 45 seconds for all of the notifications to clear out.
+                Log("Waiting for talking");
                 Thread.Sleep(45 * 1000);
 
                 //Close any annoying windows it opened
@@ -191,9 +194,12 @@ namespace Application
                 var firstParse = true;
                 while (System.Diagnostics.Process.GetProcessesByName("Warframe.x64").Length > 0 && !cancellationToken.IsCancellationRequested)
                 {
+                    if(!firstParse)
+                        Log("Running loop");
                     //Close and try again if no messages in 5 minutes
-                    if(DateTime.Now.Subtract(lastMessage).TotalMinutes > 5)
+                    if (DateTime.Now.Subtract(lastMessage).TotalMinutes > 5)
                     {
+                        Log("Possible chat connection lost, closing WF");
                         CloseWarframe();
                         break;
                     }
@@ -210,6 +216,7 @@ namespace Application
                         //Check if we have some weird OK prompt (hotfixes, etc)
                         if(_screenStateHandler.IsPromptOpen(screen))
                         {
+                            Log("Unknown prompt detected. Closing.");
                             _mouse.Click(screen.Width / 2, (int)(screen.Height * 0.57));
                             Thread.Sleep(30);
                             continue;
@@ -218,6 +225,7 @@ namespace Application
                         //If we somehow got off the glyph screen get back on it
                         if (state != Enums.ScreenState.GlyphWindow)
                         {
+                            Log("Going to glyph screen.");
                             GoToGlyphScreenAndSetupFilters();
                             Thread.Sleep(30);
                             //In the event that we did not keep up with chat and ended up in a bad state we need to scroll to the bottom
@@ -242,6 +250,7 @@ namespace Application
                                 //Click top of scroll bar to pause chat
                                 if (_chatParser.IsScrollbarPresent(screen))
                                 {
+                                    Log("Scrollbar found. Starting.");
                                     _mouse.MoveTo(3259, 658);
                                     Thread.Sleep(33);
                                     _mouse.Click(3259, 658);
@@ -253,14 +262,17 @@ namespace Application
                             //On first parse of existing image jump to bottom and pause
                             else if(firstParse && wfAlreadyRunning)
                             {
+                                Log("Scrollbar found. Resuming.");
                                 ScrollToBottomAndPause();
                                 firstParse = false;
                                 continue;
                             }
 
                             var chatLines = _chatParser.ParseChatImage(screen, true, true, 30);
+                            Log($"Found {chatLines.Length} new messages.");
                             foreach (var line in chatLines)
                             {
+                                Log("Processing message: " + line.RawMessage);
                                 lastMessage = DateTime.Now;
                                 if (line is ChatMessageLineResult)
                                 {
@@ -272,11 +284,12 @@ namespace Application
                                     }
                                 }
                                 else
-                                    _dataSender.AsyncSendDebugMessage("Unknown message: " + line.RawMessage);
+                                    Log("Unknown message: " + line.RawMessage);
                             }
                         }
                         else
                         {
+                            Log("Bad state detected! Restarting!!.");
                             //We have no idea what state we are in. Kill the game and pray the next iteration has better luck.
                             CloseWarframe();
                             break;
@@ -384,13 +397,12 @@ namespace Application
                     //Wait for riven to open
                     Bitmap crop = null;
                     var foundRivenWindow = false;
-                    for (int tries = 0; tries < 6; tries++)
+                    for (int tries = 0; tries < 15; tries++)
                     {
                         using (var b = _gameCapture.GetFullImage())
                         {
                             if (_screenStateHandler.GetScreenState(b) == ScreenState.RivenWindow)
                             {
-                                Console.WriteLine("found riven after: " + (tries + 1) + " tries");
                                 foundRivenWindow = true;
                                 crop = cropper.CropToRiven(b);
 
@@ -416,7 +428,7 @@ namespace Application
 
                     //The above click in the bottom right should have closed what ever window we opened.
                     //Give it time to animate but in the event it failed to close try clicking again.
-                    for (int tries = 0; tries < 6; tries++)
+                    for (int tries = 0; tries < 15; tries++)
                     {
                         using (var b = _gameCapture.GetFullImage())
                         {
@@ -425,11 +437,11 @@ namespace Application
                             {
                                 break;
                             }
-                            else if (tries < 5 && subState == ScreenState.RivenWindow)
+                            else if (tries < 14 && subState == ScreenState.RivenWindow)
                             {
                                 Thread.Sleep(17);
                             }
-                            else if (tries >= 5 && _screenStateHandler.IsExitable(b))
+                            else if (tries >= 14 && _screenStateHandler.IsExitable(b))
                             {
                                 _mouse.Click(3816, 2013);
                                 Thread.Sleep(40);
@@ -465,12 +477,13 @@ namespace Application
                         //Thread.Sleep(50);
 
                         _keyboard.SendPaste("asdf");
-                        Thread.Sleep(50);
+                        Thread.Sleep(100);
                     }
                     if (_screenStateHandler.IsChatCollapsed(glyphScreen))
                     {
                         //Click and drag to move chat into place
-                        _mouse.ClickAndDrag(new Point(160, 2110), new Point(0, 2160), 100);
+                        _mouse.ClickAndDrag(new Point(160, 2110), new Point(0, 2160), 1000);
+                        Thread.Sleep(100);
                     }
                     else if (!_screenStateHandler.IsChatOpen(glyphScreen))
                         throw new ChatMissingException();
@@ -488,10 +501,14 @@ namespace Application
                 var state = _screenStateHandler.GetScreenState(screen);
                 if (state == Enums.ScreenState.DailyRewardScreenItem)
                 {
+                    Log("Claiming random middle reward");
                     _mouse.Click(2908, 1592);
                 }
                 else if (state == Enums.ScreenState.DailyRewardScreenPlat)
+                {
+                    Log("Claiming unkown plat discount");
                     _mouse.Click(3325, 1951);
+                }
             }
         }
 
@@ -504,6 +521,7 @@ namespace Application
                 screen.Save("screen.png");
                 if (_screenStateHandler.GetScreenState(screen) == Enums.ScreenState.LoginScreen)
                 {
+                    Log("Logging in");
                     DisableWarframeGameCapture();
                     _mouse.Click(screen.Width, 0);
                     _mouse.Click(2671, 1239);
@@ -519,6 +537,7 @@ namespace Application
 
         private void WaitForLoadingScreen(bool wfAlreadyRunning)
         {
+            Log("Waiting for login screen");
             var startTime = DateTime.Now;
             //We may have missed the loading screen. If we started WF then wait even longer to get to the login screen
             while (!wfAlreadyRunning && DateTime.Now.Subtract(startTime).TotalMinutes < 1)
@@ -592,10 +611,7 @@ namespace Application
                     if (state != Enums.ScreenState.ControllingWarframe)
                     {
                         _keyboard.SendEscape();
-                        if(state == ScreenState.MainMenu)
-                            System.Threading.Thread.Sleep(300);
-                        else
-                            System.Threading.Thread.Sleep(150);
+                        System.Threading.Thread.Sleep(300);
                     }
                     else
                         break;
@@ -666,6 +682,14 @@ namespace Application
                 fields.Add("visible", false);
                 _obs.SendRequest("SetSceneItemProperties", fields);
             }
+        }
+
+        private void Log(string message)
+        {
+            _dataSender.AsyncSendDebugMessage(message);
+            if (message.Length > Console.BufferWidth)
+                message = message.Substring(0, Console.BufferWidth - 1);
+            Console.WriteLine(message);
         }
 
         public void Dispose()
