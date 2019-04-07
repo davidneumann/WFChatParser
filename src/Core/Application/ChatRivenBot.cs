@@ -197,17 +197,17 @@ namespace Application
                 var firstParse = true;
                 while (System.Diagnostics.Process.GetProcessesByName("Warframe.x64").Length > 0 && !cancellationToken.IsCancellationRequested)
                 {
-                    if(_messageCache.Count > 5000)
+                    if (_messageCache.Count > 5000)
                     {
                         lock (_messageCache)
                         {
                             lock (_messageCacheDetails)
                             {
-                                while(_messageCache.Count > 5000)
+                                while (_messageCache.Count > 5000)
                                 {
                                     string key = null;
                                     //Try to get the earliest key entered in
-                                    if(_messageCache.TryDequeue(out key) && key != null)
+                                    if (_messageCache.TryDequeue(out key) && key != null)
                                     {
                                         ChatMessageModel empty = null;
                                         //If we fail to remove the detail item add the key back to the cache
@@ -313,11 +313,8 @@ namespace Application
                                 else
                                     Log("Unknown message: " + line.RawMessage);
                             }
-                            if(chatLines.Length > 0)
-                            {
-                                Log($"Processed (not riven parsed) {chatLines.Length} messages in : {sw.Elapsed.TotalSeconds} seconds");
-                                sw.Stop();
-                            }
+                            Log($"Processed (not riven parsed) {chatLines.Length} messages in : {sw.Elapsed.TotalSeconds} seconds");
+                            sw.Stop();
                         }
                         else
                         {
@@ -421,7 +418,7 @@ namespace Application
                     SystemTimestamp = DateTimeOffset.UtcNow,
                     Author = cachedModel.Author,
                     EnhancedMessage = cachedModel.EnhancedMessage,
-                    Raw = cachedModel.Raw,
+                    Raw = line.RawMessage,
                     Rivens = cachedModel.Rivens
                 };
                 _dataSender.AsyncSendChatMessage(duplicateModel);

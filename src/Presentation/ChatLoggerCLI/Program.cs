@@ -180,12 +180,13 @@ namespace ChatLoggerCLI
 
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
         {
+            _cancellationSource.Cancel();
             foreach (var item in _disposables)
             {
                 if(item != null)
                     item.Dispose();
-                _cancellationSource.Cancel();
             }
+            Console.WriteLine("Shutting down...");
         }
     }
 }
