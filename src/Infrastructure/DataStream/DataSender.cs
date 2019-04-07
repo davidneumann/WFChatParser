@@ -127,6 +127,8 @@ namespace DataStream
         {
             if (e.Data.Substring(e.Data.LastIndexOf(":") + 1).Trim() == "KILL")
             {
+                try { AsyncSendDebugMessage("Kill acknowledged. Requesting a stop.").Wait(); }
+                catch { }
                 RequestToKill?.Invoke(this, EventArgs.Empty);
             }
             else if(e.Data.Substring(e.Data.LastIndexOf(":") + 1).Trim().StartsWith("SAVE"))

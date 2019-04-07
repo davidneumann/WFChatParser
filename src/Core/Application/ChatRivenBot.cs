@@ -38,6 +38,8 @@ namespace Application
         private OBSWebsocket _obs;
         private static string _password;
         private ConcurrentQueue<RivenParseTaskWorkItem> _rivenWorkQueue = new ConcurrentQueue<RivenParseTaskWorkItem>();
+        private ConcurrentQueue<string> _messageCache = new ConcurrentQueue<string>();
+        private ConcurrentDictionary<string, ChatMessageModel> _messageCacheDetails = new ConcurrentDictionary<string, ChatMessageModel>();
         private List<Thread> _rivenQueueWorkers = new List<Thread>();
         private bool _isRunning = false;
 
@@ -88,15 +90,15 @@ namespace Application
         }
         #endregion
 
-        public static void ProcessRivenQueue(CancellationToken c, IRivenParserFactory factory, IDataSender dataSender, ConcurrentQueue<RivenParseTaskWorkItem> queue, IRivenCleaner cleaner)
+        public void ProcessRivenQueue(CancellationToken c)
         {
-            var parser = factory.CreateRivenParser();
+            var parser = _rivenParserFactory.CreateRivenParser();
             while (true)
             {
                 if (c.IsCancellationRequested)
                     break;
                 RivenParseTaskWorkItem item = null;
-                if (!queue.TryDequeue(out item) || item == null)
+                if (!_rivenWorkQueue.TryDequeue(out item) || item == null)
                 {
                     Thread.Sleep(250);
                     continue;
@@ -105,7 +107,7 @@ namespace Application
                 {
                     using (var croppedCopy = new Bitmap(r.CroppedRivenBitmap))
                     {
-                        using (var cleaned = cleaner.CleanRiven(croppedCopy))
+                        using (var cleaned = _rivenCleaner.CleanRiven(croppedCopy))
                         {
                             using (var cleanedCopy = new Bitmap(cleaned))
                             {
@@ -115,20 +117,22 @@ namespace Application
 
                                 riven.MessagePlacementId = r.RivenIndex;
                                 riven.Name = r.RivenName;
-                                dataSender.AsyncSendRivenImage(riven.ImageId, croppedCopy);
+                                _dataSender.AsyncSendRivenImage(riven.ImageId, croppedCopy);
                                 r.CroppedRivenBitmap.Dispose();
                                 item.Message.Rivens.Add(riven);
                             }
                         }
                     }
                 }
-                dataSender.AsyncSendChatMessage(item.Message);
+                _messageCache.Enqueue(item.Message.Author + item.Message.EnhancedMessage);
+                _messageCacheDetails[item.Message.Author + item.Message.EnhancedMessage] = item.Message;
+                _dataSender.AsyncSendChatMessage(item.Message);
             }
 
             if (parser is IDisposable)
                 ((IDisposable)parser).Dispose();
         }
-                
+
         public void AsyncRun(CancellationToken cancellationToken)
         {
             Log("Running");
@@ -138,18 +142,14 @@ namespace Application
                 throw new Exception("Bot already running!");
 
             _redTextParser.OnRedText += async redtext => await _dataSender.AsyncSendRedtext(redtext);
-            
-            if(_rivenQueueWorkers.Count <= 0)
+
+            if (_rivenQueueWorkers.Count <= 0)
             {
                 lock (_rivenQueueWorkers)
                 {
                     for (int i = 0; i < Environment.ProcessorCount; i++)
                     {
-                        var thread = new Thread(() => ProcessRivenQueue(cancellationToken,
-                            _rivenParserFactory,
-                            _dataSender,
-                            _rivenWorkQueue,
-                            _rivenCleaner));
+                        var thread = new Thread(() => ProcessRivenQueue(cancellationToken));
                         thread.Start();
                         _rivenQueueWorkers.Add(thread);
                     }
@@ -194,7 +194,29 @@ namespace Application
                 var firstParse = true;
                 while (System.Diagnostics.Process.GetProcessesByName("Warframe.x64").Length > 0 && !cancellationToken.IsCancellationRequested)
                 {
-                    if(!firstParse)
+                    if(_messageCache.Count > 5000)
+                    {
+                        lock (_messageCache)
+                        {
+                            lock (_messageCacheDetails)
+                            {
+                                while(_messageCache.Count > 5000)
+                                {
+                                    string key = null;
+                                    //Try to get the earliest key entered in
+                                    if(_messageCache.TryDequeue(out key) && key != null)
+                                    {
+                                        ChatMessageModel empty = null;
+                                        //If we fail to remove the detail item add the key back to the cache
+                                        if (!_messageCacheDetails.TryRemove(key, out empty))
+                                            _messageCache.Enqueue(key);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (!firstParse)
                         Log("Running loop");
                     //Close and try again if no messages in 5 minutes
                     if (DateTime.Now.Subtract(lastMessage).TotalMinutes > 5)
@@ -214,7 +236,7 @@ namespace Application
                         var state = _screenStateHandler.GetScreenState(screen);
 
                         //Check if we have some weird OK prompt (hotfixes, etc)
-                        if(_screenStateHandler.IsPromptOpen(screen))
+                        if (_screenStateHandler.IsPromptOpen(screen))
                         {
                             Log("Unknown prompt detected. Closing.");
                             _mouse.Click(screen.Width / 2, (int)(screen.Height * 0.57));
@@ -238,14 +260,14 @@ namespace Application
                         else if (state == ScreenState.GlyphWindow && _screenStateHandler.IsChatOpen(screen))
                         {
                             //Wait for the scroll bar before even trying to parse
-                            if(!_chatParser.IsScrollbarPresent(screen))
+                            if (!_chatParser.IsScrollbarPresent(screen))
                             {
                                 Thread.Sleep(100);
                                 continue;
                             }
 
                             //On first parse of a new instance scroll to the top
-                            if(firstParse && !wfAlreadyRunning)
+                            if (firstParse && !wfAlreadyRunning)
                             {
                                 //Click top of scroll bar to pause chat
                                 if (_chatParser.IsScrollbarPresent(screen))
@@ -260,7 +282,7 @@ namespace Application
                                 }
                             }
                             //On first parse of existing image jump to bottom and pause
-                            else if(firstParse && wfAlreadyRunning)
+                            else if (firstParse && wfAlreadyRunning)
                             {
                                 Log("Scrollbar found. Resuming.");
                                 ScrollToBottomAndPause();
@@ -268,6 +290,8 @@ namespace Application
                                 continue;
                             }
 
+                            var sw = new Stopwatch();
+                            sw.Start();
                             var chatLines = _chatParser.ParseChatImage(screen, true, true, 30);
                             Log($"Found {chatLines.Length} new messages.");
                             foreach (var line in chatLines)
@@ -285,6 +309,11 @@ namespace Application
                                 }
                                 else
                                     Log("Unknown message: " + line.RawMessage);
+                            }
+                            if(chatLines.Length > 0)
+                            {
+                                Log($"Processed (not riven parsed) {chatLines.Length} messages in : {sw.Elapsed.TotalSeconds} seconds");
+                                sw.Stop();
                             }
                         }
                         else
@@ -378,6 +407,24 @@ namespace Application
         private bool ProcessChatMessageLineResult(IRivenParser cropper, BaseLineParseResult line)
         {
             var clr = line as ChatMessageLineResult;
+
+            if (_messageCacheDetails.ContainsKey(clr.Username + clr.EnhancedMessage))
+            {
+                Log($"Message cache hit for {clr.Username + clr.EnhancedMessage}");
+                var cachedModel = _messageCacheDetails[clr.Username + clr.EnhancedMessage];
+                var duplicateModel = new ChatMessageModel()
+                {
+                    Timestamp = clr.Timestamp,
+                    SystemTimestamp = DateTimeOffset.UtcNow,
+                    Author = cachedModel.Author,
+                    EnhancedMessage = cachedModel.EnhancedMessage,
+                    Raw = cachedModel.Raw,
+                    Rivens = cachedModel.Rivens
+                };
+                _dataSender.AsyncSendChatMessage(duplicateModel);
+                return true;
+            }
+
             var chatMessage = MakeChatModel(line as LineParseResult.ChatMessageLineResult);
             if (clr.ClickPoints.Count == 0)
                 _dataSender.AsyncSendChatMessage(chatMessage);
@@ -457,7 +504,7 @@ namespace Application
 
             return true;
         }
-               
+
         private void GoToGlyphScreenAndSetupFilters()
         {
             NavigateToGlyphScreen();

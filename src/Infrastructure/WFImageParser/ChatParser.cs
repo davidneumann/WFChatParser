@@ -595,6 +595,10 @@ namespace WFImageParser
                     clr.ClickPoints = clickPoints;
                     clr.RawMessage = rawMessage.ToString().Trim();
                     clr.EnhancedMessage = message.ToString().Trim();
+                    if (clr.EnhancedMessage.StartsWith(clr.Timestamp))
+                        clr.EnhancedMessage = clr.EnhancedMessage.Substring(clr.Timestamp.Length).Trim(); //Remove timestamp
+                    if (clr.EnhancedMessage.StartsWith(clr.Username) && clr.EnhancedMessage.Length > clr.Username.Length + 1)
+                        clr.EnhancedMessage = clr.EnhancedMessage.Substring(clr.Username.Length + 1).Trim();//Remove username and :
                     return result;
                 }
                 else

@@ -47,8 +47,9 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            TestScreenHandler();
-            TestBot();
+            VerifyNoErrors(2);
+            //TestScreenHandler();
+            //TestBot();
         }
 
         private static void ParseChatImage()
@@ -144,26 +145,26 @@ namespace DebugCLI
             //sw.Stop();
             //Console.WriteLine("Parallel parse time: " + sw.Elapsed.TotalSeconds);
 
-            var queue = new ConcurrentQueue<RivenParseTaskWorkItem>();
-            for (int i = 0; i < images.Length / 5; i++)
-            {
-                var group = bitmaps.Skip(i * 5).Take(5);
-                queue.Enqueue(new RivenParseTaskWorkItem()
-                {
-                    Message = new ChatMessageModel(),
-                    RivenWorkDetails = group.Select(image => new RivenParseTaskWorkItemDetail() { RivenIndex = 0, RivenName = null, CroppedRivenBitmap = image.Cropped }).ToList()
-                });
-            }
+            //var queue = new ConcurrentQueue<RivenParseTaskWorkItem>();
+            //for (int i = 0; i < images.Length / 5; i++)
+            //{
+            //    var group = bitmaps.Skip(i * 5).Take(5);
+            //    queue.Enqueue(new RivenParseTaskWorkItem()
+            //    {
+            //        Message = new ChatMessageModel(),
+            //        RivenWorkDetails = group.Select(image => new RivenParseTaskWorkItemDetail() { RivenIndex = 0, RivenName = null, CroppedRivenBitmap = image.Cropped }).ToList()
+            //    });
+            //}
 
-            var thread = new Thread(() =>
-            {
-                ChatRivenBot.ProcessRivenQueue(new CancellationToken(), new RivenParserFactory(), new DummySender(), queue, new RivenCleaner());
-            });
+            //var thread = new Thread(() =>
+            //{
+            //    ChatRivenBot.ProcessRivenQueue(new CancellationToken(), new RivenParserFactory(), new DummySender(), queue, new RivenCleaner());
+            //});
 
-            thread.Start();
+            //thread.Start();
 
-            while (queue.Count > 0)
-                Thread.Sleep(1000);
+            //while (queue.Count > 0)
+            //    Thread.Sleep(1000);
         }
 
         private static void PasswordShim(string key, string salt, string password)
@@ -1021,7 +1022,8 @@ namespace DebugCLI
                 cleaner.SaveChatColors(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name));
                 var sw = new Stopwatch();
                 sw.Restart();
-                var result = c.ParseChatImage(new Bitmap(masterKeyFile), xOffset, false, false).Select(i => i.RawMessage.Trim()).ToArray();
+                var fullResults = c.ParseChatImage(new Bitmap(masterKeyFile), xOffset, false, false);
+                var result = fullResults.Select(i => i.RawMessage.Trim()).ToArray();
                 Console.WriteLine("Parsed in: " + sw.Elapsed.TotalSeconds + " seconds");
                 sw.Stop();
 
