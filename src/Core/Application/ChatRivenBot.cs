@@ -42,6 +42,7 @@ namespace Application
         private ConcurrentDictionary<string, ChatMessageModel> _messageCacheDetails = new ConcurrentDictionary<string, ChatMessageModel>();
         private List<Thread> _rivenQueueWorkers = new List<Thread>();
         private bool _isRunning = false;
+        private System.IO.StreamWriter logStream = null;
 
         public ChatRivenBot(string launcherFullPath, IMouseMover mouseMover, IScreenStateHandler screenStateHandler,
             IGameCapture gameCapture,
@@ -322,6 +323,8 @@ namespace Application
                         else
                         {
                             Log("Bad state detected! Restarting!!.");
+                            var path = SaveScreenToDebug(screen);
+                            _dataSender.AsyncSendDebugMessage("Bad state detected! Restarting!!. See: " + path);
                             //We have no idea what state we are in. Kill the game and pray the next iteration has better luck.
                             CloseWarframe();
                             break;
@@ -750,7 +753,11 @@ namespace Application
 
         private void Log(string message)
         {
-            _dataSender.AsyncSendDebugMessage(message);
+            if (logStream == null)
+                logStream = new System.IO.StreamWriter("log.txt", false);
+
+            _dataSender.AsyncSendLogMessage(message);
+            logStream.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.f")}] {message}");
             if (message.Length > Console.BufferWidth)
                 message = message.Substring(0, Console.BufferWidth - 1);
             Console.WriteLine(message);

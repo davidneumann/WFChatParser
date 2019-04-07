@@ -24,6 +24,7 @@ namespace DataStream
         private readonly object _redtextMessagePrefix;
         private WebSocket _webSocket;
         private string _rivenImageMessagePrefix;
+        private string _logMessagePrefix;
 
         public event EventHandler RequestToKill;
         public event EventHandler<SaveEventArgs> RequestSaveAll;
@@ -31,9 +32,14 @@ namespace DataStream
         private bool _shouldReconnect;
 
         private DateTimeOffset _lastReconnectTime = DateTimeOffset.MinValue;
-        public DataSender(Uri websocketHostname, IEnumerable<string> connectionMessages, string messagePrefix, string debugMessagePrefix, bool shouldReconnect, string rawMessagePrefix,
+        public DataSender(Uri websocketHostname, IEnumerable<string> connectionMessages, 
+            string messagePrefix, 
+            string debugMessagePrefix, 
+            bool shouldReconnect, 
+            string rawMessagePrefix,
             string redtextMessagePrefix,
-            string rivenImageMessagePrefix)
+            string rivenImageMessagePrefix,
+            string logMessagePrefix)
         {
             _websocketHostname = websocketHostname;
             _messagePrefix = messagePrefix;
@@ -43,6 +49,7 @@ namespace DataStream
             _rawMessagePrefix = rawMessagePrefix;
             _redtextMessagePrefix = redtextMessagePrefix;
             _rivenImageMessagePrefix = rivenImageMessagePrefix;
+            _logMessagePrefix = logMessagePrefix;
 
             _jsonSettings.Converters.Add(new StringEnumConverter() { AllowIntegerValues = false, NamingStrategy = new CamelCaseNamingStrategy() });
 
@@ -246,6 +253,14 @@ namespace DataStream
         {
             if (_redtextMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
                 _webSocket.Send(_redtextMessagePrefix + JsonConvert.SerializeObject(message, _jsonSettings));
+            else if (_shouldReconnect)
+                Reconnect();
+        }
+
+        public async Task AsyncSendLogMessage(string message)
+        {
+            if (_logMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
+                _webSocket.Send($"{_logMessagePrefix} [{DateTime.Now.ToString("HH:mm:ss.f")}] {message}");
             else if (_shouldReconnect)
                 Reconnect();
         }

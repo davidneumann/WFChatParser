@@ -49,7 +49,8 @@ namespace ChatLoggerCLI
                 true,
                 config["DataSender:RawMessagePrefix"],
                 config["DataSender:RedtextMessagePrefix"],
-                config["DataSender:RivenImageMessagePrefix"]);
+                config["DataSender:RivenImageMessagePrefix"],
+                config["DataSender:LogMessagePrefix"]);
 
             dataSender.RequestToKill += (s, e) =>
             {
