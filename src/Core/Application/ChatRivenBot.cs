@@ -399,6 +399,9 @@ namespace Application
                 {
                     debugReason = "Bade name: " + username;
                 }
+
+                if (!Regex.Match(line.RawMessage, @"^(\[\d\d:\d\d\]) ([-A-Za-z0-9._]+):?\s+(.+)").Success)
+                    debugReason = "Invalid username or timestamp!";
             }
             catch { debugReason = "Bade name: " + username; }
             var cm = new ChatMessageModel()
