@@ -147,6 +147,8 @@ namespace ImageOCR
                                     if (Int32.TryParse(Regex.Match(splits[3], @"\d+").Value.TrimStart('0'), out number))
                                         result.Rolls = number;
                                 }
+                                else
+                                    result.Rolls = 0;
 
                                 if (splits.Length >= 3 && Int32.TryParse(Regex.Match(splits[2], @"\d+").Value.TrimStart('0'), out number))
                                     result.MasteryRank = number;

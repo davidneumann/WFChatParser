@@ -220,6 +220,11 @@ namespace Application
                         {
                             GoToGlyphScreenAndSetupFilters();
                             Thread.Sleep(30);
+                            //In the event that we did not keep up with chat and ended up in a bad state we need to scroll to the bottom
+                            if (!firstParse)
+                            {
+                                ScrollToBottomAndPause();
+                            }
                             continue;
                         }
                         else if (state == ScreenState.GlyphWindow && _screenStateHandler.IsChatOpen(screen))
@@ -248,11 +253,7 @@ namespace Application
                             //On first parse of existing image jump to bottom and pause
                             else if(firstParse && wfAlreadyRunning)
                             {
-                                _mouse.ClickAndDrag(new Point(3263, 2085), new Point(3263, 2121), 200);
-                                Thread.Sleep(100);
-                                _mouse.MoveTo(3250, 768);
-                                _mouse.ScrollUp();//Pause chat
-                                Thread.Sleep(30);
+                                ScrollToBottomAndPause();
                                 firstParse = false;
                                 continue;
                             }
@@ -263,7 +264,12 @@ namespace Application
                                 lastMessage = DateTime.Now;
                                 if (line is ChatMessageLineResult)
                                 {
-                                    ProcessChatMessageLineResult(cropper, line);
+                                    var processedCorrectly = ProcessChatMessageLineResult(cropper, line);
+                                    if (!processedCorrectly)
+                                    {
+                                        _chatParser.InvalidCache(line.GetKey());
+                                        break;
+                                    }
                                 }
                                 else
                                     _dataSender.AsyncSendDebugMessage("Unknown message: " + line.RawMessage);
@@ -302,6 +308,15 @@ namespace Application
 
             if (cropper is IDisposable)
                 ((IDisposable)cropper).Dispose();
+        }
+
+        private void ScrollToBottomAndPause()
+        {
+            _mouse.ClickAndDrag(new Point(3263, 2085), new Point(3263, 2121), 200);
+            Thread.Sleep(100);
+            _mouse.MoveTo(3250, 768);
+            _mouse.ScrollUp();//Pause chat
+            Thread.Sleep(60);
         }
 
         private static void CloseWarframe()
@@ -347,7 +362,7 @@ namespace Application
             return cm;
         }
 
-        private void ProcessChatMessageLineResult(IRivenParser cropper, BaseLineParseResult line)
+        private bool ProcessChatMessageLineResult(IRivenParser cropper, BaseLineParseResult line)
         {
             var clr = line as ChatMessageLineResult;
             var chatMessage = MakeChatModel(line as LineParseResult.ChatMessageLineResult);
@@ -362,21 +377,17 @@ namespace Application
                     _mouse.MoveTo(clickpoint.X, clickpoint.Y);
                     Thread.Sleep(17);
                     _mouse.Click(clickpoint.X, clickpoint.Y);
-                    Thread.Sleep(45);
+                    Thread.Sleep(17);
                     _mouse.MoveTo(0, 0);
-                    Thread.Sleep(45);
+                    Thread.Sleep(17);
 
                     //Wait for riven to open
                     Bitmap crop = null;
                     var foundRivenWindow = false;
                     for (int tries = 0; tries < 6; tries++)
                     {
-                        var sw = new Stopwatch();
-                        sw.Start();
                         using (var b = _gameCapture.GetFullImage())
                         {
-                            Console.WriteLine("Got capture in: " + sw.Elapsed.TotalSeconds);
-                            sw.Stop();
                             if (_screenStateHandler.GetScreenState(b) == ScreenState.RivenWindow)
                             {
                                 Console.WriteLine("found riven after: " + (tries + 1) + " tries");
@@ -400,7 +411,7 @@ namespace Application
                         {
                             crop.Dispose();
                         }
-                        break;
+                        return false;
                     }
 
                     //The above click in the bottom right should have closed what ever window we opened.
@@ -431,6 +442,8 @@ namespace Application
                 }
                 _rivenWorkQueue.Enqueue(new RivenParseTaskWorkItem() { Message = chatMessage, RivenWorkDetails = rivenParseDetails });
             }
+
+            return true;
         }
                
         private void GoToGlyphScreenAndSetupFilters()
@@ -579,7 +592,10 @@ namespace Application
                     if (state != Enums.ScreenState.ControllingWarframe)
                     {
                         _keyboard.SendEscape();
-                        System.Threading.Thread.Sleep(125);
+                        if(state == ScreenState.MainMenu)
+                            System.Threading.Thread.Sleep(300);
+                        else
+                            System.Threading.Thread.Sleep(150);
                     }
                     else
                         break;

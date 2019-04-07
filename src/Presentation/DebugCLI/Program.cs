@@ -47,8 +47,8 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            TestScreenHandler();
-            //TestBot();
+            //TestScreenHandler();
+            TestBot();
         }
 
         private static void ParseChatImage()
