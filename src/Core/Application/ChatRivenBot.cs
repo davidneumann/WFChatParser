@@ -388,23 +388,15 @@ namespace Application
             var m = line.RawMessage;
             string debugReason = null;
             var timestamp = m.Substring(0, 7).Trim();
-            var username = "Unknown";
+            var username = line.Username;
             try
             {
-                username = m.Substring(8).Trim();
-                if (username.IndexOf(":") > 0 && username.IndexOf(":") < username.IndexOf(" "))
-                    username = username.Substring(0, username.IndexOf(":"));
-                else
-                {
-                    username = username.Substring(0, username.IndexOf(" "));
-                    debugReason = "Bade name: " + username;
-                }
                 if (username.Contains(" ") || username.Contains(@"\/") || username.Contains("]") || username.Contains("[") || badNameRegex.Match(username).Success)
                 {
                     debugReason = "Bade name: " + username;
                 }
 
-                if (!Regex.Match(line.RawMessage, @"^(\[\d\d:\d\d\]) ([-A-Za-z0-9._]+):?\s+(.+)").Success)
+                if (!Regex.Match(line.RawMessage, @"^(\[\d\d:\d\d\])\s*([-A-Za-z0-9._]+)\s*:?\s*(.+)").Success)
                     debugReason = "Invalid username or timestamp!";
             }
             catch { debugReason = "Bade name: " + username; }
