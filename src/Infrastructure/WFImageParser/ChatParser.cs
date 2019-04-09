@@ -592,13 +592,16 @@ namespace WFImageParser
                 if (currentLineType == LineType.NewMessage || currentLineType == LineType.Continuation)
                 {
                     var clr = result as ChatMessageLineResult;
+                    var enhancedRegex = new Regex(Regex.Escape(clr.Timestamp) + @"\s*" + Regex.Escape(clr.Username) + @"\s*:\s*(.+)+");
                     clr.ClickPoints = clickPoints;
                     clr.RawMessage = rawMessage.ToString().Trim();
-                    clr.EnhancedMessage = message.ToString().Trim();
-                    if (clr.EnhancedMessage.StartsWith(clr.Timestamp))
-                        clr.EnhancedMessage = clr.EnhancedMessage.Substring(clr.Timestamp.Length).Trim(); //Remove timestamp
-                    if (clr.EnhancedMessage.StartsWith(clr.Username) && clr.EnhancedMessage.Length > clr.Username.Length + 1)
-                        clr.EnhancedMessage = clr.EnhancedMessage.Substring(clr.Username.Length + 1).Trim();//Remove username and :
+                    var matches = enhancedRegex.Match(message.ToString().Trim());
+                    clr.EnhancedMessage = matches.Groups[1].Value;
+                    //    message.ToString().Trim();
+                    //if (clr.EnhancedMessage.StartsWith(clr.Timestamp))
+                    //    clr.EnhancedMessage = clr.EnhancedMessage.Substring(clr.Timestamp.Length).Trim(); //Remove timestamp
+                    //if (clr.EnhancedMessage.StartsWith(clr.Username) && clr.EnhancedMessage.Length > clr.Username.Length + 1)
+                    //    clr.EnhancedMessage = clr.EnhancedMessage.Substring(clr.Username.Length + 1).Trim();//Remove username and :
                     return result;
                 }
                 else
