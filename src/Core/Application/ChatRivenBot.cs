@@ -19,13 +19,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Application.LogParser;
 using Newtonsoft.Json;
+using Application.Window;
 
 namespace Application
 {
     public class ChatRivenBot : IDisposable
     {
         private readonly string _launcherPath;
-        private readonly IMouseMover _mouse;
+        private readonly IMouse _mouse;
         private readonly IScreenStateHandler _screenStateHandler;
         private readonly IGameCapture _gameCapture;
         private readonly IKeyboard _keyboard;
@@ -44,7 +45,7 @@ namespace Application
         private bool _isRunning = false;
         private System.IO.StreamWriter logStream = null;
 
-        public ChatRivenBot(string launcherFullPath, IMouseMover mouseMover, IScreenStateHandler screenStateHandler,
+        public ChatRivenBot(string launcherFullPath, IMouse mouseMover, IScreenStateHandler screenStateHandler,
             IGameCapture gameCapture,
             ObsSettings obsSettings,
             string password,
@@ -72,24 +73,6 @@ namespace Application
                 ConnectToObs();
         }
 
-        #region user32 helpers
-        [DllImport("user32.dll")]
-        private static extern int SetForegroundWindow(IntPtr hwnd);
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        public static extern IntPtr FindWindow(string strClassName, string strWindowName);
-
-        [DllImport("user32.dll")]
-        public static extern bool GetWindowRect(IntPtr hwnd, ref Rect rectangle);
-
-        public struct Rect
-        {
-            public int Left { get; set; }
-            public int Top { get; set; }
-            public int Right { get; set; }
-            public int Bottom { get; set; }
-        }
-        #endregion
 
         public void ProcessRivenQueue(CancellationToken c)
         {
@@ -231,7 +214,7 @@ namespace Application
                     }
 
                     //Try doing a parse
-                    SetForegroundWindow(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
+                    _screenStateHandler.GiveWindowFocus(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
                     using (var screen = _gameCapture.GetFullImage())
                     {
                         _mouse.MoveTo(0, 0);
@@ -524,7 +507,7 @@ namespace Application
             Thread.Sleep(250);
             using (var glyphScreen = _gameCapture.GetFullImage())
             {
-                SetForegroundWindow(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
+                _screenStateHandler.GiveWindowFocus(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
                 if (_screenStateHandler.GetScreenState(glyphScreen) == ScreenState.GlyphWindow)
                 {
                     //Check if filter is setup with asdf
@@ -553,7 +536,7 @@ namespace Application
 
         private void ClaimDailyReward()
         {
-            SetForegroundWindow(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
+            _screenStateHandler.GiveWindowFocus(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
             _mouse.Click(0, 0);
             using (var screen = _gameCapture.GetFullImage())
             {
@@ -574,7 +557,7 @@ namespace Application
 
         private void LogIn()
         {
-            SetForegroundWindow(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
+            _screenStateHandler.GiveWindowFocus(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
             _mouse.MoveTo(0, 0);
             using (var screen = _gameCapture.GetFullImage())
             {
@@ -602,7 +585,7 @@ namespace Application
             //We may have missed the loading screen. If we started WF then wait even longer to get to the login screen
             while (!wfAlreadyRunning && DateTime.Now.Subtract(startTime).TotalMinutes < 1)
             {
-                SetForegroundWindow(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
+                _screenStateHandler.GiveWindowFocus(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
                 _mouse.MoveTo(0, 0);
                 using (var screen = _gameCapture.GetFullImage())
                 {
@@ -640,9 +623,8 @@ namespace Application
                     if (launcher == null)
                         continue;
                 }
-                SetForegroundWindow(launcher.MainWindowHandle);
-                Rect launcherRect = new Rect();
-                GetWindowRect(launcher.MainWindowHandle, ref launcherRect);
+                _screenStateHandler.GiveWindowFocus(launcher.MainWindowHandle);
+                Rect launcherRect = _screenStateHandler.GetWindowRectangle(launcher.MainWindowHandle);
                 _mouse.Click(launcherRect.Left + (int)((launcherRect.Right - launcherRect.Left) * 0.7339181286549708f),
                     launcherRect.Top + (int)((launcherRect.Bottom - launcherRect.Top) * 0.9252336448598131f));
                 System.Threading.Thread.Sleep(17);
@@ -663,7 +645,7 @@ namespace Application
             var tries = 0;
             while (true)
             {
-                SetForegroundWindow(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
+                _screenStateHandler.GiveWindowFocus(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
                 using (var screen = _gameCapture.GetFullImage())
                 {
                     screen.Save("screen.png");
@@ -685,7 +667,7 @@ namespace Application
             System.Threading.Thread.Sleep(1000); //Give menu time to animate
 
             //Check if on Main Menu
-            SetForegroundWindow(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
+            _screenStateHandler.GiveWindowFocus(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
             using (var screen = _gameCapture.GetFullImage())
             {
                 screen.Save("screen.png");
@@ -693,7 +675,7 @@ namespace Application
                 if (state == Enums.ScreenState.MainMenu)
                 {
                     //Click profile
-                    SetForegroundWindow(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
+                    _screenStateHandler.GiveWindowFocus(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
                     _mouse.Click(728, 937);
                     Thread.Sleep(750);
 

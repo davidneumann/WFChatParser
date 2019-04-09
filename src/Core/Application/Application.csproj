@@ -17,4 +17,8 @@
     <ProjectReference Include="..\..\Common\Common\Common.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Actionables\ProfileBots\" />
+  </ItemGroup>
+
 </Project>

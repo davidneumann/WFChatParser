@@ -47,10 +47,79 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            TestRivenParsing();
+            //FindErrorAgain();
+            //TestRivenParsing();
             VerifyNoErrors(2);
             //TestScreenHandler();
             //TestBot();
+        }
+
+        private static void FindErrorAgain()
+        {
+            var cp = new ChatParser();
+            foreach (var file in Directory.GetFiles(@"\\DESKTOP-BJRVJJQ\ChatLog\debug").Where(f => f.Contains("131992381447623296")))
+            {
+                var lines = cp.ParseChatImage(new Bitmap(file));
+                foreach (var line in lines)
+                {
+                    var clr = line as ChatMessageLineResult;
+
+                    var chatMessage = MakeChatModel(line as Application.LineParseResult.ChatMessageLineResult);
+                }
+            }
+        }
+
+        private static ChatMessageModel MakeChatModel(Application.LineParseResult.ChatMessageLineResult line)
+        {
+            var m = line.RawMessage;
+            string debugReason, timestamp, username;
+            var parsed = GetUsername(line.RawMessage);
+            timestamp = parsed.Item1;
+            username = parsed.Item2;
+            debugReason = parsed.Item3;
+            var cm = new ChatMessageModel()
+            {
+                Raw = m,
+                Author = username,
+                Timestamp = timestamp,
+                SystemTimestamp = DateTimeOffset.UtcNow
+            };
+            if (debugReason != null)
+            {
+                cm.DEBUGREASON = debugReason;
+            }
+            cm.EnhancedMessage = line.EnhancedMessage;
+            return cm;
+        }
+
+        private static Tuple<string,string,string> GetUsername(string RawMessage)
+        {
+            var badNameRegex = new Regex("[^-A-Za-z0-9._]");
+            string debugReason = null;
+            var m = RawMessage;
+            var timestamp = m.Substring(0, 7).Trim();
+            var username = "Unknown";
+            try
+            {
+                username = m.Substring(8).Trim();
+                if (username.IndexOf(":") > 0 && username.IndexOf(":") < username.IndexOf(" "))
+                    username = username.Substring(0, username.IndexOf(":"));
+                else
+                {
+                    username = username.Substring(0, username.IndexOf(" "));
+                    debugReason = "Bade name: " + username;
+                }
+                if (username.Contains(" ") || username.Contains(@"\/") || username.Contains("]") || username.Contains("[") || badNameRegex.Match(username).Success)
+                {
+                    debugReason = "Bade name: " + username;
+                }
+
+                if (!Regex.Match(RawMessage, @"^(\[\d\d:\d\d\]) ([-A-Za-z0-9._]+):?\s+(.+)").Success)
+                    debugReason = "Invalid username or timestamp!";
+            }
+            catch { debugReason = "Bade name: " + username; }
+
+            return new Tuple<string, string, string>(timestamp, username, debugReason);
         }
 
         private static void ParseChatImage()
@@ -1027,6 +1096,16 @@ namespace DebugCLI
                 var sw = new Stopwatch();
                 sw.Restart();
                 var fullResults = c.ParseChatImage(new Bitmap(masterKeyFile), xOffset, false, false);
+
+                var m = fullResults.OfType<ChatMessageLineResult>().Select(line => MakeChatModel(line)).ToArray();
+                var m2 = fullResults.Select(line => GetUsername(line.RawMessage)).ToArray();
+                var allThere = !m.Select(model => m2.Any(old => old.Item2 == model.Author)).Any(b => !b);
+                var allThere2 = !m2.Select(old => m.Any(model => model.Author == old.Item2)).Any(b => !b);
+                if (!allThere || !allThere2)
+                    Debugger.Break();
+                var newE = m.Select(model => model.EnhancedMessage);
+                var oldE = fullResults.Select(line => line.RawMessage.Substring(5).Substring(line.RawMessage.Substring(5).IndexOf(":") + 1).Trim());
+
                 var result = fullResults.Select(i => i.RawMessage.Trim()).ToArray();
                 Console.WriteLine("Parsed in: " + sw.Elapsed.TotalSeconds + " seconds");
                 sw.Stop();

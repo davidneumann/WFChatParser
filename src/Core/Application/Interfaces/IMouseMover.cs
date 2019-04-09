@@ -2,7 +2,7 @@
 
 namespace Application.Interfaces
 {
-    public interface IMouseMover
+    public interface IMouse
     {
         void ScrollUp();
         void ScrollDown();

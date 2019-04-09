@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace WarframeDriver
 {
-    public class MouseHelper: IMouseMover
+    public class MouseHelper: IMouse
     {
         [DllImport("user32.dll")]
         private static extern bool SetCursorPos(int X, int Y);

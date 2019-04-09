@@ -26,7 +26,7 @@ namespace Application
         private IDataSender _dataSender;
         private IChatParser _chatParser;
         private IGameCapture _gameCapture;
-        private IMouseMover _mouseMover;
+        private IMouse _mouseMover;
         private IRivenCleaner _rivenCleaner;
         private IRivenParser _rivenParser;
         private IScreenStateHandler _screenStateHandler;
@@ -37,7 +37,7 @@ namespace Application
         private Riven _UILastRiven = null;
         private RedTextParser _redTextParser;
 
-        public ChatWatcher(IDataSender dataSender, IChatParser chatParser, IGameCapture gameCapture, IMouseMover mouseMover, IRivenCleaner rivenCleaner, IRivenParser rivenParser,
+        public ChatWatcher(IDataSender dataSender, IChatParser chatParser, IGameCapture gameCapture, IMouse mouseMover, IRivenCleaner rivenCleaner, IRivenParser rivenParser,
             IScreenStateHandler screenStateHandler,
             RedTextParser redTextParser)
         {
