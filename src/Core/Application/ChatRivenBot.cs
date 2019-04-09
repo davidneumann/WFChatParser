@@ -317,6 +317,7 @@ namespace Application
                                 else
                                     Log("Unknown message: " + line.RawMessage);
                             }
+                            Thread.Sleep(75);
                             Log($"Processed (not riven parsed) {chatLines.Length} messages in : {sw.Elapsed.TotalSeconds} seconds");
                             sw.Stop();
                         }
@@ -664,7 +665,7 @@ namespace Application
             }
         }
 
-        private void NavigateToGlyphScreen()
+        private void NavigateToGlyphScreen(bool retry=true)
         {
             //Ensure we are controlling a warframe
             var tries = 0;
@@ -684,7 +685,7 @@ namespace Application
                         break;
                 }
                 tries++;
-                if (tries > 15)
+                if (tries > 25)
                     throw new NavigationException(ScreenState.ControllingWarframe);
             }
             //Send escape to open main menu
@@ -702,7 +703,7 @@ namespace Application
                     //Click profile
                     SetForegroundWindow(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
                     _mouse.Click(728, 937);
-                    Thread.Sleep(500);
+                    Thread.Sleep(750);
 
                     using (var profileMenuImage = _gameCapture.GetFullImage())
                     {
@@ -710,14 +711,26 @@ namespace Application
                         {
                             //Click Glyph
                             _mouse.Click(693, 948);
-                            Thread.Sleep(500);
+                            Thread.Sleep(750);
                         }
-                        else
+                        else if (retry)
+                            NavigateToGlyphScreen(false);
+                        else if (!retry)
+                        {
+                            var path = SaveScreenToDebug(screen);
+                            _dataSender.AsyncSendDebugMessage("Failed to navigate to profile menu. See: " + path);
                             throw new NavigationException(ScreenState.ProfileMenu);
+                        }
                     }
                 }
-                else
+                else if (retry)
+                    NavigateToGlyphScreen(false);
+                else if (!retry)
+                {
+                    var path = SaveScreenToDebug(screen);
+                    _dataSender.AsyncSendDebugMessage("Failed to navigate to mian menu. See: " + path);
                     throw new NavigationException(ScreenState.MainMenu);
+                }
             }
         }
 
