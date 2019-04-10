@@ -1,10 +1,12 @@
 ﻿using AdysTech.CredentialManager;
 using Application;
+using Application.Actionables;
 using DataStream;
 using ImageOCR;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -40,6 +42,25 @@ namespace ChatLoggerCLI
               .AddJsonFile("appsettings.production.json", true, true)
               .Build();
 
+
+            var launchers = config.GetSection("Launchers").GetChildren().AsEnumerable();
+            var startInfos = launchers.Select(i => {
+                var section = config.GetSection(i.Path);
+                var startInfo = new ProcessStartInfo();
+                startInfo.UserName = section.GetSection("Username").Value;
+                var password = section.GetSection("Password").Value;
+                System.Security.SecureString ssPwd = new System.Security.SecureString();
+                for (int x = 0; x < password.Length; x++)
+                {
+                    ssPwd.AppendChar(password[x]);
+                }
+                startInfo.Password = ssPwd;
+                var info = new FileInfo(section.GetSection("LauncherPath").Value);
+                startInfo.FileName = info.FullName;
+                startInfo.UseShellExecute = false;
+                startInfo.WorkingDirectory = info.Directory.FullName;
+                return startInfo;
+                }).ToArray();
 
             Console.WriteLine("Data sender connecting");
             var dataSender = new DataSender(new Uri(config["DataSender:HostName"]),
@@ -77,44 +98,37 @@ namespace ChatLoggerCLI
                 catch { }
             };
 
-            var password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"]);
+            //var password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"]);
             
             var gc = new GameCapture();
             var obs = GetObsSettings(config["Credentials:Key"], config["Credentials:Salt"]);
-            var bot = new ChatRivenBot(config["LauncherPath"], new MouseHelper(),
-                new ScreenStateHandler(),
-                gc,
-                obs,
-                password,
+            var bot = new MultiChatRivenBot(startInfos, new MouseHelper(),
                 new KeyboardHelper(),
-                new ChatParser(),
-                dataSender,
-                new RivenCleaner(),
+                new ScreenStateHandler(),
                 new RivenParserFactory(),
-                new Application.LogParser.RedTextParser());
+                new RivenCleaner(),
+                dataSender);
 
             _cancellationSource = new CancellationTokenSource();
-            Task t =  Task.Run(() => bot.AsyncRun(_cancellationSource.Token));
-            while(true)
+            Task t =  bot.AsyncRun(_cancellationSource.Token);
+            while(!t.IsCanceled && !t.IsCompleted && !t.IsCompletedSuccessfully && !t.IsFaulted)
             {
-                if (t.IsFaulted || t.Exception != null)
-                {
-                    Console.WriteLine("\n" + t.Exception);
-                    try
-                    {
-                        dataSender.AsyncSendDebugMessage(t.Exception.ToString()).Wait();
-                        System.Threading.Thread.Sleep(2000);
-                    }
-                    catch
-                    {
-                        _cancellationSource.Cancel();
-                    }
-                    break;
-                }
-                else if (t.IsCompleted || t.IsCanceled || t.IsFaulted)
-                    break;
                 //var debug = progress.GetAwaiter().IsCompleted;
                 System.Threading.Thread.Sleep(1000);
+            }
+
+            if (t.IsFaulted || t.Exception != null)
+            {
+                Console.WriteLine("\n" + t.Exception);
+                try
+                {
+                    dataSender.AsyncSendDebugMessage(t.Exception.ToString()).Wait();
+                    System.Threading.Thread.Sleep(2000);
+                }
+                catch
+                {
+                    _cancellationSource.Cancel();
+                }
             }
         }
 

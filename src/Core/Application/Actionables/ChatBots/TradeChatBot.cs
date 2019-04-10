@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -6,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Application.Interfaces;
+using Application.Logger;
 using static Application.ChatRivenBot;
 
 namespace Application.Actionables.ChatBots
@@ -13,38 +15,42 @@ namespace Application.Actionables.ChatBots
     public class TradeChatBot : IActionable
     {
         public bool IsRequestingControl => _requestingControl;
-        private bool _requestingControl = false;
+        private bool _requestingControl = true;
 
         private Task _controlTask = null;
 
-        private List<Thread> _rivenQueueWorkers;
+        private ConcurrentQueue<RivenParseTaskWorkItem> _workQueue;
         private IRivenParser _rivenCropper;
         private CancellationToken _cancellationToken;
-
+        private ProcessStartInfo _launcherStartInfo;
         private BotStates _currentState = BotStates.StartWarframe;
-
-        private string _launcherPath;
 
         private IMouse _mouse;
         private IKeyboard _keyboard;
         private IScreenStateHandler _screenStateHandler;
+        private ILogger _logger;
+        private IGameCapture _gameCapture;
         private Process _warframeProcess;
 
-        public TradeChatBot(List<Thread> rivenQueueWorkers,
+        public TradeChatBot(ConcurrentQueue<RivenParseTaskWorkItem> workQueue,
             IRivenParser rivenCropper,
             CancellationToken cancellationToken,
-            string launcherPath,
+            ProcessStartInfo launcherStartInfo,
             IMouse mouse,
             IKeyboard keyboard,
-            IScreenStateHandler screenStateHandler)
+            IScreenStateHandler screenStateHandler,
+            ILogger logger,
+            IGameCapture gameCapture)
         {
-            _rivenQueueWorkers = rivenQueueWorkers;
+            _workQueue = workQueue;
             _rivenCropper = rivenCropper;
             _cancellationToken = cancellationToken;
-            _launcherPath = launcherPath;
+            _launcherStartInfo = launcherStartInfo;
             _mouse = mouse;
             _keyboard = keyboard;
             _screenStateHandler = screenStateHandler;
+            _logger = logger;
+            _gameCapture = gameCapture;
         }
 
         public Task TakeControl()
@@ -54,7 +60,7 @@ namespace Application.Actionables.ChatBots
                 case BotStates.StartWarframe:
                     return StartWarframe();
                 case BotStates.WaitForLoadScreen:
-                    break;
+                    return WaitForLoadingScreen();
                 case BotStates.LogIn:
                     break;
                 case BotStates.ClaimReward:
@@ -66,9 +72,9 @@ namespace Application.Actionables.ChatBots
                 case BotStates.ParseChat:
                     break;
                 default:
-                    break; 
+                    break;
             }
-            return null;
+            return Task.Delay(5000);
         }
 
         private enum BotStates
@@ -277,26 +283,19 @@ namespace Application.Actionables.ChatBots
 
         private async Task StartWarframe()
         {
+            _requestingControl = false;
             var existingWarframes = System.Diagnostics.Process.GetProcessesByName("Warframe.x64").ToArray();
+
+            var launcher = new System.Diagnostics.Process()
+            {
+                StartInfo = _launcherStartInfo
+            };
+            launcher.Start();
+            await Task.Delay(5000);
+
             ////If not start launcher, click play until WF starts
             while (true)
             {
-                var launcher = System.Diagnostics.Process.GetProcessesByName("Launcher").FirstOrDefault();
-                if (launcher == null)
-                {
-                    launcher = new System.Diagnostics.Process()
-                    {
-                        StartInfo = new System.Diagnostics.ProcessStartInfo()
-                        {
-                            FileName = _launcherPath
-                        }
-                    };
-                    launcher.Start();
-                    await Task.Delay(1000);
-                    launcher = System.Diagnostics.Process.GetProcessesByName("Launcher").FirstOrDefault();
-                    if (launcher == null)
-                        continue;
-                }
                 _screenStateHandler.GiveWindowFocus(launcher.MainWindowHandle);
                 var launcherRect = _screenStateHandler.GetWindowRectangle(launcher.MainWindowHandle);
                 _mouse.Click(launcherRect.Left + (int)((launcherRect.Right - launcherRect.Left) * 0.7339181286549708f),
@@ -316,6 +315,36 @@ namespace Application.Actionables.ChatBots
                 if (!existingWarframes.Any(eWF => eWF.MainWindowHandle == warframe.MainWindowHandle))
                     _warframeProcess = warframe;
             }
+
+            _currentState = BotStates.WaitForLoadScreen;
+            _requestingControl = true;
+        }
+
+        private async Task WaitForLoadingScreen()
+        {
+            _requestingControl = false;
+
+            _logger.Log("Waiting for login screen");
+            var startTime = DateTime.Now;
+            //We may have missed the loading screen. If we started WF then wait even longer to get to the login screen
+            while (DateTime.Now.Subtract(startTime).TotalMinutes < 1)
+            {
+                _screenStateHandler.GiveWindowFocus(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
+                _mouse.MoveTo(0, 0);
+                using (var screen = _gameCapture.GetFullImage())
+                {
+                    screen.Save("screen.png");
+                    if (_screenStateHandler.GetScreenState(screen) != Enums.ScreenState.LoginScreen)
+                    {
+                        await Task.Delay(1000);
+                    }
+                    else
+                        break;
+                }
+            }
+
+            _currentState = BotStates.LogIn;
+            _requestingControl = true;
         }
     }
 }

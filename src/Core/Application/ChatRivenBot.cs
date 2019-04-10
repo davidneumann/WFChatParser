@@ -20,6 +20,7 @@ using System.Threading.Tasks;
 using Application.LogParser;
 using Newtonsoft.Json;
 using Application.Window;
+using Application.Actionables.ChatBots;
 
 namespace Application
 {
@@ -754,19 +755,6 @@ namespace Application
         {
             if (_obs != null)
                 _obs.Disconnect();
-        }
-
-        public class RivenParseTaskWorkItem
-        {
-            public ChatMessageModel Message { get; set; }
-            public List<RivenParseTaskWorkItemDetail> RivenWorkDetails { get; set; } = new List<RivenParseTaskWorkItemDetail>();
-        }
-
-        public class RivenParseTaskWorkItemDetail
-        {
-            public string RivenName { get; set; }
-            public int RivenIndex { get; set; }
-            public Bitmap CroppedRivenBitmap { get; set; }
         }
     }
 }
