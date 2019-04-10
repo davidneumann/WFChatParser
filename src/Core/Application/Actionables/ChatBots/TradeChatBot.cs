@@ -22,7 +22,7 @@ namespace Application.Actionables.ChatBots
         private ConcurrentQueue<RivenParseTaskWorkItem> _workQueue;
         private IRivenParser _rivenCropper;
         private CancellationToken _cancellationToken;
-        private ProcessStartInfo _launcherStartInfo;
+        private WarframeCredentials _warframeCredentials;
         private BotStates _currentState = BotStates.StartWarframe;
 
         private IMouse _mouse;
@@ -35,7 +35,7 @@ namespace Application.Actionables.ChatBots
         public TradeChatBot(ConcurrentQueue<RivenParseTaskWorkItem> workQueue,
             IRivenParser rivenCropper,
             CancellationToken cancellationToken,
-            ProcessStartInfo launcherStartInfo,
+            WarframeCredentials warframeCredentials,
             IMouse mouse,
             IKeyboard keyboard,
             IScreenStateHandler screenStateHandler,
@@ -45,16 +45,22 @@ namespace Application.Actionables.ChatBots
             _workQueue = workQueue;
             _rivenCropper = rivenCropper;
             _cancellationToken = cancellationToken;
-            _launcherStartInfo = launcherStartInfo;
+            _warframeCredentials = warframeCredentials;
             _mouse = mouse;
             _keyboard = keyboard;
             _screenStateHandler = screenStateHandler;
             _logger = logger;
             _gameCapture = gameCapture;
+            _warframeCredentials = warframeCredentials;
         }
 
         public Task TakeControl()
         {
+            if (_warframeProcess == null || _warframeProcess.HasExited)
+                _currentState = BotStates.StartWarframe;
+
+            _requestingControl = false;
+
             switch (_currentState)
             {
                 case BotStates.StartWarframe:
@@ -62,9 +68,9 @@ namespace Application.Actionables.ChatBots
                 case BotStates.WaitForLoadScreen:
                     return WaitForLoadingScreen();
                 case BotStates.LogIn:
-                    break;
+                    return LogIn();
                 case BotStates.ClaimReward:
-                    break;
+                    return ClaimDailyRewardTask();
                 case BotStates.CloseWarframe:
                     break;
                 case BotStates.NavigateToChat:
@@ -288,7 +294,7 @@ namespace Application.Actionables.ChatBots
 
             var launcher = new System.Diagnostics.Process()
             {
-                StartInfo = _launcherStartInfo
+                StartInfo = _warframeCredentials.StartInfo
             };
             launcher.Start();
             await Task.Delay(5000);
@@ -327,9 +333,10 @@ namespace Application.Actionables.ChatBots
             _logger.Log("Waiting for login screen");
             var startTime = DateTime.Now;
             //We may have missed the loading screen. If we started WF then wait even longer to get to the login screen
+            var atLogin = false;
             while (DateTime.Now.Subtract(startTime).TotalMinutes < 1)
             {
-                _screenStateHandler.GiveWindowFocus(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
+                _screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle);
                 _mouse.MoveTo(0, 0);
                 using (var screen = _gameCapture.GetFullImage())
                 {
@@ -339,12 +346,91 @@ namespace Application.Actionables.ChatBots
                         await Task.Delay(1000);
                     }
                     else
+                    {
+                        atLogin = true;
                         break;
+                    }
                 }
             }
 
-            _currentState = BotStates.LogIn;
+            if (atLogin)
+            {
+                _currentState = BotStates.LogIn;
+            }
+            else
+                _currentState = BotStates.WaitForLoadScreen;
             _requestingControl = true;
+        }
+
+        private async Task LogIn()
+        {
+            _screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle);
+            _mouse.Click(0, 0);
+            await Task.Delay(17);
+
+            using (var screen = _gameCapture.GetFullImage())
+            {
+                screen.Save("screen.png");
+                if (_screenStateHandler.GetScreenState(screen) == Enums.ScreenState.LoginScreen)
+                {
+                    _logger.Log("Logging in");
+                    ////Username
+                    //_mouse.Click(3041, 1145);
+                    //await Task.Delay(17);
+                    //_keyboard.SendPaste(_warframeCredentials.Username);
+                    //await Task.Delay(17);
+
+                    //Password
+                    _mouse.Click(2936, 1235);
+                    await Task.Delay(17);
+                    _keyboard.SendPaste(_warframeCredentials.Password);
+                    await Task.Delay(17);
+
+                    //Login
+                    _mouse.Click(2945, 1333);
+
+                    //Give plenty of time for the screen to transition
+                    await Task.Delay(5000);
+                }
+            }
+
+            ClaimDailyReward();
+            await Task.Delay(1000);
+
+            _currentState = BotStates.NavigateToChat;
+            _requestingControl = true;
+        }
+
+        private void ClaimDailyReward()
+        {
+            if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
+                _mouse.Click(0, 0);
+
+            using (var screen = _gameCapture.GetFullImage())
+            {
+                screen.Save("screen.png");
+                var state = _screenStateHandler.GetScreenState(screen);
+                if (state == Enums.ScreenState.DailyRewardScreenItem)
+                {
+                    _logger.Log("Claiming random middle reward");
+                    _mouse.Click(2908, 1592);
+                }
+                else if (state == Enums.ScreenState.DailyRewardScreenPlat)
+                {
+                    _logger.Log("Claiming unkown plat discount");
+                    _mouse.Click(3325, 1951);
+                }
+            }
+        }
+
+        private Task ClaimDailyRewardTask()
+        {
+            return Task.Run(() =>
+            {
+                ClaimDailyReward();
+                _currentState = BotStates.NavigateToChat;
+                _requestingControl = true;
+            });
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using Application.Actionables.ChatBots;
 using Application.Interfaces;
+using Application.Logger;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -13,7 +14,7 @@ namespace Application.Actionables
 {
     public class MultiChatRivenBot
     {
-        private ProcessStartInfo[] _launcherStartInfos;
+        private WarframeCredentials[] _warframeCredentials;
 
         private TradeChatBot[] _bots;
 
@@ -25,23 +26,28 @@ namespace Application.Actionables
         private IDataSender _dataSender;
         private List<Thread> _rivenQueueWorkers = new List<Thread>();
         private ConcurrentQueue<RivenParseTaskWorkItem> _rivenWorkQueue = new ConcurrentQueue<RivenParseTaskWorkItem>();
+        private Application.Logger.Logger _logger;
+        private IGameCapture _gameCapture;
 
-        public MultiChatRivenBot(ProcessStartInfo[] launcherStartInfos, 
+        public MultiChatRivenBot(WarframeCredentials[] warframeCredentials,
             IMouse mouse, 
             IKeyboard keyboard, 
             IScreenStateHandler screenStateHandler,
             IRivenParserFactory rivenParserFactory,
             IRivenCleaner rivenCleaner,
-            IDataSender dataSender)
+            IDataSender dataSender,
+            IGameCapture gameCapture)
         {
-            _launcherStartInfos = launcherStartInfos;
-            _bots = new TradeChatBot[_launcherStartInfos.Length];
+            _warframeCredentials = warframeCredentials;
+            _bots = new TradeChatBot[_warframeCredentials.Length];
             _mouse = mouse;
             _keyboard = keyboard;
             _screenStateHandler = screenStateHandler;
             _rivenParserFactory = rivenParserFactory;
             _rivenCleaner = rivenCleaner;
             _dataSender = dataSender;
+            _logger = new Application.Logger.Logger(_dataSender);
+            _gameCapture = gameCapture;
         }
 
         public void ProcessRivenQueue(CancellationToken c)
@@ -104,7 +110,7 @@ namespace Application.Actionables
 
             for (int i = 0; i < _bots.Length; i++)
             {
-                _bots[i] = new TradeChatBot(_rivenWorkQueue, null, c, _launcherStartInfos[i], _mouse, _keyboard, _screenStateHandler);
+                _bots[i] = new TradeChatBot(_rivenWorkQueue, null, c, _warframeCredentials[i], _mouse, _keyboard, _screenStateHandler, _logger, _gameCapture);
             }
 
             while (!c.IsCancellationRequested)

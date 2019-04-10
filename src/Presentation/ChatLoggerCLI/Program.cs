@@ -1,6 +1,7 @@
 ﻿using AdysTech.CredentialManager;
 using Application;
 using Application.Actionables;
+using Application.Actionables.ChatBots;
 using DataStream;
 using ImageOCR;
 using Microsoft.Extensions.Configuration;
@@ -44,7 +45,7 @@ namespace ChatLoggerCLI
 
 
             var launchers = config.GetSection("Launchers").GetChildren().AsEnumerable();
-            var startInfos = launchers.Select(i => {
+            var warframeCredentials = launchers.Select(i => {
                 var section = config.GetSection(i.Path);
                 var startInfo = new ProcessStartInfo();
                 startInfo.UserName = section.GetSection("Username").Value;
@@ -59,7 +60,14 @@ namespace ChatLoggerCLI
                 startInfo.FileName = info.FullName;
                 startInfo.UseShellExecute = false;
                 startInfo.WorkingDirectory = info.Directory.FullName;
-                return startInfo;
+
+                var credentials = new WarframeCredentials()
+                {
+                    StartInfo = startInfo,
+                    Password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"], section.GetSection("WarframeCredentialsTarget").Value),
+                    Username = GetUsername(config["Credentials:Key"], config["Credentials:Salt"], section.GetSection("WarframeCredentialsTarget").Value)
+                };
+                return credentials;
                 }).ToArray();
 
             Console.WriteLine("Data sender connecting");
@@ -102,12 +110,13 @@ namespace ChatLoggerCLI
             
             var gc = new GameCapture();
             var obs = GetObsSettings(config["Credentials:Key"], config["Credentials:Salt"]);
-            var bot = new MultiChatRivenBot(startInfos, new MouseHelper(),
+            var bot = new MultiChatRivenBot(warframeCredentials, new MouseHelper(),
                 new KeyboardHelper(),
                 new ScreenStateHandler(),
                 new RivenParserFactory(),
                 new RivenCleaner(),
-                dataSender);
+                dataSender,
+                gc);
 
             _cancellationSource = new CancellationTokenSource();
             Task t =  bot.AsyncRun(_cancellationSource.Token);
@@ -132,9 +141,9 @@ namespace ChatLoggerCLI
             }
         }
 
-        private static string GetPassword(string key, string salt)
+        private static string GetPassword(string key, string salt, string target)
         {
-            var r = CredentialManager.GetCredentials("WFChatBot", CredentialManager.CredentialType.Generic);
+            var r = CredentialManager.GetCredentials(target, CredentialManager.CredentialType.Generic);
             using (MemoryStream ms = new MemoryStream())
             {
                 PasswordDeriveBytes pdb = new PasswordDeriveBytes(key, Encoding.UTF8.GetBytes(salt));
@@ -145,6 +154,25 @@ namespace ChatLoggerCLI
                   aes.CreateDecryptor(), CryptoStreamMode.Write))
                 {
                     var input = Convert.FromBase64String(r.Password);
+                    cs.Write(input, 0, input.Length);
+                    cs.Close();
+                    return Encoding.UTF8.GetString(ms.ToArray());
+                }
+            }
+        }
+        private static string GetUsername(string key, string salt, string target)
+        {
+            var r = CredentialManager.GetCredentials(target, CredentialManager.CredentialType.Generic);
+            using (MemoryStream ms = new MemoryStream())
+            {
+                PasswordDeriveBytes pdb = new PasswordDeriveBytes(key, Encoding.UTF8.GetBytes(salt));
+                Aes aes = new AesManaged();
+                aes.Key = pdb.GetBytes(aes.KeySize / 8);
+                aes.IV = pdb.GetBytes(aes.BlockSize / 8);
+                using (CryptoStream cs = new CryptoStream(ms,
+                  aes.CreateDecryptor(), CryptoStreamMode.Write))
+                {
+                    var input = Convert.FromBase64String(r.UserName);
                     cs.Write(input, 0, input.Length);
                     cs.Close();
                     return Encoding.UTF8.GetString(ms.ToArray());

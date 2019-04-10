@@ -47,9 +47,10 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
+            CredentialShim("WFBot:Bot2");
             //FindErrorAgain();
             //TestRivenParsing();
-            VerifyNoErrors(2);
+            //VerifyNoErrors(2);
             //TestScreenHandler();
             //TestBot();
         }
@@ -92,7 +93,7 @@ namespace DebugCLI
             return cm;
         }
 
-        private static Tuple<string,string,string> GetUsername(string RawMessage)
+        private static Tuple<string, string, string> GetUsername(string RawMessage)
         {
             var badNameRegex = new Regex("[^-A-Za-z0-9._]");
             string debugReason = null;
@@ -235,6 +236,61 @@ namespace DebugCLI
 
             //while (queue.Count > 0)
             //    Thread.Sleep(1000);
+        }
+
+        private static void CredentialShim(string target)
+        {
+            IConfiguration config = new ConfigurationBuilder()
+                 .AddJsonFile("appsettings.json", true, true)
+                 .AddJsonFile("appsettings.development.json", true, true)
+                 .AddJsonFile("appsettings.production.json", true, true)
+                 .Build();
+
+            var key = config["Credentials:Key"];
+            var salt = config["Credentials:Salt"];
+
+
+            Console.Write("Username: ");
+            var username = Console.ReadLine();
+            Console.Write("\r\nPassword: ");
+            var password = Console.ReadLine();
+
+
+            string encryptedPassword = null;
+            using (MemoryStream ms = new MemoryStream())
+            {
+                PasswordDeriveBytes pdb = new PasswordDeriveBytes(key, Encoding.UTF8.GetBytes(salt));
+                Aes aes = new AesManaged();
+                aes.Key = pdb.GetBytes(aes.KeySize / 8);
+                aes.IV = pdb.GetBytes(aes.BlockSize / 8);
+                using (CryptoStream cs = new CryptoStream(ms,
+                  aes.CreateEncryptor(), CryptoStreamMode.Write))
+                {
+                    var pass = Encoding.UTF8.GetBytes(password);
+                    cs.Write(pass, 0, pass.Length);
+                    cs.Close();
+                }
+                encryptedPassword = Convert.ToBase64String(ms.ToArray());
+            }
+
+            string encryptedUsername = null;
+            using (MemoryStream ms = new MemoryStream())
+            {
+                PasswordDeriveBytes pdb = new PasswordDeriveBytes(key, Encoding.UTF8.GetBytes(salt));
+                Aes aes = new AesManaged();
+                aes.Key = pdb.GetBytes(aes.KeySize / 8);
+                aes.IV = pdb.GetBytes(aes.BlockSize / 8);
+                using (CryptoStream cs = new CryptoStream(ms,
+                  aes.CreateEncryptor(), CryptoStreamMode.Write))
+                {
+                    var pass = Encoding.UTF8.GetBytes(username);
+                    cs.Write(pass, 0, pass.Length);
+                    cs.Close();
+                }
+                encryptedUsername = Convert.ToBase64String(ms.ToArray());
+            }
+
+            CredentialManager.SaveCredentials(target, new System.Net.NetworkCredential(encryptedUsername, encryptedPassword));
         }
 
         private static void PasswordShim(string key, string salt, string password)
