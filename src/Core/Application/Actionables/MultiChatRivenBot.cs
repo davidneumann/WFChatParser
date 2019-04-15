@@ -110,7 +110,7 @@ namespace Application.Actionables
 
             for (int i = 0; i < _bots.Length; i++)
             {
-                _bots[i] = new TradeChatBot(_rivenWorkQueue, null, c, _warframeCredentials[i], _mouse, _keyboard, _screenStateHandler, _logger, _gameCapture);
+                _bots[i] = new TradeChatBot(_rivenWorkQueue, null, c, _warframeCredentials[i], _mouse, _keyboard, _screenStateHandler, _logger, _gameCapture, _dataSender);
             }
 
             while (!c.IsCancellationRequested)

@@ -2,10 +2,12 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Application.Enums;
 using Application.Interfaces;
 using Application.Logger;
 using static Application.ChatRivenBot;
@@ -31,6 +33,8 @@ namespace Application.Actionables.ChatBots
         private ILogger _logger;
         private IGameCapture _gameCapture;
         private Process _warframeProcess;
+        private bool firstParse;
+        private IDataSender _dataSender;
 
         public TradeChatBot(ConcurrentQueue<RivenParseTaskWorkItem> workQueue,
             IRivenParser rivenCropper,
@@ -40,7 +44,8 @@ namespace Application.Actionables.ChatBots
             IKeyboard keyboard,
             IScreenStateHandler screenStateHandler,
             ILogger logger,
-            IGameCapture gameCapture)
+            IGameCapture gameCapture,
+            IDataSender dataSender)
         {
             _workQueue = workQueue;
             _rivenCropper = rivenCropper;
@@ -52,6 +57,7 @@ namespace Application.Actionables.ChatBots
             _logger = logger;
             _gameCapture = gameCapture;
             _warframeCredentials = warframeCredentials;
+            _dataSender = dataSender;
         }
 
         public Task TakeControl()
@@ -72,15 +78,209 @@ namespace Application.Actionables.ChatBots
                 case BotStates.ClaimReward:
                     return ClaimDailyRewardTask();
                 case BotStates.CloseWarframe:
-                    break;
+                    return CloseWarframe();
                 case BotStates.NavigateToChat:
-                    break;
+                    return NavigateToChat();
                 case BotStates.ParseChat:
                     break;
                 default:
                     break;
             }
             return Task.Delay(5000);
+        }
+
+        private async Task NavigateToChat()
+        {
+            if (_warframeProcess == null || _warframeProcess.HasExited)
+            {
+                _currentState = BotStates.StartWarframe;
+                _requestingControl = true;
+                return;
+            }
+            
+            if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
+                _mouse.Click(0, 0);
+
+            _mouse.MoveTo(0, 0);
+            await Task.Delay(17);
+
+            using (var screen = _gameCapture.GetFullImage())
+            {
+                var state = _screenStateHandler.GetScreenState(screen);
+                if(state == Enums.ScreenState.LoadingScreen || state == Enums.ScreenState.LoginScreen || state == Enums.ScreenState.DailyRewardScreenItem || state == Enums.ScreenState.DailyRewardScreenPlat)
+                {
+                    _currentState = BotStates.StartWarframe;
+                    _requestingControl = true;
+                    return;
+                }
+
+                //Check if we have some weird OK prompt (hotfixes, etc)
+                if (_screenStateHandler.IsPromptOpen(screen))
+                {
+                    _logger.Log("Unknown prompt detected. Closing.");
+                    _mouse.Click(screen.Width / 2, (int)(screen.Height * 0.57));
+                    await Task.Delay(30);
+                }
+
+                //If we somehow got off the glyph screen get back on it
+                if (state != Enums.ScreenState.GlyphWindow)
+                {
+                    _logger.Log("Going to glyph screen.");
+                    await GoToGlyphScreenAndSetupFilters();
+                    await Task.Delay(30);
+                    //In the event that we did not keep up with chat and ended up in a bad state we need to scroll to the bottom
+                    if (!firstParse)
+                    {
+                        await ScrollToBottomAndPause();
+                    }
+                }
+            }
+        }
+
+        private async Task ScrollToBottomAndPause()
+        {
+            if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
+                _mouse.Click(0, 0);
+            _mouse.ClickAndDrag(new Point(3263, 2085), new Point(3263, 2121), 200);
+            await Task.Delay(100);
+            _mouse.MoveTo(3250, 768);
+            _mouse.ScrollUp();//Pause chat
+            await Task.Delay(60);
+        }
+
+        private async Task GoToGlyphScreenAndSetupFilters()
+        {
+            if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
+                _mouse.Click(0, 0);
+            await NavigateToGlyphScreen();
+            await Task.Delay(250);
+            using (var glyphScreen = _gameCapture.GetFullImage())
+            {
+                _screenStateHandler.GiveWindowFocus(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
+                if (_screenStateHandler.GetScreenState(glyphScreen) == ScreenState.GlyphWindow)
+                {
+                    //Check if filter is setup with asdf
+                    if (!_screenStateHandler.GlyphFiltersPresent(glyphScreen))
+                    {
+                        //Click clear to be safe
+                        _mouse.Click(1125, 263);
+                        Thread.Sleep(50);
+                        //_mouse.Click(1125, 263);
+                        //Thread.Sleep(50);
+
+                        _keyboard.SendPaste("asdf");
+                        Thread.Sleep(100);
+                    }
+                    if (_screenStateHandler.IsChatCollapsed(glyphScreen))
+                    {
+                        //Click and drag to move chat into place
+                        _mouse.ClickAndDrag(new Point(160, 2110), new Point(0, 2160), 1000);
+                        Thread.Sleep(100);
+                    }
+                    else if (!_screenStateHandler.IsChatOpen(glyphScreen))
+                        throw new ChatMissingException();
+                }
+            }
+        }
+
+        private async Task NavigateToGlyphScreen(bool retry = true)
+        {
+            if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
+                _mouse.Click(0, 0);
+            //Ensure we are controlling a warframe
+            var tries = 0;
+            while (true)
+            {
+                _screenStateHandler.GiveWindowFocus(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
+                using (var screen = _gameCapture.GetFullImage())
+                {
+                    screen.Save("screen.png");
+                    var state = _screenStateHandler.GetScreenState(screen);
+                    if (state != Enums.ScreenState.ControllingWarframe)
+                    {
+                        _keyboard.SendEscape();
+                        await Task.Delay(600);
+                    }
+                    else
+                        break;
+                }
+                tries++;
+                if (tries > 25)
+                    throw new NavigationException(ScreenState.ControllingWarframe);
+            }
+            //Send escape to open main menu
+            _keyboard.SendEscape();
+            await Task.Delay(1000); //Give menu time to animate
+
+            //Check if on Main Menu
+            _screenStateHandler.GiveWindowFocus(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
+            using (var screen = _gameCapture.GetFullImage())
+            {
+                screen.Save("screen.png");
+                var state = _screenStateHandler.GetScreenState(screen);
+                if (state == Enums.ScreenState.MainMenu)
+                {
+                    //Click profile
+                    _screenStateHandler.GiveWindowFocus(Process.GetProcessesByName("Warframe.x64").First().MainWindowHandle);
+                    _mouse.Click(728, 937);
+                    Thread.Sleep(750);
+
+                    using (var profileMenuImage = _gameCapture.GetFullImage())
+                    {
+                        if (_screenStateHandler.GetScreenState(profileMenuImage) == Enums.ScreenState.ProfileMenu)
+                        {
+                            //Click Glyph
+                            _mouse.Click(693, 948);
+                            Thread.Sleep(750);
+                        }
+                        else if (retry)
+                            await NavigateToGlyphScreen(false);
+                        else if (!retry)
+                        {
+                            var path = SaveScreenToDebug(screen);
+                            await _dataSender.AsyncSendDebugMessage("Failed to navigate to profile menu. See: " + path);
+                            throw new NavigationException(ScreenState.ProfileMenu);
+                        }
+                    }
+                }
+                else if (retry)
+                    await NavigateToGlyphScreen(false);
+                else if (!retry)
+                {
+                    var path = SaveScreenToDebug(screen);
+                    await _dataSender.AsyncSendDebugMessage("Failed to navigate to mian menu. See: " + path);
+                    throw new NavigationException(ScreenState.MainMenu);
+                }
+            }
+        }
+
+        private object SaveScreenToDebug(Bitmap screen)
+        {
+            if (!System.IO.Directory.Exists("debug"))
+                System.IO.Directory.CreateDirectory("debug");
+            var filePath = System.IO.Path.Combine("debug", DateTime.Now.ToFileTime() + ".png");
+            try { screen.Save(filePath); return filePath; }
+            catch { return null; }
+        }
+
+        private Task CloseWarframe()
+        {
+            return Task.Run(() =>
+            {
+                if (_warframeProcess != null)
+                {
+                    try
+                    {
+                        _warframeProcess.Kill();
+                    }
+                    catch
+                    { }
+                    _warframeProcess = null;
+                }
+
+                _currentState = BotStates.StartWarframe;
+                _requestingControl = true;
+            });
         }
 
         private enum BotStates
