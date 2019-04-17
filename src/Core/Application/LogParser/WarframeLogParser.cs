@@ -67,6 +67,7 @@ namespace Application.LogParser
                 if (_reader == null)
                 {
                     _reader = new StreamReader(fi.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
+                    _reader.BaseStream.Seek(0, SeekOrigin.End);
                 }
 
                 // Assume the file got truncated if it shrinks in size.
