@@ -334,6 +334,8 @@ namespace Application
                 }
             }
 
+            Log("Bot loop has been ended");
+
             _rivenQueueWorkers.Clear();
             _redTextParser.OnRedText -= async redtext => await _dataSender.AsyncSendRedtext(redtext);
             _isRunning = false;

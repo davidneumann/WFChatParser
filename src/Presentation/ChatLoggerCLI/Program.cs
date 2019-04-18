@@ -24,8 +24,18 @@ namespace ChatLoggerCLI
 
         public static void Main(string[] args)
         {
+            _cancellationSource = new CancellationTokenSource();
+
             Console.CancelKeyPress += Console_CancelKeyPress;
-            
+
+            while (!_cancellationSource.Token.IsCancellationRequested)
+            {
+                RunBot();
+            }
+        }
+
+        private static void RunBot()
+        {
             var rivenParser = new RivenParser();
             _disposables.Add(rivenParser);
             //var c = new ChatImageCleaner(JsonConvert.DeserializeObject<CharInfo[]>("chars.json"));
@@ -78,7 +88,7 @@ namespace ChatLoggerCLI
             };
 
             var password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"]);
-            
+
             var gc = new GameCapture();
             var obs = GetObsSettings(config["Credentials:Key"], config["Credentials:Salt"]);
             var bot = new ChatRivenBot(config["LauncherPath"], new MouseHelper(),
@@ -93,29 +103,27 @@ namespace ChatLoggerCLI
                 new RivenParserFactory(),
                 new Application.LogParser.RedTextParser());
 
-            _cancellationSource = new CancellationTokenSource();
-            Task t =  Task.Run(() => bot.AsyncRun(_cancellationSource.Token));
-            while(true)
+            Task t = Task.Run(() => bot.AsyncRun(_cancellationSource.Token));
+            while (!t.IsCompleted && !t.IsCompleted && !t.IsFaulted)
             {
-                if (t.IsFaulted || t.Exception != null)
-                {
-                    Console.WriteLine("\n" + t.Exception);
-                    try
-                    {
-                        dataSender.AsyncSendDebugMessage(t.Exception.ToString()).Wait();
-                        System.Threading.Thread.Sleep(2000);
-                    }
-                    catch
-                    {
-                        _cancellationSource.Cancel();
-                    }
-                    break;
-                }
-                else if (t.IsCompleted || t.IsCanceled || t.IsFaulted)
-                    break;
                 //var debug = progress.GetAwaiter().IsCompleted;
                 System.Threading.Thread.Sleep(1000);
             }
+
+            if (t.IsFaulted || t.Exception != null)
+            {
+                Console.WriteLine("\n" + t.Exception);
+                try
+                {
+                    dataSender.AsyncSendDebugMessage(t.Exception.ToString()).Wait();
+                    System.Threading.Thread.Sleep(2000);
+                }
+                catch
+                {
+                }
+            }
+
+            Dispose();
         }
 
         private static string GetPassword(string key, string salt)
@@ -182,12 +190,17 @@ namespace ChatLoggerCLI
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
         {
             _cancellationSource.Cancel();
+            Dispose();
+            Console.WriteLine("Shutting down...");
+        }
+
+        private static void Dispose()
+        {
             foreach (var item in _disposables)
             {
-                if(item != null)
+                if (item != null)
                     item.Dispose();
             }
-            Console.WriteLine("Shutting down...");
         }
     }
 }
