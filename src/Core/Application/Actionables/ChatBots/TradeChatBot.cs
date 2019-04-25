@@ -5,10 +5,13 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Application.ChatMessages.Model;
 using Application.Enums;
 using Application.Interfaces;
+using Application.LineParseResult;
 using Application.Logger;
 using static Application.ChatRivenBot;
 
@@ -35,6 +38,10 @@ namespace Application.Actionables.ChatBots
         private Process _warframeProcess;
         private bool firstParse;
         private IDataSender _dataSender;
+        private IChatParser _chatParser;
+        private DateTime _lastMessage = DateTime.Now;
+
+        private ConcurrentDictionary<string, ChatMessageModel> _messageCacheDetails = new ConcurrentDictionary<string, ChatMessageModel>();
 
         public TradeChatBot(ConcurrentQueue<RivenParseTaskWorkItem> workQueue,
             IRivenParser rivenCropper,
@@ -45,7 +52,8 @@ namespace Application.Actionables.ChatBots
             IScreenStateHandler screenStateHandler,
             ILogger logger,
             IGameCapture gameCapture,
-            IDataSender dataSender)
+            IDataSender dataSender,
+            IChatParser chatParser)
         {
             _workQueue = workQueue;
             _rivenCropper = rivenCropper;
@@ -58,6 +66,7 @@ namespace Application.Actionables.ChatBots
             _gameCapture = gameCapture;
             _warframeCredentials = warframeCredentials;
             _dataSender = dataSender;
+            _chatParser = chatParser;
         }
 
         public Task TakeControl()
@@ -82,11 +91,274 @@ namespace Application.Actionables.ChatBots
                 case BotStates.NavigateToChat:
                     return NavigateToChat();
                 case BotStates.ParseChat:
-                    break;
+                    return ParseChat();
                 default:
                     break;
             }
             return Task.Delay(5000);
+        }
+
+        private async Task ParseChat()
+        {
+            //Close and try again if no messages in 5 minutes
+            if (DateTime.Now.Subtract(_lastMessage).TotalMinutes > 5)
+            {
+                _logger.Log("Possible chat connection lost, closing WF");
+                _currentState = BotStates.CloseWarframe;
+                _requestingControl = true;
+                return;
+            }
+
+
+            //Try doing a parse
+            using (var screen = _gameCapture.GetFullImage())
+            {
+                _mouse.MoveTo(0, 0);
+                await Task.Delay(17);
+                screen.Save("screen.png");
+                var state = _screenStateHandler.GetScreenState(screen);
+
+                //Check if we have some weird OK prompt (hotfixes, etc)
+                if (_screenStateHandler.IsPromptOpen(screen))
+                {
+                    _logger.Log("Unknown prompt detected. Closing.");
+                    _mouse.Click(screen.Width / 2, (int)(screen.Height * 0.57));
+                    await Task.Delay(30);
+                }
+
+                //If we somehow got off the glyph screen get back on it
+                if (state != Enums.ScreenState.GlyphWindow)
+                {
+                    _logger.Log("Going to glyph screen.");
+                    _currentState = BotStates.NavigateToChat;
+                    _requestingControl = true;
+                    return;
+                }
+                else if (state == ScreenState.GlyphWindow && _screenStateHandler.IsChatOpen(screen))
+                {
+                    //Wait for the scroll bar before even trying to parse
+                    if (!_chatParser.IsScrollbarPresent(screen))
+                    {
+                        var t = Task.Run(async () =>
+                        {
+                            await Task.Delay(100);
+                            _currentState = BotStates.ParseChat;
+                            _requestingControl = true;
+                        });
+                        return;
+                    }
+
+                    //On first parse of a new instance scroll to the top
+                    if (firstParse)
+                    {
+                        //Click top of scroll bar to pause chat
+                        if (_chatParser.IsScrollbarPresent(screen))
+                        {
+                            _logger.Log("Scrollbar found. Starting.");
+                            _mouse.MoveTo(3259, 658);
+                            await Task.Delay(33);
+                            _mouse.Click(3259, 658);
+                            await Task.Delay(100);
+                            firstParse = false;
+                            _currentState = BotStates.ParseChat;
+                            _requestingControl = true;
+                        }
+                    }
+
+                    var sw = new Stopwatch();
+                    sw.Start();
+                    var chatLines = _chatParser.ParseChatImage(screen, true, true, 30);
+                    _logger.Log($"Found {chatLines.Length} new messages.");
+                    foreach (var line in chatLines)
+                    {
+                        _logger.Log("Processing message: " + line.RawMessage);
+                        _lastMessage = DateTime.Now;
+                        if (line is ChatMessageLineResult)
+                        {
+                            var processedCorrectly = await ProcessChatMessageLineResult(_rivenCropper, line);
+                            if (!processedCorrectly)
+                            {
+                                var path = SaveScreenToDebug(screen);
+                                if (path != null)
+                                    _dataSender.AsyncSendDebugMessage("Failed to parse correctly. See: " + path);
+                                _chatParser.InvalidCache(line.GetKey());
+                                break;
+                            }
+                        }
+                        else
+                            _logger.Log("Unknown message: " + line.RawMessage);
+                    }
+                    await Task.Delay(75);
+                    _logger.Log($"Processed (not riven parsed) {chatLines.Length} messages in : {sw.Elapsed.TotalSeconds} seconds");
+                    sw.Stop();
+                }
+                else
+                {
+                    _logger.Log("Bad state detected! Restarting!!.");
+                    var path = SaveScreenToDebug(screen);
+                    _dataSender.AsyncSendDebugMessage("Bad state detected! Restarting!!. See: " + path);
+                    //We have no idea what state we are in. Kill the game and pray the next iteration has better luck.
+                    _currentState = BotStates.CloseWarframe;
+                    _requestingControl = true;
+                    return;
+                }
+            }
+
+            //Scroll down to get 27 more messages
+            _mouse.MoveTo(3250, 768);
+            await Task.Delay(30);
+            //Scroll down for new page of messages
+            for (int i = 0; i < 27; i++)
+            {
+                _mouse.ScrollDown();
+                await Task.Delay(17);
+            }
+            for (int i = 0; i < 1; i++)
+            {
+                _mouse.ScrollUp();//Pause chat
+                await Task.Delay(90);
+            }
+            _mouse.MoveTo(0, 0);
+            await Task.Delay(17);
+
+            _currentState = BotStates.ParseChat;
+            _requestingControl = true;
+        }
+
+        private async Task<bool> ProcessChatMessageLineResult(IRivenParser cropper, BaseLineParseResult line)
+        {
+            var clr = line as ChatMessageLineResult;
+
+            if (_messageCacheDetails.ContainsKey(clr.Username + clr.EnhancedMessage))
+            {
+                _logger.Log($"Message cache hit for {clr.Username + clr.EnhancedMessage}");
+                var cachedModel = _messageCacheDetails[clr.Username + clr.EnhancedMessage];
+                var duplicateModel = new ChatMessageModel()
+                {
+                    Timestamp = clr.Timestamp,
+                    SystemTimestamp = DateTimeOffset.UtcNow,
+                    Author = cachedModel.Author,
+                    EnhancedMessage = cachedModel.EnhancedMessage,
+                    Raw = line.RawMessage,
+                    Rivens = cachedModel.Rivens
+                };
+                _dataSender.AsyncSendChatMessage(duplicateModel);
+                return true;
+            }
+
+            var chatMessage = MakeChatModel(line as LineParseResult.ChatMessageLineResult);
+            if (chatMessage.DEBUGREASON != null && chatMessage.DEBUGREASON.Length > 0)
+                return false;
+            if (clr.ClickPoints.Count == 0)
+                _dataSender.AsyncSendChatMessage(chatMessage);
+            else
+            {
+                var rivenParseDetails = new List<RivenParseTaskWorkItemDetail>();
+                foreach (var clickpoint in clr.ClickPoints)
+                {
+                    //Click riven
+                    _mouse.MoveTo(clickpoint.X, clickpoint.Y);
+                    await Task.Delay(17);
+                    _mouse.Click(clickpoint.X, clickpoint.Y);
+                    await Task.Delay(17);
+                    _mouse.MoveTo(0, 0);
+                    await Task.Delay(17);
+
+                    //Wait for riven to open
+                    Bitmap crop = null;
+                    var foundRivenWindow = false;
+                    for (int tries = 0; tries < 15; tries++)
+                    {
+                        using (var b = _gameCapture.GetFullImage())
+                        {
+                            if (_screenStateHandler.GetScreenState(b) == ScreenState.RivenWindow)
+                            {
+                                foundRivenWindow = true;
+                                crop = cropper.CropToRiven(b);
+
+                                _mouse.Click(3816, 2013);
+                                await Task.Delay(17);
+                                _mouse.MoveTo(0, 0);
+                                await Task.Delay(17);
+                                break;
+                            }
+                        }
+                    }
+
+                    //If something went wrong clear this item from caches so it may be tried again
+                    if (!foundRivenWindow || crop == null)
+                    {
+                        _chatParser.InvalidCache(line.GetKey());
+                        if (crop != null)
+                        {
+                            crop.Dispose();
+                        }
+                        return false;
+                    }
+
+                    //The above click in the bottom right should have closed what ever window we opened.
+                    //Give it time to animate but in the event it failed to close try clicking again.
+                    for (int tries = 0; tries < 15; tries++)
+                    {
+                        using (var b = _gameCapture.GetFullImage())
+                        {
+                            var subState = _screenStateHandler.GetScreenState(b);
+                            if (_screenStateHandler.IsChatOpen(b))
+                            {
+                                break;
+                            }
+                            else if (tries < 14 && subState == ScreenState.RivenWindow)
+                            {
+                                await Task.Delay(17);
+                            }
+                            else if (tries >= 14 && _screenStateHandler.IsExitable(b))
+                            {
+                                _mouse.Click(3816, 2013);
+                                await Task.Delay(40);
+                                _mouse.MoveTo(0, 0);
+                                await Task.Delay(40);
+                            }
+                        }
+                    }
+                    rivenParseDetails.Add(new RivenParseTaskWorkItemDetail() { RivenIndex = clickpoint.Index, RivenName = clickpoint.RivenName, CroppedRivenBitmap = crop });
+                }
+                _workQueue.Enqueue(new RivenParseTaskWorkItem() { Message = chatMessage, RivenWorkDetails = rivenParseDetails });
+            }
+
+            return true;
+        }
+
+        private ChatMessageModel MakeChatModel(LineParseResult.ChatMessageLineResult line)
+        {
+            var badNameRegex = new Regex("[^-A-Za-z0-9._]");
+            var m = line.RawMessage;
+            string debugReason = null;
+            var timestamp = m.Substring(0, 7).Trim();
+            var username = line.Username;
+            try
+            {
+                if (username.Contains(" ") || username.Contains(@"\/") || username.Contains("]") || username.Contains("[") || badNameRegex.Match(username).Success)
+                {
+                    debugReason = "Bade name: " + username;
+                }
+
+                if (!Regex.Match(line.RawMessage, @"^(\[\d\d:\d\d\])\s*([-A-Za-z0-9._]+)\s*:?\s*(.+)").Success)
+                    debugReason = "Invalid username or timestamp!";
+            }
+            catch { debugReason = "Bade name: " + username; }
+            var cm = new ChatMessageModel()
+            {
+                Raw = m,
+                Author = username,
+                Timestamp = timestamp,
+                SystemTimestamp = DateTimeOffset.UtcNow
+            };
+            if (debugReason != null)
+            {
+                cm.DEBUGREASON = debugReason;
+            }
+            cm.EnhancedMessage = line.EnhancedMessage;
+            return cm;
         }
 
         private async Task NavigateToChat()
@@ -594,14 +866,14 @@ namespace Application.Actionables.ChatBots
                 }
             }
 
-            ClaimDailyReward();
+            await ClaimDailyReward();
             await Task.Delay(1000);
 
             _currentState = BotStates.NavigateToChat;
             _requestingControl = true;
         }
 
-        private void ClaimDailyReward()
+        private async Task ClaimDailyReward()
         {
             if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
                 _mouse.Click(0, 0);
@@ -621,13 +893,30 @@ namespace Application.Actionables.ChatBots
                     _mouse.Click(3325, 1951);
                 }
             }
+
+            await Task.Delay(1000);
+
+            CloseUnknownWindow();
+        }
+
+        private void CloseUnknownWindow()
+        {
+            //Close any annoying windows it opened
+            using (var screen = _gameCapture.GetFullImage())
+            {
+                if (_screenStateHandler.IsExitable(screen))
+                {
+                    _mouse.Click(3816, 2013);
+                    Thread.Sleep(30);
+                }
+            }
         }
 
         private Task ClaimDailyRewardTask()
         {
-            return Task.Run(() =>
+            return Task.Run(async () =>
             {
-                ClaimDailyReward();
+                await ClaimDailyReward();
                 _currentState = BotStates.NavigateToChat;
                 _requestingControl = true;
             });
