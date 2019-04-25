@@ -11,5 +11,7 @@ namespace Application.Actionables
         bool IsRequestingControl { get; }
 
         Task TakeControl();
+
+        void ShutDown();
     }
 }

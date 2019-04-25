@@ -28,6 +28,7 @@ namespace Application.Actionables
         private ConcurrentQueue<RivenParseTaskWorkItem> _rivenWorkQueue = new ConcurrentQueue<RivenParseTaskWorkItem>();
         private Application.Logger.Logger _logger;
         private IGameCapture _gameCapture;
+        private IChatParser _chatParser;
 
         public MultiChatRivenBot(WarframeCredentials[] warframeCredentials,
             IMouse mouse, 
@@ -36,7 +37,8 @@ namespace Application.Actionables
             IRivenParserFactory rivenParserFactory,
             IRivenCleaner rivenCleaner,
             IDataSender dataSender,
-            IGameCapture gameCapture)
+            IGameCapture gameCapture,
+            IChatParser chatParser)
         {
             _warframeCredentials = warframeCredentials;
             _bots = new TradeChatBot[_warframeCredentials.Length];
@@ -48,6 +50,7 @@ namespace Application.Actionables
             _dataSender = dataSender;
             _logger = new Application.Logger.Logger(_dataSender);
             _gameCapture = gameCapture;
+            _chatParser = chatParser;
         }
 
         public void ProcessRivenQueue(CancellationToken c)
@@ -110,17 +113,26 @@ namespace Application.Actionables
 
             for (int i = 0; i < _bots.Length; i++)
             {
-                _bots[i] = new TradeChatBot(_rivenWorkQueue, null, c, _warframeCredentials[i], _mouse, _keyboard, _screenStateHandler, _logger, _gameCapture, _dataSender);
+                _bots[i] = new TradeChatBot(_rivenWorkQueue, null, c, _warframeCredentials[i], _mouse, _keyboard, _screenStateHandler, _logger, _gameCapture, _dataSender, _chatParser);
             }
 
             while (!c.IsCancellationRequested)
             {
-                foreach (var bot in _bots)
+                for (int i = 0; i < _bots.Length; i++)
                 {
+                    var bot = _bots[i];
                     if (bot.IsRequestingControl)
                     {
-                        await bot.TakeControl();
-                        await Task.Delay(17);
+                        try
+                        {
+                            await bot.TakeControl();
+                            await Task.Delay(17);
+                        }
+                        catch
+                        {
+                            bot.ShutDown();
+                            _bots[i] = new TradeChatBot(_rivenWorkQueue, null, c, _warframeCredentials[i], _mouse, _keyboard, _screenStateHandler, _logger, _gameCapture, _dataSender, _chatParser);
+                        }
                     }
                 }
             }

@@ -921,5 +921,21 @@ namespace Application.Actionables.ChatBots
                 _requestingControl = true;
             });
         }
+
+        public void ShutDown()
+        {
+            if (_warframeProcess != null && !_warframeProcess.HasExited)
+            {
+                try
+                {
+                    CloseWarframe().Wait();
+                }
+                catch
+                {
+                    _warframeProcess.Close();
+                    _warframeProcess = null;
+                }
+            }
+        }
     }
 }
