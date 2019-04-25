@@ -288,7 +288,7 @@ namespace Application
                                 lastMessage = DateTime.Now;
                                 if (line is ChatMessageLineResult)
                                 {
-                                    var processedCorrectly = ProcessChatMessageLineResult(cropper, line);
+                                    var processedCorrectly = await ProcessChatMessageLineResult(cropper, line);
                                     if (!processedCorrectly)
                                     {
                                         var path = SaveScreenToDebug(screen);
