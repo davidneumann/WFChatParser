@@ -502,7 +502,12 @@ namespace Application.Actionables.ChatBots
                 {
                     screen.Save("screen.png");
                     var state = _screenStateHandler.GetScreenState(screen);
-                    if (state != Enums.ScreenState.ControllingWarframe)
+                    if(state == ScreenState.GlyphWindow)
+                    {
+                        await Task.Delay(30);
+                        return;
+                    }
+                    else if (state != Enums.ScreenState.ControllingWarframe)
                     {
                         _keyboard.SendEscape();
                         await Task.Delay(600);
