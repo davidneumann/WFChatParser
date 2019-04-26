@@ -113,7 +113,7 @@ namespace Application.Actionables
 
             for (int i = 0; i < _bots.Length; i++)
             {
-                _bots[i] = new TradeChatBot(_rivenWorkQueue, null, c, _warframeCredentials[i], _mouse, _keyboard, _screenStateHandler, _logger, _gameCapture, _dataSender, _chatParser);
+                _bots[i] = new TradeChatBot(_rivenWorkQueue, _rivenParserFactory.CreateRivenParser(), c, _warframeCredentials[i], _mouse, _keyboard, _screenStateHandler, _logger, _gameCapture, _dataSender, _chatParser);
             }
 
             while (!c.IsCancellationRequested)
@@ -128,10 +128,11 @@ namespace Application.Actionables
                             await bot.TakeControl();
                             await Task.Delay(17);
                         }
-                        catch
+                        catch (Exception e)
                         {
+                            _logger.Log("Exception: " + e.ToString());
                             bot.ShutDown();
-                            _bots[i] = new TradeChatBot(_rivenWorkQueue, null, c, _warframeCredentials[i], _mouse, _keyboard, _screenStateHandler, _logger, _gameCapture, _dataSender, _chatParser);
+                            _bots[i] = new TradeChatBot(_rivenWorkQueue, _rivenParserFactory.CreateRivenParser(), c, _warframeCredentials[i], _mouse, _keyboard, _screenStateHandler, _logger, _gameCapture, _dataSender, _chatParser);
                         }
                     }
                 }

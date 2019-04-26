@@ -28,7 +28,7 @@ namespace ChatLoggerCLI
         public static void Main(string[] args)
         {
             Console.CancelKeyPress += Console_CancelKeyPress;
-            
+
             var rivenParser = new RivenParser();
             _disposables.Add(rivenParser);
             //var c = new ChatImageCleaner(JsonConvert.DeserializeObject<CharInfo[]>("chars.json"));
@@ -43,9 +43,9 @@ namespace ChatLoggerCLI
               .AddJsonFile("appsettings.production.json", true, true)
               .Build();
 
-
             var launchers = config.GetSection("Launchers").GetChildren().AsEnumerable();
-            var warframeCredentials = launchers.Select(i => {
+            var warframeCredentials = launchers.Select(i =>
+            {
                 var section = config.GetSection(i.Path);
                 var startInfo = new ProcessStartInfo();
                 startInfo.UserName = section.GetSection("Username").Value;
@@ -68,7 +68,7 @@ namespace ChatLoggerCLI
                     Username = GetUsername(config["Credentials:Key"], config["Credentials:Salt"], section.GetSection("WarframeCredentialsTarget").Value)
                 };
                 return credentials;
-                }).ToArray();
+            }).ToArray();
 
             Console.WriteLine("Data sender connecting");
             var dataSender = new DataSender(new Uri(config["DataSender:HostName"]),
@@ -107,7 +107,7 @@ namespace ChatLoggerCLI
             };
 
             //var password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"]);
-            
+
             var gc = new GameCapture();
             var obs = GetObsSettings(config["Credentials:Key"], config["Credentials:Salt"]);
             var bot = new MultiChatRivenBot(warframeCredentials, new MouseHelper(),
@@ -116,11 +116,12 @@ namespace ChatLoggerCLI
                 new RivenParserFactory(),
                 new RivenCleaner(),
                 dataSender,
-                gc);
+                gc,
+                new ChatParser());
 
             _cancellationSource = new CancellationTokenSource();
-            Task t =  bot.AsyncRun(_cancellationSource.Token);
-            while(!t.IsCanceled && !t.IsCompleted && !t.IsCompletedSuccessfully && !t.IsFaulted)
+            Task t = bot.AsyncRun(_cancellationSource.Token);
+            while (!t.IsCanceled && !t.IsCompleted && !t.IsCompletedSuccessfully && !t.IsFaulted)
             {
                 //var debug = progress.GetAwaiter().IsCompleted;
                 System.Threading.Thread.Sleep(1000);
@@ -226,7 +227,7 @@ namespace ChatLoggerCLI
             _cancellationSource.Cancel();
             foreach (var item in _disposables)
             {
-                if(item != null)
+                if (item != null)
                     item.Dispose();
             }
             Console.WriteLine("Shutting down...");
