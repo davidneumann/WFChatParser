@@ -462,19 +462,23 @@ namespace Application.Actionables.ChatBots
                         _logger.Log("Setting up filters");
                         //Click clear to be safe
                         _mouse.Click(1125, 263);
-                        Thread.Sleep(50);
+                        await Task.Delay(100);
+                        _mouse.Click(0, 0);
+                        await Task.Delay(100);
+                        _mouse.Click(1125, 263);
+                        await Task.Delay(100);
                         //_mouse.Click(1125, 263);
                         //Thread.Sleep(50);
 
                         _keyboard.SendPaste("asdf");
-                        Thread.Sleep(100);
+                        await Task.Delay(100);
                     }
                     if (_screenStateHandler.IsChatCollapsed(glyphScreen))
                     {
                         _logger.Log("Expanding chat");
                         //Click and drag to move chat into place
                         _mouse.ClickAndDrag(new Point(160, 2110), new Point(0, 2160), 1000);
-                        Thread.Sleep(100);
+                        await Task.Delay(100);
                     }
                     else if (!_screenStateHandler.IsChatOpen(glyphScreen))
                         throw new ChatMissingException();
