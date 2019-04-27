@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using Application.Logger;
 using WFImageParser;
 
 namespace PerfTest
@@ -12,7 +13,7 @@ namespace PerfTest
     {
         static void Main(string[] args)
         {
-            var c = new ChatParser();
+            var c = new ChatParser(new FakeLogger());
             var sw = new Stopwatch();
             var times = new List<TimeSpan>();
 
@@ -31,6 +32,13 @@ namespace PerfTest
             var max = times.Max(e => e.TotalMilliseconds);
 
             Console.WriteLine($"total: {total:N2}ms avg: {avg:N2}ms min: {min:N2}ms max: {max:N2}ms");
+        }
+    }
+
+    internal class FakeLogger : ILogger
+    {
+        public void Log(string message)
+        {
         }
     }
 }
