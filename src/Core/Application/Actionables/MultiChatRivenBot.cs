@@ -1,4 +1,5 @@
 ﻿using Application.Actionables.ChatBots;
+using Application.ChatMessages.Model;
 using Application.Interfaces;
 using Application.Logger;
 using System;
@@ -6,6 +7,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -55,6 +57,7 @@ namespace Application.Actionables
 
         public void ProcessRivenQueue(CancellationToken c)
         {
+            var rand = new Random();
             var parser = _rivenParserFactory.CreateRivenParser();
             while (true)
             {
@@ -72,18 +75,35 @@ namespace Application.Actionables
                     {
                         using (var cleaned = _rivenCleaner.CleanRiven(croppedCopy))
                         {
-                            using (var cleanedCopy = new Bitmap(cleaned))
+                            var rivens = new List<ChatMessages.Model.Riven>();
+                            for (int i = 0; i < 10; i++)
                             {
-                                var riven = parser.ParseRivenTextFromImage(cleanedCopy, null);
-                                riven.Polarity = parser.ParseRivenPolarityFromColorImage(croppedCopy);
-                                riven.Rank = parser.ParseRivenRankFromColorImage(croppedCopy);
-
-                                riven.MessagePlacementId = r.RivenIndex;
-                                riven.Name = r.RivenName;
-                                _dataSender.AsyncSendRivenImage(riven.ImageId, croppedCopy);
-                                r.CroppedRivenBitmap.Dispose();
-                                item.Message.Rivens.Add(riven);
+                                var factor = rand.NextDouble() * 0.5f + 0.5f;
+                                using (var cleanedScaledDown = new Bitmap(cleaned, new Size((int)(cleaned.Width * factor), (int)(cleaned.Height * factor))))
+                                {
+                                    using (var cleanedScaledBack = new Bitmap(cleanedScaledDown, new Size(cleaned.Width, cleaned.Height)))
+                                    {
+                                        var parsedRiven = parser.ParseRivenTextFromImage(cleanedScaledBack, null);
+                                        parsedRiven.Polarity = parser.ParseRivenPolarityFromColorImage(croppedCopy);
+                                        parsedRiven.Rank = parser.ParseRivenRankFromColorImage(croppedCopy);
+                                        rivens.Add(parsedRiven);
+                                    }
+                                }
                             }
+                            var riven = new Riven()
+                            {
+                                Drain = rivens.Select(p => p.Drain).GroupBy(d => d).OrderByDescending(g => g.Count()).Select(g => g.Key).First(),
+                                ImageId = Guid.NewGuid(),
+                                MasteryRank = rivens.Select(p => p.MasteryRank).GroupBy(mr => mr).OrderByDescending(g => g.Count()).Select(g => g.Key).First(),
+                                Modifiers = rivens.Select(p => p.Modifiers).GroupBy(ms => ms.Aggregate("", (key, m) => key + $"{m.Curse}{m.Description}{m.Value}")).OrderByDescending(g => g.Count()).Select(g => g.First()).First(),
+                                Polarity = rivens.Select(p => p.Polarity).GroupBy(p => p).OrderByDescending(g => g.Count()).Select(g => g.Key).First(),
+                                Rank = rivens.Select(p => p.Rank).GroupBy(rank => rank).OrderByDescending(g => g.Count()).Select(g => g.Key).First(),
+                                Rolls = rivens.Select(p => p.Rolls).GroupBy(rolls => rolls).OrderByDescending(g => g.Count()).Select(g => g.Key).First()
+                            };
+                            riven.Name = r.RivenName;
+                            riven.MessagePlacementId = r.RivenIndex;
+                            item.Message.Rivens.Add(riven);
+                            _dataSender.AsyncSendRivenImage(riven.ImageId, croppedCopy);
                         }
                     }
                 }
