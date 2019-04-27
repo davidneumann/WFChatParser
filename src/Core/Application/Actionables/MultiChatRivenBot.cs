@@ -17,7 +17,7 @@ namespace Application.Actionables
 {
     public class MultiChatRivenBot
     {
-        private WarframeCredentials[] _warframeCredentials;
+        private WarframeClientInformation[] _warframeCredentials;
 
         private TradeChatBot[] _bots;
 
@@ -33,7 +33,7 @@ namespace Application.Actionables
         private IGameCapture _gameCapture;
         private IChatParser _chatParser;
 
-        public MultiChatRivenBot(WarframeCredentials[] warframeCredentials,
+        public MultiChatRivenBot(WarframeClientInformation[] warframeCredentials,
             IMouse mouse, 
             IKeyboard keyboard, 
             IScreenStateHandler screenStateHandler,

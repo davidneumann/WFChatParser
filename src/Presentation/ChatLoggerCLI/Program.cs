@@ -61,11 +61,12 @@ namespace ChatLoggerCLI
                 startInfo.UseShellExecute = false;
                 startInfo.WorkingDirectory = info.Directory.FullName;
 
-                var credentials = new WarframeCredentials()
+                var credentials = new WarframeClientInformation()
                 {
                     StartInfo = startInfo,
                     Password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"], section.GetSection("WarframeCredentialsTarget").Value),
-                    Username = GetUsername(config["Credentials:Key"], config["Credentials:Salt"], section.GetSection("WarframeCredentialsTarget").Value)
+                    Username = GetUsername(config["Credentials:Key"], config["Credentials:Salt"], section.GetSection("WarframeCredentialsTarget").Value),
+                    Region = section.GetSection("Region").Value
                 };
                 return credentials;
             }).ToArray();

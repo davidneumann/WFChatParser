@@ -27,7 +27,7 @@ namespace Application.Actionables.ChatBots
         private ConcurrentQueue<RivenParseTaskWorkItem> _workQueue;
         private IRivenParser _rivenCropper;
         private CancellationToken _cancellationToken;
-        private WarframeCredentials _warframeCredentials;
+        private WarframeClientInformation _warframeCredentials;
         private BotStates _currentState = BotStates.StartWarframe;
 
         private IMouse _mouse;
@@ -47,7 +47,7 @@ namespace Application.Actionables.ChatBots
         public TradeChatBot(ConcurrentQueue<RivenParseTaskWorkItem> workQueue,
             IRivenParser rivenCropper,
             CancellationToken cancellationToken,
-            WarframeCredentials warframeCredentials,
+            WarframeClientInformation warframeCredentials,
             IMouse mouse,
             IKeyboard keyboard,
             IScreenStateHandler screenStateHandler,
@@ -258,6 +258,7 @@ namespace Application.Actionables.ChatBots
             }
 
             var chatMessage = MakeChatModel(line as LineParseResult.ChatMessageLineResult);
+
             if (chatMessage.DEBUGREASON != null && chatMessage.DEBUGREASON.Length > 0)
                 return false;
             if (clr.ClickPoints.Count == 0)
@@ -333,7 +334,11 @@ namespace Application.Actionables.ChatBots
                     }
                     rivenParseDetails.Add(new RivenParseTaskWorkItemDetail() { RivenIndex = clickpoint.Index, RivenName = clickpoint.RivenName, CroppedRivenBitmap = crop });
                 }
-                _workQueue.Enqueue(new RivenParseTaskWorkItem() { Message = chatMessage, RivenWorkDetails = rivenParseDetails, MessageCache = _messageCache, MessageCacheDetails = _messageCacheDetails });
+                _workQueue.Enqueue(new RivenParseTaskWorkItem() {
+                    Message = chatMessage,
+                    RivenWorkDetails = rivenParseDetails,
+                    MessageCache = _messageCache,
+                    MessageCacheDetails = _messageCacheDetails });
             }
 
             return true;
