@@ -7,6 +7,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -103,6 +104,19 @@ namespace Application.Actionables
                             riven.Name = r.RivenName;
                             riven.MessagePlacementId = r.RivenIndex;
                             item.Message.Rivens.Add(riven);
+                            if(!Directory.Exists("riven_images"))
+                            {
+                                try
+                                {
+                                    Directory.CreateDirectory("riven_images");
+                                }
+                                catch { }
+                            }
+                            try
+                            {
+                                croppedCopy.Save(Path.Combine("riven_images", riven.ImageId.ToString() + ".png"));
+                            }
+                            catch { }
                             _dataSender.AsyncSendRivenImage(riven.ImageId, croppedCopy);
                         }
                     }
