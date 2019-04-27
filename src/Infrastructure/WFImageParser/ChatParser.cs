@@ -592,11 +592,18 @@ namespace WFImageParser
                 if (currentLineType == LineType.NewMessage || currentLineType == LineType.Continuation)
                 {
                     var clr = result as ChatMessageLineResult;
-                    var enhancedRegex = new Regex(Regex.Escape(clr.Timestamp) + @"\s*" + Regex.Escape(clr.Username) + @"\s*:\s*(.+)+");
                     clr.ClickPoints = clickPoints;
                     clr.RawMessage = rawMessage.ToString().Trim();
-                    var matches = enhancedRegex.Match(message.ToString().Trim());
-                    clr.EnhancedMessage = matches.Groups[1].Value;
+                    if (currentLineType == LineType.NewMessage)
+                    {
+                        var enhancedRegex = new Regex(Regex.Escape(clr.Timestamp) + @"\s*" + Regex.Escape(clr.Username) + @"\s*:?\s+(.+)");
+                        var matches = enhancedRegex.Match(message.ToString().Trim());
+                        clr.EnhancedMessage = matches.Groups[1].Value;
+                    }
+                    else if(currentLineType == LineType.Continuation)
+                    {
+                        clr.EnhancedMessage = message.ToString();
+                    }
                     //    message.ToString().Trim();
                     //if (clr.EnhancedMessage.StartsWith(clr.Timestamp))
                     //    clr.EnhancedMessage = clr.EnhancedMessage.Substring(clr.Timestamp.Length).Trim(); //Remove timestamp

@@ -11,5 +11,10 @@ namespace Application.LineParseResult
 
         public abstract string GetKey();
         public abstract bool KeyReady();
+
+        public override string ToString()
+        {
+            return RawMessage;
+        }
     }
 }

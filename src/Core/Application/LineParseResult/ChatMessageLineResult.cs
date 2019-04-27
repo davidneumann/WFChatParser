@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Application.LineParseResult
 {
@@ -10,33 +11,36 @@ namespace Application.LineParseResult
         public string Timestamp { get; set; } = string.Empty;
         public string EnhancedMessage { get; set; }
         public List<ClickPoint> ClickPoints { get; set; }
-        public void Append(ChatMessageLineResult lineParseResult)
+        public void Append(ChatMessageLineResult wrappedLine)
         {
+            //Trim all lines
             this.RawMessage = this.RawMessage.Trim();
-            lineParseResult.RawMessage = lineParseResult.RawMessage.Trim();
+            wrappedLine.RawMessage = wrappedLine.RawMessage.Trim();
             this.EnhancedMessage = this.EnhancedMessage.Trim();
-            lineParseResult.EnhancedMessage = lineParseResult.EnhancedMessage.Trim();
+            wrappedLine.EnhancedMessage = wrappedLine.EnhancedMessage.Trim();
 
-            this.RawMessage += " " + lineParseResult.RawMessage;
-            var message = lineParseResult.EnhancedMessage;
-            var addedRivens = 0;
-            for (int i = 0; i < message.Length;)
+            //Combine raw messages
+            this.RawMessage += " " + wrappedLine.RawMessage;
+
+            var wrappedEnhanced = wrappedLine.EnhancedMessage;
+            var rivenRegex = new Regex(@"(\[[^\]]+\])\((\d+)\)");
+            //Find all rivens in enhanced message
+            var m = rivenRegex.Matches(wrappedEnhanced);
+            for (int i = 0; i < m.Count; i++)
             {
-                if (message[i] == '[' && i + 1 < message.Length && Char.IsDigit(message[i + 1]))
-                {
-                    var id = Int32.Parse(message.Substring(i + 1, message.IndexOf(']', i + 1) - i - 1));
-                    var newId = this.ClickPoints.Count + addedRivens;
-                    message = message.Replace("[" + id + "]", "[" + newId + "]");
-                    var p = lineParseResult.ClickPoints[addedRivens];
-                    lineParseResult.ClickPoints[0] = new ClickPoint() { Index = this.EnhancedMessage.Length + i + 1, X = p.X, Y = p.Y };
-                    i = i + ("[" + newId + "]").ToString().Length;
-                    addedRivens++;
-                }
-                else
-                    i++;
+                //Ex: [Gammacor Acri-visican](0)
+                //Group[1] = rivenname + square brackets
+                //Group[2] = only index inside of paren
+                var newId = int.Parse(m[i].Groups[2].Value) + this.ClickPoints.Count;
+                var riven = m[i].Groups[1] + "(" + (newId) + ")";
+                //Replace entire riven with new riven string
+                wrappedEnhanced = wrappedEnhanced.Substring(0, m[i].Index) + riven + wrappedEnhanced.Substring(m[i].Index + m[i].Length);
+                //Update clickpoint ids to account for new positions
+                var cp = wrappedLine.ClickPoints[i];
+                cp.Index = newId;
+                this.ClickPoints.Add(cp);
             }
-            this.ClickPoints.AddRange(lineParseResult.ClickPoints);
-            this.EnhancedMessage += " " + message;
+            this.EnhancedMessage += " " + wrappedEnhanced;
         }
 
         public override string GetKey()

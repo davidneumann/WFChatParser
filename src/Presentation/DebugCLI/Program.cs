@@ -47,12 +47,13 @@ namespace DebugCLI
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
 
-            CredentialShim("WFBot:Bot2");
+            //CredentialShim("WFBot:Bot2");
             //FindErrorAgain();
             //TestRivenParsing();
             //VerifyNoErrors(2);
             //TestScreenHandler();
             //TestBot();
+            ParseChatImage();
         }
 
         private static void FindErrorAgain()
@@ -126,7 +127,7 @@ namespace DebugCLI
         private static void ParseChatImage()
         {
             //var filePath = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Validation Inputs\error_blurry1.png";
-            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\ErrorImages\line_offsets\new\"))
+            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("(184).png")))
             {
                 using (var bitmap = new Bitmap(filePath))
                 {
