@@ -258,7 +258,7 @@ namespace Application.Actionables.ChatBots
             }
 
             var chatMessage = MakeChatModel(line as LineParseResult.ChatMessageLineResult);
-
+            chatMessage.Region = _warframeCredentials.Region;
             if (chatMessage.DEBUGREASON != null && chatMessage.DEBUGREASON.Length > 0)
                 return false;
             if (clr.ClickPoints.Count == 0)
