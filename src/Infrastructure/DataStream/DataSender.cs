@@ -260,7 +260,7 @@ namespace DataStream
         public async Task AsyncSendLogMessage(string message)
         {
             if (_logMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
-                _webSocket.Send($"{_logMessagePrefix} [{DateTime.Now.ToString("HH:mm:ss.f")}] {message}");
+                _webSocket.Send($"{_logMessagePrefix} {message}");
             else if (_shouldReconnect)
                 Reconnect();
         }
