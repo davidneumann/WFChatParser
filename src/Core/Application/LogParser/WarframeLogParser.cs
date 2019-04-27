@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 
@@ -18,6 +19,7 @@ namespace Application.LogParser
         private bool _disposed = false;
         private DateTimeOffset _logStartTime = DateTimeOffset.UtcNow;
         private bool _foundStartTime = false;
+        private readonly StringBuilder _sb = new StringBuilder();
 
         public event Action<LogMessage> OnNewMessage;
 
@@ -78,20 +80,33 @@ namespace Application.LogParser
                     _foundStartTime = false;
                 }
 
-                string line;
-                while ((line = _reader.ReadLine()) != null)
+                while (true)
                 {
-                    if (string.IsNullOrEmpty(line))
-                        continue;
-                    var message = ParseLine(line);
-                    if (message != null)
+                    var c = _reader.Read();
+                    if (c == -1) break;
+                    if (c == '\r' || c == '\n')
                     {
-                        if (!_foundStartTime)
+                        if (c == '\r' && _reader.Peek() == '\n')
                         {
-                            FindLogStartTime(message);
+                            _reader.Read();
                         }
 
-                        OnNewMessage?.Invoke(message);
+                        var line = _sb.ToString();
+                        var message = ParseLine(line);
+                        _sb.Clear();
+                        if (message != null)
+                        {
+                            if (!_foundStartTime)
+                            {
+                                FindLogStartTime(message);
+                            }
+
+                            OnNewMessage?.Invoke(message);
+                        }
+                    }
+                    else
+                    {
+                        _sb.Append((char)c);
                     }
                 }
 
