@@ -41,6 +41,7 @@ namespace Application.Actionables.ChatBots
         private IChatParser _chatParser;
         private DateTime _lastMessage = DateTime.Now;
 
+        private ConcurrentQueue<string> _messageCache = new ConcurrentQueue<string>();
         private ConcurrentDictionary<string, ChatMessageModel> _messageCacheDetails = new ConcurrentDictionary<string, ChatMessageModel>();
 
         public TradeChatBot(ConcurrentQueue<RivenParseTaskWorkItem> workQueue,
@@ -332,7 +333,7 @@ namespace Application.Actionables.ChatBots
                     }
                     rivenParseDetails.Add(new RivenParseTaskWorkItemDetail() { RivenIndex = clickpoint.Index, RivenName = clickpoint.RivenName, CroppedRivenBitmap = crop });
                 }
-                _workQueue.Enqueue(new RivenParseTaskWorkItem() { Message = chatMessage, RivenWorkDetails = rivenParseDetails });
+                _workQueue.Enqueue(new RivenParseTaskWorkItem() { Message = chatMessage, RivenWorkDetails = rivenParseDetails, MessageCache = _messageCache, MessageCacheDetails = _messageCacheDetails });
             }
 
             return true;

@@ -107,8 +107,8 @@ namespace Application.Actionables
                         }
                     }
                 }
-                //_messageCache.Enqueue(item.Message.Author + item.Message.EnhancedMessage);
-                //_messageCacheDetails[item.Message.Author + item.Message.EnhancedMessage] = item.Message;
+                item.MessageCache.Enqueue(item.Message.Author + item.Message.EnhancedMessage);
+                item.MessageCacheDetails[item.Message.Author + item.Message.EnhancedMessage] = item.Message;
                 _dataSender.AsyncSendChatMessage(item.Message);
             }
 
