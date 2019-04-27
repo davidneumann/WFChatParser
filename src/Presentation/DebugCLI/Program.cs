@@ -31,6 +31,7 @@ using Application.Interfaces;
 using System.Collections.Concurrent;
 using static Application.ChatRivenBot;
 using Application.LogParser;
+using Application.Logger;
 
 namespace DebugCLI
 {
@@ -58,7 +59,7 @@ namespace DebugCLI
 
         private static void FindErrorAgain()
         {
-            var cp = new ChatParser();
+            var cp = new ChatParser(new FakeLogger());
             foreach (var file in Directory.GetFiles(@"\\DESKTOP-BJRVJJQ\ChatLog\debug").Where(f => f.Contains("131992381447623296")))
             {
                 var lines = cp.ParseChatImage(new Bitmap(file));
@@ -131,7 +132,7 @@ namespace DebugCLI
             {
                 using (var bitmap = new Bitmap(filePath))
                 {
-                    var cp = new ChatParser();
+                    var cp = new ChatParser(new FakeLogger());
                     var ic = new ImageCleaner();
                     //ic.SaveSoftMask(filePath, "error_blurry1_white.png");
                     ic.SaveSoftMask(filePath, filePath.Replace(".png", "_white.png"));
@@ -152,7 +153,7 @@ namespace DebugCLI
             var cleaner = new ImageCleaner();
             cleaner.SaveChatColors(input, "test.png");
             cleaner.SaveSoftMask(input, "test2.png");
-            var cp = new ChatParser();
+            var cp = new ChatParser(new FakeLogger());
             var lines = cp.ParseChatImage(new Bitmap(input), false, false, 50);
         }
 
@@ -457,7 +458,7 @@ namespace DebugCLI
                 obs,
                 password,
                 new KeyboardHelper(),
-                new ChatParser(),
+                new ChatParser(new FakeLogger()),
                 dataSender,
                 new RivenCleaner(),
                 new RivenParserFactory(),
@@ -718,7 +719,7 @@ namespace DebugCLI
             fullImage.Dispose();
 
             var chatIcon = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chaticon.png");
-            var cp = new ChatParser();
+            var cp = new ChatParser(new FakeLogger());
             var isChat = cp.IsChatFocused(chatIcon);
         }
 
@@ -743,7 +744,7 @@ namespace DebugCLI
 
         private static void VisualizeClickpoints()
         {
-            var cp = new ChatParser();
+            var cp = new ChatParser(new FakeLogger());
             var r = cp.ParseChatImage(new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\bad.png"));
             var list = new CoordinateList();
             r.Where(r1 => r1 is ChatMessageLineResult).Cast<ChatMessageLineResult>().SelectMany(r1 => r1.ClickPoints).ToList().ForEach(p => list.Add(p.X, p.Y));
@@ -898,7 +899,7 @@ namespace DebugCLI
             b.Save("test.png");
             b.Dispose();
 
-            var p = new ChatParser();
+            var p = new ChatParser(new FakeLogger());
             var results = p.ParseChatImage(new Bitmap(image), true, true, 27).Where(r => r is ChatMessageLineResult).Cast<ChatMessageLineResult>();
 
             var clean = new ImageCleaner();
@@ -1027,7 +1028,7 @@ namespace DebugCLI
         {
             var cleaner = new ImageCleaner();
             cleaner.SaveChatColors(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png", @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input_white.png");
-            var p = new ChatParser();
+            var p = new ChatParser(new FakeLogger());
             var r = p.ParseChatImage(new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png"));
             foreach (var line in r)
             {
@@ -1150,7 +1151,7 @@ namespace DebugCLI
                 Console.WriteLine($"=={fileInfo.Name}==");
                 var masterKeyFile = trainingImages[k];
                 var correctResults = File.ReadAllLines(trainingText[k]).Select(line => line.Trim()).ToArray();
-                var c = new ChatParser();
+                var c = new ChatParser(new FakeLogger());
                 var cleaner = new ImageCleaner();
                 cleaner.SaveChatColors(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name));
                 var sw = new Stopwatch();
@@ -1289,6 +1290,13 @@ namespace DebugCLI
                     fout.WriteLine(sb.ToString() + "[");
                 }
             }
+        }
+    }
+
+    internal class FakeLogger : ILogger
+    {
+        public void Log(string message)
+        {
         }
     }
 

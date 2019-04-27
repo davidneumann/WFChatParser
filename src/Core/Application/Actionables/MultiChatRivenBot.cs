@@ -29,7 +29,7 @@ namespace Application.Actionables
         private IDataSender _dataSender;
         private List<Thread> _rivenQueueWorkers = new List<Thread>();
         private ConcurrentQueue<RivenParseTaskWorkItem> _rivenWorkQueue = new ConcurrentQueue<RivenParseTaskWorkItem>();
-        private Application.Logger.Logger _logger;
+        private ILogger _logger;
         private IGameCapture _gameCapture;
         private IChatParser _chatParser;
 
@@ -41,7 +41,8 @@ namespace Application.Actionables
             IRivenCleaner rivenCleaner,
             IDataSender dataSender,
             IGameCapture gameCapture,
-            IChatParser chatParser)
+            IChatParser chatParser,
+            ILogger logger)
         {
             _warframeCredentials = warframeCredentials;
             _bots = new TradeChatBot[_warframeCredentials.Length];
@@ -51,7 +52,7 @@ namespace Application.Actionables
             _rivenParserFactory = rivenParserFactory;
             _rivenCleaner = rivenCleaner;
             _dataSender = dataSender;
-            _logger = new Application.Logger.Logger(_dataSender);
+            _logger = logger;
             _gameCapture = gameCapture;
             _chatParser = chatParser;
         }

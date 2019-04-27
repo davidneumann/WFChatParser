@@ -31,10 +31,7 @@ namespace ChatLoggerCLI
 
             var rivenParser = new RivenParser();
             _disposables.Add(rivenParser);
-            //var c = new ChatImageCleaner(JsonConvert.DeserializeObject<CharInfo[]>("chars.json"));
             Console.WriteLine("Starting up image parser");
-            var c = new ChatParser();
-            //var t = new ImageParser();
 
             Console.WriteLine("Loading config for data sender");
             IConfiguration config = new ConfigurationBuilder()
@@ -111,6 +108,7 @@ namespace ChatLoggerCLI
 
             var gc = new GameCapture();
             var obs = GetObsSettings(config["Credentials:Key"], config["Credentials:Salt"]);
+            var logger = new Application.Logger.Logger(dataSender);
             var bot = new MultiChatRivenBot(warframeCredentials, new MouseHelper(),
                 new KeyboardHelper(),
                 new ScreenStateHandler(),
@@ -118,7 +116,8 @@ namespace ChatLoggerCLI
                 new RivenCleaner(),
                 dataSender,
                 gc,
-                new ChatParser());
+                new ChatParser(logger),
+                logger);
 
             _cancellationSource = new CancellationTokenSource();
             Task t = bot.AsyncRun(_cancellationSource.Token);

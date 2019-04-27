@@ -1,6 +1,7 @@
 ﻿using Application.ChatMessages.Model;
 using Application.Interfaces;
 using Application.LineParseResult;
+using Application.Logger;
 using Newtonsoft.Json;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.ColorSpaces;
@@ -30,8 +31,10 @@ namespace WFImageParser
         //private static readonly string[] _suffixes = new string[] { "ada]", "ata]", "bin]", "bo]", "cak]", "can]", "con]", "cron]", "cta]", "des]", "dex]", "do]", "dra]", "lis]", "mag]", "nak]", "nem]", "nent]", "nok]", "pha]", "sus]", "tak]", "tia]", "tin]", "tio]", "tis]", "ton]", "tor]", "tox]", "tron]" };
         private static readonly List<string> _suffixes = new List<string>();
         private static readonly List<Regex> _blacklistedRegex = new List<Regex>();
-        public ChatParser()
+        public ChatParser(ILogger logger)
         {
+            _logger = logger;
+
             //Load suffixes
             if (Directory.Exists("rivendata") && File.Exists(@"rivendata\affixcombos.txt"))
             {
@@ -116,6 +119,7 @@ namespace WFImageParser
 
 
         private Queue<string> _sentItems = new Queue<string>();
+        private ILogger _logger;
 
         public class SimpleGapPair
         {
@@ -189,6 +193,7 @@ namespace WFImageParser
                     var color = image.GetColor(maxPoint.X, maxPoint.Y);
                     if(color == ImageCache.ChatColor.Ignored)
                     {
+                        _logger.Log("Ignored color detected while parsing chat line");
                         return null;
                     }
                     //if (color == ImageCache.ChatColor.Redtext)
@@ -208,7 +213,10 @@ namespace WFImageParser
                     }
 
                     if (currentLineType == LineType.Continuation && !(prevLineType == LineType.Continuation || prevLineType == LineType.NewMessage))
+                    {
+                        _logger.Log("Chat box parser aborted contiuation parsing early due to invalid prev type");
                         return null;
+                    }
                 }
 
                 var didRemove = false;
@@ -549,7 +557,10 @@ namespace WFImageParser
                                     {
                                         checkedKey = true;
                                         if (_sentItems.Any(i => i == clr.GetKey()))
+                                        {
+                                            _logger.Log("Chat box parser aborting line parse due to cache hit for timestamp + username");
                                             return null;
+                                        }
                                     }
                                 }
 
@@ -871,6 +882,7 @@ namespace WFImageParser
                             prevType = line.LineType;
                         else
                         {
+                            _logger.Log("Invalid line found in chat box parsing. Skipping");
                             prevType = LineType.Unknown;
                             continue;
                         }
@@ -880,28 +892,19 @@ namespace WFImageParser
                         {
                             if (i == offsets.Length - 1 && line != null && line.LineType == LineType.Continuation && results.Count > 0)
                             {
+                                _logger.Log("Last line in chat box is contiuation. Removing last real message to prevent partial cut off.");
                                 var last = results.Last();
                                 results.Remove(last);
                             }
                             else if (i == offsets.Length - 1 && line != null && line.LineType == LineType.NewMessage)
+                            {
+                                _logger.Log("Last line in chat box is a new message. Possible contiuation off screen, not adding.");
                                 continue;
+                            }
                         }
 
                         if (i >= endLine && line.LineType != LineType.Continuation)
                             break;
-
-                        ////Add redtext to results
-                        //if (line != null && line.LineType == LineType.RedText && !_sentItems.Any(item => item == line.RawMessage))
-                        //{
-                        //    if(results.Count > 0 && results.Last().LineType == LineType.RedText)
-                        //    {
-                        //        var last = results.Last();
-                        //        _sentItems.Enqueue(last.RawMessage);
-                        //        _sentItems.Enqueue(line.RawMessage);
-                        //        last.RawMessage += " " + line.RawMessage;
-                        //    }
-                        //    results.Add(line);
-                        //}
 
                         //Reset the known type when we hit a kick message to prevent accidently combining messages
                         if (line != null && line.RawMessage != null && line.RawMessage.Length > 0 && kickRegex.Match(line.RawMessage).Success)
@@ -924,8 +927,7 @@ namespace WFImageParser
                             && !_blacklistedRegex.Any(regex => regex.Match(line.RawMessage).Success))
                         {
                             var last = results.Last() as ChatMessageLineResult;
-                            //results.Remove(last);
-                            //results.Add(last + " " + line);
+                            _logger.Log("Appending continuation to last message. Last: " + last.RawMessage + " cont: " + line.RawMessage);
                             last.Append(line as ChatMessageLineResult);
                         }
                     }
