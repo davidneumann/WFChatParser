@@ -223,7 +223,7 @@ namespace DataStream
         public async Task AsyncSendRivenImage(Guid imageID, Bitmap bitmap)
         {
             var b = new BackgroundWorker();
-            var image = new Bitmap(bitmap, new Size(300,482));
+            var image = new Bitmap(bitmap, new Size(300,428));
             b.DoWork += (sender, e) =>
             {
                 var memImage = new MemoryStream();
