@@ -121,7 +121,10 @@ namespace ImageOCR
                             {
                                 result.Name = name;
                                 if (parsedName != null)
+                                {
                                     result.Name = parsedName;
+                                    name = result.Name;
+                                }
                                 currentStep = Step.ReadingModifiers;
                                 modis.Add(line);
                             }
