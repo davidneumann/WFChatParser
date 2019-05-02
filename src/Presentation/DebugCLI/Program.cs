@@ -395,6 +395,7 @@ namespace DebugCLI
             var password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"]);
             var gc = new GameCapture();
             var obs = GetObsSettings(config["Credentials:Key"], config["Credentials:Salt"]);
+            var textParser = new AllTextParser(dataSender);
             var bot = new ChatRivenBot(config["LauncherPath"], new MouseHelper(),
                 new ScreenStateHandler(),
                 gc,
