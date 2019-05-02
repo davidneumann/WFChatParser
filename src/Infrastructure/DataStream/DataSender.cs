@@ -270,10 +270,14 @@ namespace DataStream
 
         public async Task AsyncSendLogLine(LogMessage message)
         {
-            if (_logLineMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
-                _webSocket.Send($"{_logLineMessagePrefix} {JsonConvert.SerializeObject(message, _jsonSettings)}");
-            else if (_shouldReconnect)
-                Reconnect();
+            try
+            {
+                if (_logLineMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
+                    _webSocket.Send($"{_logLineMessagePrefix} {JsonConvert.SerializeObject(message, _jsonSettings)}");
+                else if (_shouldReconnect)
+                    Reconnect();
+            }
+            catch { }
         }
     }
 

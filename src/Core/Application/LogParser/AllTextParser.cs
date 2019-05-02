@@ -5,17 +5,21 @@ using System.Text;
 
 namespace Application.LogParser
 {
-    public class AllTextParser : WarframeLogParser
+    public class AllTextParser
     {
         private IDataSender _dataSender;
-        public AllTextParser(IDataSender dataSender)
+        private WarframeLogParser _warframeLogParser;
+
+        public AllTextParser(IDataSender dataSender, WarframeLogParser warframeLogParser)
         {
             _dataSender = dataSender;
-            this.OnNewMessage += AllTextParser_OnNewMessage;
+            _warframeLogParser = warframeLogParser;
+            _warframeLogParser.OnNewMessage += AllTextParser_OnNewMessage;
         }
 
         private void AllTextParser_OnNewMessage(LogMessage message)
         {
+
             _dataSender.AsyncSendLogLine(message).Wait();
         }
     }

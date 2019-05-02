@@ -1,5 +1,6 @@
 ﻿using AdysTech.CredentialManager;
 using Application;
+using Application.LogParser;
 using DataStream;
 using ImageOCR;
 using Microsoft.Extensions.Configuration;
@@ -92,6 +93,8 @@ namespace ChatLoggerCLI
 
             var gc = new GameCapture();
             var obs = GetObsSettings(config["Credentials:Key"], config["Credentials:Salt"]);
+            var logParser = new WarframeLogParser();
+            var textParser = new AllTextParser(dataSender, logParser);
             var bot = new ChatRivenBot(config["LauncherPath"], new MouseHelper(),
                 new ScreenStateHandler(),
                 gc,
@@ -102,7 +105,7 @@ namespace ChatLoggerCLI
                 dataSender,
                 new RivenCleaner(),
                 new RivenParserFactory(),
-                new Application.LogParser.RedTextParser());
+                new Application.LogParser.RedTextParser(logParser));
 
             Task t = Task.Run(() => bot.AsyncRun(_cancellationSource.Token));
             while (!t.IsCompleted && !t.IsCompleted && !t.IsFaulted)

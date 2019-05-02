@@ -395,7 +395,8 @@ namespace DebugCLI
             var password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"]);
             var gc = new GameCapture();
             var obs = GetObsSettings(config["Credentials:Key"], config["Credentials:Salt"]);
-            var textParser = new AllTextParser(dataSender);
+            var logParser = new WarframeLogParser();
+            var textParser = new AllTextParser(dataSender, logParser);
             var bot = new ChatRivenBot(config["LauncherPath"], new MouseHelper(),
                 new ScreenStateHandler(),
                 gc,
@@ -406,7 +407,7 @@ namespace DebugCLI
                 dataSender,
                 new RivenCleaner(),
                 new RivenParserFactory(),
-                new Application.LogParser.RedTextParser());
+                new Application.LogParser.RedTextParser(logParser));
             bot.AsyncRun(new System.Threading.CancellationToken());
         }
 
