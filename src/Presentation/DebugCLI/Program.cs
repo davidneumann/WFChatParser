@@ -386,7 +386,8 @@ namespace DebugCLI
                 config["DataSender:RawMessagePrefix"],
                 config["DataSender:RedtextMessagePrefix"],
                 config["DataSender:RivenImageMessagePrefix"],
-                config["DataSender:LogMessagePrefix"]);
+                config["DataSender:LogMessagePrefix"],
+                config["DataSender:LogLineMessagePrefix"]);
 
             var pass = Console.ReadLine().Trim();
             PasswordShim(config["Credentials:Key"], config["Credentials:Salt"], pass);
@@ -1239,6 +1240,10 @@ namespace DebugCLI
         }
 
         public async Task AsyncSendDebugMessage(string message)
+        {
+        }
+
+        public async Task AsyncSendLogLine(LogMessage message)
         {
         }
 

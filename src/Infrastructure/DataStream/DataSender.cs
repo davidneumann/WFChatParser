@@ -25,6 +25,7 @@ namespace DataStream
         private WebSocket _webSocket;
         private string _rivenImageMessagePrefix;
         private string _logMessagePrefix;
+        private string _logLineMessagePrefix;
 
         public event EventHandler RequestToKill;
         public event EventHandler<SaveEventArgs> RequestSaveAll;
@@ -39,7 +40,8 @@ namespace DataStream
             string rawMessagePrefix,
             string redtextMessagePrefix,
             string rivenImageMessagePrefix,
-            string logMessagePrefix)
+            string logMessagePrefix,
+            string logLineMessagePrefix)
         {
             _websocketHostname = websocketHostname;
             _messagePrefix = messagePrefix;
@@ -50,6 +52,7 @@ namespace DataStream
             _redtextMessagePrefix = redtextMessagePrefix;
             _rivenImageMessagePrefix = rivenImageMessagePrefix;
             _logMessagePrefix = logMessagePrefix;
+            _logLineMessagePrefix = logLineMessagePrefix;
 
             _jsonSettings.Converters.Add(new StringEnumConverter() { AllowIntegerValues = false, NamingStrategy = new CamelCaseNamingStrategy() });
 
@@ -261,6 +264,14 @@ namespace DataStream
         {
             if (_logMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
                 _webSocket.Send($"{_logMessagePrefix} [{DateTime.Now.ToString("HH:mm:ss.f")}] {message}");
+            else if (_shouldReconnect)
+                Reconnect();
+        }
+
+        public async Task AsyncSendLogLine(LogMessage message)
+        {
+            if (_logLineMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
+                _webSocket.Send($"{_logLineMessagePrefix} {JsonConvert.SerializeObject(message, _jsonSettings)}");
             else if (_shouldReconnect)
                 Reconnect();
         }
