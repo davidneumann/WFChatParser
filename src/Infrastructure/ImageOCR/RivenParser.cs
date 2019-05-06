@@ -142,7 +142,7 @@ namespace ImageOCR
                             {
                                 //MR o 16 D14
                                 //MR 6 10 . 02
-                                var matches = Regex.Match(line, @"MR\s+\S*\s+(\d+)[^\d]*(\d+)?");
+                                var matches = Regex.Match(line, @"MR[^\d]*(\d+)[^\d]*(\d+)?");
                                 if (matches.Success)
                                 {
                                     if (matches.Groups[2].Success)
