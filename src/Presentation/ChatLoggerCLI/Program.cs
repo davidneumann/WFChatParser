@@ -2,6 +2,7 @@
 using Application;
 using Application.Actionables;
 using Application.Actionables.ChatBots;
+using Application.LogParser;
 using DataStream;
 using ImageOCR;
 using Microsoft.Extensions.Configuration;
@@ -24,6 +25,7 @@ namespace ChatLoggerCLI
     {
         private static List<IDisposable> _disposables = new List<IDisposable>();
         private static CancellationTokenSource _cancellationSource;
+        private static DataSender _dataSender;
 
         public static void Main(string[] args)
         {
@@ -69,7 +71,7 @@ namespace ChatLoggerCLI
             }).ToArray();
 
             Console.WriteLine("Data sender connecting");
-            var dataSender = new DataSender(new Uri(config["DataSender:HostName"]),
+            _dataSender = new DataSender(new Uri(config["DataSender:HostName"]),
                 config.GetSection("DataSender:ConnectionMessages").GetChildren().Select(i => i.Value),
                 config["DataSender:MessagePrefix"],
                 config["DataSender:DebugMessagePrefix"],
@@ -77,13 +79,14 @@ namespace ChatLoggerCLI
                 config["DataSender:RawMessagePrefix"],
                 config["DataSender:RedtextMessagePrefix"],
                 config["DataSender:RivenImageMessagePrefix"],
-                config["DataSender:LogMessagePrefix"]);
+                config["DataSender:LogMessagePrefix"],
+                config["DataSender:LogLineMessagePrefix"]);
 
-            dataSender.RequestToKill += (s, e) =>
+            _dataSender.RequestToKill += (s, e) =>
             {
                 Console_CancelKeyPress(null, null);
             };
-            dataSender.RequestSaveAll += (s, e) =>
+            _dataSender.RequestSaveAll += (s, e) =>
             {
                 try
                 {
@@ -106,15 +109,20 @@ namespace ChatLoggerCLI
 
             //var password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"]);
 
+            var logParser = new WarframeLogParser();
+            var redtextthing = new RedTextParser(logParser);
+            redtextthing.OnRedText += Redtextthing_OnRedText;
+            logParser.OnNewMessage += LogParser_OnNewMessage;
+
             var gc = new GameCapture();
             var obs = GetObsSettings(config["Credentials:Key"], config["Credentials:Salt"]);
-            var logger = new Application.Logger.Logger(dataSender);
+            var logger = new Application.Logger.Logger(_dataSender);
             var bot = new MultiChatRivenBot(warframeCredentials, new MouseHelper(),
                 new KeyboardHelper(),
                 new ScreenStateHandler(),
                 new RivenParserFactory(),
                 new RivenCleaner(),
-                dataSender,
+                _dataSender,
                 gc,
                 new ChatParser(logger),
                 logger);
@@ -132,7 +140,7 @@ namespace ChatLoggerCLI
                 Console.WriteLine("\n" + t.Exception);
                 try
                 {
-                    dataSender.AsyncSendDebugMessage(t.Exception.ToString()).Wait();
+                    _dataSender.AsyncSendDebugMessage(t.Exception.ToString()).Wait();
                     System.Threading.Thread.Sleep(2000);
                 }
                 catch
@@ -140,6 +148,16 @@ namespace ChatLoggerCLI
                     _cancellationSource.Cancel();
                 }
             }
+        }
+
+        private static void LogParser_OnNewMessage(LogMessage msg)
+        {
+            _dataSender.AsyncSendLogLine(msg).Wait();
+        }
+
+        private static void Redtextthing_OnRedText(RedTextMessage msg)
+        {
+            _dataSender.AsyncSendRedtext(msg).Wait();
         }
 
         private static string GetPassword(string key, string salt, string target)

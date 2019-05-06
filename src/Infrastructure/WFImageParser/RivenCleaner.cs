@@ -10,12 +10,15 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace WFImageParser
 {
     public class RivenCleaner : IRivenCleaner
     {
+        private System.Drawing.Point[] _middleLockPixels = new System.Drawing.Point[] { new System.Drawing.Point(176, 725), new System.Drawing.Point(189, 720), new System.Drawing.Point(247, 725) };
+
         public void FastPrepareRiven(string imagePath, string outputPath)
         {
 
@@ -75,7 +78,7 @@ namespace WFImageParser
                     //Copy MR & rerolls
                     for (int x = 0; x < 450; x++)
                     {
-                        for (int y = 0; y < 45; y++)
+                        for (int y = 0; y < 42; y++)
                         {
                             var p = image[refX + x, refY + y];
                             if (IsPurple(p))
@@ -96,6 +99,37 @@ namespace WFImageParser
                         for (int y = 587; y < 587 + 48; y++)
                         {
                             outputImage[x, y] = Rgba32.White;
+                        }
+                    }
+
+                    //Remove lock icon
+                    var middleLockPresent = _middleLockPixels.Any(p => outputImage[p.X, p.Y].R < 128);
+                    if (middleLockPresent)
+                    {
+                        for (int x = 216; x < 226+29; x++)
+                        {
+                            for (int y = outputImage.Height - 40; y < outputImage.Height; y++)
+                            {
+                                outputImage[x, y] = Rgba32.White;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        //Lock & roll
+                        for (int x = 80; x < 80+30; x++)
+                        {
+                            for (int y = outputImage.Height - 40; y < outputImage.Height; y++)
+                            {
+                                outputImage[x, y] = Rgba32.White;
+                            }
+                        }
+                        for (int x = 379; x < 379+35; x++)
+                        {
+                            for (int y = outputImage.Height - 40; y < outputImage.Height; y++)
+                            {
+                                outputImage[x, y] = Rgba32.White;
+                            }
                         }
                     }
                 }
