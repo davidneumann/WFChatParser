@@ -31,7 +31,8 @@ namespace Application.Actionables
         private ConcurrentQueue<RivenParseTaskWorkItem> _rivenWorkQueue = new ConcurrentQueue<RivenParseTaskWorkItem>();
         private ILogger _logger;
         private IGameCapture _gameCapture;
-        private IChatParser _chatParser;
+        //private IChatParser _chatParser;
+        private IChatParserFactory _chatParserFactory;
 
         public MultiChatRivenBot(WarframeClientInformation[] warframeCredentials,
             IMouse mouse, 
@@ -41,8 +42,8 @@ namespace Application.Actionables
             IRivenCleaner rivenCleaner,
             IDataSender dataSender,
             IGameCapture gameCapture,
-            IChatParser chatParser,
-            ILogger logger)
+            ILogger logger,
+            IChatParserFactory chatParserFactory)
         {
             _warframeCredentials = warframeCredentials;
             _bots = new TradeChatBot[_warframeCredentials.Length];
@@ -54,7 +55,7 @@ namespace Application.Actionables
             _dataSender = dataSender;
             _logger = logger;
             _gameCapture = gameCapture;
-            _chatParser = chatParser;
+            _chatParserFactory = chatParserFactory;
         }
 
         public void ProcessRivenQueue(CancellationToken c)
@@ -148,7 +149,7 @@ namespace Application.Actionables
 
             for (int i = 0; i < _bots.Length; i++)
             {
-                _bots[i] = new TradeChatBot(_rivenWorkQueue, _rivenParserFactory.CreateRivenParser(), c, _warframeCredentials[i], _mouse, _keyboard, _screenStateHandler, _logger, _gameCapture, _dataSender, _chatParser);
+                _bots[i] = new TradeChatBot(_rivenWorkQueue, _rivenParserFactory.CreateRivenParser(), c, _warframeCredentials[i], _mouse, _keyboard, _screenStateHandler, _logger, _gameCapture, _dataSender, _chatParserFactory.CreateChatParser());
             }
 
             while (!c.IsCancellationRequested)
@@ -167,7 +168,7 @@ namespace Application.Actionables
                         {
                             _logger.Log("Exception: " + e.ToString());
                             bot.ShutDown();
-                            _bots[i] = new TradeChatBot(_rivenWorkQueue, _rivenParserFactory.CreateRivenParser(), c, _warframeCredentials[i], _mouse, _keyboard, _screenStateHandler, _logger, _gameCapture, _dataSender, _chatParser);
+                            _bots[i] = new TradeChatBot(_rivenWorkQueue, _rivenParserFactory.CreateRivenParser(), c, _warframeCredentials[i], _mouse, _keyboard, _screenStateHandler, _logger, _gameCapture, _dataSender, _chatParserFactory.CreateChatParser());
                         }
                     }
                 }

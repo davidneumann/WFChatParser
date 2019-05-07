@@ -127,8 +127,8 @@ namespace ChatLoggerCLI
                     new RivenCleaner(),
                     _dataSender,
                     gc,
-                    new ChatParser(logger),
-                    logger);
+                    logger,
+                    new ChatParserFactory(logger));
 
                 _cancellationSource = new CancellationTokenSource();
                 Task t = bot.AsyncRun(_cancellationSource.Token);
