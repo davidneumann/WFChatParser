@@ -230,22 +230,22 @@ namespace DataStream
             b.DoWork += (sender, e) =>
             {
                 var memImage = new MemoryStream();
-                image.Save(memImage, System.Drawing.Imaging.ImageFormat.Png);
+                image.Save(memImage, System.Drawing.Imaging.ImageFormat.Jpeg);
                 try
                 {
-                    image.Save("riven.png");
+                    image.Save("riven.jpg");
                 }
                 catch { }
                 memImage.Seek(0, SeekOrigin.Begin);
-                using (var webP = new MagickImage(memImage))
-                {
-                    memImage.Seek(0, SeekOrigin.Begin);
-                    memImage.SetLength(0);
-                    webP.Write(memImage, MagickFormat.WebP);
-                    memImage.Seek(0, SeekOrigin.Begin);
-                }
+                //using (var webP = new MagickImage(memImage))
+                //{
+                //    memImage.Seek(0, SeekOrigin.Begin);
+                //    memImage.SetLength(0);
+                //    webP.Write(memImage, MagickFormat.WebP);
+                //    memImage.Seek(0, SeekOrigin.Begin);
+                //}
                 var rivenBase64 = Convert.ToBase64String(memImage.ToArray());
-                AsyncSendRivenImage(imageID, rivenBase64);
+                AsyncSendRivenImage(imageID, rivenBase64).Wait();
                 memImage.Dispose();
                 image.Dispose();
             };

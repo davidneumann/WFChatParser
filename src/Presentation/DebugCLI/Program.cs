@@ -45,12 +45,14 @@ namespace DebugCLI
         {
             Console.CancelKeyPress += Console_CancelKeyPress;
 
-            if (!Directory.Exists(outputDir))
-                Directory.CreateDirectory(outputDir);
+            //if (!Directory.Exists(outputDir))
+            //    Directory.CreateDirectory(outputDir);
 
-            //CredentialShim("WFBot:Bot2");
+            Console.Write("Enter target name [ex, WFBot:Bot2]: ");
+            var target = Console.ReadLine();
+            CredentialShim(target);
             //FindErrorAgain();
-            TestRivenParsing();
+            //TestRivenParsing();
             //VerifyNoErrors(2);
             //TestScreenHandler();
             //TestBot();

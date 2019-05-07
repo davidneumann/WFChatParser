@@ -42,35 +42,6 @@ namespace ChatLoggerCLI
               .AddJsonFile("appsettings.production.json", true, true)
               .Build();
 
-            var launchers = config.GetSection("Launchers").GetChildren().AsEnumerable();
-            var warframeCredentials = launchers.Select(i =>
-            {
-                var section = config.GetSection(i.Path);
-                var startInfo = new ProcessStartInfo();
-                startInfo.UserName = section.GetSection("Username").Value;
-                var password = section.GetSection("Password").Value;
-                System.Security.SecureString ssPwd = new System.Security.SecureString();
-                for (int x = 0; x < password.Length; x++)
-                {
-                    ssPwd.AppendChar(password[x]);
-                }
-                startInfo.Password = ssPwd;
-                var info = new FileInfo(section.GetSection("LauncherPath").Value);
-                startInfo.FileName = info.FullName;
-                startInfo.UseShellExecute = false;
-                startInfo.WorkingDirectory = info.Directory.FullName;
-
-                var credentials = new WarframeClientInformation()
-                {
-                    StartInfo = startInfo,
-                    Password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"], section.GetSection("WarframeCredentialsTarget").Value),
-                    Username = GetUsername(config["Credentials:Key"], config["Credentials:Salt"], section.GetSection("WarframeCredentialsTarget").Value),
-                    Region = section.GetSection("Region").Value
-                };
-                return credentials;
-            }).ToArray();
-
-            Console.WriteLine("Data sender connecting");
             _dataSender = new DataSender(new Uri(config["DataSender:HostName"]),
                 config.GetSection("DataSender:ConnectionMessages").GetChildren().Select(i => i.Value),
                 config["DataSender:MessagePrefix"],
@@ -82,71 +53,108 @@ namespace ChatLoggerCLI
                 config["DataSender:LogMessagePrefix"],
                 config["DataSender:LogLineMessagePrefix"]);
 
-            _dataSender.RequestToKill += (s, e) =>
+            try
             {
-                Console_CancelKeyPress(null, null);
-            };
-            _dataSender.RequestSaveAll += (s, e) =>
-            {
-                try
+                var launchers = config.GetSection("Launchers").GetChildren().AsEnumerable();
+                var warframeCredentials = launchers.Select(i =>
                 {
-                    for (int i = 6; i >= 0; i--)
+                    var section = config.GetSection(i.Path);
+                    var startInfo = new ProcessStartInfo();
+                    startInfo.UserName = section.GetSection("Username").Value;
+                    var password = section.GetSection("Password").Value;
+                    System.Security.SecureString ssPwd = new System.Security.SecureString();
+                    for (int x = 0; x < password.Length; x++)
                     {
-                        var dir = Path.Combine(config["DEBUG:ImageDirectory"], "Saves");
-                        if (e.Name != null && e.Name.Length > 0)
-                            dir = Path.Combine(config["DEBUG:ImageDirectory"], "Saves", e.Name);
-                        if (!Directory.Exists(dir))
-                            Directory.CreateDirectory(dir);
+                        ssPwd.AppendChar(password[x]);
+                    }
+                    startInfo.Password = ssPwd;
+                    var info = new FileInfo(section.GetSection("LauncherPath").Value);
+                    startInfo.FileName = info.FullName;
+                    startInfo.UseShellExecute = false;
+                    startInfo.WorkingDirectory = info.Directory.FullName;
 
-                        var curFile = Path.Combine(config["DEBUG:ImageDirectory"], "capture_" + i + ".png");
-                        var copyFile = Path.Combine(dir, "capture_" + i + ".png");
-                        if (File.Exists(curFile))
-                            File.Copy(curFile, copyFile, true);
+                    var credentials = new WarframeClientInformation()
+                    {
+                        StartInfo = startInfo,
+                        Password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"], section.GetSection("WarframeCredentialsTarget").Value),
+                        Username = GetUsername(config["Credentials:Key"], config["Credentials:Salt"], section.GetSection("WarframeCredentialsTarget").Value),
+                        Region = section.GetSection("Region").Value
+                    };
+                    return credentials;
+                }).ToArray();
+
+                Console.WriteLine("Data sender connecting");
+
+                _dataSender.RequestToKill += (s, e) =>
+                {
+                    Console_CancelKeyPress(null, null);
+                };
+                _dataSender.RequestSaveAll += (s, e) =>
+                {
+                    try
+                    {
+                        for (int i = 6; i >= 0; i--)
+                        {
+                            var dir = Path.Combine(config["DEBUG:ImageDirectory"], "Saves");
+                            if (e.Name != null && e.Name.Length > 0)
+                                dir = Path.Combine(config["DEBUG:ImageDirectory"], "Saves", e.Name);
+                            if (!Directory.Exists(dir))
+                                Directory.CreateDirectory(dir);
+
+                            var curFile = Path.Combine(config["DEBUG:ImageDirectory"], "capture_" + i + ".png");
+                            var copyFile = Path.Combine(dir, "capture_" + i + ".png");
+                            if (File.Exists(curFile))
+                                File.Copy(curFile, copyFile, true);
+                        }
+                    }
+                    catch { }
+                };
+
+                //var password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"]);
+
+                var logParser = new WarframeLogParser();
+                var redtextthing = new RedTextParser(logParser);
+                redtextthing.OnRedText += Redtextthing_OnRedText;
+                logParser.OnNewMessage += LogParser_OnNewMessage;
+
+                var gc = new GameCapture();
+                var obs = GetObsSettings(config["Credentials:Key"], config["Credentials:Salt"]);
+                var logger = new Application.Logger.Logger(_dataSender);
+                var bot = new MultiChatRivenBot(warframeCredentials, new MouseHelper(),
+                    new KeyboardHelper(),
+                    new ScreenStateHandler(),
+                    new RivenParserFactory(),
+                    new RivenCleaner(),
+                    _dataSender,
+                    gc,
+                    new ChatParser(logger),
+                    logger);
+
+                _cancellationSource = new CancellationTokenSource();
+                Task t = bot.AsyncRun(_cancellationSource.Token);
+                while (!t.IsCanceled && !t.IsCompleted && !t.IsCompletedSuccessfully && !t.IsFaulted)
+                {
+                    //var debug = progress.GetAwaiter().IsCompleted;
+                    System.Threading.Thread.Sleep(1000);
+                }
+
+                if (t.IsFaulted || t.Exception != null)
+                {
+                    Console.WriteLine("\n" + t.Exception);
+                    try
+                    {
+                        _dataSender.AsyncSendDebugMessage(t.Exception.ToString()).Wait();
+                        System.Threading.Thread.Sleep(2000);
+                    }
+                    catch
+                    {
+                        _cancellationSource.Cancel();
                     }
                 }
-                catch { }
-            };
-
-            //var password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"]);
-
-            var logParser = new WarframeLogParser();
-            var redtextthing = new RedTextParser(logParser);
-            redtextthing.OnRedText += Redtextthing_OnRedText;
-            logParser.OnNewMessage += LogParser_OnNewMessage;
-
-            var gc = new GameCapture();
-            var obs = GetObsSettings(config["Credentials:Key"], config["Credentials:Salt"]);
-            var logger = new Application.Logger.Logger(_dataSender);
-            var bot = new MultiChatRivenBot(warframeCredentials, new MouseHelper(),
-                new KeyboardHelper(),
-                new ScreenStateHandler(),
-                new RivenParserFactory(),
-                new RivenCleaner(),
-                _dataSender,
-                gc,
-                new ChatParser(logger),
-                logger);
-
-            _cancellationSource = new CancellationTokenSource();
-            Task t = bot.AsyncRun(_cancellationSource.Token);
-            while (!t.IsCanceled && !t.IsCompleted && !t.IsCompletedSuccessfully && !t.IsFaulted)
-            {
-                //var debug = progress.GetAwaiter().IsCompleted;
-                System.Threading.Thread.Sleep(1000);
             }
-
-            if (t.IsFaulted || t.Exception != null)
+            catch (Exception e)
             {
-                Console.WriteLine("\n" + t.Exception);
-                try
-                {
-                    _dataSender.AsyncSendDebugMessage(t.Exception.ToString()).Wait();
-                    System.Threading.Thread.Sleep(2000);
-                }
-                catch
-                {
-                    _cancellationSource.Cancel();
-                }
+                _dataSender.AsyncSendDebugMessage(e.ToString()).Wait();
             }
         }
 
