@@ -124,8 +124,12 @@ namespace Application.Actionables
                         }
                     }
                 }
+                var sw = new Stopwatch();
+                sw.Start();
                 item.MessageCache.Enqueue(item.Message.Author + item.Message.EnhancedMessage);
                 item.MessageCacheDetails[item.Message.Author + item.Message.EnhancedMessage] = item.Message;
+                _logger.Log("Added " + item.Message.Author + "'s message to cache in: " + sw.ElapsedMilliseconds + " ms.");
+                sw.Stop();
                 _dataSender.AsyncSendChatMessage(item.Message);
             }
 
