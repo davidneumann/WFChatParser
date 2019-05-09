@@ -92,47 +92,50 @@ namespace Application.Actionables
                         {
                             _logger.Log(item.Message.Author + "'s riven image cleaned in: " + cleanSW.ElapsedMilliseconds + " ms.");
                             cleanSW.Stop();
-                            var rivens = new List<ChatMessages.Model.Riven>();
-                            for (int i = 0; i < 3; i++)
-                            {
-                                var factor = rand.NextDouble() * 0.5f + 0.5f;
-                                var scalingSW = new Stopwatch();
-                                scalingSW.Start();
-                                using (var cleanedScaledDown = new Bitmap(cleaned, new Size((int)(cleaned.Width * factor), (int)(cleaned.Height * factor))))
-                                {
-                                    using (var cleanedScaledBack = new Bitmap(cleanedScaledDown, new Size(cleaned.Width, cleaned.Height)))
-                                    {
-                                        scalingSW.Stop();
-                                        _logger.Log(item.Message.Author + "'s riven scaled randomly in: " + scalingSW.ElapsedMilliseconds + " ms.");
-                                        var tessParseSW = new Stopwatch();
-                                        tessParseSW.Start();
-                                        var parsedRiven = parser.ParseRivenTextFromImage(cleanedScaledBack, null);
-                                        tessParseSW.Stop();
-                                        _logger.Log(item.Message.Author + "'s riven tess parsed in: " + tessParseSW.ElapsedMilliseconds + " ms.");
-                                        var imageParseSW = new Stopwatch();
-                                        imageParseSW.Start();
-                                        parsedRiven.Polarity = parser.ParseRivenPolarityFromColorImage(croppedCopy);
-                                        parsedRiven.Rank = parser.ParseRivenRankFromColorImage(croppedCopy);
-                                        imageParseSW.Stop();
-                                        _logger.Log(item.Message.Author + "'s riven other stuff parsed in: " + imageParseSW.ElapsedMilliseconds + " ms.");
-                                        rivens.Add(parsedRiven);
-                                    }
-                                }
-                            }
-                            var combineSW = new Stopwatch();
-                            combineSW.Start();
-                            var riven = new Riven()
-                            {
-                                Drain = rivens.Select(p => p.Drain).GroupBy(d => d).OrderByDescending(g => g.Count()).Select(g => g.Key).First(),
-                                ImageId = Guid.NewGuid(),
-                                MasteryRank = rivens.Select(p => p.MasteryRank).GroupBy(mr => mr).OrderByDescending(g => g.Count()).Select(g => g.Key).First(),
-                                Modifiers = rivens.Select(p => p.Modifiers).GroupBy(ms => ms.Aggregate("", (key, m) => key + $"{m.Curse}{m.Description}{m.Value}")).OrderByDescending(g => g.Count()).Select(g => g.First()).First(),
-                                Polarity = rivens.Select(p => p.Polarity).GroupBy(p => p).OrderByDescending(g => g.Count()).Select(g => g.Key).First(),
-                                Rank = rivens.Select(p => p.Rank).GroupBy(rank => rank).OrderByDescending(g => g.Count()).Select(g => g.Key).First(),
-                                Rolls = rivens.Select(p => p.Rolls).GroupBy(rolls => rolls).OrderByDescending(g => g.Count()).Select(g => g.Key).First()
-                            };
-                            combineSW.Stop();
-                            _logger.Log(item.Message.Author + "'s riven parses combined in: " + combineSW.ElapsedMilliseconds + " ms.");
+                            //var rivens = new List<ChatMessages.Model.Riven>();
+                            //for (int i = 0; i < 3; i++)
+                            //{
+                            //    var factor = rand.NextDouble() * 0.5f + 0.5f;
+                            //    var scalingSW = new Stopwatch();
+                            //    scalingSW.Start();
+                            //    using (var cleanedScaledDown = new Bitmap(cleaned, new Size((int)(cleaned.Width * factor), (int)(cleaned.Height * factor))))
+                            //    {
+                            //        using (var cleanedScaledBack = new Bitmap(cleanedScaledDown, new Size(cleaned.Width, cleaned.Height)))
+                            //        {
+                            //            scalingSW.Stop();
+                            //            _logger.Log(item.Message.Author + "'s riven scaled randomly in: " + scalingSW.ElapsedMilliseconds + " ms.");
+                            //            var tessParseSW = new Stopwatch();
+                            //            tessParseSW.Start();
+                            //            var parsedRiven = parser.ParseRivenTextFromImage(cleanedScaledBack, null);
+                            //            tessParseSW.Stop();
+                            //            _logger.Log(item.Message.Author + "'s riven tess parsed in: " + tessParseSW.ElapsedMilliseconds + " ms.");
+                            //            var imageParseSW = new Stopwatch();
+                            //            imageParseSW.Start();
+                            //            //parsedRiven.Polarity = parser.ParseRivenPolarityFromColorImage(croppedCopy);
+                            //            //parsedRiven.Rank = parser.ParseRivenRankFromColorImage(croppedCopy);
+                            //            imageParseSW.Stop();
+                            //            _logger.Log(item.Message.Author + "'s riven other stuff parsed in: " + imageParseSW.ElapsedMilliseconds + " ms.");
+                            //            rivens.Add(parsedRiven);
+                            //        }
+                            //    }
+                            //}
+                            //var combineSW = new Stopwatch();
+                            //combineSW.Start();
+                            //var riven = new Riven()
+                            //{
+                            //    Drain = rivens.Select(p => p.Drain).GroupBy(d => d).OrderByDescending(g => g.Count()).Select(g => g.Key).First(),
+                            //    ImageId = Guid.NewGuid(),
+                            //    MasteryRank = rivens.Select(p => p.MasteryRank).GroupBy(mr => mr).OrderByDescending(g => g.Count()).Select(g => g.Key).First(),
+                            //    Modifiers = rivens.Select(p => p.Modifiers).GroupBy(ms => ms.Aggregate("", (key, m) => key + $"{m.Curse}{m.Description}{m.Value}")).OrderByDescending(g => g.Count()).Select(g => g.First()).First(),
+                            //    Polarity = rivens.Select(p => p.Polarity).GroupBy(p => p).OrderByDescending(g => g.Count()).Select(g => g.Key).First(),
+                            //    Rank = rivens.Select(p => p.Rank).GroupBy(rank => rank).OrderByDescending(g => g.Count()).Select(g => g.Key).First(),
+                            //    Rolls = rivens.Select(p => p.Rolls).GroupBy(rolls => rolls).OrderByDescending(g => g.Count()).Select(g => g.Key).First()
+                            //};
+                            //combineSW.Stop();
+                            //_logger.Log(item.Message.Author + "'s riven parses combined in: " + combineSW.ElapsedMilliseconds + " ms.");
+                            var riven = parser.ParseRivenTextFromImage(cleaned, r.RivenName);
+                            riven.Polarity = parser.ParseRivenPolarityFromColorImage(croppedCopy);
+                            riven.Rank = parser.ParseRivenRankFromColorImage(croppedCopy);
                             riven.Name = r.RivenName;
                             riven.MessagePlacementId = r.RivenIndex;
                             item.Message.Rivens.Add(riven);
@@ -173,7 +176,7 @@ namespace Application.Actionables
             {
                 lock (_rivenQueueWorkers)
                 {
-                    for (int i = 0; i < Environment.ProcessorCount*6; i++)
+                    for (int i = 0; i < Environment.ProcessorCount; i++)
                     {
                         var thread = new Thread(() => ProcessRivenQueue(c));
                         thread.Start();

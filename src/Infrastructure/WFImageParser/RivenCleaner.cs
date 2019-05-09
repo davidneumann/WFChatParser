@@ -17,7 +17,6 @@ namespace WFImageParser
 {
     public class RivenCleaner : IRivenCleaner
     {
-        private System.Drawing.Point[] _middleLockPixels = new System.Drawing.Point[] { new System.Drawing.Point(176, 725), new System.Drawing.Point(189, 720), new System.Drawing.Point(247, 725) };
 
         public void FastPrepareRiven(string imagePath, string outputPath)
         {
@@ -42,8 +41,8 @@ namespace WFImageParser
         public Bitmap CleanRiven(Bitmap croppedRiven)
         {
             Bitmap result = null;
-            Rgba32 background = Rgba32.Black;
-            using (Image<Rgba32> outputImage = new Image<Rgba32>(null, 540, 740, background))
+            Rgba32 background = Rgba32.White;
+            using (Image<Rgba32> outputImage = new Image<Rgba32>(null, 540, 780, background))
             {
                 var croppedAsMemory = new MemoryStream();
                 croppedRiven.Save(croppedAsMemory, System.Drawing.Imaging.ImageFormat.Bmp);
@@ -55,7 +54,7 @@ namespace WFImageParser
                     //Copy title/modis
                     var pastBackground = false;
                     var converter = new ColorSpaceConverter();
-                    Rgba32 foreground = Rgba32.White;
+                    Rgba32 foreground = Rgba32.Black;
                     for (int y = 0; y < 630; y++)
                     {
                         //Check if this line is still image
@@ -66,9 +65,9 @@ namespace WFImageParser
                             {
                                 Vs[x] = converter.ToHsv(image[refX + x, refY + y]).V;
                             }
-                            for (int x = 540-15; x < 540; x++)
+                            for (int x = 540 - 15; x < 540; x++)
                             {
-                                Vs[x - (540-15) + 15] = converter.ToHsv(image[refX + x, refY + y]).V;
+                                Vs[x - (540 - 15) + 15] = converter.ToHsv(image[refX + x, refY + y]).V;
                             }
                             if (Vs.Average() >= 0.165)
                                 continue;
@@ -91,7 +90,7 @@ namespace WFImageParser
                         {
                             var p = image[refX + x, refY + y];
                             if (IsPurple(p))
-                                outputImage[x, y + 640] = foreground;
+                                outputImage[outputImage.Width / 2 - 30 + x, y + 650] = foreground;
                         }
                     }
                     refX = 65;
@@ -103,19 +102,19 @@ namespace WFImageParser
                         {
                             var p = image[refX + x, refY + y];
                             if (IsPurple(p))
-                                outputImage[x, y + 640 + 45 + 10] = foreground;
+                                outputImage[outputImage.Width / 2 - (450 / 2) + x, y + 650 + 55 + 20] = foreground;
                         }
                     }
 
                     //Clean up bottom corners
-                    for (int x = 0; x < 25; x++)
+                    for (int x = 0; x < 17; x++)
                     {
                         for (int y = 587; y < 587 + 48; y++)
                         {
                             outputImage[x, y] = background;
                         }
                     }
-                    for (int x = outputImage.Width - 25; x < outputImage.Width; x++)
+                    for (int x = outputImage.Width - 17; x < outputImage.Width; x++)
                     {
                         for (int y = 587; y < 587 + 48; y++)
                         {
@@ -123,47 +122,43 @@ namespace WFImageParser
                         }
                     }
 
-                    //Remove lock icon
-                    var middleLockPresent = _middleLockPixels.Any(p => outputImage[p.X, p.Y].R > 128);
-                    if (middleLockPresent)
+                    //Remove centered lock icon
+                    for (int x = outputImage.Width / 2 - 12; x < outputImage.Width / 2 - 12 + 48; x++)
                     {
-                        for (int x = 216; x < 226 + 29; x++)
+                        for (int y = outputImage.Height - 50; y < outputImage.Height; y++)
                         {
-                            for (int y = outputImage.Height - 40; y < outputImage.Height; y++)
+                            outputImage[x, y] = background;
+                        }
+                    }
+                    //Remove left lock icon
+                    for (int x = 122; x < 122 + 30; x++)
+                    {
+                        for (int y = outputImage.Height - 50; y < outputImage.Height; y++)
+                        {
+                            outputImage[x, y] = background;
+                        }
+                    }
+                    //Remove right roll icon
+                    var startX = -1;
+                    for (int x = (int)(outputImage.Width * 0.7); x < outputImage.Width; x++)
+                    {
+                        if (startX >= 0)
+                            break;
+                        for (int y = outputImage.Height - 50; y < outputImage.Height; y++)
+                        {
+                            if (outputImage[x, y].R < 128)
                             {
-                                outputImage[x, y] = background;
+                                startX = x;
+                                break;
                             }
                         }
                     }
-                    else
+                    if (startX > 0)
                     {
-                        //Lock & roll
-                        for (int x = 80; x < 80 + 30; x++)
+                        var endX = Math.Min(startX + 40, outputImage.Width);
+                        for (int x = startX; x < endX; x++)
                         {
-                            for (int y = outputImage.Height - 40; y < outputImage.Height; y++)
-                            {
-                                outputImage[x, y] = background;
-                            }
-                        }
-                        var startX = -1;
-                        for (int x = outputImage.Width; x < outputImage.Width; x++)
-                        {
-                            if (startX >= 0)
-                                break;
-                            for (int y = outputImage.Height - 40; y < outputImage.Height; y++)
-                            {
-                                if(outputImage[x,y].R > 128)
-                                {
-                                    startX = x;
-                                    break;
-                                }
-                            }
-                        }
-                        if (startX < 0)
-                            startX = 279;
-                        for (int x = 379; x < 379 + 35; x++)
-                        {
-                            for (int y = outputImage.Height - 40; y < outputImage.Height; y++)
+                            for (int y = outputImage.Height - 50; y < outputImage.Height; y++)
                             {
                                 outputImage[x, y] = background;
                             }

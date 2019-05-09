@@ -57,6 +57,36 @@ namespace DebugCLI
             //TestScreenHandler();
             //TestBot();
             //ParseChatImage();
+            //TessShim();
+        }
+
+        private static void TessShim()
+        {
+            //using (var rawImage = new Bitmap(@"C:\Users\david\error.png"))
+            //{
+            //    var rc = new RivenCleaner();
+            //    using (var cleaned = rc.CleanRiven(rawImage))
+            //    {
+
+            //    }
+            //}
+            //var lp = new LineParser();
+            //var result = lp.ParseLine(new Bitmap("line.png"));
+
+            using (var cropped = new Bitmap(@"\\desktop-3414ubq\Warframes\Bot Client\riven_images\00209cb3-2580-46fd-943f-bcf3f6e135ce.png"))
+            {
+                var cleaner = new RivenCleaner();
+                using (var cleaned = cleaner.CleanRiven(cropped))
+                {
+                    cleaned.Save("cleaned.png");
+                    var parser = new RivenParser();
+                    var riven = parser.ParseRivenTextFromImage(cleaned, null);
+                }
+            }
+
+            //var lp = new LineParser();
+            //var wp = new WordParser();
+            //var res = lp.ParseLine(new Bitmap("debug.png"));
         }
 
         private static void FindErrorAgain()
@@ -735,7 +765,7 @@ namespace DebugCLI
             var bads = new List<string>();
             //foreach (var name in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs").Where(f => f.EndsWith(".png")))
             var files = Directory.GetFiles(@"\\desktop-3414ubq\Warframes\Bot Client\riven_images\").Where(f => f.EndsWith(".png")).ToArray();
-            //var files = new string[] { "\\\\desktop-3414ubq\\Warframes\\Bot Client\\riven_images\\0309f8bc-9c2c-45b8-b253-0bf7595323ad.png" };
+            //var files = new string[] { "\\\\desktop-3414ubq\\Warframes\\Bot Client\\riven_images\\001278d5-928c-4f99-8f96-e890857980bf.png" };
             var sw = new Stopwatch();
             var times = new List<double>();
             Console.WindowHeight = 10;
@@ -744,10 +774,10 @@ namespace DebugCLI
             var errors = 0;
             using (var fout = new StreamWriter("errors.txt"))
             {
-
-                for (int i = 0; i < files.Length; i++)
+                var rand = new System.Random();
+                for (int fileIndex = 0; fileIndex < files.Length; fileIndex++)
                 {
-                    var name = files[i];
+                    var name = files[fileIndex];
                     sw.Restart();
                     var cropped = new Bitmap(name);
                     if (cropped.Width > 600)
@@ -762,24 +792,82 @@ namespace DebugCLI
                     //var clean = resizeUp;
                     clean.Save("clean.png");
                     //Console.WriteLine(name);
-                    var result = rp.ParseRivenTextFromImage(clean, null);
-                    result.Rank = rp.ParseRivenRankFromColorImage(cropped);
-                    result.Polarity = rp.ParseRivenPolarityFromColorImage(cropped);
+                    var rivens = new List<Application.ChatMessages.Model.Riven>();
+                    var scales = 1;
+                    for (int i = 1; i <= scales; i++)
+                    {
+                        //var factor = rand.NextDouble() * 0.5f + 0.5f;
+                        var factor = (1.0 / scales) * i;
+                        using (var cleanedScaledDown = new Bitmap(clean, new Size((int)(clean.Width * factor), (int)(clean.Height * factor))))
+                        {
+                            using (var cleanedScaledBack = new Bitmap(cleanedScaledDown, new Size(clean.Width, clean.Height)))
+                            {
+                                cleanedScaledBack.Save("clean_scaled_" + i + ".png");
+                                var parsedRiven = rp.ParseRivenTextFromImage(cleanedScaledBack, null);
+                                var imageParseSW = new Stopwatch();
+                                imageParseSW.Start();
+                                rivens.Add(parsedRiven);
+                            }
+                        }
+                    }
+                    var combineSW = new Stopwatch();
+                    combineSW.Start();
+                    var riven = new Riven();
+                    try
+                    {
+                        riven.Drain = rivens.Select(p => p.Drain).Where(d => d >= 0).GroupBy(d => d).OrderByDescending(g => g.Count()).Select(g => g.Key).First();
+                        riven.ImageId = Guid.NewGuid();
+                        riven.MasteryRank = rivens.Select(p => p.MasteryRank).Where(mr => mr >= 0).GroupBy(mr => mr).OrderByDescending(g => g.Count()).Select(g => g.Key).First();
+                        riven.Modifiers = rivens.Select(p => p.Modifiers).GroupBy(ms => ms.Aggregate("", (key, m) => key + $"{m.Curse}{m.Description}{m.Value}")).OrderByDescending(g => g.Count()).Select(g => g.First()).First();
+                        riven.Rolls = rivens.Select(p => p.Rolls).Where(rolls => rolls >= 0).GroupBy(rolls => rolls).OrderByDescending(g => g.Count()).Select(g => g.Key).First();
+                    }
+                    catch { }
+                    riven.Polarity = rp.ParseRivenPolarityFromColorImage(cropped);
+                    riven.Rank = rp.ParseRivenRankFromColorImage(cropped);
+                    var guid = name.Substring(name.LastIndexOf("\\") + 1);
+                    guid = guid.Replace(".png", "");
+                    riven.ImageId = Guid.Parse(guid);
                     //Console.WriteLine(JsonConvert.SerializeObject(result));
                     cropped.Dispose();
                     times.Add(sw.Elapsed.TotalSeconds);
                     Console.Write(empty);
-                    Console.Write("\rFinished in: " + sw.Elapsed.TotalSeconds + "s. Average: " + times.Average() + "s.\nTime left: " + ((files.Length - i) * times.Average() / 60) + " minutes. Checked: " + (i + 1) + ". Errors: " + errors);
-                    var errorReason = DoesRivenHaveError(result);
+                    Console.Write("\rFinished in: " + sw.Elapsed.TotalSeconds + "s. Average: " + times.Average() + "s.\nTime left: " + ((files.Length - fileIndex) * times.Average() / 60) + " minutes. Checked: " + (fileIndex + 1) + ". Errors: " + errors);
+                    var errorReason = DoesRivenHaveError(riven);
                     if (errorReason.Length > 0)
                     {
-                        var json = JsonConvert.SerializeObject(result);
+                        var json = JsonConvert.SerializeObject(riven);
                         bads.Add(json);
                         Console.WriteLine("\n" + errorReason);
                         fout.WriteLine("File: " + name + "\nReason: " + errorReason + "\n" + json);
                         fout.Flush();
                         Console.WriteLine(json);
                         //Debugger.Break();
+
+                        var images = Directory.GetFiles(Environment.CurrentDirectory).Where(f => f.Contains("clean_scaled_") && f.EndsWith(".png"))
+                            .Select(f => new FileInfo(f)).Where(f => f.Name.StartsWith("clean_scaled_"))
+                            .Select(f => new Bitmap(f.FullName)).ToArray();
+                        var width = images.Aggregate(0, (prod, next) => prod + next.Width);
+                        using (var combinedCleaned = new Bitmap(width, clean.Height))
+                        {
+                            var offset = 0;
+                            for (int i = 0; i < images.Length; i++)
+                            {
+                                for (int x = 0; x < images[i].Width; x++)
+                                {
+                                    for (int y = 0; y < images[i].Height && y < clean.Height; y++)
+                                    {
+                                        combinedCleaned.SetPixel(offset + x, y, images[i].GetPixel(x, y));
+                                    }
+                                }
+                                offset += images[i].Width;
+                            }
+                            combinedCleaned.Save("combined_cleaned.png");
+                        }
+                        foreach (var image in images)
+                        {
+                            image.Dispose();
+                        }
+
                         errors++;
                     }
                 }
@@ -788,35 +876,35 @@ namespace DebugCLI
 
         private static string DoesRivenHaveError(Riven result)
         {
-            if (result.Modifiers.Any(m => m.Value == 0))
-            {
-                return "Bad modifier value";
-                
-            }
-            else if (result.Modifiers.Length > 4)
-            {
-                return "Bad modifier count";
-                
-            }
-            else if (result.Drain < 0)
+            if (result.Drain < 0)
             {
                 return "Bad drain";
-                
+
             }
             else if (result.MasteryRank < 0)
             {
                 return "Bad mastery rank";
-                
+
             }
             else if (result.Rolls < 0)
             {
                 return "Bad rolls";
-                
+
             }
             else if (result.Polarity == Polarity.Unknown)
             {
                 return "Bad polarity";
-                
+
+            }
+            else if (result.Modifiers.Any(m => m.Value == 0))
+            {
+                return "Bad modifier value";
+
+            }
+            else if (result.Modifiers.Length > 4)
+            {
+                return "Bad modifier count";
+
             }
 
             return "";

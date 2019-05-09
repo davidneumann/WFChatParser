@@ -24,13 +24,17 @@ namespace ImageOCR
         private List<Point> _dPixels = new List<Point>();
         private List<Point> _vPixels = new List<Point>();
 
+        private LineParser _lineParser;
+        private WordParser _wordParser;
+
         public RivenParser()
         {
             string dataPath = @"tessdata\";
             string language = "eng";
             _engine = new TesseractEngine(dataPath, language, EngineMode.Default, "bazaar");
-            _engine.DefaultPageSegMode = PageSegMode.SingleBlock;
-
+            _engine.DefaultPageSegMode = PageSegMode.SingleLine;
+            _lineParser = new LineParser();
+            _wordParser = new WordParser();
 
             //Polarity pixels
             for (int x = 537; x < 537 + 3; x++)
@@ -79,7 +83,7 @@ namespace ImageOCR
             _engine.Dispose();
         }
 
-        public Riven ParseRivenTextFromImage(Bitmap croppedRiven, string parsedName)
+        public Riven ParseRivenTextFromImage(Bitmap cleanedRiven, string parsedName)
         {
             //if (croppedRiven.Width != 560 && croppedRiven.Height != 760)
             //    return null;
@@ -90,85 +94,67 @@ namespace ImageOCR
                 Rank = 0,
             };
 
+            var allLines = GetLines(cleanedRiven);
+
             var newModiRegex = new Regex(@"[+-][\d]");
             // Set the input image
-            var debug = new StringBuilder();
-            using (var pix = PixConverter.ToPix(croppedRiven))
+            var debug = allLines.Aggregate("", (str, line) => (str + "\n" + line).Trim());
+            var currentStep = Step.ReadingName;
+            var name = string.Empty;
+            var modis = new List<string>();
+            var number = 0;
+            foreach (var line in allLines)
             {
-                // Extract text from result iterator
-                var rivenText = new List<string>();
-                var currentStep = Step.ReadingName;
-                var name = string.Empty;
-                var modis = new List<string>();
-                var number = 0;
-                PageIteratorLevel pageIteratorLevel = PageIteratorLevel.TextLine;
-                using (var page = _engine.Process(pix))
+                if (line.Length > 0 && !(newModiRegex.Match(line).Success && line.Contains(' ')) && currentStep == Step.ReadingName)
+                    name = (name + " " + line).Trim();
+                else if (line.Length > 0 && (newModiRegex.Match(line).Success && line.Contains(' ')) && (currentStep == Step.ReadingName || currentStep == Step.ReadingModifiers))
                 {
-                    using (var iter = page.GetIterator())
+                    result.Name = name;
+                    if (parsedName != null)
                     {
-                        do
+                        result.Name = parsedName;
+                        name = result.Name;
+                    }
+                    currentStep = Step.ReadingModifiers;
+                    modis.Add(line);
+                }
+                else if (line.Length > 0 && !Char.IsDigit(line[0]) && currentStep == Step.ReadingModifiers)
+                {
+                    var last = modis.Last();
+                    modis.Remove(last);
+                    last = last + " " + line;
+                    modis.Add(last);
+                }
+                else if (line.Length > 0 && Char.IsDigit(line[0]) && currentStep == Step.ReadingModifiers)
+                {
+                    currentStep = Step.ReadingMRLine;
+                    if (Int32.TryParse(line, out number))
+                        result.Drain = number;
+                }
+                else if (line.Length > 0 && currentStep == Step.ReadingMRLine)
+                {
+                    //MR o 16 D14
+                    //MR 6 10 . 02
+                    var matches = Regex.Match(line, @"MR[^\d]*(\d+)[^\d]*(\d+)?");
+                    if (matches.Success)
+                    {
+                        if (matches.Groups[2].Success)
                         {
-                            var line = string.Empty;
-                            try
-                            {
-                                line = iter.GetText(pageIteratorLevel).Trim();
-                                debug.AppendLine(line);
-                            }
-                            catch { continue; }
-                            if (line.Length > 0 && !(newModiRegex.Match(line).Success && line.Contains(' ')) && currentStep == Step.ReadingName)
-                                name = (name + " " + line).Trim();
-                            else if (line.Length > 0 && (newModiRegex.Match(line).Success && line.Contains(' ')) && (currentStep == Step.ReadingName || currentStep == Step.ReadingModifiers))
-                            {
-                                result.Name = name;
-                                if (parsedName != null)
-                                {
-                                    result.Name = parsedName;
-                                    name = result.Name;
-                                }
-                                currentStep = Step.ReadingModifiers;
-                                modis.Add(line);
-                            }
-                            else if (line.Length > 0 && !Char.IsDigit(line[0]) && currentStep == Step.ReadingModifiers)
-                            {
-                                var last = modis.Last();
-                                modis.Remove(last);
-                                last = last + " " + line;
-                                modis.Add(last);
-                            }
-                            else if (line.Length > 0 && Char.IsDigit(line[0]) && currentStep == Step.ReadingModifiers)
-                            {
-                                currentStep = Step.ReadingMRLine;
-                                if (Int32.TryParse(line, out number))
-                                    result.Drain = number;
-                            }
-                            else if (line.Length > 0 && currentStep == Step.ReadingMRLine)
-                            {
-                                //MR o 16 D14
-                                //MR 6 10 . 02
-                                var matches = Regex.Match(line, @"MR[^\d]*(\d+)[^\d]*(\d+)?");
-                                if (matches.Success)
-                                {
-                                    if (matches.Groups[2].Success)
-                                    {
 
-                                        if (Int32.TryParse(matches.Groups[2].Value, out number))
-                                            result.Rolls = number;
-                                    }
-                                    else
-                                        result.Rolls = 0;
+                            if (Int32.TryParse(matches.Groups[2].Value, out number))
+                                result.Rolls = number;
+                        }
+                        else
+                            result.Rolls = 0;
 
-                                    if (matches.Groups[1].Success)
-                                    {
-                                        if (Int32.TryParse(matches.Groups[1].Value, out number))
-                                            result.MasteryRank = number;
-                                    }
-                                }
-                            }
-
-                            //rivenText.Add(line);
-                        } while (iter.Next(pageIteratorLevel));
+                        if (matches.Groups[1].Success)
+                        {
+                            if (Int32.TryParse(matches.Groups[1].Value, out number))
+                                result.MasteryRank = number;
+                        }
                     }
                 }
+
                 if (modis.Count > 0)
                 {
                     var modiObjects = modis.Select(m => Modifier.ParseString(m)).ToArray();
@@ -185,9 +171,112 @@ namespace ImageOCR
                 }
             }
 
-            //Console.WriteLine(debug.ToString());
+            Console.WriteLine(debug.ToString());
             result.ImageId = Guid.NewGuid();
             return result;
+        }
+
+        private List<string> GetLines(Bitmap cleanedRiven)
+        {
+            List<string> allLines = new List<string>();
+            var lineRects = new List<Rectangle>();
+            for (int y = 0; y < cleanedRiven.Height;)
+            {
+                var lineRect = GetNextLineRect(y, cleanedRiven);
+                if (lineRect == Rectangle.Empty || lineRect.Top >= cleanedRiven.Height)
+                    break;
+                lineRects.Add(lineRect);
+                y = lineRect.Bottom;
+            }
+            for (int i = 0; i < lineRects.Count; i++)
+            {
+                var lineRect = lineRects[i];
+                using (var lineBitmap = new Bitmap(lineRect.Width + 20, lineRect.Height + 20))
+                {
+                    for (int backgroundX = 0; backgroundX < lineBitmap.Width; backgroundX++)
+                    {
+                        for (int backgroundY = 0; backgroundY < lineBitmap.Height; backgroundY++)
+                        {
+                            lineBitmap.SetPixel(backgroundX, backgroundY, Color.White);
+                        }
+                    }
+                    for (int referenceX = lineRect.Left; referenceX < lineRect.Right; referenceX++)
+                    {
+                        for (int referenceY = lineRect.Top; referenceY < lineRect.Bottom; referenceY++)
+                        {
+                            //Color pixel = cleanedRiven.GetPixel(referenceX, referenceY);
+                            //if(pixel.R < 128)
+                            //    lineBitmap.SetPixel(10 + referenceX - lineRect.Left, 10 + referenceY - lineRect.Top, Color.Black);
+                            //else
+                            //    lineBitmap.SetPixel(10 + referenceX - lineRect.Left, 10 + referenceY - lineRect.Top, Color.White);
+                            lineBitmap.SetPixel(10 + referenceX - lineRect.Left, 10 + referenceY - lineRect.Top, cleanedRiven.GetPixel(referenceX, referenceY));
+                        }
+                    }
+                    //lineBitmap.Save("debug.png");
+                    if (i != lineRects.Count - 2)
+                    {
+                        allLines.Add(_lineParser.ParseLine(lineBitmap));
+                    }
+                    else
+                    {
+                        string line = "";
+                        int number = 0;
+                        line = _lineParser.ParseLine(lineBitmap);
+                        if (int.TryParse(line, out number))
+                            allLines.Add(line);
+                        else
+                        {
+                            line = _wordParser.ParseWord(lineBitmap);
+                            if (int.TryParse(line, out number))
+                                allLines.Add(line);
+                            else
+                                allLines.Add("-1");
+                        }
+                    }
+                }
+            }
+            return allLines;
+        }
+
+        private Rectangle GetNextLineRect(int lastY, Bitmap bitmap)
+        {
+            var result = Rect.Empty;
+            var startingY = -1;
+            var endingY = -1;
+            var startX = -1;
+            var endX = -1;
+            for (int y = lastY; y < bitmap.Height; y++)
+            {
+                var pixelFound = false;
+                for (int x = 0; x < bitmap.Width; x++)
+                {
+                    if (bitmap.GetPixel(x, y).R < 128)
+                    {
+                        pixelFound = true;
+                        if (x < startX || startX < 0)
+                            startX = x;
+                        if (x > endX)
+                            endX = x;
+
+                        if (startingY < 0 || y < startingY)
+                            startingY = y;
+                        if (endingY < y)
+                            endingY = y;
+                    }
+                }
+                if (!pixelFound && endingY > 0)
+                    break;
+            }
+            endX++;
+            endingY++;
+
+            if (startingY > 0 && endingY < 0)
+                endingY = bitmap.Height;
+
+            if (startingY > 0)
+                return new Rectangle(startX, startingY, endX - startX, endingY - startingY);
+            else
+                return Rectangle.Empty;
         }
 
         private int GetRank(Bitmap croppedRiven)
