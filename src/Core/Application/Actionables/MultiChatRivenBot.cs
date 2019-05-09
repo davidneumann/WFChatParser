@@ -72,6 +72,7 @@ namespace Application.Actionables
                     Thread.Sleep(250);
                     continue;
                 }
+                _logger.Log("Worker queue working on: " + item.Message.Author + ":" + item.Message.EnhancedMessage);
                 foreach (var r in item.RivenWorkDetails)
                 {
                     using (var croppedCopy = new Bitmap(r.CroppedRivenBitmap))
@@ -143,6 +144,7 @@ namespace Application.Actionables
                         var thread = new Thread(() => ProcessRivenQueue(c));
                         thread.Start();
                         _rivenQueueWorkers.Add(thread);
+                        _logger.Log("New worker thread added. Total: " + _rivenQueueWorkers.Count);
                     }
                 }
             }

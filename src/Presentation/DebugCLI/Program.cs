@@ -453,7 +453,8 @@ namespace DebugCLI
             PasswordShim(config["Credentials:Key"], config["Credentials:Salt"], pass);
 
             var password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"]);
-            var gc = new GameCapture(new Logger(dataSender));
+            CancellationToken token = new System.Threading.CancellationToken();
+            var gc = new GameCapture(new Logger(dataSender, token));
             var obs = GetObsSettings(config["Credentials:Key"], config["Credentials:Salt"]);
             var logParser = new WarframeLogParser();
             var textParser = new AllTextParser(dataSender, logParser);
@@ -468,7 +469,7 @@ namespace DebugCLI
                 new RivenCleaner(),
                 new RivenParserFactory(),
                 new Application.LogParser.RedTextParser(logParser));
-            bot.AsyncRun(new System.Threading.CancellationToken());
+            bot.AsyncRun(token);
         }
 
         private static void testRivenSplit()

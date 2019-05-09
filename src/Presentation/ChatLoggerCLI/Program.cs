@@ -112,12 +112,14 @@ namespace ChatLoggerCLI
 
                 //var password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"]);
 
+                _cancellationSource = new CancellationTokenSource();
+
                 var logParser = new WarframeLogParser();
                 var redtextthing = new RedTextParser(logParser);
                 redtextthing.OnRedText += Redtextthing_OnRedText;
                 logParser.OnNewMessage += LogParser_OnNewMessage;
 
-                var logger = new Application.Logger.Logger(_dataSender);
+                var logger = new Application.Logger.Logger(_dataSender, _cancellationSource.Token);
                 var gc = new GameCapture(logger);
                 var obs = GetObsSettings(config["Credentials:Key"], config["Credentials:Salt"]);
                 var bot = new MultiChatRivenBot(warframeCredentials, new MouseHelper(),
@@ -130,7 +132,6 @@ namespace ChatLoggerCLI
                     logger,
                     new ChatParserFactory(logger));
 
-                _cancellationSource = new CancellationTokenSource();
                 Task t = bot.AsyncRun(_cancellationSource.Token);
                 while (!t.IsCanceled && !t.IsCompleted && !t.IsCompletedSuccessfully && !t.IsFaulted)
                 {
