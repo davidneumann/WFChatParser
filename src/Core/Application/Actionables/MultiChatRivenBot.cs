@@ -161,7 +161,7 @@ namespace Application.Actionables
                     {
                         try
                         {
-                            _logger.Log("Giving control to: " + _warframeCredentials[i].Username + ":" + _warframeCredentials[i].Region);
+                            _logger.Log("Giving control to: " + _warframeCredentials[i].StartInfo.UserName + ":" + _warframeCredentials[i].Region);
                             await bot.TakeControl();
                             await Task.Delay(17);
                         }
