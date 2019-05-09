@@ -183,6 +183,10 @@ namespace Application.Actionables.ChatBots
                             _mouse.Click(3259, 658);
                             await Task.Delay(100);
                             firstParse = false;
+
+                            _currentState = BotStates.ParseChat;
+                            _requestingControl = true;
+                            return;
                         }
                     }
 
