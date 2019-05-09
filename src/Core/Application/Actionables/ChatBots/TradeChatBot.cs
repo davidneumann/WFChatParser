@@ -36,7 +36,7 @@ namespace Application.Actionables.ChatBots
         private ILogger _logger;
         private IGameCapture _gameCapture;
         private Process _warframeProcess;
-        private bool firstParse;
+        private bool firstParse = true;
         private IDataSender _dataSender;
         private IChatParser _chatParser;
         private DateTime _lastMessage = DateTime.Now;
