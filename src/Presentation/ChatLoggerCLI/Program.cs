@@ -117,9 +117,9 @@ namespace ChatLoggerCLI
                 redtextthing.OnRedText += Redtextthing_OnRedText;
                 logParser.OnNewMessage += LogParser_OnNewMessage;
 
-                var gc = new GameCapture();
-                var obs = GetObsSettings(config["Credentials:Key"], config["Credentials:Salt"]);
                 var logger = new Application.Logger.Logger(_dataSender);
+                var gc = new GameCapture(logger);
+                var obs = GetObsSettings(config["Credentials:Key"], config["Credentials:Salt"]);
                 var bot = new MultiChatRivenBot(warframeCredentials, new MouseHelper(),
                     new KeyboardHelper(),
                     new ScreenStateHandler(),

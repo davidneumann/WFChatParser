@@ -10,6 +10,7 @@ using SharpDX.Direct3D11;
 using SharpDX.DXGI;
 using Device = SharpDX.Direct3D11.Device;
 using MapFlags = SharpDX.Direct3D11.MapFlags;
+using Application.Logger;
 
 namespace WFGameCapture
 {
@@ -21,6 +22,7 @@ namespace WFGameCapture
         // For double buffering bitmaps (may not be required depending in your use case)
         private Bitmap _currentBitmap;
         private Bitmap _previousBitmap;
+        private ILogger _logger;
 
         public Rectangle DisplayBounds { get; private set; } = Rectangle.Empty;
         public Rectangle ClippingBounds { get; set; } = Rectangle.Empty;
@@ -28,8 +30,9 @@ namespace WFGameCapture
         public Adapter1 Adapter { get; private set; }
         public Device Device { get; private set; }
 
-        public GameCapture()
+        public GameCapture(ILogger logger)
         {
+            _logger = logger;
             Init();
         }
 
@@ -205,22 +208,32 @@ namespace WFGameCapture
 
         public Bitmap GetFullImage()
         {
+            var sw = new System.Diagnostics.Stopwatch();
+            sw.Start();
             ClippingBounds = Rectangle.Empty;
             var image = GetOutputAsBitmap(100);
+            _logger.Log("Got full image in: " + sw.ElapsedMilliseconds + " ms.");
+            sw.Stop();
             return image;
         }
 
         public Bitmap GetRivenImage()
         {
+            var sw = new System.Diagnostics.Stopwatch();
             ClippingBounds = new Rectangle(1757, 251, 582, 1043);
             var image = GetOutputAsBitmap(100);
+            _logger.Log("Got riven image in: " + sw.ElapsedMilliseconds + " ms.");
+            sw.Stop();
             return image;
         }
 
         public Bitmap GetChatIcon()
         {
+            var sw = new System.Diagnostics.Stopwatch();
             ClippingBounds = new Rectangle(128, 594, 66, 52);
             var image = GetOutputAsBitmap(100);
+            _logger.Log("Got chat icon in: " + sw.ElapsedMilliseconds + " ms.");
+            sw.Stop();
             return image;
         }
     }

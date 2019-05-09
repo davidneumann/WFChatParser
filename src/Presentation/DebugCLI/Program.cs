@@ -453,7 +453,7 @@ namespace DebugCLI
             PasswordShim(config["Credentials:Key"], config["Credentials:Salt"], pass);
 
             var password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"]);
-            var gc = new GameCapture();
+            var gc = new GameCapture(new Logger(dataSender));
             var obs = GetObsSettings(config["Credentials:Key"], config["Credentials:Salt"]);
             var logParser = new WarframeLogParser();
             var textParser = new AllTextParser(dataSender, logParser);
@@ -835,7 +835,7 @@ namespace DebugCLI
 
         private static void TestScreenHandler()
         {
-            var c = new GameCapture();
+            var c = new GameCapture(new DummyLogger());
             var ss = new ScreenStateHandler();
 
             using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\loading.png"))
@@ -969,7 +969,7 @@ namespace DebugCLI
 
         private static void TestRivenStuff()
         {
-            var c = new GameCapture();
+            var c = new GameCapture(new DummyLogger());
             var rp = new RivenParser();
             var ss = new ScreenStateHandler();
 
@@ -1369,6 +1369,14 @@ namespace DebugCLI
                     fout.WriteLine(sb.ToString() + "[");
                 }
             }
+        }
+    }
+
+    internal class DummyLogger : ILogger
+    {
+        public void Log(string message)
+        {
+            Console.WriteLine(message);
         }
     }
 

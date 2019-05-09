@@ -74,10 +74,14 @@ namespace Application.Actionables.ChatBots
         {
             _logger.Log(_warframeCredentials.StartInfo.UserName + ":" + _warframeCredentials.Region + " taking control");
             _logger.Log("Cache size: " + _messageCache.Count + ". Cache detail size: " + _messageCacheDetails.Count);
-            var sample = _messageCacheDetails.Last().Value.EnhancedMessage;
-            if (sample.Length > Console.BufferWidth - 20)
-                sample = sample.Substring(0, Console.BufferWidth - 20);
-            _logger.Log("Cache sample: " + sample);
+            if (_messageCacheDetails.Count > 0)
+            {
+                var sample = _messageCacheDetails.Last().Value.EnhancedMessage;
+                if (sample.Length > Console.BufferWidth - 20)
+                    sample = sample.Substring(0, Console.BufferWidth - 20);
+                _logger.Log("Cache sample: " + sample);
+            }
+
             if (_warframeProcess == null || _warframeProcess.HasExited)
                 _currentState = BotStates.StartWarframe;
 
