@@ -31,7 +31,6 @@ namespace Application.Logger
                 string message = null;
                 if (_messages.TryDequeue(out message) || message != null)
                 {
-                    message = $"[{DateTime.Now.ToString("HH:mm:ss.f")}] {message}";
                     _dataSender.AsyncSendLogMessage(message);
                     _streamWriter.WriteLine(message);
                     if (message.Length > Console.BufferWidth)
@@ -43,6 +42,7 @@ namespace Application.Logger
 
         public void Log(string message)
         {
+            message = $"[{DateTime.Now.ToString("HH:mm:ss.f")}] {message}";
             _messages.Enqueue(message);
         }
     }
