@@ -73,6 +73,8 @@ namespace Application.Actionables
                     continue;
                 }
                 _logger.Log("Worker queue working on: " + item.Message.Author + ":" + item.Message.EnhancedMessage);
+                var fullTimeSw = new Stopwatch();
+                fullTimeSw.Start();
                 foreach (var r in item.RivenWorkDetails)
                 {
                     using (var croppedCopy = new Bitmap(r.CroppedRivenBitmap))
@@ -124,12 +126,9 @@ namespace Application.Actionables
                         }
                     }
                 }
-                var sw = new Stopwatch();
-                sw.Start();
                 item.MessageCache.Enqueue(item.Message.Author + item.Message.EnhancedMessage);
                 item.MessageCacheDetails[item.Message.Author + item.Message.EnhancedMessage] = item.Message;
-                _logger.Log("Added " + item.Message.Author + "'s message to cache in: " + sw.ElapsedMilliseconds + " ms.");
-                sw.Stop();
+                _logger.Log("Riven parsed and added " + item.Message.Author + "'s message to cache in: " + fullTimeSw.ElapsedMilliseconds + " ms.");
                 _dataSender.AsyncSendChatMessage(item.Message);
             }
 
