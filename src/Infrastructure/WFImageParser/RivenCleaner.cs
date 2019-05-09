@@ -140,7 +140,7 @@ namespace WFImageParser
                     }
                     //Remove right roll icon
                     var startX = -1;
-                    for (int x = (int)(outputImage.Width * 0.7); x < outputImage.Width; x++)
+                    for (int x = (int)(outputImage.Width * 0.68); x < outputImage.Width; x++)
                     {
                         if (startX >= 0)
                             break;
@@ -155,7 +155,7 @@ namespace WFImageParser
                     }
                     if (startX > 0)
                     {
-                        var endX = Math.Min(startX + 40, outputImage.Width);
+                        var endX = Math.Min(startX + 42, outputImage.Width);
                         for (int x = startX; x < endX; x++)
                         {
                             for (int y = outputImage.Height - 50; y < outputImage.Height; y++)

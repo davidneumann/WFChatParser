@@ -52,12 +52,12 @@ namespace DebugCLI
             //var target = Console.ReadLine();
             //CredentialShim(target);
             //FindErrorAgain();
-            //TestRivenParsing();
+            TestRivenParsing();
             //VerifyNoErrors(2);
             //TestScreenHandler();
             //TestBot();
             //ParseChatImage();
-            TessShim();
+            //TessShim();
         }
 
         private static void TessShim()
@@ -73,7 +73,7 @@ namespace DebugCLI
             //var lp = new LineParser();
             //var result = lp.ParseLine(new Bitmap("line.png"));
 
-            using (var cropped = new Bitmap(@"\\desktop-3414ubq\Warframes\Bot Client\riven_images\59d31534-95aa-4958-88d1-30a8c27fa9b9.png"))
+            using (var cropped = new Bitmap(@"\\desktop-3414ubq\Warframes\Bot Client\riven_images\e76b45ab-c683-4270-bf1a-39d3534b84ae.png"))
             {
                 var cleaner = new RivenCleaner();
                 using (var cleaned = cleaner.CleanRiven(cropped))
@@ -764,7 +764,9 @@ namespace DebugCLI
             var rp = new RivenParser();
             var bads = new List<string>();
             //foreach (var name in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs").Where(f => f.EndsWith(".png")))
-            var files = Directory.GetFiles(@"\\desktop-3414ubq\Warframes\Bot Client\riven_images\").Where(f => f.EndsWith(".png")).ToArray();
+            var badIds = new HashSet<string>(File.ReadAllLines(@"C:\users\david\Downloads\bad_rivens.txt"));
+            var files = badIds.Select(f => @"\\desktop-3414ubq\Warframes\Bot Client\riven_images\" + f + ".png").ToArray();
+            //var files = Directory.GetFiles(@"\\desktop-3414ubq\Warframes\Bot Client\riven_images\").Where(f => f.EndsWith(".png")).Select(f => new FileInfo(f)).OrderByDescending(f => f.CreationTime).Select(f => f.FullName).ToArray();
             //var files = new string[] { "\\\\desktop-3414ubq\\Warframes\\Bot Client\\riven_images\\001278d5-928c-4f99-8f96-e890857980bf.png" };
             var sw = new Stopwatch();
             var times = new List<double>();
@@ -888,9 +890,11 @@ namespace DebugCLI
             }
             else if (result.Rolls < 0)
             {
-                return "Bad rolls";
+                return "Bad rolls [missing]";
 
             }
+            else if (result.Rolls > 255)
+                return "Bad rolls [high]";
             else if (result.Polarity == Polarity.Unknown)
             {
                 return "Bad polarity";

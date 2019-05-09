@@ -170,8 +170,9 @@ namespace ImageOCR
                     result.Modifiers = modiObjects;
                 }
             }
-
+#if DEBUG
             Console.WriteLine(debug.ToString());
+#endif
             result.ImageId = Guid.NewGuid();
             return result;
         }
