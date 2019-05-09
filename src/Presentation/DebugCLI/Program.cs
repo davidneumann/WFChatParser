@@ -52,12 +52,12 @@ namespace DebugCLI
             //var target = Console.ReadLine();
             //CredentialShim(target);
             //FindErrorAgain();
-            TestRivenParsing();
+            //TestRivenParsing();
             //VerifyNoErrors(2);
             //TestScreenHandler();
             //TestBot();
             //ParseChatImage();
-            //TessShim();
+            TessShim();
         }
 
         private static void TessShim()
@@ -73,7 +73,7 @@ namespace DebugCLI
             //var lp = new LineParser();
             //var result = lp.ParseLine(new Bitmap("line.png"));
 
-            using (var cropped = new Bitmap(@"\\desktop-3414ubq\Warframes\Bot Client\riven_images\00209cb3-2580-46fd-943f-bcf3f6e135ce.png"))
+            using (var cropped = new Bitmap(@"\\desktop-3414ubq\Warframes\Bot Client\riven_images\59d31534-95aa-4958-88d1-30a8c27fa9b9.png"))
             {
                 var cleaner = new RivenCleaner();
                 using (var cleaned = cleaner.CleanRiven(cropped))

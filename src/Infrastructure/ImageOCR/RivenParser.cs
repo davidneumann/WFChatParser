@@ -188,6 +188,13 @@ namespace ImageOCR
                 lineRects.Add(lineRect);
                 y = lineRect.Bottom;
             }
+
+#if DEBUG
+            foreach (var file in Directory.GetFiles(Environment.CurrentDirectory).Select(f => new FileInfo(f)).Where(f => f.Name.StartsWith("debug_")))
+            {
+                File.Delete(file.FullName);
+            }
+#endif
             for (int i = 0; i < lineRects.Count; i++)
             {
                 var lineRect = lineRects[i];
@@ -212,7 +219,9 @@ namespace ImageOCR
                             lineBitmap.SetPixel(10 + referenceX - lineRect.Left, 10 + referenceY - lineRect.Top, cleanedRiven.GetPixel(referenceX, referenceY));
                         }
                     }
-                    //lineBitmap.Save("debug.png");
+#if DEBUG
+                    lineBitmap.Save("debug_ " + allLines.Count + ".png");
+#endif
                     if (i != lineRects.Count - 2)
                     {
                         allLines.Add(_lineParser.ParseLine(lineBitmap));
@@ -235,6 +244,29 @@ namespace ImageOCR
                     }
                 }
             }
+#if DEBUG
+            var debugs = Directory.GetFiles(Environment.CurrentDirectory).Where(f => f.Substring(f.LastIndexOf("\\") + 1).StartsWith("debug_")).OrderBy(f => f).Select(f => new Bitmap(f)).ToArray();
+            var height = debugs.Aggregate(0, (prod, next) => prod + next.Height);
+            var width = debugs.Max(f => f.Width);
+            using (var combinedDebug = new Bitmap(width, height))
+            {
+                var offset = 0;
+                for (int i = 0; i < debugs.Length; i++)
+                {
+                    var startX = width / 2 - debugs[i].Width / 2;
+                    for (int x = 0; x < debugs[i].Width; x++)
+                    {
+                        for (int y = 0; y < debugs[i].Height; y++)
+                        {
+                            combinedDebug.SetPixel(startX + x, offset + y, debugs[i].GetPixel(x, y));
+                        }
+                    }
+                    offset += debugs[i].Height;
+                }
+                combinedDebug.Save("debug_combined.png");
+            }
+            debugs.ToList().ForEach(f => f.Dispose());
+#endif
             return allLines;
         }
 
@@ -272,6 +304,9 @@ namespace ImageOCR
 
             if (startingY > 0 && endingY < 0)
                 endingY = bitmap.Height;
+
+            if (endingY - startingY > 65)
+                endingY = startingY + (endingY - startingY) / 2;
 
             if (startingY > 0)
                 return new Rectangle(startX, startingY, endX - startX, endingY - startingY);
