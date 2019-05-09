@@ -20,29 +20,46 @@ namespace Application.Logger
             _dataSender = dataSender;
             _streamWriter = new System.IO.StreamWriter("log.txt", false);
             _token = c;
-            var t = new Thread(new ThreadStart(ProcessMessages));
+            var t = new Thread(new ThreadStart(DataSenderMessageSender));
             t.Start();            
         }
 
-        private void ProcessMessages()
+        private void DataSenderMessageSender()
         {
-            while(!_token.IsCancellationRequested)
+            var processingSw = new System.Diagnostics.Stopwatch();
+            while (!_token.IsCancellationRequested)
             {
+                processingSw.Restart();
+                var messageSb = new StringBuilder();
                 string message = null;
-                if (_messages.TryDequeue(out message) || message != null)
+                var messageCount = 0;
+                do
                 {
-                    _dataSender.AsyncSendLogMessage(message);
-                    _streamWriter.WriteLine(message);
-                    if (message.Length > Console.BufferWidth)
-                        message = message.Substring(0, Console.BufferWidth - 1);
-                    Console.WriteLine(message);
+                    if (_messages.TryDequeue(out message))
+                    {
+                        messageCount++;
+                        messageSb.Insert(0, message + "\n");
+                        _streamWriter.WriteLine(message);
+                    }
+                    else
+                        break;
+                } while (messageCount < 1000 && message != null);
+                if (messageCount > 0)
+                {
+                    _dataSender.AsyncSendLogMessage(messageSb.ToString());
+                    _streamWriter.Flush();
                 }
+                processingSw.Stop();
+                Thread.Sleep((int)Math.Max(0, 1000 - processingSw.ElapsedMilliseconds));
             }
         }
 
         public void Log(string message)
         {
             message = $"[{DateTime.Now.ToString("HH:mm:ss.f")}] {message}";
+            if (message.Length > Console.BufferWidth)
+                message = message.Substring(0, Console.BufferWidth - 1);
+            Console.WriteLine(message);
             _messages.Enqueue(message);
         }
     }

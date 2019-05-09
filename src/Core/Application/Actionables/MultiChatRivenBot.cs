@@ -188,6 +188,7 @@ namespace Application.Actionables
                 _bots[i] = new TradeChatBot(_rivenWorkQueue, _rivenParserFactory.CreateRivenParser(), c, _warframeCredentials[i], _mouse, _keyboard, _screenStateHandler, _logger, _gameCapture, _dataSender, _chatParserFactory.CreateChatParser());
             }
 
+            var controlSw = new Stopwatch();
             while (!c.IsCancellationRequested)
             {
                 for (int i = 0; i < _bots.Length; i++)
@@ -195,6 +196,7 @@ namespace Application.Actionables
                     var bot = _bots[i];
                     if (bot.IsRequestingControl)
                     {
+                        controlSw.Restart();
                         try
                         {
                             _logger.Log("Giving control to: " + _warframeCredentials[i].StartInfo.UserName + ":" + _warframeCredentials[i].Region);
@@ -207,6 +209,8 @@ namespace Application.Actionables
                             bot.ShutDown();
                             _bots[i] = new TradeChatBot(_rivenWorkQueue, _rivenParserFactory.CreateRivenParser(), c, _warframeCredentials[i], _mouse, _keyboard, _screenStateHandler, _logger, _gameCapture, _dataSender, _chatParserFactory.CreateChatParser());
                         }
+                        _logger.Log(_warframeCredentials[i].StartInfo.UserName + ":" + _warframeCredentials[i].Region + " finished task in: " + controlSw.Elapsed.TotalSeconds + " seconds.");
+                        controlSw.Stop();
                     }
                 }
             }
