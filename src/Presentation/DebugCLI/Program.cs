@@ -45,14 +45,14 @@ namespace DebugCLI
         {
             Console.CancelKeyPress += Console_CancelKeyPress;
 
-            //if (!Directory.Exists(outputDir))
-            //    Directory.CreateDirectory(outputDir);
+            if (!Directory.Exists(outputDir))
+                Directory.CreateDirectory(outputDir);
 
-            Console.Write("Enter target name [ex, WFBot:Bot2]: ");
-            var target = Console.ReadLine();
-            CredentialShim(target);
+            //Console.Write("Enter target name [ex, WFBot:Bot2]: ");
+            //var target = Console.ReadLine();
+            //CredentialShim(target);
             //FindErrorAgain();
-            //TestRivenParsing();
+            TestRivenParsing();
             //VerifyNoErrors(2);
             //TestScreenHandler();
             //TestBot();
@@ -731,20 +731,94 @@ namespace DebugCLI
         private static void TestRivenParsing()
         {
             var rp = new RivenParser();
-            var cropped = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\error10.png");
-            //var cropped = rp.CropToRiven(bitmap);
-            cropped.Save("cropped.png");
-            //bitmap.Dispose();
-            var rc = new RivenCleaner();
-            //var clean = rc.CleanRiven(cropped);
-            var resizeDown = new Bitmap(cropped, new Size(cropped.Width / 2, cropped.Height / 2));
-            var resizeUp = new Bitmap(resizeDown, new Size(cropped.Width, cropped.Height));
-            var clean = resizeUp;
-            clean.Save("clean.png");
-            var result = rp.ParseRivenTextFromImage(clean, null);
-            result.Rank = rp.ParseRivenRankFromColorImage(cropped);
-            result.Polarity = rp.ParseRivenPolarityFromColorImage(cropped);
-            cropped.Dispose();
+            var bads = new List<string>();
+            //foreach (var name in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs").Where(f => f.EndsWith(".png")))
+            var files = Directory.GetFiles(@"\\desktop-3414ubq\Warframes\Bot Client\riven_images\").Where(f => f.EndsWith(".png")).ToArray();
+            //var files = new string[] { "\\\\desktop-3414ubq\\Warframes\\Bot Client\\riven_images\\0309f8bc-9c2c-45b8-b253-0bf7595323ad.png" };
+            var sw = new Stopwatch();
+            var times = new List<double>();
+            Console.WindowHeight = 10;
+            Console.BufferHeight = 10;
+            var empty = "\r" + new string((new Char[Console.BufferWidth - 1]).Select(_ => ' ').ToArray());
+            var errors = 0;
+            using (var fout = new StreamWriter("errors.txt"))
+            {
+
+                for (int i = 0; i < files.Length; i++)
+                {
+                    var name = files[i];
+                    sw.Restart();
+                    var cropped = new Bitmap(name);
+                    if (cropped.Width > 600)
+                        cropped = rp.CropToRiven(cropped);
+                    //var cropped = rp.CropToRiven(bitmap);
+                    cropped.Save("cropped.png");
+                    //bitmap.Dispose();
+                    var rc = new RivenCleaner();
+                    var clean = rc.CleanRiven(cropped);
+                    //var resizeDown = new Bitmap(cropped, new Size(cropped.Width / 2, cropped.Height / 2));
+                    //var resizeUp = new Bitmap(resizeDown, new Size(cropped.Width, cropped.Height));
+                    //var clean = resizeUp;
+                    clean.Save("clean.png");
+                    //Console.WriteLine(name);
+                    var result = rp.ParseRivenTextFromImage(clean, null);
+                    result.Rank = rp.ParseRivenRankFromColorImage(cropped);
+                    result.Polarity = rp.ParseRivenPolarityFromColorImage(cropped);
+                    //Console.WriteLine(JsonConvert.SerializeObject(result));
+                    cropped.Dispose();
+                    times.Add(sw.Elapsed.TotalSeconds);
+                    Console.Write(empty);
+                    Console.Write("\rFinished in: " + sw.Elapsed.TotalSeconds + "s. Average: " + times.Average() + "s.\nTime left: " + ((files.Length - i) * times.Average() / 60) + " minutes. Checked: " + (i + 1) + ". Errors: " + errors);
+                    var errorReason = DoesRivenHaveError(result);
+                    if (errorReason.Length > 0)
+                    {
+                        var json = JsonConvert.SerializeObject(result);
+                        bads.Add(json);
+                        Console.WriteLine("\n" + errorReason);
+                        fout.WriteLine("File: " + name + "\nReason: " + errorReason + "\n" + json);
+                        fout.Flush();
+                        Console.WriteLine(json);
+                        //Debugger.Break();
+                        errors++;
+                    }
+                }
+            }
+        }
+
+        private static string DoesRivenHaveError(Riven result)
+        {
+            if (result.Modifiers.Any(m => m.Value == 0))
+            {
+                return "Bad modifier value";
+                
+            }
+            else if (result.Modifiers.Length > 4)
+            {
+                return "Bad modifier count";
+                
+            }
+            else if (result.Drain < 0)
+            {
+                return "Bad drain";
+                
+            }
+            else if (result.MasteryRank < 0)
+            {
+                return "Bad mastery rank";
+                
+            }
+            else if (result.Rolls < 0)
+            {
+                return "Bad rolls";
+                
+            }
+            else if (result.Polarity == Polarity.Unknown)
+            {
+                return "Bad polarity";
+                
+            }
+
+            return "";
         }
 
         private static void VisualizeClickpoints()
