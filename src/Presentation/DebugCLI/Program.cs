@@ -764,10 +764,10 @@ namespace DebugCLI
             var rp = new RivenParser();
             var bads = new List<string>();
             //foreach (var name in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs").Where(f => f.EndsWith(".png")))
-            var badIds = new HashSet<string>(File.ReadAllLines(@"C:\users\david\Downloads\bad_rivens.txt"));
-            var files = badIds.Select(f => @"\\desktop-3414ubq\Warframes\Bot Client\riven_images\" + f + ".png").ToArray();
+            //var badIds = new HashSet<string>(File.ReadAllLines(@"C:\users\david\Downloads\bad_rivens.txt"));
+            //var files = badIds.Select(f => @"\\desktop-3414ubq\Warframes\Bot Client\riven_images\" + f + ".png").Skip(1311).ToArray();
             //var files = Directory.GetFiles(@"\\desktop-3414ubq\Warframes\Bot Client\riven_images\").Where(f => f.EndsWith(".png")).Select(f => new FileInfo(f)).OrderByDescending(f => f.CreationTime).Select(f => f.FullName).ToArray();
-            //var files = new string[] { "\\\\desktop-3414ubq\\Warframes\\Bot Client\\riven_images\\001278d5-928c-4f99-8f96-e890857980bf.png" };
+            var files = new string[] { @"C:\Users\david\Downloads\riven_test.png" };
             var sw = new Stopwatch();
             var times = new List<double>();
             Console.WindowHeight = 10;
@@ -779,6 +779,9 @@ namespace DebugCLI
                 var rand = new System.Random();
                 for (int fileIndex = 0; fileIndex < files.Length; fileIndex++)
                 {
+                    if (!File.Exists(files[fileIndex]))
+                        continue;
+
                     var name = files[fileIndex];
                     sw.Restart();
                     var cropped = new Bitmap(name);
@@ -828,12 +831,16 @@ namespace DebugCLI
                     riven.Rank = rp.ParseRivenRankFromColorImage(cropped);
                     var guid = name.Substring(name.LastIndexOf("\\") + 1);
                     guid = guid.Replace(".png", "");
-                    riven.ImageId = Guid.Parse(guid);
+                    try
+                    {
+                        riven.ImageId = Guid.Parse(guid);
+                    }
+                    catch { }
                     //Console.WriteLine(JsonConvert.SerializeObject(result));
                     cropped.Dispose();
                     times.Add(sw.Elapsed.TotalSeconds);
                     Console.Write(empty);
-                    Console.Write("\rFinished in: " + sw.Elapsed.TotalSeconds + "s. Average: " + times.Average() + "s.\nTime left: " + ((files.Length - fileIndex) * times.Average() / 60) + " minutes. Checked: " + (fileIndex + 1) + ". Errors: " + errors);
+                    Console.Write("\rFinished in: " + sw.Elapsed.TotalSeconds + "s. Average: " + times.Average() + "s.\nTime left: " + ((files.Length - fileIndex) * times.Average() / 60) + " minutes. Checked " + (fileIndex + 1) + " of " + files.Length + ". Errors: " + errors);
                     var errorReason = DoesRivenHaveError(riven);
                     if (errorReason.Length > 0)
                     {
@@ -869,9 +876,10 @@ namespace DebugCLI
                         {
                             image.Dispose();
                         }
-
                         errors++;
                     }
+
+                    Console.WriteLine("\n" + Newtonsoft.Json.JsonConvert.SerializeObject(riven));
                 }
             }
         }
@@ -907,9 +915,13 @@ namespace DebugCLI
             }
             else if (result.Modifiers.Length > 4)
             {
-                return "Bad modifier count";
+                return "Bad modifier count [high]";
 
             }
+            else if (result.Modifiers.Length < 2)
+                return "Bad modifier count [low]";
+            else if (result.Modifiers.Where(m => !m.Curse).Count() > 3)
+                return "To many buffs";
 
             return "";
         }

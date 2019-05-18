@@ -193,7 +193,11 @@ namespace ImageOCR
 #if DEBUG
             foreach (var file in Directory.GetFiles(Environment.CurrentDirectory).Select(f => new FileInfo(f)).Where(f => f.Name.StartsWith("debug_")))
             {
-                File.Delete(file.FullName);
+                try
+                {
+                    File.Delete(file.FullName);
+                }
+                catch { }
             }
 #endif
             for (int i = 0; i < lineRects.Count; i++)
@@ -221,7 +225,11 @@ namespace ImageOCR
                         }
                     }
 #if DEBUG
-                    lineBitmap.Save("debug_ " + allLines.Count + ".png");
+                    try
+                    {
+                        lineBitmap.Save("debug_ " + allLines.Count + ".png");
+                    }
+                    catch { }
 #endif
                     if (i != lineRects.Count - 2)
                     {
@@ -246,27 +254,31 @@ namespace ImageOCR
                 }
             }
 #if DEBUG
-            var debugs = Directory.GetFiles(Environment.CurrentDirectory).Where(f => f.Substring(f.LastIndexOf("\\") + 1).StartsWith("debug_")).OrderBy(f => f).Select(f => new Bitmap(f)).ToArray();
-            var height = debugs.Aggregate(0, (prod, next) => prod + next.Height);
-            var width = debugs.Max(f => f.Width);
-            using (var combinedDebug = new Bitmap(width, height))
+            try
             {
-                var offset = 0;
-                for (int i = 0; i < debugs.Length; i++)
+                var debugs = Directory.GetFiles(Environment.CurrentDirectory).Where(f => f.Substring(f.LastIndexOf("\\") + 1).StartsWith("debug_")).OrderBy(f => f).Select(f => new Bitmap(f)).ToArray();
+                var height = debugs.Aggregate(0, (prod, next) => prod + next.Height);
+                var width = debugs.Max(f => f.Width);
+                using (var combinedDebug = new Bitmap(width, height))
                 {
-                    var startX = width / 2 - debugs[i].Width / 2;
-                    for (int x = 0; x < debugs[i].Width; x++)
+                    var offset = 0;
+                    for (int i = 0; i < debugs.Length; i++)
                     {
-                        for (int y = 0; y < debugs[i].Height; y++)
+                        var startX = width / 2 - debugs[i].Width / 2;
+                        for (int x = 0; x < debugs[i].Width; x++)
                         {
-                            combinedDebug.SetPixel(startX + x, offset + y, debugs[i].GetPixel(x, y));
+                            for (int y = 0; y < debugs[i].Height; y++)
+                            {
+                                combinedDebug.SetPixel(startX + x, offset + y, debugs[i].GetPixel(x, y));
+                            }
                         }
+                        offset += debugs[i].Height;
                     }
-                    offset += debugs[i].Height;
+                    combinedDebug.Save("debug_combined.png");
                 }
-                combinedDebug.Save("debug_combined.png");
+                debugs.ToList().ForEach(f => f.Dispose());
             }
-            debugs.ToList().ForEach(f => f.Dispose());
+            catch { }
 #endif
             return allLines;
         }
