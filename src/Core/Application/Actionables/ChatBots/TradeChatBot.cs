@@ -314,6 +314,16 @@ namespace Application.Actionables.ChatBots
                     //If something went wrong clear this item from caches so it may be tried again
                     if (!foundRivenWindow || crop == null)
                     {
+                        if (!foundRivenWindow)
+                        {
+                            using (var b = _gameCapture.GetFullImage())
+                            {
+                                string filename = System.IO.Path.Combine("debug", "riven_" + Guid.NewGuid().ToString() + ".png");
+                                b.Save(filename);
+                                _logger.Log("Could not find riven window. See: " + filename);
+                            }
+                        }
+
                         _chatParser.InvalidCache(line.GetKey());
                         if (crop != null)
                         {
@@ -348,11 +358,13 @@ namespace Application.Actionables.ChatBots
                     }
                     rivenParseDetails.Add(new RivenParseTaskWorkItemDetail() { RivenIndex = clickpoint.Index, RivenName = clickpoint.RivenName, CroppedRivenBitmap = crop });
                 }
-                _workQueue.Enqueue(new RivenParseTaskWorkItem() {
+                _workQueue.Enqueue(new RivenParseTaskWorkItem()
+                {
                     Message = chatMessage,
                     RivenWorkDetails = rivenParseDetails,
                     MessageCache = _messageCache,
-                    MessageCacheDetails = _messageCacheDetails });
+                    MessageCacheDetails = _messageCacheDetails
+                });
             }
 
             return true;
@@ -469,7 +481,7 @@ namespace Application.Actionables.ChatBots
             await Task.Delay(250);
             using (var glyphScreen = _gameCapture.GetFullImage())
             {
-                if(_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
+                if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
                 {
                     await Task.Delay(17);
                     _mouse.Click(0, 0);
@@ -517,7 +529,7 @@ namespace Application.Actionables.ChatBots
             var tries = 0;
             while (true)
             {
-                if(_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
+                if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
                 {
                     await Task.Delay(17);
                     _mouse.Click(0, 0);
@@ -526,7 +538,7 @@ namespace Application.Actionables.ChatBots
                 {
                     screen.Save("screen.png");
                     var state = _screenStateHandler.GetScreenState(screen);
-                    if(state == ScreenState.GlyphWindow)
+                    if (state == ScreenState.GlyphWindow)
                     {
                         await Task.Delay(30);
                         return;
@@ -638,7 +650,7 @@ namespace Application.Actionables.ChatBots
             NavigateToChat,
             ParseChat
         }
-        
+
         private async Task StartWarframe()
         {
             _requestingControl = false;

@@ -49,6 +49,9 @@ namespace WFImageParser
                 croppedAsMemory.Seek(0, SeekOrigin.Begin);
                 using (Image<Rgba32> image = SixLabors.ImageSharp.Image.Load(croppedAsMemory))
                 {
+                    if (image.Width != 582)
+                        image.Mutate(i => i.Resize(582, 831));
+
                     var refX = 21;
                     var refY = 63;
                     //Copy title/modis
@@ -107,14 +110,14 @@ namespace WFImageParser
                     }
 
                     //Clean up bottom corners
-                    for (int x = 0; x < 17; x++)
+                    for (int x = 0; x < 18; x++)
                     {
                         for (int y = 587; y < 587 + 48; y++)
                         {
                             outputImage[x, y] = background;
                         }
                     }
-                    for (int x = outputImage.Width - 17; x < outputImage.Width; x++)
+                    for (int x = outputImage.Width - 18; x < outputImage.Width; x++)
                     {
                         for (int y = 587; y < 587 + 48; y++)
                         {

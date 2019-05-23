@@ -65,7 +65,7 @@ namespace WarframeDriver
         {
             var miniProfileIconPoints = new Point[] { new Point(198, 172), new Point(208, 171), new Point(218, 170), new Point(228, 173), new Point(238, 174), new Point(248, 170) };
             var largeProfileIconPoints = new Point[] { new Point(196, 194), new Point(206, 199), new Point(216, 195), new Point(226, 196), new Point(236, 197), new Point(246, 198) };
-            return !IsExitable(bitmap) 
+            return !IsExitable(bitmap)
                 && !miniProfileIconPoints.Any(p => { var pixel = bitmap.GetPixel(p.X, p.Y); return pixel.R >= 178 && pixel.R <= 198 && pixel.G >= 155 && pixel.G <= 175 && pixel.B >= 91 && pixel.B <= 111; })
                 && !largeProfileIconPoints.Any(p => { var pixel = bitmap.GetPixel(p.X, p.Y); return pixel.R >= 178 && pixel.R <= 198 && pixel.G >= 155 && pixel.G <= 175 && pixel.B >= 91 && pixel.B <= 111; });
         }
@@ -160,7 +160,12 @@ namespace WarframeDriver
         }
         private bool IsRiven(Bitmap bitmap)
         {
-            var purplePixelAnchors = new Point[] { new Point(1831, 1160), new Point(2262, 1160), new Point(2262, 459), new Point(2337, 1061), new Point(1815, 432), new Point(2338, 896) };
+            var height = (int)(bitmap.Height * 0.3462962962962963);
+            var purplePixelAnchors = new Point[] { new Point((int)(bitmap.Width * 0.49072265625), height),
+                new Point((int)(bitmap.Width * 0.4951171875), height),
+                new Point((int)(bitmap.Width * 0.5), height),
+                new Point((int)(bitmap.Width * 0.504638671875), height),
+                new Point((int)(bitmap.Width * 0.509033203125), height) };
             return !purplePixelAnchors.Any(p => !IsPurple(bitmap.GetPixel(p.X, p.Y)));
         }
 

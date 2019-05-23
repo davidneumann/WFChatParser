@@ -52,12 +52,33 @@ namespace DebugCLI
             //var target = Console.ReadLine();
             //CredentialShim(target);
             //FindErrorAgain();
-            TestRivenParsing();
+            //TestRivenParsing();
             //VerifyNoErrors(2);
             //TestScreenHandler();
             //TestBot();
             //ParseChatImage();
             //TessShim();
+            NewRivenShim();
+        }
+
+        private static void NewRivenShim()
+        {
+            var rc = new RivenCleaner();
+            var rp = new RivenParser();
+            //var newRiven = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\new_riven.png");
+            var fullImage = new Bitmap(@"\\desktop-3414ubq\Warframes\Bot Client\debug\debug.png");
+            var newRiven = rp.CropToRiven(fullImage);
+            newRiven.Save("new_riven_cropped.png");
+            var result = rc.CleanRiven(newRiven);
+            result.Save("new_riven_processed2.png");
+            var riven = rp.ParseRivenTextFromImage(result, null);
+            riven.Rank = rp.ParseRivenRankFromColorImage(newRiven);
+            riven.Polarity = rp.ParseRivenPolarityFromColorImage(newRiven);
+            Console.WriteLine("\n" + (int)riven.Polarity + " = " + riven.Polarity.ToString());
+            Console.WriteLine(JsonConvert.SerializeObject(riven));
+            newRiven.Dispose();
+            fullImage.Dispose();
+            result.Dispose();
         }
 
         private static void TessShim()

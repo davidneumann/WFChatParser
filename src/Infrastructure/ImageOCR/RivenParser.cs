@@ -332,6 +332,10 @@ namespace ImageOCR
             var width = 8;
             var startX = 178;
             var gap = 31;
+            var inputRiven = croppedRiven;
+            if (inputRiven.Width != 582)
+                inputRiven = new Bitmap(croppedRiven, new Size(582, 831));
+
             for (int i = 0; i < 8; i++)
             {
                 var pixelValues = 0f;
@@ -339,13 +343,19 @@ namespace ImageOCR
                 {
                     for (int y = 818; y < 818 + 6; y++)
                     {
-                        var pixel = croppedRiven.GetPixel(x, y);
+                        var pixel = inputRiven.GetPixel(x, y);
                         pixelValues += ((((float)pixel.R / 255f) + ((float)pixel.G / 255f) + ((float)pixel.B / 255f)) / 3f);
                     }
                 }
                 if (pixelValues / 48f < 0.75f)
+                {
+                    if (inputRiven.Width != croppedRiven.Width)
+                        inputRiven.Dispose();
                     return Math.Max(i, 0);
+                }
             }
+            if (inputRiven.Width != croppedRiven.Width)
+                inputRiven.Dispose();
             return 8;
         }
 
@@ -360,23 +370,36 @@ namespace ImageOCR
         }
         private Polarity GetPolarity(Bitmap croppedRiven)
         {
-            var dashMatches = _dashPixels.Count(p => IsPurple(p, croppedRiven));
-            var vMatches = _vPixels.Count(p => IsPurple(p, croppedRiven));
-            var dMatches = _dPixels.Count(p => IsPurple(p, croppedRiven));
+            var inputRiven = croppedRiven;
+            if (inputRiven.Width != 582)
+                inputRiven = new Bitmap(croppedRiven, new Size(582, 831));
 
+            var dashMatches = _dashPixels.Count(p => IsPurple(p, inputRiven));
+            var vMatches = _vPixels.Count(p => IsPurple(p, inputRiven));
+            var dMatches = _dPixels.Count(p => IsPurple(p, inputRiven));
+
+            var result = Polarity.Unknown;
             if (dashMatches > _dashPixels.Count * 0.9)
-                return Polarity.Naramon;
+                result = Polarity.Naramon;
             else if (vMatches > _vPixels.Count * 0.9)
-                return Polarity.Madurai;
+                result = Polarity.Madurai;
             else if (dMatches > _dashPixels.Count * 0.9)
-                return Polarity.Vazarin;
+                result = Polarity.Vazarin;
             else
-                return Polarity.Unknown;
+                result = Polarity.Unknown;
+
+            if (inputRiven.Width != croppedRiven.Width)
+                inputRiven.Dispose();
+            return result;
         }
 
         public Bitmap CropToRiven(Bitmap bitmap)
         {
-            return bitmap.Clone(new Rectangle(1757, 463, 582, 831), bitmap.PixelFormat);
+            return bitmap.Clone(new Rectangle((int)(bitmap.Width * 0.443115234375),
+                (int)(bitmap.Height * 0.3578703703703704),
+                (int)(bitmap.Width * 0.11376953125),
+                (int)(bitmap.Height * 0.3083333333333333)),
+                bitmap.PixelFormat);
         }
 
         public bool IsRivenPresent(Bitmap bitmap)

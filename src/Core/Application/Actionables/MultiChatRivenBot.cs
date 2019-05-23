@@ -35,8 +35,8 @@ namespace Application.Actionables
         private IChatParserFactory _chatParserFactory;
 
         public MultiChatRivenBot(WarframeClientInformation[] warframeCredentials,
-            IMouse mouse, 
-            IKeyboard keyboard, 
+            IMouse mouse,
+            IKeyboard keyboard,
             IScreenStateHandler screenStateHandler,
             IRivenParserFactory rivenParserFactory,
             IRivenCleaner rivenCleaner,
@@ -66,7 +66,7 @@ namespace Application.Actionables
             {
                 if (c.IsCancellationRequested)
                     break;
-                if(_rivenWorkQueue.Count > 0)
+                if (_rivenWorkQueue.Count > 0)
                     _logger.Log("Worker thread taking new message from queue of " + _rivenWorkQueue.Count + " items");
 
                 RivenParseTaskWorkItem item = null;
@@ -151,7 +151,7 @@ namespace Application.Actionables
                             {
                                 var saveSW = new Stopwatch();
                                 saveSW.Start();
-                                croppedCopy.Save(Path.Combine("riven_images", riven.ImageId.ToString() + ".png"));
+                                croppedCopy.Save(Path.Combine("riven_images", DateTime.Now.ToString("yyyy_MM_dd"), riven.ImageId.ToString() + ".png"));
                                 _logger.Log(item.Message.Author + "'s riven image saved to disk in: " + saveSW.ElapsedMilliseconds + " ms.");
                                 saveSW.Stop();
                             }
@@ -172,6 +172,8 @@ namespace Application.Actionables
 
         public async Task AsyncRun(CancellationToken c)
         {
+            KillAllWarframes();
+
             if (_rivenQueueWorkers.Count <= 0)
             {
                 lock (_rivenQueueWorkers)
@@ -214,6 +216,24 @@ namespace Application.Actionables
                         }
                         _logger.Log(_warframeCredentials[i].StartInfo.UserName + ":" + _warframeCredentials[i].Region + " finished task in: " + controlSw.Elapsed.TotalSeconds + " seconds.");
                         controlSw.Stop();
+                    }
+                }
+            }
+        }
+
+        private void KillAllWarframes()
+        {
+            foreach (var process in System.Diagnostics.Process.GetProcesses())
+            {
+                var name = process.ProcessName.ToLower();
+                if (name.Contains("launcher") || name.Contains("warframe"))
+                {
+                    try
+                    {
+                        process.Kill();
+                    }
+                    catch
+                    {
                     }
                 }
             }
