@@ -663,6 +663,12 @@ namespace Application.Actionables.ChatBots
             launcher.Start();
             await Task.Delay(5000);
 
+            //Check if there was already a launcher running
+            if (launcher.HasExited)
+            {
+                System.Diagnostics.Process.GetProcesses().Where(p => p.ProcessName.ToLower().Contains("launcher")).ToList().ForEach(p => p.Kill());
+            }
+
             ////If not start launcher, click play until WF starts
             while (true)
             {
