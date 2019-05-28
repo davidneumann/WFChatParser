@@ -28,5 +28,10 @@ namespace Application.ChatMessages.Model
         {
             return (Value > 0 ? "+": "") + Value + Description;
         }
+
+        public static void OverrideDescriptions(string[] newDescriptions)
+        {
+            _possibleDescriptions = newDescriptions;
+        }
     }
 }
