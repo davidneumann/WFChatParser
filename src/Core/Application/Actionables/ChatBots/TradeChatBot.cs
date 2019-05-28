@@ -315,6 +315,16 @@ namespace Application.Actionables.ChatBots
                                 await Task.Delay(17);
                                 break;
                             }
+                            else if(_screenStateHandler.GetScreenState(b) == ScreenState.GlyphWindow && _screenStateHandler.IsChatOpen(b))
+                            {
+                                //Click riven... again
+                                _mouse.MoveTo(clickpoint.X, clickpoint.Y);
+                                await Task.Delay(45);
+                                _mouse.Click(clickpoint.X, clickpoint.Y);
+                                await Task.Delay(45);
+                                _mouse.MoveTo(0, 0);
+                                await Task.Delay(100);
+                            }
                         }
                     }
 
