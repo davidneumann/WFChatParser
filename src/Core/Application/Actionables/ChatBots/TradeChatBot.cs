@@ -194,8 +194,14 @@ namespace Application.Actionables.ChatBots
                     sw.Start();
                     var chatLines = _chatParser.ParseChatImage(screen, true, true, 30);
                     _logger.Log($"Found {chatLines.Length} new messages.");
+                    var lineFailed = false;
                     foreach (var line in chatLines)
                     {
+                        if (lineFailed)
+                        {
+                            _chatParser.InvalidCache(line.GetKey());
+                            continue;
+                        }
                         _logger.Log("Processing message: " + line.RawMessage);
                         _lastMessage = DateTime.Now;
                         if (line is ChatMessageLineResult)
@@ -207,6 +213,7 @@ namespace Application.Actionables.ChatBots
                                 if (path != null)
                                     _dataSender.AsyncSendDebugMessage("Failed to parse correctly. See: " + path);
                                 _chatParser.InvalidCache(line.GetKey());
+                                lineFailed = true;
                                 break;
                             }
                         }
