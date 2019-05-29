@@ -315,7 +315,7 @@ namespace Application.Actionables.ChatBots
                                 await Task.Delay(17);
                                 break;
                             }
-                            else if(_screenStateHandler.GetScreenState(b) == ScreenState.GlyphWindow && _screenStateHandler.IsChatOpen(b))
+                            else if (_screenStateHandler.GetScreenState(b) == ScreenState.GlyphWindow && _screenStateHandler.IsChatOpen(b))
                             {
                                 //Click riven... again
                                 _mouse.MoveTo(clickpoint.X, clickpoint.Y);
@@ -783,6 +783,17 @@ namespace Application.Actionables.ChatBots
                     _mouse.Click(2945, 1333);
 
                     //Give plenty of time for the screen to transition
+                    var startTime = DateTime.Now;
+                    while (DateTime.Now.Subtract(startTime).TotalSeconds < 15)
+                    {
+                        using (var newScreen = _gameCapture.GetFullImage())
+                        {
+                            if (_screenStateHandler.GetScreenState(newScreen) == ScreenState.LoginScreen)
+                                await Task.Delay(1000);
+                            else
+                                break;
+                        }
+                    }
                     _logger.Log("Waiting 5 seconds for screen transition");
                     await Task.Delay(5000);
                     _logger.Log("Waiting done");

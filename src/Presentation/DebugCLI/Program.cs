@@ -54,11 +54,12 @@ namespace DebugCLI
             //FindErrorAgain();
             //TestRivenParsing();
             //VerifyNoErrors(2);
-            //TestScreenHandler();
+            TestScreenHandler();
             //TestBot();
             //ParseChatImage();
-            TessShim();
+            //TessShim();
             //NewRivenShim();
+
         }
 
         private static void NewRivenShim()
@@ -1090,6 +1091,18 @@ namespace DebugCLI
             {
                 var isChatCollapsed = ss.IsChatCollapsed(b);
                 Console.WriteLine("Is chat collapsed icon found: " + isChatCollapsed + " should be true");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\old_login_reward.png"))
+            {
+                var isDailyItemReward = ss.GetScreenState(b) == ScreenState.DailyRewardScreenItem;
+                Console.WriteLine("Is daily item reward: " + isDailyItemReward + " should be true");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\unknown_login_reward.png"))
+            {
+                var isDailyItemReward = ss.GetScreenState(b) == ScreenState.DailyRewardScreenItem;
+                Console.WriteLine("Is daily item reward2: " + isDailyItemReward + " should be true");
             }
         }
 
