@@ -139,11 +139,12 @@ namespace Application.Actionables
                             riven.Name = r.RivenName;
                             riven.MessagePlacementId = r.RivenIndex;
                             item.Message.Rivens.Add(riven);
-                            if (!Directory.Exists("riven_images"))
+                            var outputDir = Path.Combine("riven_images", DateTime.Now.ToString("yyyy_MM_dd"));
+                            if (!Directory.Exists(outputDir))
                             {
                                 try
                                 {
-                                    Directory.CreateDirectory("riven_images");
+                                    Directory.CreateDirectory(outputDir);
                                 }
                                 catch { }
                             }
@@ -151,7 +152,7 @@ namespace Application.Actionables
                             {
                                 var saveSW = new Stopwatch();
                                 saveSW.Start();
-                                croppedCopy.Save(Path.Combine("riven_images", DateTime.Now.ToString("yyyy_MM_dd"), riven.ImageId.ToString() + ".png"));
+                                croppedCopy.Save(Path.Combine(outputDir, riven.ImageId.ToString() + ".png"));
                                 _logger.Log(item.Message.Author + "'s riven image saved to disk in: " + saveSW.ElapsedMilliseconds + " ms.");
                                 saveSW.Stop();
                             }

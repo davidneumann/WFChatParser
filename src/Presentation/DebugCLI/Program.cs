@@ -57,8 +57,8 @@ namespace DebugCLI
             //TestScreenHandler();
             //TestBot();
             //ParseChatImage();
-            //TessShim();
-            NewRivenShim();
+            TessShim();
+            //NewRivenShim();
         }
 
         private static void NewRivenShim()
@@ -94,7 +94,7 @@ namespace DebugCLI
             //var lp = new LineParser();
             //var result = lp.ParseLine(new Bitmap("line.png"));
 
-            using (var cropped = new Bitmap(@"\\desktop-3414ubq\Warframes\Bot Client\riven_images\e76b45ab-c683-4270-bf1a-39d3534b84ae.png"))
+            using (var cropped = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\bad_parse2.png"))
             {
                 var cleaner = new RivenCleaner();
                 using (var cleaned = cleaner.CleanRiven(cropped))
