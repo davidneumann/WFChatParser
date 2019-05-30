@@ -1009,6 +1009,12 @@ namespace DebugCLI
                 Console.WriteLine("Is piloting warframe3: " + isPiloting + " should be true");
             }
 
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\warframe_pilot4.png"))
+            {
+                var isPiloting = ss.GetScreenState(b);
+                Console.WriteLine("Is piloting warframe4: " + isPiloting + " should be " + ScreenState.ControllingWarframe.ToString() + ". " + (isPiloting == ScreenState.ControllingWarframe));
+            }
+
             using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\main_menu.png"))
             {
                 var isMainMenu = ss.GetScreenState(b) == ScreenState.MainMenu;

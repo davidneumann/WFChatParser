@@ -82,7 +82,8 @@ namespace WarframeDriver
         {
             var lightPixels = new Point[] { /*new Point(2706, 1875), new Point(2743, 1897), new Point(2776, 1897), new Point(2830, 1873), new Point(2956, 1885),*/
                 new Point(2570, 346), new Point(2646, 390), new Point(2694, 363), new Point(2747, 393), new Point(2807, 368), new Point(2987, 335), new Point(3165, 355)};
-            var darkPixels = new Point[] { new Point(2766, 1894), new Point(2868, 1875), new Point(2963, 1879), new Point(3038, 1889), new Point(3162, 1885) };
+            var darkPixels = new Point[] { new Point(2560, 364), new Point(2717, 363), new Point(2783, 369), new Point(2915, 406),
+                new Point(3050, 1928), new Point(2766, 1894), new Point(2868, 1875), new Point(2963, 1879), new Point(3038, 1889), new Point(3162, 1885) };
             return lightPixels.Select(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value).Average() > 0.65f
                     && darkPixels.Select(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value).Average() < 0.4f;
         }
