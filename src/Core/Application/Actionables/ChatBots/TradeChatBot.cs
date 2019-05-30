@@ -196,9 +196,11 @@ namespace Application.Actionables.ChatBots
                     sw.Start();
                     var chatLines = _chatParser.ParseChatImage(screen, true, true, 30);
                     _logger.Log($"Found {chatLines.Length} new messages.");
-                    foreach (var line in chatLines)
+                    var superFailed = false;
+                    for (int i = 0; i < chatLines.Length; i++)
                     {
-                        if (lineFailed)
+                        var line = chatLines[i];
+                        if (lineFailed && superFailed)
                         {
                             _chatParser.InvalidCache(line.GetKey());
                             continue;
@@ -214,6 +216,30 @@ namespace Application.Actionables.ChatBots
                                 if (path != null)
                                     _dataSender.AsyncSendDebugMessage("Failed to parse correctly. See: " + path);
                                 _chatParser.InvalidCache(line.GetKey());
+                                if (lineFailed)
+                                    superFailed = true;
+                                else
+                                {
+                                    //Adjust click points and retry
+                                    for (int x = i; x < chatLines.Length; x++)
+                                    {
+                                        if(chatLines[i] is ChatMessageLineResult)
+                                        {
+                                            var lineToOffset = chatLines[i] as ChatMessageLineResult;
+                                            for (int index = 0; index < lineToOffset.ClickPoints.Count; index++)
+                                            {
+                                                lineToOffset.ClickPoints[x] = new ClickPoint()
+                                                {
+                                                    Index = lineToOffset.ClickPoints[x].Index,
+                                                    RivenName = lineToOffset.ClickPoints[x].RivenName,
+                                                    X = lineToOffset.ClickPoints[x].X,
+                                                    Y = lineToOffset.ClickPoints[x].Y + 50
+                                                };
+                                            }
+                                        }
+                                    }
+                                    i--;
+                                }
                                 lineFailed = true;
                                 break;
                             }
