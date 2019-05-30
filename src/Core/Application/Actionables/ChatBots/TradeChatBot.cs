@@ -118,6 +118,8 @@ namespace Application.Actionables.ChatBots
 
         private async Task ParseChat()
         {
+            var lineFailed = false;
+
             //Close and try again if no messages in 5 minutes
             if (DateTime.Now.Subtract(_lastMessage).TotalMinutes > 5)
             {
@@ -194,7 +196,6 @@ namespace Application.Actionables.ChatBots
                     sw.Start();
                     var chatLines = _chatParser.ParseChatImage(screen, true, true, 30);
                     _logger.Log($"Found {chatLines.Length} new messages.");
-                    var lineFailed = false;
                     foreach (var line in chatLines)
                     {
                         if (lineFailed)
@@ -236,19 +237,22 @@ namespace Application.Actionables.ChatBots
                 }
             }
 
-            //Scroll down to get 27 more messages
-            _mouse.MoveTo(3250, 768);
-            await Task.Delay(30);
-            //Scroll down for new page of messages
-            for (int i = 0; i < 27; i++)
+            if (!lineFailed)
             {
-                _mouse.ScrollDown();
-                await Task.Delay(17);
-            }
-            for (int i = 0; i < 1; i++)
-            {
-                _mouse.ScrollUp();//Pause chat
-                await Task.Delay(90);
+                //Scroll down to get 27 more messages
+                _mouse.MoveTo(3250, 768);
+                await Task.Delay(30);
+                //Scroll down for new page of messages
+                for (int i = 0; i < 27; i++)
+                {
+                    _mouse.ScrollDown();
+                    await Task.Delay(17);
+                }
+                for (int i = 0; i < 1; i++)
+                {
+                    _mouse.ScrollUp();//Pause chat
+                    await Task.Delay(90);
+                }
             }
             _mouse.MoveTo(0, 0);
             await Task.Delay(17);
