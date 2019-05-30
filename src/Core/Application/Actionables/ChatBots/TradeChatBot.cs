@@ -247,6 +247,8 @@ namespace Application.Actionables.ChatBots
                         else
                             _logger.Log("Unknown message: " + line.RawMessage);
                     }
+                    if (!superFailed)
+                        lineFailed = false;
                     await Task.Delay(75);
                     _logger.Log($"Processed (not riven parsed) {chatLines.Length} messages in : {sw.Elapsed.TotalSeconds} seconds");
                     sw.Stop();
