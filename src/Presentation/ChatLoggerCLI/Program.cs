@@ -132,6 +132,9 @@ namespace ChatLoggerCLI
                     logger,
                     new ChatParserFactory(logger));
 
+                var drive = DriveInfo.GetDrives().First(d => d.Name == Path.GetPathRoot(Environment.CurrentDirectory));
+                _dataSender.AsyncSendDebugMessage("Starting bot on drive: " + Path.GetPathRoot(Environment.CurrentDirectory) + ". Available space: " + drive.AvailableFreeSpace + " bytes").Wait();
+
                 Task t = bot.AsyncRun(_cancellationSource.Token);
                 while (!t.IsCanceled && !t.IsCompleted && !t.IsCompletedSuccessfully && !t.IsFaulted)
                 {

@@ -222,6 +222,7 @@ namespace Application.Actionables.ChatBots
                                 {
                                     //Adjust click points and retry
                                     _logger.Log("Failed to handle riven correctly. Attempting to adjust future offsets and retrying.");
+                                    await _dataSender.AsyncSendDebugMessage("Failed to handle riven correctly.Attempting to adjust future offsets and retrying.");
                                     for (int x = i; x < chatLines.Length; x++)
                                     {
                                         if(chatLines[i] is ChatMessageLineResult)
