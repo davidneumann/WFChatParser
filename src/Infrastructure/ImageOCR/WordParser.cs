@@ -11,7 +11,7 @@ namespace ImageOCR
         public WordParser()
         {
             string dataPath = @"tessdata\";
-            string language = "eng";
+            string language = "chi_sim";
             _engine = new TesseractEngine(dataPath, language, EngineMode.Default, "bazaar");
             _engine.DefaultPageSegMode = PageSegMode.SingleWord;
         }

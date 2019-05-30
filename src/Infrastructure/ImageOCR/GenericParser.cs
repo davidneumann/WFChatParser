@@ -6,21 +6,21 @@ using System.Text;
 using System.Threading.Tasks;
 using Tesseract;
 
-namespace ImageOCR
+namespace ImageOCRBad
 {
-    public class LineParser
+    public class GenericParser
     {
         private TesseractEngine _engine = null;
 
-        public LineParser()
+        public GenericParser()
         {
             string dataPath = @"tessdata\";
             string language = "chi_sim";
             _engine = new TesseractEngine(dataPath, language, EngineMode.Default, "bazaar");
-            _engine.DefaultPageSegMode = PageSegMode.SingleLine;
+            _engine.DefaultPageSegMode = PageSegMode.Auto;
         }
 
-        public string ParseLine(Bitmap bitmap)
+        public string PraseImage (Bitmap bitmap)
         {
             var sb = new StringBuilder();
             using (var pix = PixConverter.ToPix(bitmap))

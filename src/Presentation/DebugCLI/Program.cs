@@ -54,12 +54,27 @@ namespace DebugCLI
             //FindErrorAgain();
             //TestRivenParsing();
             //VerifyNoErrors(2);
-            TestScreenHandler();
+            //TestScreenHandler();
             //TestBot();
             //ParseChatImage();
             //TessShim();
             //NewRivenShim();
+            ChineseShim();
+        }
 
+        private static void ChineseShim()
+        {
+            var rc = new ChatParser(new DummyLogger());
+            using (var image = rc.ConvertImageToBotVision(new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chinese_tradechat_1.png")))
+            {
+                using (var crop = image.Clone(new Rectangle(3, 757, 3182, 1342), PixelFormat.DontCare))
+                {
+                    crop.Save("debug.png");
+                    var gp = new ImageOCRBad.GenericParser();
+                    var parsed = gp.PraseImage(crop);
+                    System.IO.File.WriteAllText("debug.txt", parsed, Encoding.UTF8);
+                }
+            }
         }
 
         private static void NewRivenShim()
@@ -95,7 +110,17 @@ namespace DebugCLI
             //var lp = new LineParser();
             //var result = lp.ParseLine(new Bitmap("line.png"));
 
-            using (var cropped = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\bad_parse2.png"))
+            var input = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\chinese1.png");
+            Bitmap cropped = null;
+            if (input.Width == 4096)
+            {
+                var rc = new RivenParser();
+                cropped = rc.CropToRiven(input);
+            }
+            else
+                cropped = input;
+
+            using (cropped)
             {
                 var cleaner = new RivenCleaner();
                 using (var cleaned = cleaner.CleanRiven(cropped))

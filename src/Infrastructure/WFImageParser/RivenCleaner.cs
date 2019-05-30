@@ -38,6 +38,31 @@ namespace WFImageParser
                 return true;
             return false;
         }
+
+        public Bitmap ConvertPurpleToBlackAndWhite(Bitmap b)
+        {
+            Bitmap result = null;
+            using (Image<Rgba32> image = new Image<Rgba32>(null, b.Width, b.Height, Rgba32.White))
+            {
+                for (int x = 0; x < b.Width; x++)
+                {
+                    for (int y = 0; y < b.Height; y++)
+                    {
+                        if (IsPurple(image[x, y]))
+                            image[x, y] = Rgba32.Black;
+                        else
+                            image[x, y] = Rgba32.White;
+                    }
+                }
+
+                var mem = new MemoryStream();
+                image.Save(mem, new PngEncoder());
+                result = new Bitmap(mem);
+            }
+
+            return result;
+        }
+
         public Bitmap CleanRiven(Bitmap croppedRiven)
         {
             Bitmap result = null;

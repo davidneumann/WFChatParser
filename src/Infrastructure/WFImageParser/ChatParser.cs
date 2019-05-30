@@ -855,6 +855,32 @@ namespace WFImageParser
             return null;
         }
 
+        public System.Drawing.Bitmap ConvertImageToBotVision(System.Drawing.Bitmap b)
+        {
+            using (var mem = new MemoryStream())
+            {
+                b.Save(mem, System.Drawing.Imaging.ImageFormat.Png);
+                mem.Seek(0, SeekOrigin.Begin);
+                using (Image<Rgba32> rgbImage = Image.Load(mem))
+                {
+                    var cache = new ImageCache(rgbImage);
+                    for (int x = 0; x < b.Width; x++)
+                    {
+                        for (int y = 0; y < b.Height; y++)
+                        {
+                            rgbImage[x, y] = new Rgba32(1f - cache[x, y], 1f - cache[x, y], 1f - cache[x, y]);
+                        }
+                    }
+
+                    mem.Seek(0, SeekOrigin.Begin);
+                    mem.SetLength(0);
+                    rgbImage.Save(mem, new SixLabors.ImageSharp.Formats.Png.PngEncoder());
+                }
+
+                return new System.Drawing.Bitmap(mem);
+            }
+        }
+
         public BaseLineParseResult[] ParseChatImage(System.Drawing.Bitmap bitmapImage, int xOffset, bool useCache, bool isScrolledUp, int lineParseCount = 27)
         {
             var chatRect = new Rectangle(4, 763, 3236, 1350);

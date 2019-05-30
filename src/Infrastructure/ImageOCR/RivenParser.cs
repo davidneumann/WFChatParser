@@ -30,7 +30,7 @@ namespace ImageOCR
         public RivenParser()
         {
             string dataPath = @"tessdata\";
-            string language = "eng";
+            string language = "chi_sim";
             _engine = new TesseractEngine(dataPath, language, EngineMode.Default, "bazaar");
             _engine.DefaultPageSegMode = PageSegMode.SingleLine;
             _lineParser = new LineParser();
@@ -171,6 +171,7 @@ namespace ImageOCR
                 }
             }
 #if DEBUG
+            File.WriteAllText("test.txt", debug.ToString(), System.Text.Encoding.UTF8);
             Console.WriteLine(debug.ToString());
 #endif
             result.ImageId = Guid.NewGuid();
