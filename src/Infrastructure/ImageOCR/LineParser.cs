@@ -34,7 +34,7 @@ namespace ImageOCR
                         {
                             try
                             {
-                                sb.AppendLine(iter.GetText(pageIteratorLevel).Trim());
+                                sb.Append(iter.GetText(pageIteratorLevel).Trim());
                             }
                             catch { continue; }
                         } while (iter.Next(pageIteratorLevel));

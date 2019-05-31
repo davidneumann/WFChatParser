@@ -32,6 +32,7 @@ using System.Collections.Concurrent;
 using static Application.ChatRivenBot;
 using Application.LogParser;
 using Application.Logger;
+using Application.ChatLineExtractor;
 
 namespace DebugCLI
 {
@@ -54,12 +55,35 @@ namespace DebugCLI
             //FindErrorAgain();
             //TestRivenParsing();
             //VerifyNoErrors(2);
-            TestScreenHandler();
+            //TestScreenHandler();
             //TestBot();
             //ParseChatImage();
             //TessShim();
             //NewRivenShim();
+            NewChatParsingShim();
+        }
 
+        private static void NewChatParsingShim()
+        {
+            //var input = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chat_new2.png");
+
+            //var cle = new ChatLineExtractor();
+            //var lines = cle.ExtractChatLines(input);
+            //for (int i = 0; i < lines.Length; i++)
+            //{
+            //    lines[i].Save("debug_" + i + ".png");
+            //}
+
+            //var lp = new LineParser();
+            //foreach (var line in lines)
+            //{
+            //    Console.WriteLine(lp.ParseLine(line));
+            //}
+
+            var lp = new LineParser();
+            var b = new Bitmap(@"C:\Users\david\source\repos\WFChatParser\src\Presentation\DebugCLI\bin\Debug\netcoreapp2.2\ec61e4c8-2e2a-4061-801a-4b99e2623182.png");
+            Console.WriteLine(lp.ParseLine(b));
+            b.Dispose();
         }
 
         private static void NewRivenShim()
