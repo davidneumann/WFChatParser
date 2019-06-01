@@ -32,7 +32,7 @@ using System.Collections.Concurrent;
 using static Application.ChatRivenBot;
 using Application.LogParser;
 using Application.Logger;
-using Application.ChatLineExtractor;
+using Application.ChatBoxParsing.ChatLineExtractor;
 
 namespace DebugCLI
 {
@@ -63,27 +63,44 @@ namespace DebugCLI
             NewChatParsingShim();
         }
 
-        private static void NewChatParsingShim()
+        private static string[] NewChatParsingShim(string path = null)
         {
-            //var input = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chat_new2.png");
+            if (path == null)
+                path = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chinese_tradechat_2.png";
+            var input = new Bitmap(path);
 
-            //var cle = new ChatLineExtractor();
-            //var lines = cle.ExtractChatLines(input);
-            //for (int i = 0; i < lines.Length; i++)
-            //{
-            //    lines[i].Save("debug_" + i + ".png");
-            //}
-
-            //var lp = new LineParser();
-            //foreach (var line in lines)
-            //{
-            //    Console.WriteLine(lp.ParseLine(line));
-            //}
+            var cle = new ChatLineExtractor();
+            var lines = cle.ExtractChatLines(input);
+            for (int i = 0; i < lines.Length; i++)
+            {
+                lines[i].Save("debug_" + i + ".png");
+            }
 
             var lp = new LineParser();
-            var b = new Bitmap(@"C:\Users\david\source\repos\WFChatParser\src\Presentation\DebugCLI\bin\Debug\netcoreapp2.2\ec61e4c8-2e2a-4061-801a-4b99e2623182.png");
-            Console.WriteLine(lp.ParseLine(b));
-            b.Dispose();
+            var result = new List<string>();
+            var timestampReg = new Regex("^\\[\\d");
+            foreach (var image in lines)
+            {
+                var line = lp.ParseLine(image);
+                if (!timestampReg.IsMatch(line))
+                {
+                    var last = result.Last();
+                    result.Remove(last);
+                    result.Add(last + ' ' + line);
+                }
+                else
+                    result.Add(line);
+            }
+
+            File.WriteAllLines("chinese.txt", result);
+
+            return result.ToArray();
+
+            //var lp = new LineParser();
+            //var b = new Bitmap(@"C:\Users\david\source\repos\WFChatParser\src\Presentation\DebugCLI\bin\Debug\netcoreapp2.2\blackyb.png");
+            //Console.WriteLine(lp.ParseLine(b));
+            //b.Dispose();
+            //return null;
         }
 
         private static void NewRivenShim()
@@ -1399,12 +1416,15 @@ namespace DebugCLI
                 Console.WriteLine($"=={fileInfo.Name}==");
                 var masterKeyFile = trainingImages[k];
                 var correctResults = File.ReadAllLines(trainingText[k]).Select(line => line.Trim()).ToArray();
-                var c = new ChatParser(new FakeLogger());
-                var cleaner = new ImageCleaner();
-                cleaner.SaveChatColors(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name));
+                //var c = new ChatParser(new FakeLogger());
+                //var cleaner = new ImageCleaner();
+                //cleaner.SaveChatColors(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name));
                 var sw = new Stopwatch();
                 sw.Restart();
-                var fullResults = c.ParseChatImage(new Bitmap(masterKeyFile), xOffset, false, false);
+                //var fullResults = c.ParseChatImage(new Bitmap(masterKeyFile), xOffset, false, false);
+                var lines = NewChatParsingShim(masterKeyFile);
+                var fullResults = lines.Select(l => new ChatMessageLineResult() { RawMessage = l });
+                //var fullResults = NewChatParsingShim(masterKeyFile);
 
                 var m = fullResults.OfType<ChatMessageLineResult>().Select(line => MakeChatModel(line)).ToArray();
                 var m2 = fullResults.Select(line => GetUsername(line.RawMessage)).ToArray();

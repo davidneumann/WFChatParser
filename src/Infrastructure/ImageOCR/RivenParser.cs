@@ -12,6 +12,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Tesseract;
 using Application.Utils;
+using Application.Data;
 
 namespace ImageOCR
 {
@@ -29,8 +30,8 @@ namespace ImageOCR
 
         public RivenParser()
         {
-            string dataPath = @"tessdata\";
-            string language = "eng";
+            string dataPath = DataHelper.TessDataPath;
+            string language = "chi_sim+eng";
             _engine = new TesseractEngine(dataPath, language, EngineMode.Default, "bazaar");
             _engine.DefaultPageSegMode = PageSegMode.SingleLine;
             _lineParser = new LineParser();

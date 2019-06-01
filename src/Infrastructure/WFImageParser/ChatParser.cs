@@ -36,9 +36,11 @@ namespace WFImageParser
             _logger = logger;
 
             //Load suffixes
-            if (Directory.Exists("rivendata") && File.Exists(@"rivendata\affixcombos.txt"))
+            string affixFile = Path.Combine(Application.Data.DataHelper.RivenDataPath, "affixcombos.txt");
+            if (Directory.Exists(Application.Data.DataHelper.RivenDataPath) &&
+                File.Exists(affixFile))
             {
-                foreach (var line in File.ReadAllLines(@"rivendata\affixcombos.txt"))
+                foreach (var line in File.ReadAllLines(affixFile))
                 {
                     _suffixes.Add(line.Trim() + ']');
                 }
