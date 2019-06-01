@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Common\Common\Common.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\Tesseract\src\Tesseract\Tesseract.csproj" />
   </ItemGroup>
 
   <ItemGroup>

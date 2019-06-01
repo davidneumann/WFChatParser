@@ -11,7 +11,7 @@ namespace Application.Data
         {
             get
             {
-                return Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase), "data");
+                return (new Uri(Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase), "data"))).LocalPath;
             }
         }
 
@@ -19,7 +19,7 @@ namespace Application.Data
         {
             get
             {
-                return Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase), "data", "rivendata");
+                return Path.Combine(DataPath, "rivendata");
             }
         }
 
@@ -27,7 +27,7 @@ namespace Application.Data
         {
             get
             {
-                return Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase), "data", "tessdata");
+                return Path.Combine(DataPath, "tessdata");
             }
         }
     }
