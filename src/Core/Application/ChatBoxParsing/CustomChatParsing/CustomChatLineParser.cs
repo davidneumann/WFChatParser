@@ -124,7 +124,7 @@ namespace Application.ChatBoxParsing.CustomChatParsing
             if (line != lineImage)
                 line.Dispose();
 
-            throw new NotImplementedException();
+            return new ChatMessageLineResult();
         }
     }
 }
