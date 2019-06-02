@@ -30,5 +30,13 @@ namespace Application.Data
                 return Path.Combine(DataPath, "tessdata");
             }
         }
+
+        public static string OcrDataPath
+        {
+            get
+            {
+                return Path.Combine(DataPath, "ocrdata");
+            }
+        }
     }
 }
