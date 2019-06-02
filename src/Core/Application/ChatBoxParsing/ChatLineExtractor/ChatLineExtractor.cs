@@ -5,8 +5,10 @@ using SixLabors.ImageSharp.Processing;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Application.ChatBoxParsing.ChatLineExtractor
@@ -96,15 +98,23 @@ namespace Application.ChatBoxParsing.ChatLineExtractor
                 }
 
                 //Make new bitmap
-                Bitmap newLine = new Bitmap(endX - startX, endY - startY);
+                Bitmap newLine = new Bitmap(endX - startX, endY - startY, PixelFormat.Format24bppRgb);
+                var data = newLine.LockBits(new Rectangle(0, 0, newLine.Width, newLine.Height), ImageLockMode.WriteOnly,
+                    PixelFormat.Format24bppRgb);
+                var bytes = new byte[data.Stride * newLine.Height];
                 for (int x = startX; x < endX; x++)
                 {
                     for (int y = startY; y < endY; y++)
                     {
-                        var v = (int)((1 - cache[x, y]) * 255);
-                        newLine.SetPixel(x-startX, y-startY, Color.FromArgb(v, v, v));
+                        var pos = (y-startY) * data.Stride + (x - startX) * 3;
+                        var v = (byte)((1 - cache[x, y]) * 255);
+                        bytes[pos] = v;
+                        bytes[pos + 1] = v;
+                        bytes[pos + 2] = v;
                     }
                 }
+                Marshal.Copy(bytes, 0, data.Scan0, bytes.Length);
+                newLine.UnlockBits(data);
 
                 lines.Add(newLine);
             }
