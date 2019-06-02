@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Text;
 using Application.Data;
 using Application.LineParseResult;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 using Tesseract;
 
 namespace Application.ChatBoxParsing
@@ -23,11 +27,35 @@ namespace Application.ChatBoxParsing
 
         public BaseLineParseResult ParseLine(Bitmap lineImage)
         {
+            var image = lineImage;
+            if(lineImage.Height < 52)
+            {
+                using (var mem = new MemoryStream())
+                {
+                    lineImage.Save(mem, System.Drawing.Imaging.ImageFormat.Png);
+                    mem.Seek(0, SeekOrigin.Begin);
+                    using (Image<Rgba32> rgbImage = SixLabors.ImageSharp.Image.Load(mem))
+                    {
+                        var scale = 52f / rgbImage.Height;
+                        var width = (int)Math.Round(scale * rgbImage.Width);
+                        var height = (int)Math.Round(scale * rgbImage.Height);
+                        rgbImage.Mutate(m => m.Resize(width, height).EntropyCrop().Pad(width + 40, height + 40).BackgroundColor(Rgba32.White));
+
+
+                        mem.Seek(0, SeekOrigin.Begin);
+                        mem.SetLength(0);
+                        rgbImage.SaveAsPng(mem);
+                    }
+                    mem.Seek(0, SeekOrigin.Begin);
+                    image = new Bitmap(mem);
+                }
+            }
+
             var rawBuilder = new StringBuilder();
             var enhancedBuilder = new StringBuilder();
             var clickPoints = new List<ClickPoint>();
             var lastBox = Rect.Empty;
-            using (var pix = PixConverter.ToPix(lineImage))
+            using (var pix = PixConverter.ToPix(image))
             {
                 PageIteratorLevel pageIteratorLevel = PageIteratorLevel.Word;
                 using (var page = _engine.Process(pix))
@@ -83,6 +111,9 @@ namespace Application.ChatBoxParsing
                 }
             }
 
+            if (image != lineImage)
+                image.Dispose();
+            
             return new ChatMessageLineResult()
             {
                 ClickPoints = clickPoints,

@@ -10,6 +10,10 @@ using System.Text.RegularExpressions;
 using Application.Data;
 using Application.LineParseResult;
 using Newtonsoft.Json;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace Application.ChatBoxParsing.CustomChatParsing
 {
@@ -96,28 +100,30 @@ namespace Application.ChatBoxParsing.CustomChatParsing
             Bitmap line = lineImage;
             if (lineImage.Height != _referenceHeight)
             {
-                var scale = (float)_referenceHeight / lineImage.Height;
-                var scaleRect = new Rectangle(0, 0, (int)Math.Round(lineImage.Width * scale), (int)(Math.Round(lineImage.Height * scale)));
-                var scaledImage = new Bitmap(scaleRect.Width, scaleRect.Height);
-                using (var g = Graphics.FromImage(scaledImage))
+                //Adjust to reference height
+                using (var mem = new MemoryStream())
                 {
-                    g.CompositingMode = CompositingMode.SourceCopy;
-                    g.CompositingQuality = CompositingQuality.HighQuality;
-                    g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                    g.SmoothingMode = SmoothingMode.HighQuality;
-                    g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-
-                    using (var wrapMode = new ImageAttributes())
+                    lineImage.Save(mem, System.Drawing.Imaging.ImageFormat.Png);
+                    mem.Seek(0, SeekOrigin.Begin);
+                    using (Image<Rgba32> rgbImage = SixLabors.ImageSharp.Image.Load(mem))
                     {
-                        wrapMode.SetWrapMode(WrapMode.TileFlipXY);
-                        g.DrawImage(lineImage, scaleRect, 0, 0, lineImage.Width, lineImage.Height, GraphicsUnit.Pixel, wrapMode);
+                        rgbImage.Mutate(m => m.EntropyCrop());
+                        var scale = (float)_referenceHeight / rgbImage.Height;
+                        rgbImage.Mutate(m => m.Resize((int)Math.Round(rgbImage.Width * scale), (int)Math.Round(rgbImage.Height * scale)));
+                        mem.Seek(0, SeekOrigin.Begin);
+                        mem.SetLength(0);
+                        rgbImage.Save(mem, new PngEncoder());
                     }
+
+                    mem.Seek(0, SeekOrigin.Begin);
+                    line = new Bitmap(mem);
+                    line.Save("debug.png");
                 }
-
-                line = scaledImage;
-
-                line.Save("debug.png");
             }
+
+            if (line != lineImage)
+                line.Dispose();
+
             throw new NotImplementedException();
         }
     }

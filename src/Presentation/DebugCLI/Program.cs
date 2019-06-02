@@ -107,7 +107,7 @@ namespace DebugCLI
             //return null;
 
             var clp = new CustomChatLineParser();
-            var result = clp.ParseLine(new Bitmap(@"C:\Users\david\source\repos\WFChatParser\src\Presentation\DebugCLI\bin\Debug\netcoreapp2.2\debug_4.png"));
+            var result = clp.ParseLine(new Bitmap(@"C:\Users\david\source\repos\WFChatParser\src\Presentation\DebugCLI\bin\Debug\netcoreapp2.2\debug_6.png"));
             return null;
 
             //var lp = new LineParser();

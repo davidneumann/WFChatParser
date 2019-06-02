@@ -106,25 +106,6 @@ namespace Application.ChatBoxParsing.ChatLineExtractor
                     }
                 }
 
-                using (var mem = new MemoryStream())
-                {
-                    newLine.Save(mem, System.Drawing.Imaging.ImageFormat.Png);
-                    mem.Seek(0, SeekOrigin.Begin);
-                    using (Image<Rgba32> image = SixLabors.ImageSharp.Image.Load(mem))
-                    {
-                        var scale = 70f / image.Height;
-                        var width = (int)Math.Round(scale * image.Width);
-                        var height = (int)Math.Round(scale * image.Height);
-                        image.Mutate(m => m.Resize(width, height).Pad(width + 40, height + 40).BackgroundColor(Rgba32.White));
-
-
-                        mem.Seek(0, SeekOrigin.Begin);
-                        mem.SetLength(0);
-                        image.SaveAsPng(mem);
-                        newLine.Dispose();
-                        newLine = new Bitmap(mem);
-                    }
-                }
                 lines.Add(newLine);
             }
 
