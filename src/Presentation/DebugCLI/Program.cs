@@ -67,48 +67,57 @@ namespace DebugCLI
 
         private static string[] NewChatParsingShim(string path = null)
         {
-            //var lp = new TessChatLineParser();
+            var sw = new Stopwatch();
+            sw.Start();
 
-            //if (path == null)
-            //    path = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chinese_tradechat_2.png";
-            //var input = new Bitmap(path);
+            var lp = new TessChatLineParser();
+            var cp = new CustomChatLineParser();
 
-            //var cle = new ChatLineExtractor();
-            //var lines = cle.ExtractChatLines(input);
-            //for (int i = 0; i < lines.Length; i++)
-            //{
-            //    lines[i].Save("debug_" + i + ".png");
-            //}
+            if (path == null)
+                path = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chinese_tradechat_2.png";
+            var input = new Bitmap(path);
 
-            //var result = new List<string>();
-            //var messages = new List<BaseLineParseResult>();
-            //var timestampReg = new Regex("^\\[\\d");
-            //foreach (var image in lines)
-            //{
-            //    var line = lp.ParseLine(image);
-            //    messages.Add(line);
-            //    if (!timestampReg.IsMatch(line.RawMessage))
-            //    {
-            //        var last = result.Last();
-            //        result.Remove(last);
-            //        result.Add(last + ' ' + line);
-            //    }
-            //    else
-            //        result.Add(line.RawMessage);
-            //}
+            var cle = new ChatLineExtractor();
+            var lines = cle.ExtractChatLines(input);
+            for (int i = 0; i < lines.Length; i++)
+            {
+                lines[i].Save("debug_" + i + ".png");
+            }
 
-            //File.WriteAllLines("chinese.txt", result);
+            var result = new List<string>();
+            var messages = new List<BaseLineParseResult>();
+            var extraMessages = new List<BaseLineParseResult>();
+            var timestampReg = new Regex("^\\[\\d");
+            foreach (var image in lines)
+            {
+                var line = lp.ParseLine(image);
+                messages.Add(line);
+                extraMessages.Add(line);
+                if (!timestampReg.IsMatch(line.RawMessage))
+                {
+                    var last = result.Last();
+                    result.Remove(last);
+                    result.Add(last + ' ' + line);
+                }
+                else
+                    result.Add(line.RawMessage);
+            }
 
-            //return result.ToArray();
+            File.WriteAllLines("chinese.txt", result);
+
+            sw.Stop();
+            Console.WriteLine("Parsed 1 image in: " + sw.Elapsed.TotalSeconds  + " seconds.");
+
+            return result.ToArray();
 
             //var lp = new TessChatLineParser();
             //var input = new Bitmap(@"C:\Users\david\source\repos\WFChatParser\src\Presentation\DebugCLI\bin\Debug\netcoreapp2.2\debug_22.png");
             //var result = lp.ParseLine(input);
             //return null;
 
-            var clp = new CustomChatLineParser();
-            var result = clp.ParseLine(new Bitmap(@"C:\Users\david\source\repos\WFChatParser\src\Presentation\DebugCLI\bin\Debug\netcoreapp2.2\debug_6.png"));
-            return null;
+            //var clp = new CustomChatLineParser();
+            //var result = clp.ParseLine(new Bitmap(@"C:\Users\david\source\repos\WFChatParser\src\Presentation\DebugCLI\bin\Debug\netcoreapp2.2\debug_6.png"));
+            //return null;
 
             //var lp = new LineParser();
             //var b = new Bitmap(@"C:\Users\david\source\repos\WFChatParser\src\Presentation\DebugCLI\bin\Debug\netcoreapp2.2\blackyb.png");
