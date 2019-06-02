@@ -92,7 +92,7 @@ namespace DebugCLI
             {
                 var line = lp.ParseLine(image);
                 messages.Add(line);
-                extraMessages.Add(line);
+                extraMessages.Add(cp.ParseLine(image));
                 if (!timestampReg.IsMatch(line.RawMessage))
                 {
                     var last = result.Last();
