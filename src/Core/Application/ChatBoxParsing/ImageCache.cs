@@ -27,7 +27,7 @@ namespace Application.ChatLineExtractor
                 {
                     var hsvPixel = _image.GetPixel(x, y).ToHsv();
                     var v = Math.Max(0, (hsvPixel.Value - 0.6f)) / (1f - 0.6f);
-                    var color = GetColor(x, y);
+                    var color = GetColor(hsvPixel);
                     if (color == ChatColor.Unknown || color == ChatColor.Redtext)
                         v = 0;
                     else if (color == ChatColor.ChatTimestampName)
@@ -51,9 +51,8 @@ namespace Application.ChatLineExtractor
             return _image.GetPixel(x, y).ToHsv();
         }
 
-        internal ChatColor GetColor(int x, int y)
+        internal ChatColor GetColor(Hsv hsvPixel)
         {
-            var hsvPixel = GetHsv(x, y);
 
             if ((hsvPixel.Hue >= 175 && hsvPixel.Hue <= 190)
                 && hsvPixel.Saturation > 0.1) //green
@@ -66,6 +65,10 @@ namespace Application.ChatLineExtractor
                 return ChatColor.Ignored;
 
             return ChatColor.Unknown;
+        }
+        internal ChatColor GetColor(int x, int y)
+        {
+            return GetColor(GetHsv(x, y));
         }
 
         internal enum ChatColor
