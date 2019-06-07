@@ -392,11 +392,7 @@ namespace Application.Actionables.ChatBots
                             {
                                 break;
                             }
-                            else if (tries < 14 && subState == ScreenState.RivenWindow)
-                            {
-                                await Task.Delay(17);
-                            }
-                            else if (tries >= 14 && _screenStateHandler.IsExitable(b))
+                            else if (_screenStateHandler.IsExitable(b))
                             {
                                 _mouse.Click(3816, 2013);
                                 await Task.Delay(40);
