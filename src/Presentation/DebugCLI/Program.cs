@@ -32,6 +32,7 @@ using System.Collections.Concurrent;
 using static Application.ChatRivenBot;
 using Application.LogParser;
 using Application.Logger;
+using Application.ChatBoxParsing;
 
 namespace DebugCLI
 {
@@ -54,12 +55,39 @@ namespace DebugCLI
             //FindErrorAgain();
             //TestRivenParsing();
             //VerifyNoErrors(2);
-            TestScreenHandler();
+            //TestScreenHandler();
             //TestBot();
             //ParseChatImage();
             //TessShim();
             //NewRivenShim();
+            ChatMovingShim();
+        }
 
+        private static void ChatMovingShim()
+        {
+            var input = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chat_new.png");
+            var samples = LineSampler.GetAllLineSamples(input);
+            var clickPoints= new Point[]{ new Point(283, 779), new Point(472, 978)};
+            var movedScreen = new Bitmap(@"C:\Users\david\Downloads\new_chat_blurr.png");
+            foreach (var clickPoint in clickPoints)
+            {
+                int chatLine = LineSampler.GetLineIndexFromPoint(clickPoint.X, clickPoint.Y);
+                var lineSamples = LineSampler.GetLineSamples(movedScreen, chatLine);
+                for (int i = 0; i < lineSamples.Length; i++)
+                {
+                    var origSample = samples[chatLine, i];
+                    var sample = lineSamples[i];
+                    var rDiff = origSample.R - sample.R;
+                    var gDiff = origSample.G - sample.G;
+                    var bDiff = origSample.B - sample.B;
+                    if ((origSample.R - sample.R) * (origSample.R - sample.R) +
+                        (origSample.G - sample.G) * (origSample.G - sample.G) +
+                        (origSample.B - sample.B) * (origSample.B - sample.B) > 225)
+                    {
+                        Console.WriteLine("Image different");
+                    }
+                }
+            }            
         }
 
         private static void NewRivenShim()

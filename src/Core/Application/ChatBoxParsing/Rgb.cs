@@ -6,9 +6,9 @@ namespace Application.ChatBoxParsing
 {
     public struct Rgb
     {
-        byte R;
-        byte G;
-        byte B;
+        public readonly byte R;
+        public readonly byte G;
+        public readonly byte B;
 
         public Rgb(byte red, byte green, byte blue)
         {

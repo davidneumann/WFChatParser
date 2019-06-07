@@ -68,5 +68,23 @@ namespace Application.ChatBoxParsing
 
             return results;
         }
+
+        public static int GetLineIndexFromPoint(int x, int y)
+        {
+            var bestLine = 0;
+            var lineDistance = int.MaxValue;
+            y -= _zoneSize / 2; //Clickpoints should be aligned to midline. Adjust to our top aligned reference
+            for (int i = 0; i < _samplePoints.GetLength(1); i++)
+            {
+                var dist = Math.Abs(_samplePoints[i, 0].Y - y);
+                if (dist < lineDistance)
+                {
+                    bestLine = i;
+                    lineDistance = dist;
+                }
+            }
+
+            return bestLine;
+        }
     }
 }

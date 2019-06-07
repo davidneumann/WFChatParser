@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Application.ChatBoxParsing;
 using Application.ChatMessages.Model;
 using Application.Enums;
 using Application.Interfaces;
@@ -195,6 +196,10 @@ namespace Application.Actionables.ChatBots
                     var sw = new Stopwatch();
                     sw.Start();
                     var chatLines = _chatParser.ParseChatImage(screen, true, true, 30);
+                    Rgb[,] samples = null;
+                    if (chatLines.Length > 0)
+                        samples = LineSampler.GetAllLineSamples(screen);
+
                     _logger.Log($"Found {chatLines.Length} new messages.");
                     for (int i = 0; i < chatLines.Length; i++)
                     {
@@ -208,7 +213,7 @@ namespace Application.Actionables.ChatBots
                         _lastMessage = DateTime.Now;
                         if (line is ChatMessageLineResult)
                         {
-                            var processedCorrectly = await ProcessChatMessageLineResult(_rivenCropper, line);
+                            var processedCorrectly = await ProcessChatMessageLineResult(_rivenCropper, line, samples);
                             if (!processedCorrectly)
                             {
                                 var path = SaveScreenToDebug(screen);
@@ -262,7 +267,7 @@ namespace Application.Actionables.ChatBots
             _requestingControl = true;
         }
 
-        private async Task<bool> ProcessChatMessageLineResult(IRivenParser cropper, BaseLineParseResult line)
+        private async Task<bool> ProcessChatMessageLineResult(IRivenParser cropper, BaseLineParseResult line, Rgb[,] samples)
         {
             var clr = line as ChatMessageLineResult;
 
@@ -294,6 +299,26 @@ namespace Application.Actionables.ChatBots
                 var rivenParseDetails = new List<RivenParseTaskWorkItemDetail>();
                 foreach (var clickpoint in clr.ClickPoints)
                 {
+                    using (var screen = _gameCapture.GetFullImage())
+                    {
+                        int chatLine = LineSampler.GetLineIndexFromPoint(clickpoint.X, clickpoint.Y);
+                        var lineSamples = LineSampler.GetLineSamples(screen, chatLine);
+                        for (int i = 0; i < lineSamples.Length; i++)
+                        {
+                            var origSample = samples[chatLine, i];
+                            var sample = lineSamples[i];
+
+                            if( (origSample.R - sample.R) * (origSample.R - sample.R) +
+                                (origSample.G - sample.G) * (origSample.G - sample.G) +
+                                (origSample.B - sample.B) * (origSample.B - sample.B) > 225)
+                            {
+                                _chatParser.InvalidCache(line.GetKey());
+                                _logger.Log("Chat box has changed. Aborting riven clicks.");
+                                return false;
+                            }
+                        }
+                    }
+
                     //Click riven
                     _mouse.MoveTo(clickpoint.X, clickpoint.Y);
                     await Task.Delay(17);
