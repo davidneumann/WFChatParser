@@ -686,7 +686,10 @@ namespace Application.Actionables.ChatBots
                 System.IO.Directory.CreateDirectory("debug");
             var filePath = System.IO.Path.Combine("debug", DateTime.Now.ToFileTime() + ".png");
             try { screen.Save(filePath); return filePath; }
-            catch { return null; }
+            catch (Exception e){
+                _dataSender.AsyncSendDebugMessage("Failed to save screen: " + e.ToString());
+                return null;
+            }
         }
 
         private Task CloseWarframe()
