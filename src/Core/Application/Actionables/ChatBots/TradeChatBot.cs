@@ -40,7 +40,7 @@ namespace Application.Actionables.ChatBots
         private bool firstParse = true;
         private IDataSender _dataSender;
         private IChatParser _chatParser;
-        private DateTime _lastMessage = DateTime.Now;
+        private DateTime _lastMessage = DateTime.Now.AddMinutes(10);
 
         private ConcurrentQueue<string> _messageCache = new ConcurrentQueue<string>();
         private ConcurrentDictionary<string, ChatMessageModel> _messageCacheDetails = new ConcurrentDictionary<string, ChatMessageModel>();
