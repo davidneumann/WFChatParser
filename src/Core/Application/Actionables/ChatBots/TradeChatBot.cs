@@ -301,6 +301,7 @@ namespace Application.Actionables.ChatBots
                 {
                     using (var screen = _gameCapture.GetFullImage())
                     {
+                        _logger.Log("Verify riven message is still there.");
                         int chatLine = LineSampler.GetLineIndexFromPoint(clickpoint.X, clickpoint.Y);
                         var lineSamples = LineSampler.GetLineSamples(screen, chatLine);
                         for (int i = 0; i < lineSamples.Length; i++)
@@ -317,6 +318,7 @@ namespace Application.Actionables.ChatBots
                                 return false;
                             }
                         }
+                        _logger.Log("Riven message still there.");
                     }
 
                     //Click riven
