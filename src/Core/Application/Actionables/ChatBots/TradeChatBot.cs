@@ -40,7 +40,7 @@ namespace Application.Actionables.ChatBots
         private bool firstParse = true;
         private IDataSender _dataSender;
         private IChatParser _chatParser;
-        private DateTime _lastMessage = DateTime.Now;
+        private DateTime _lastMessage = DateTime.Now.AddMinutes(10);
 
         private ConcurrentQueue<string> _messageCache = new ConcurrentQueue<string>();
         private ConcurrentDictionary<string, ChatMessageModel> _messageCacheDetails = new ConcurrentDictionary<string, ChatMessageModel>();
@@ -141,7 +141,7 @@ namespace Application.Actionables.ChatBots
             {
                 _mouse.MoveTo(0, 0);
                 await Task.Delay(17);
-                screen.Save("screen.png");
+                //screen.Save("screen.png");
                 var state = _screenStateHandler.GetScreenState(screen);
 
                 //Check if we have some weird OK prompt (hotfixes, etc)
@@ -218,7 +218,9 @@ namespace Application.Actionables.ChatBots
                             {
                                 var path = SaveScreenToDebug(screen);
                                 if (path != null)
-                                    _dataSender.AsyncSendDebugMessage("Failed to parse correctly. See: " + path);
+                                    await _dataSender.AsyncSendDebugMessage("Failed to parse correctly. See: " + path);
+                                else
+                                    await _dataSender.AsyncSendDebugMessage("Failed to parse correctly. Also failed to save image");
                                 _chatParser.InvalidCache(line.GetKey());
                                 lineFailed = true;
                                 break;
@@ -284,16 +286,19 @@ namespace Application.Actionables.ChatBots
                     Raw = line.RawMessage,
                     Rivens = cachedModel.Rivens
                 };
-                _dataSender.AsyncSendChatMessage(duplicateModel);
+                await _dataSender.AsyncSendChatMessage(duplicateModel);
                 return true;
             }
 
             var chatMessage = MakeChatModel(line as LineParseResult.ChatMessageLineResult);
             chatMessage.Region = _warframeCredentials.Region;
             if (chatMessage.DEBUGREASON != null && chatMessage.DEBUGREASON.Length > 0)
+            {
+                await _dataSender.AsyncSendDebugMessage("Model incorrect: " + chatMessage.DEBUGREASON);
                 return false;
+            }
             if (clr.ClickPoints.Count == 0)
-                _dataSender.AsyncSendChatMessage(chatMessage);
+                await _dataSender.AsyncSendChatMessage(chatMessage);
             else
             {
                 var rivenParseDetails = new List<RivenParseTaskWorkItemDetail>();
@@ -301,24 +306,12 @@ namespace Application.Actionables.ChatBots
                 {
                     using (var screen = _gameCapture.GetFullImage())
                     {
-                        _logger.Log("Verify riven message is still there.");
-                        int chatLine = LineSampler.GetLineIndexFromPoint(clickpoint.X, clickpoint.Y);
-                        var lineSamples = LineSampler.GetLineSamples(screen, chatLine);
-                        for (int i = 0; i < lineSamples.Length; i++)
+                        var screenValid = CheckInPlace(screen, line, samples, clickpoint);
+                        if(!screenValid)
                         {
-                            var origSample = samples[chatLine, i];
-                            var sample = lineSamples[i];
-
-                            if( (origSample.R - sample.R) * (origSample.R - sample.R) +
-                                (origSample.G - sample.G) * (origSample.G - sample.G) +
-                                (origSample.B - sample.B) * (origSample.B - sample.B) > 225)
-                            {
-                                _chatParser.InvalidCache(line.GetKey());
-                                _logger.Log("Chat box has changed. Aborting riven clicks.");
-                                return false;
-                            }
+                            await _dataSender.AsyncSendDebugMessage("Chat line moved!");
+                            return false;
                         }
-                        _logger.Log("Riven message still there.");
                     }
 
                     //Click riven
@@ -349,6 +342,13 @@ namespace Application.Actionables.ChatBots
                             }
                             else if (_screenStateHandler.GetScreenState(b) == ScreenState.GlyphWindow && _screenStateHandler.IsChatOpen(b))
                             {
+                                var screenValid = CheckInPlace(b, line, samples, clickpoint);
+                                if (!screenValid)
+                                {
+                                    await _dataSender.AsyncSendDebugMessage("Chat line moved! After the check!");
+                                    return false;
+                                }
+
                                 //Click riven... again
                                 _mouse.MoveTo(clickpoint.X, clickpoint.Y);
                                 await Task.Delay(45);
@@ -378,6 +378,7 @@ namespace Application.Actionables.ChatBots
                         {
                             crop.Dispose();
                         }
+                        await _dataSender.AsyncSendDebugMessage("Failed to findwindow or crop. Found window: " + foundRivenWindow + ", " + "Crop valid: " + (crop != null));
                         return false;
                     }
 
@@ -392,7 +393,7 @@ namespace Application.Actionables.ChatBots
                             {
                                 break;
                             }
-                            else if (_screenStateHandler.IsExitable(b))
+                            else if (tries >= 14 && _screenStateHandler.IsExitable(b))
                             {
                                 _mouse.Click(3816, 2013);
                                 await Task.Delay(40);
@@ -411,6 +412,30 @@ namespace Application.Actionables.ChatBots
                     MessageCacheDetails = _messageCacheDetails
                 });
             }
+
+            return true;
+        }
+
+        private bool CheckInPlace(Bitmap screen, BaseLineParseResult line, Rgb[,] samples, ClickPoint clickpoint)
+        {
+            _logger.Log("Verify riven message is still there.");
+            int chatLine = LineSampler.GetLineIndexFromPoint(clickpoint.X, clickpoint.Y);
+            var lineSamples = LineSampler.GetLineSamples(screen, chatLine);
+            for (int i = 0; i < lineSamples.Length; i++)
+            {
+                var origSample = samples[chatLine, i];
+                var sample = lineSamples[i];
+
+                if ((origSample.R - sample.R) * (origSample.R - sample.R) +
+                    (origSample.G - sample.G) * (origSample.G - sample.G) +
+                    (origSample.B - sample.B) * (origSample.B - sample.B) > 225)
+                {
+                    _chatParser.InvalidCache(line.GetKey());
+                    _logger.Log("Chat box has changed. Aborting riven clicks.");
+                    return false;
+                }
+            }
+            _logger.Log("Riven message still there.");
 
             return true;
         }
