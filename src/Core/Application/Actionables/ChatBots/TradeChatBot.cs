@@ -591,7 +591,7 @@ namespace Application.Actionables.ChatBots
                 }
             }
 
-            _lastMessage = DateTime.Now;
+            //_lastMessage = DateTime.Now;
             _currentState = BotStates.ParseChat;
             _requestingControl = true;
         }
