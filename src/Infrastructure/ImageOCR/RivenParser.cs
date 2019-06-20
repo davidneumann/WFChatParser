@@ -203,15 +203,29 @@ namespace ImageOCR
             for (int i = 0; i < lineRects.Count; i++)
             {
                 var lineRect = lineRects[i];
-                using (var lineBitmap = new Bitmap(lineRect.Width + 20, lineRect.Height + 20))
+                using (var lineBitmap = new Bitmap(lineRect.Width, lineRect.Height))
                 {
-                    for (int backgroundX = 0; backgroundX < lineBitmap.Width; backgroundX++)
-                    {
-                        for (int backgroundY = 0; backgroundY < lineBitmap.Height; backgroundY++)
-                        {
-                            lineBitmap.SetPixel(backgroundX, backgroundY, Color.White);
-                        }
-                    }
+                    //for (int backgroundX = 0; backgroundX < lineBitmap.Width; backgroundX++)
+                    //{
+                    //    for (int backgroundY = 0; backgroundY < lineBitmap.Height; backgroundY++)
+                    //    {
+                    //        lineBitmap.SetPixel(backgroundX, backgroundY, Color.White);
+                    //    }
+                    //}
+                    //for (int referenceX = lineRect.Left; referenceX < lineRect.Right; referenceX++)
+                    //{
+                    //    for (int referenceY = lineRect.Top; referenceY < lineRect.Bottom; referenceY++)
+                    //    {
+                    //        //Color pixel = cleanedRiven.GetPixel(referenceX, referenceY);
+                    //        //if(pixel.R < 128)
+                    //        //    lineBitmap.SetPixel(10 + referenceX - lineRect.Left, 10 + referenceY - lineRect.Top, Color.Black);
+                    //        //else
+                    //        //    lineBitmap.SetPixel(10 + referenceX - lineRect.Left, 10 + referenceY - lineRect.Top, Color.White);
+                    //        lineBitmap.SetPixel(10 + referenceX - lineRect.Left, 10 + referenceY - lineRect.Top, cleanedRiven.GetPixel(referenceX, referenceY));
+                    //    }
+                    //}
+
+                    //Copy pixels
                     for (int referenceX = lineRect.Left; referenceX < lineRect.Right; referenceX++)
                     {
                         for (int referenceY = lineRect.Top; referenceY < lineRect.Bottom; referenceY++)
@@ -221,34 +235,60 @@ namespace ImageOCR
                             //    lineBitmap.SetPixel(10 + referenceX - lineRect.Left, 10 + referenceY - lineRect.Top, Color.Black);
                             //else
                             //    lineBitmap.SetPixel(10 + referenceX - lineRect.Left, 10 + referenceY - lineRect.Top, Color.White);
-                            lineBitmap.SetPixel(10 + referenceX - lineRect.Left, 10 + referenceY - lineRect.Top, cleanedRiven.GetPixel(referenceX, referenceY));
+                            lineBitmap.SetPixel(referenceX - lineRect.Left, referenceY - lineRect.Top, cleanedRiven.GetPixel(referenceX, referenceY));
                         }
                     }
-#if DEBUG
-                    try
+
+                    //Resize up
+                    var scale = 48f / lineBitmap.Height;
+                    using (var resized = new Bitmap(lineBitmap, new Size((int)(lineBitmap.Width * scale), (int)(lineBitmap.Height * scale))))
                     {
-                        lineBitmap.Save("debug_ " + allLines.Count + ".png");
-                    }
-                    catch { }
-#endif
-                    if (i != lineRects.Count - 2)
-                    {
-                        allLines.Add(_lineParser.ParseLine(lineBitmap));
-                    }
-                    else
-                    {
-                        string line = "";
-                        int number = 0;
-                        line = _lineParser.ParseLine(lineBitmap);
-                        if (int.TryParse(line, out number))
-                            allLines.Add(line);
-                        else
+                        //Add padding
+                        using (var padding = new Bitmap(resized.Width + 20, resized.Height + 20))
                         {
-                            line = _wordParser.ParseWord(lineBitmap);
-                            if (int.TryParse(line, out number))
-                                allLines.Add(line);
+                            //Background
+                            for (int backgroundX = 0; backgroundX < padding.Width; backgroundX++)
+                            {
+                                for (int backgroundY = 0; backgroundY < padding.Height; backgroundY++)
+                                {
+                                    padding.SetPixel(backgroundX, backgroundY, Color.White);
+                                }
+                            }
+                            for (int x = 0; x < resized.Width; x++)
+                            {
+                                for (int y = 0; y < resized.Height; y++)
+                                {
+                                    padding.SetPixel(10 + x, 10 + y, resized.GetPixel(x, y));
+                                }
+                            }
+
+#if DEBUG
+                            try
+                            {
+                                padding.Save("debug_ " + allLines.Count + ".png");
+                            }
+                            catch { }
+#endif
+                            if (i != lineRects.Count - 2)
+                            {
+                                allLines.Add(_lineParser.ParseLine(padding));
+                            }
                             else
-                                allLines.Add("-1");
+                            {
+                                string line = "";
+                                int number = 0;
+                                line = _lineParser.ParseLine(padding);
+                                if (int.TryParse(line, out number))
+                                    allLines.Add(line);
+                                else
+                                {
+                                    line = _wordParser.ParseWord(padding);
+                                    if (int.TryParse(line, out number))
+                                        allLines.Add(line);
+                                    else
+                                        allLines.Add("-1");
+                                }
+                            }
                         }
                     }
                 }

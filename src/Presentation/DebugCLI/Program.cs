@@ -58,9 +58,9 @@ namespace DebugCLI
             //TestScreenHandler();
             //TestBot();
             //ParseChatImage();
-            //TessShim();
+            TessShim();
             //NewRivenShim();
-            ChatMovingShim();
+            //ChatMovingShim();
         }
 
         private static void ChatMovingShim()
@@ -123,7 +123,8 @@ namespace DebugCLI
             //var lp = new LineParser();
             //var result = lp.ParseLine(new Bitmap("line.png"));
 
-            using (var cropped = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\bad_parse2.png"))
+            var f = new FileInfo(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\4f41dd91-628e-40f4-8b68-2642fd86c4c8.png");
+            using (var cropped = new Bitmap(f.FullName))
             {
                 var cleaner = new RivenCleaner();
                 using (var cleaned = cleaner.CleanRiven(cropped))
@@ -131,6 +132,11 @@ namespace DebugCLI
                     cleaned.Save("cleaned.png");
                     var parser = new RivenParser();
                     var riven = parser.ParseRivenTextFromImage(cleaned, null);
+                    try
+                    {
+                        riven.ImageId = Guid.Parse(f.Name.Replace(".png", ""));
+                    }
+                    catch { }
                 }
             }
 
@@ -992,6 +998,12 @@ namespace DebugCLI
         {
             var c = new GameCapture(new DummyLogger());
             var ss = new ScreenStateHandler();
+
+            using (var b = new Bitmap(@"C:\Users\david\Downloads\132045487768031380.png"))
+            {
+                var isLoading = ss.GetScreenState(b);
+                Console.WriteLine("Is GlyphWindow: " + (ss.GetScreenState(b) == (ScreenState.GlyphWindow)) + " should be true. Is chat open: " + ss.IsChatOpen(b) + " should be true");
+            }
 
             using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\loading.png"))
             {
