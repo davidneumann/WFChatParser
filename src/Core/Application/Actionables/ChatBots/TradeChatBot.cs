@@ -241,10 +241,10 @@ namespace Application.Actionables.ChatBots
                             if (!success)
                             {
                                 var path = SaveScreenToDebug(screen);
-                                if (path != null)
-                                    await _dataSender.AsyncSendDebugMessage("Failed to parse correctly. See: " + path);
-                                else
-                                    await _dataSender.AsyncSendDebugMessage("Failed to parse correctly. Also failed to save image");
+                                //if (path != null)
+                                //    await _dataSender.AsyncSendDebugMessage("Failed to parse correctly. See: " + path);
+                                //else
+                                //    await _dataSender.AsyncSendDebugMessage("Failed to parse correctly. Also failed to save image");
                                 _chatParser.InvalidCache(line.GetKey());
                                 lineFailed = true;
                                 break;
@@ -258,7 +258,7 @@ namespace Application.Actionables.ChatBots
                     sw.Stop();
 
                     //Verify the chat didn't move during all of that
-                    if (!lineFailed)
+                    if (!lineFailed && chatLines.Length > 0)
                     {
                         using (var newScreen = _gameCapture.GetFullImage())
                         {
@@ -427,7 +427,7 @@ namespace Application.Actionables.ChatBots
                     {
                         crop.Dispose();
                     }
-                    await _dataSender.AsyncSendDebugMessage("Failed to findwindow or crop. Found window: " + foundRivenWindow + ", " + "Crop valid: " + (crop != null));
+                    //await _dataSender.AsyncSendDebugMessage("Failed to findwindow or crop. Found window: " + foundRivenWindow + ", " + "Crop valid: " + (crop != null));
                     return null;
                 }
 
