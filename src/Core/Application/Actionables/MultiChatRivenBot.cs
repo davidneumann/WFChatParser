@@ -78,6 +78,7 @@ namespace Application.Actionables
                 _logger.Log("Worker queue working on: " + item.Message.Author + ":" + item.Message.EnhancedMessage);
                 var fullTimeSw = new Stopwatch();
                 fullTimeSw.Start();
+                var success = true;
                 foreach (var r in item.RivenWorkDetails)
                 {
                     var cropSW = new Stopwatch();
@@ -137,7 +138,10 @@ namespace Application.Actionables
                             riven.Polarity = parser.ParseRivenPolarityFromColorImage(croppedCopy);
                             riven.Rank = parser.ParseRivenRankFromColorImage(croppedCopy);
                             riven.Name = r.RivenName;
+                            if (riven.Name.ToLower().Trim() != r.RivenName.ToLower().Trim())
+                                success = false;
                             riven.MessagePlacementId = r.RivenIndex;
+
                             item.Message.Rivens.Add(riven);
                             var outputDir = Path.Combine("riven_images", DateTime.Now.ToString("yyyy_MM_dd"));
                             if (!Directory.Exists(outputDir))
@@ -161,9 +165,16 @@ namespace Application.Actionables
                         }
                     }
                 }
-                item.MessageCache.Enqueue(item.Message.Author + item.Message.EnhancedMessage);
-                item.MessageCacheDetails[item.Message.Author + item.Message.EnhancedMessage] = item.Message;
-                _logger.Log("Riven parsed and added " + item.Message.Author + "'s message to cache in: " + fullTimeSw.ElapsedMilliseconds + " ms.");
+                if (success)
+                {
+                    item.MessageCache.Enqueue(item.Message.Author + item.Message.EnhancedMessage);
+                    item.MessageCacheDetails[item.Message.Author + item.Message.EnhancedMessage] = item.Message;
+                    _logger.Log("Riven parsed and added " + item.Message.Author + "'s message to cache in: " + fullTimeSw.ElapsedMilliseconds + " ms.");
+                }
+                else
+                {
+                    _dataSender.AsyncSendDebugMessage("Failed to parse riven correctly");
+                }
                 _dataSender.AsyncSendChatMessage(item.Message);
             }
 
