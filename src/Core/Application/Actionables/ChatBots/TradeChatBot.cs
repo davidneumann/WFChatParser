@@ -838,6 +838,8 @@ namespace Application.Actionables.ChatBots
                     _warframeProcess = warframe;
             }
 
+            //Give 15 minutes on a fresh login to allow slow chats to fill up before killing them.
+            _lastMessage = DateTime.Now.AddMinutes(15);
             _currentState = BotStates.WaitForLoadScreen;
             _requestingControl = true;
         }
