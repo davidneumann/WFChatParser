@@ -212,6 +212,30 @@ namespace Application.Actionables
             var controlSw = new Stopwatch();
             while (!c.IsCancellationRequested)
             {
+                var possibleBadState = true;
+                foreach (var bot in _bots)
+                {
+                    if(bot != null && bot.LastMessage != null && DateTime.Now.Subtract(bot.LastMessage).TotalMinutes < 15)
+                    {
+                        possibleBadState = false;
+                        break;
+                    }
+                }
+                if(possibleBadState)
+                {
+                    try
+                    {
+                        _dataSender.AsyncSendDebugMessage("CRITICIAL FAILURE DETECTED! No messages in 15 minutes from any bot! Attempting to restart PC").Wait();
+                    }
+                    catch { }
+                    var shutdown = new System.Diagnostics.Process()
+                    {
+                        StartInfo = new ProcessStartInfo("shutdown.exe", "/r /f /t 0")
+                    };
+                    shutdown.Start();
+                    break;
+                }
+
                 for (int i = 0; i < _bots.Length; i++)
                 {
                     var bot = _bots[i];

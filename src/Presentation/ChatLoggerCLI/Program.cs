@@ -153,13 +153,38 @@ namespace ChatLoggerCLI
                     catch
                     {
                         _cancellationSource.Cancel();
+                        logger.Log("Bad state detected: IsFaulted: " + t.IsFaulted + " Exception: " + t.Exception);
+                        _dataSender.AsyncSendDebugMessage("Bad state detected: IsFaulted: " + t.IsFaulted + " Exception: " + t.Exception).Wait();
                     }
                 }
             }
             catch (Exception e)
             {
-                _dataSender.AsyncSendDebugMessage(e.ToString()).Wait();
+                _dataSender.AsyncSendDebugMessage(e.ToString()).Wait();                
             }
+
+            //Failure state detected! Try to clean up images in case that was the issue
+            try
+            {
+                var cuttoffTime = DateTime.Now.Subtract(TimeSpan.FromDays(2));
+                foreach (var file in Directory.GetFiles(Path.Combine(Environment.CurrentDirectory, "riven_images")))
+                {
+                    try
+                    {
+                        var info = new FileInfo(file);
+                        if(info.LastWriteTime < cuttoffTime)
+                            File.Delete(file);
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+
+            var shutdown = new System.Diagnostics.Process()
+            {
+                StartInfo = new ProcessStartInfo("shutdown.exe", "/r /f /t 0")
+            };
+            shutdown.Start();
         }
 
         private static void LogParser_OnNewMessage(LogMessage msg)

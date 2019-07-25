@@ -43,6 +43,8 @@ namespace Application.Actionables.ChatBots
         private IChatParser _chatParser;
         private DateTime _lastMessage = DateTime.Now.AddMinutes(10);
 
+        public DateTime LastMessage { get { return _lastMessage; } }
+
         private ConcurrentQueue<string> _messageCache = new ConcurrentQueue<string>();
         private ConcurrentDictionary<string, ChatMessageModel> _messageCacheDetails = new ConcurrentDictionary<string, ChatMessageModel>();
 

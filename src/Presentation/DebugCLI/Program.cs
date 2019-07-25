@@ -55,10 +55,10 @@ namespace DebugCLI
             //FindErrorAgain();
             //TestRivenParsing();
             //VerifyNoErrors(2);
-            //TestScreenHandler();
+            TestScreenHandler();
             //TestBot();
             //ParseChatImage();
-            TessShim();
+            //TessShim();
             //NewRivenShim();
             //ChatMovingShim();
         }
@@ -999,10 +999,16 @@ namespace DebugCLI
             var c = new GameCapture(new DummyLogger());
             var ss = new ScreenStateHandler();
 
-            using (var b = new Bitmap(@"C:\Users\david\Downloads\132045487768031380.png"))
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\new_glyph_1.png"))
+            {
+                var state = ss.GetScreenState(b);
+                Console.WriteLine("Is GlyphWindow: " + (ss.GetScreenState(b) == (ScreenState.GlyphWindow)) + " should be true. Is chat open: " + ss.IsChatOpen(b) + " should be false");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\new_glyph_1.png"))
             {
                 var isLoading = ss.GetScreenState(b);
-                Console.WriteLine("Is GlyphWindow: " + (ss.GetScreenState(b) == (ScreenState.GlyphWindow)) + " should be true. Is chat open: " + ss.IsChatOpen(b) + " should be true");
+                Console.WriteLine("Is GlyphWindow: " + (ss.GetScreenState(b) == (ScreenState.GlyphWindow)) + " should be true. Is chat open: " + ss.IsChatOpen(b) + " should be false");
             }
 
             using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\loading.png"))
