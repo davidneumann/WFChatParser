@@ -365,7 +365,14 @@ namespace Application
 
         private static void CloseWarframe()
         {
-            System.Diagnostics.Process.GetProcessesByName("Warframe.x64").ToList().ForEach(p => p.Kill());
+            System.Diagnostics.Process.GetProcessesByName("Warframe.x64").ToList().ForEach(p =>
+            {
+                try
+                {
+                    p.Kill();
+                }
+                catch { }
+            });
         }
 
         private static ChatMessageModel MakeChatModel(LineParseResult.ChatMessageLineResult line)

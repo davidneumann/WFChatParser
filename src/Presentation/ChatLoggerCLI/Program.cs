@@ -26,6 +26,7 @@ namespace ChatLoggerCLI
         private static List<IDisposable> _disposables = new List<IDisposable>();
         private static CancellationTokenSource _cancellationSource;
         private static DataSender _dataSender;
+        private static bool _cleanExistRequested = false;
 
         public static void Main(string[] args)
         {
@@ -186,28 +187,31 @@ namespace ChatLoggerCLI
                 _dataSender.AsyncSendDebugMessage(e.ToString()).Wait();                
             }
 
-            //Failure state detected! Try to clean up images in case that was the issue
-            try
+            if (!_cleanExistRequested)
             {
-                var cuttoffTime = DateTime.Now.Subtract(TimeSpan.FromDays(2));
-                foreach (var file in Directory.GetFiles(Path.Combine(Environment.CurrentDirectory, "riven_images")))
+                //Failure state detected! Try to clean up images in case that was the issue
+                try
                 {
-                    try
+                    var cuttoffTime = DateTime.Now.Subtract(TimeSpan.FromDays(2));
+                    foreach (var file in Directory.GetFiles(Path.Combine(Environment.CurrentDirectory, "riven_images")))
                     {
-                        var info = new FileInfo(file);
-                        if(info.LastWriteTime < cuttoffTime)
-                            File.Delete(file);
+                        try
+                        {
+                            var info = new FileInfo(file);
+                            if (info.LastWriteTime < cuttoffTime)
+                                File.Delete(file);
+                        }
+                        catch { }
                     }
-                    catch { }
                 }
-            }
-            catch { }
+                catch { }
 
-            var shutdown = new System.Diagnostics.Process()
-            {
-                StartInfo = new ProcessStartInfo("shutdown.exe", "/r /f /t 0")
-            };
-            shutdown.Start();
+                var shutdown = new System.Diagnostics.Process()
+                {
+                    StartInfo = new ProcessStartInfo("shutdown.exe", "/r /f /t 0")
+                };
+                shutdown.Start();
+            }
         }
 
         private static void LogParser_OnNewMessage(LogMessage msg)
@@ -302,6 +306,7 @@ namespace ChatLoggerCLI
 
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
         {
+            _cleanExistRequested = true;
             _cancellationSource.Cancel();
             foreach (var item in _disposables)
             {

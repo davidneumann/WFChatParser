@@ -814,7 +814,10 @@ namespace Application.Actionables.ChatBots
             //Check if there was already a launcher running
             if (launcher.HasExited)
             {
-                System.Diagnostics.Process.GetProcesses().Where(p => p.ProcessName.ToLower().Contains("launcher")).ToList().ForEach(p => p.Kill());
+                System.Diagnostics.Process.GetProcesses().Where(p => p.ProcessName.ToLower().Contains("launcher")).ToList().ForEach(p =>
+                {
+                    try { p.Kill(); } catch { }
+                });
             }
 
             ////If not start launcher, click play until WF starts
