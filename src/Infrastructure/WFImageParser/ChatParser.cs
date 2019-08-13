@@ -596,6 +596,18 @@ namespace WFImageParser
                     endX = startX = Math.Max(endX + 1, targetMask.MaxX + 1);
                 }
             }
+
+            //Handle messages with no content due to a line wrap
+            if (rawMessage.Length <= 0 && result is ChatMessageLineResult)
+            {
+                var clr = result as ChatMessageLineResult;
+                if (clr.Username == null || clr.Username.Length <= 0)
+                {
+                    ((ChatMessageLineResult)result).Username = currentWord.ToString().Trim().TrimEnd(':');
+                }
+                rawMessage.Append(" ");
+            }
+
             if (rawMessage.Length > 0)
             {
                 AppendSpace(image, lineHeight, lineOffset, rawMessage, message, wordStartX, currentWord, clickPoints);
