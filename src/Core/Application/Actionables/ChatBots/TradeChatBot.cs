@@ -818,11 +818,25 @@ namespace Application.Actionables.ChatBots
                 {
                     try { p.Kill(); } catch { }
                 });
+
+                _currentState = BotStates.StartWarframe;
+                _requestingControl = true;
+                return;
             }
 
             ////If not start launcher, click play until WF starts
+            var start = DateTime.Now;
             while (true)
             {
+
+                //Yield to other tasks after 4 minutes of waiting
+                if(DateTime.Now.Subtract(start).TotalMinutes > 4f)
+                {
+                    _currentState = BotStates.StartWarframe;
+                    _requestingControl = true;
+                    return;
+                }
+
                 _screenStateHandler.GiveWindowFocus(launcher.MainWindowHandle);
                 var launcherRect = _screenStateHandler.GetWindowRectangle(launcher.MainWindowHandle);
                 _mouse.Click(launcherRect.Left + (int)((launcherRect.Right - launcherRect.Left) * 0.7339181286549708f),
