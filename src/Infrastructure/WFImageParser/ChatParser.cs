@@ -867,6 +867,25 @@ namespace WFImageParser
             return null;
         }
 
+        public System.Drawing.Bitmap[] ExtractChatLines(System.Drawing.Bitmap fullScreenImage)
+        {
+            var chatRect = new Rectangle(4, 763, 3236, 1350);
+            var lines = new System.Drawing.Bitmap[_lineOffsets.Length];
+            for (int i = 0; i < _lineOffsets.Length; i++)
+            {
+                lines[i] = new System.Drawing.Bitmap(chatRect.Width, 36);
+                for (int x = 0; x < lines[i].Width; x++)
+                {
+                    for (int y = 0; y < lines[i].Height; y++)
+                    {
+                        lines[i].SetPixel(x, y, fullScreenImage.GetPixel(chatRect.X + x, _lineOffsets[i] + y));
+                    }
+                }
+            }
+
+            return lines;
+        }
+
         public BaseLineParseResult[] ParseChatImage(System.Drawing.Bitmap bitmapImage, int xOffset, bool useCache, bool isScrolledUp, int lineParseCount = 27)
         {
             var chatRect = new Rectangle(4, 763, 3236, 1350);

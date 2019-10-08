@@ -61,7 +61,19 @@ namespace DebugCLI
             //TessShim();
             //NewRivenShim();
             //ChatMovingShim();
-            ParseRivenImage();
+            //ParseRivenImage();
+            ChatLineExtractorShim();
+        }
+
+        private static void ChatLineExtractorShim()
+        {
+            var cp = new ChatParser(new FakeLogger());
+            var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chinese_tradechat_2.png");
+            var lines = cp.ExtractChatLines(b);
+            for (int i = 0; i < lines.Length; i++)
+            {
+                lines[i].Save("line_" + i + ".png");
+            }
         }
 
         private static void ChatMovingShim()
