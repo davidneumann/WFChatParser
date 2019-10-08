@@ -68,11 +68,14 @@ namespace DebugCLI
         private static void ChatLineExtractorShim()
         {
             var cp = new ChatParser(new FakeLogger());
-            var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chinese_tradechat_2.png");
+            var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chat_new.png");
             var lines = cp.ExtractChatLines(b);
             for (int i = 0; i < lines.Length; i++)
             {
                 lines[i].Save("line_" + i + ".png");
+                var username = cp.GetUsernameFromChatLine(lines[i]);
+                if (username != null)
+                    Console.WriteLine("Username: " + username);
             }
         }
 

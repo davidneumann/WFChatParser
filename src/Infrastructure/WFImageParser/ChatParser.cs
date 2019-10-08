@@ -905,7 +905,164 @@ namespace WFImageParser
 
         public string GetUsernameFromChatLine(System.Drawing.Bitmap chatLine)
         {
+            var chatRect = new Rectangle(0, 0, chatLine.Width, chatLine.Height);
+            var startX = 0;
+            var endX = 0;
+            var lastCharacterEndX = startX;
+            var prevMatchedCharacters = new CoordinateList();
+            TargetMask prevTargetMask = null;
+            CharacterDetails lastCharacterDetails = null;
+            var wordStartX = -1;
+            var currentWord = new StringBuilder();
+            var currentLineType = LineType.Unknown;
+            var checkedKey = false;
+            var image = new ImageCache(chatLine);
+            var lineOffset = 0;
+            var lineHeight = chatLine.Height;
+            var minV = 0.3f;
+            string timestamp = string.Empty;
+            for (int x = startX; x < chatLine.Width; x++)
+            {
+                //Advance until next pixel
+                Point firstPixel = GetFirstPixel(image, 0.3f, ref chatRect, 36, 0, endX, prevMatchedCharacters, ref x);
 
+                //Make sure we didn't escape
+                if (x >= chatRect.Right || firstPixel == Point.Empty)
+                    break;
+
+                var targetMask = OCRHelpers.FindCharacterMask(firstPixel, image, prevMatchedCharacters, chatRect.Left, chatRect.Right, 0, 36);
+
+                if (currentLineType == LineType.Unknown)
+                {
+                    Point maxPoint = new Point(-1);
+                    var maxPointV = float.MinValue;
+                    for (int x2 = 0; x2 < targetMask.Width; x2++)
+                    {
+                        for (int y2 = 0; y2 < lineHeight; y2++)
+                        {
+                            if (targetMask.SoftMask[x2, y2] > maxPointV)
+                            {
+                                maxPoint = new Point(x2 + targetMask.MinX, y2 + lineOffset);
+                                maxPointV = targetMask.SoftMask[x2, y2];
+                            }
+                        }
+                    }
+
+                    var color = image.GetColor(maxPoint.X, maxPoint.Y);
+                    if (color == ImageCache.ChatColor.Ignored)
+                    {
+                        _logger.Log("Ignored color detected while parsing chat line");
+                        return null;
+                    }
+                    //if (color == ImageCache.ChatColor.Redtext)
+                    //{
+                    //    result = new RedtextLineResult();
+                    //    currentLineType = LineType.RedText;
+                    //}
+                    if (color == ImageCache.ChatColor.Text || color == ImageCache.ChatColor.ItemLink)
+                    {
+                        return null;
+                    }
+                    else if (color == ImageCache.ChatColor.ChatTimestampName)
+                    {
+                        currentLineType = LineType.NewMessage;
+                    }
+                }
+
+                RemoveSeenPixels(image, minV, ref chatRect, lineHeight, lineOffset, prevMatchedCharacters, ref wordStartX, ref x, ref firstPixel, ref targetMask);
+
+                startX = targetMask.MinX;
+                endX = targetMask.MaxX + 1;
+
+                if (endX > startX && targetMask.PixelCount > 10)
+                {
+                    Tuple<float, CharacterDetails, CoordinateList> bestFit = GetBestMatchingCharacter(image, lineHeight, lineOffset, targetMask);
+
+                    if (bestFit != null && bestFit.Item2 != null && endX != lastCharacterEndX)
+                    {
+                        string name = GetCharacterName(bestFit);
+
+                        ////Check if we skipped past a space
+                        if (prevTargetMask != null && prevTargetMask.PixelCount > 0)
+                        {
+                            var safeRightX = -1;
+                            var safeLeftX = -1;
+                            //We need to account for all the random pixels that are added from noise
+                            //Search from right to left on the prev mask for a column that has a pixel with 2 ore more neighbors
+                            for (int i = prevTargetMask.Width - 1; i > 0; i--)
+                            {
+                                for (int y = 0; y < lineHeight; y++)
+                                {
+                                    if (OCRHelpers.NeighborCount(prevTargetMask, i, y) > 1)
+                                    {
+                                        safeLeftX = prevTargetMask.MinX + i;
+                                        break;
+                                    }
+                                }
+                                if (safeLeftX > -1)
+                                    break;
+                            }
+                            //Search from left to right on current mask for a column that has a pixel with 2 or more neighbors
+                            for (int i = 0; i < targetMask.Width; i++)
+                            {
+                                for (int y = 0; y < lineHeight; y++)
+                                {
+                                    if (OCRHelpers.NeighborCount(targetMask, i, y) > 1)
+                                    {
+                                        safeRightX = targetMask.MinX + i + 1;
+                                        break;
+                                    }
+                                }
+                                if (safeRightX > -1)
+                                    break;
+                            }
+                            var pixelGap = safeRightX - safeLeftX;
+                            int spaceWidth = 6;
+                            if (_gapPairs.ContainsKey(lastCharacterDetails.Name)
+                                && _gapPairs[lastCharacterDetails.Name].ContainsKey(bestFit.Item2.Name)
+                                && pixelGap > _gapPairs[lastCharacterDetails.Name][bestFit.Item2.Name] + spaceWidth)
+                            {
+                                if (currentLineType == LineType.NewMessage)
+                                {
+                                    if (timestamp == string.Empty)
+                                        timestamp  = currentWord.ToString().Trim();
+                                    else
+                                        return currentWord.ToString().Trim().TrimEnd(':');
+                                }
+
+                                currentWord.Clear();
+                                wordStartX = targetMask.MinX;
+
+                            }
+                        }
+
+                        //Add character
+                        currentWord.Append(name);
+
+                        lastCharacterEndX = startX + bestFit.Item2.Width - 2;
+                        prevMatchedCharacters.AddRange(bestFit.Item3);
+                        prevTargetMask = targetMask;
+                        lastCharacterDetails = bestFit.Item2;
+
+                        //Due to new char IDing system we can safely jump a bit ahead to prevent double reading
+                        if (endX - startX > _maxCharWidth * 0.6 && targetMask.PixelCount - prevMatchedCharacters.Count > targetMask.PixelCount * 0.3)
+                            endX = x = lastCharacterEndX;
+                        else
+                            endX = x = lastCharacterEndX + 2;
+                    }
+                    else //failed to ID the character, skip it
+                    {
+                        //AppendSpace(image, lineHeight, lineOffset, rawMessage, message, wordStartX, currentWord, clickPoints);
+                        x = lastCharacterEndX = endX = targetMask.MaxX + 1;
+                    }
+                }
+                else
+                {
+                    endX = startX = Math.Max(endX + 1, targetMask.MaxX + 1);
+                }
+            }
+
+            return null;
         }
 
         public BaseLineParseResult[] ParseChatImage(System.Drawing.Bitmap bitmapImage, int xOffset, bool useCache, bool isScrolledUp, int lineParseCount = 27)

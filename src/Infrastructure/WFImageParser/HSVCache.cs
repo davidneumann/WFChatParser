@@ -5,6 +5,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.Primitives;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 
 namespace WFImageParser
@@ -22,6 +23,19 @@ namespace WFImageParser
             this._image = image;
             _valueMap = new float[image.Width, image.Height];
             _valueMapMask = new bool[image.Width, image.Height];
+        }
+
+        public ImageCache(System.Drawing.Bitmap bitmap)
+        {
+            using (MemoryStream mem = new MemoryStream())
+            {
+                bitmap.Save(mem, System.Drawing.Imaging.ImageFormat.Png);
+                mem.Seek(0, SeekOrigin.Begin);
+                this._image = Image.Load(mem);
+            }
+
+            _valueMap = new float[this._image.Width, this._image.Height];
+            _valueMapMask = new bool[this._image.Width, this._image.Height];
         }
 
         public float this[int x, int y]
