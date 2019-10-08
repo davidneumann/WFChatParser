@@ -137,28 +137,34 @@ namespace ChatLoggerCLI
                 logger.Log("Starting bot on drive: " + Path.GetPathRoot(Environment.CurrentDirectory) + ". Available space: " + drive.AvailableFreeSpace + " bytes");
 
                 Task t = bot.AsyncRun(_cancellationSource.Token);
-                var lastDate = DateTime.Today;
+                var lastDate = DateTime.Today.Subtract(TimeSpan.FromDays(1));
                 while (!t.IsCanceled && !t.IsCompleted && !t.IsCompletedSuccessfully && !t.IsFaulted)
                 {
                     //Delete old files
                     if (lastDate != DateTime.Today)
                     {
+                        logger.Log("Deleting old files");
                         if (Directory.Exists("riven_images"))
                         {
                             foreach (var folder in Directory.GetDirectories("riven_images"))
                             {
-                                var splits = folder.Split('_');
+                                var folderInfo = new DirectoryInfo(folder);
+                                logger.Log("Looking at: " + folderInfo.Name);
+                                var splits = folderInfo.Name.Split('_');
                                 try
                                 {
                                     var time = new DateTime(int.Parse(splits[0]), int.Parse(splits[1]), int.Parse(splits[2]));
                                     if (DateTime.Today.Subtract(time).TotalDays > 3)
                                     {
-                                        Directory.Delete(folder);
+                                        logger.Log("Deleting: " + folderInfo.Name);
+                                        Directory.Delete(folderInfo.FullName, true);
                                     }
                                 }
                                 catch { }
                             }
                         }
+                        else
+                            logger.Log("Failed to find riven_images folder for deletion");
                         lastDate = DateTime.Today;
                     }
 
