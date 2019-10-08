@@ -243,6 +243,16 @@ namespace ImageOCR
                     var scale = 48f / lineBitmap.Height;
                     using (var resized = new Bitmap(lineBitmap, new Size((int)(lineBitmap.Width * scale), (int)(lineBitmap.Height * scale))))
                     {
+                        for (int x = 0; x < resized.Width; x++)
+                        {
+                            for (int y = 0; y < resized.Height; y++)
+                            {
+                                Color p = resized.GetPixel(x, y);
+                                if (p.A < byte.MaxValue)
+                                    resized.SetPixel(x, y, Color.FromArgb(byte.MaxValue, p.R, p.G, p.B));
+                            }
+                        }
+
                         //Add padding
                         using (var padding = new Bitmap(resized.Width + 20, resized.Height + 20))
                         {
@@ -254,6 +264,7 @@ namespace ImageOCR
                                     padding.SetPixel(backgroundX, backgroundY, Color.White);
                                 }
                             }
+
                             for (int x = 0; x < resized.Width; x++)
                             {
                                 for (int y = 0; y < resized.Height; y++)
@@ -318,7 +329,7 @@ namespace ImageOCR
                 }
                 debugs.ToList().ForEach(f => f.Dispose());
             }
-            catch { }
+            catch (Exception e) { }
 #endif
             return allLines;
         }

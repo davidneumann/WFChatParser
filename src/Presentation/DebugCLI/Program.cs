@@ -55,12 +55,13 @@ namespace DebugCLI
             //FindErrorAgain();
             //TestRivenParsing();
             //VerifyNoErrors(2);
-            TestScreenHandler();
+            //TestScreenHandler();
             //TestBot();
             //ParseChatImage();
             //TessShim();
             //NewRivenShim();
             //ChatMovingShim();
+            ParseRivenImage();
         }
 
         private static void ChatMovingShim()
@@ -213,10 +214,20 @@ namespace DebugCLI
             return new Tuple<string, string, string>(timestamp, username, debugReason);
         }
 
+        private static void ParseRivenImage()
+        {
+            var rp = new RivenParser();
+            var b = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("74062b19-5158-4eb6-b26a-1b809f787994.png")).Select(file => new Bitmap(file)).FirstOrDefault();
+            var rc = new RivenCleaner();
+            var b2 = rc.CleanRiven(b);
+            b2.Save("debug_clean.png");
+            var text = rp.ParseRivenTextFromImage(b2, null);
+        }
+
         private static void ParseChatImage()
         {
             //var filePath = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Validation Inputs\error_blurry1.png";
-            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("(184).png")))
+            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("384fa372-61ce-433a-a623-03a79cfb96e8.png")))
             {
                 using (var bitmap = new Bitmap(filePath))
                 {
