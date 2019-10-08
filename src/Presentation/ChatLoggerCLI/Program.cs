@@ -26,6 +26,7 @@ namespace ChatLoggerCLI
         private static List<IDisposable> _disposables = new List<IDisposable>();
         private static CancellationTokenSource _cancellationSource;
         private static DataSender _dataSender;
+        private static bool _cleanExistRequested = false;
 
         public static void Main(string[] args)
         {
@@ -136,8 +137,37 @@ namespace ChatLoggerCLI
                 logger.Log("Starting bot on drive: " + Path.GetPathRoot(Environment.CurrentDirectory) + ". Available space: " + drive.AvailableFreeSpace + " bytes");
 
                 Task t = bot.AsyncRun(_cancellationSource.Token);
+                var lastDate = DateTime.Today.Subtract(TimeSpan.FromDays(1));
                 while (!t.IsCanceled && !t.IsCompleted && !t.IsCompletedSuccessfully && !t.IsFaulted)
                 {
+                    //Delete old files
+                    if (lastDate != DateTime.Today)
+                    {
+                        logger.Log("Deleting old files");
+                        if (Directory.Exists("riven_images"))
+                        {
+                            foreach (var folder in Directory.GetDirectories("riven_images"))
+                            {
+                                var folderInfo = new DirectoryInfo(folder);
+                                logger.Log("Looking at: " + folderInfo.Name);
+                                var splits = folderInfo.Name.Split('_');
+                                try
+                                {
+                                    var time = new DateTime(int.Parse(splits[0]), int.Parse(splits[1]), int.Parse(splits[2]));
+                                    if (DateTime.Today.Subtract(time).TotalDays > 3)
+                                    {
+                                        logger.Log("Deleting: " + folderInfo.Name);
+                                        Directory.Delete(folderInfo.FullName, true);
+                                    }
+                                }
+                                catch { }
+                            }
+                        }
+                        else
+                            logger.Log("Failed to find riven_images folder for deletion");
+                        lastDate = DateTime.Today;
+                    }
+
                     //var debug = progress.GetAwaiter().IsCompleted;
                     System.Threading.Thread.Sleep(1000);
                 }
@@ -153,12 +183,40 @@ namespace ChatLoggerCLI
                     catch
                     {
                         _cancellationSource.Cancel();
+                        logger.Log("Bad state detected: IsFaulted: " + t.IsFaulted + " Exception: " + t.Exception);
+                        _dataSender.AsyncSendDebugMessage("Bad state detected: IsFaulted: " + t.IsFaulted + " Exception: " + t.Exception).Wait();
                     }
                 }
             }
             catch (Exception e)
             {
-                _dataSender.AsyncSendDebugMessage(e.ToString()).Wait();
+                _dataSender.AsyncSendDebugMessage(e.ToString()).Wait();                
+            }
+
+            if (!_cleanExistRequested)
+            {
+                //Failure state detected! Try to clean up images in case that was the issue
+                try
+                {
+                    var cuttoffTime = DateTime.Now.Subtract(TimeSpan.FromDays(2));
+                    foreach (var file in Directory.GetFiles(Path.Combine(Environment.CurrentDirectory, "riven_images")))
+                    {
+                        try
+                        {
+                            var info = new FileInfo(file);
+                            if (info.LastWriteTime < cuttoffTime)
+                                File.Delete(file);
+                        }
+                        catch { }
+                    }
+                }
+                catch { }
+
+                var shutdown = new System.Diagnostics.Process()
+                {
+                    StartInfo = new ProcessStartInfo("shutdown.exe", "/r /f /t 0")
+                };
+                shutdown.Start();
             }
         }
 
@@ -254,6 +312,7 @@ namespace ChatLoggerCLI
 
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
         {
+            _cleanExistRequested = true;
             _cancellationSource.Cancel();
             foreach (var item in _disposables)
             {

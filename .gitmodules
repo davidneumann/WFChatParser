@@ -1,4 +1,4 @@
 [submodule "src/Infrastructure/Tesseract"]
 	path = src/Infrastructure/Tesseract
-	url = https://github.com/charlesw/tesseract.git
+	url = https://github.com/davidneumann/tesseract.git
 	branch = feature/321-Tesseract-4

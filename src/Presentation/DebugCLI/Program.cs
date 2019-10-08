@@ -32,6 +32,7 @@ using System.Collections.Concurrent;
 using static Application.ChatRivenBot;
 using Application.LogParser;
 using Application.Logger;
+using Application.ChatBoxParsing;
 
 namespace DebugCLI
 {
@@ -57,9 +58,10 @@ namespace DebugCLI
             //TestScreenHandler();
             //TestBot();
             //ParseChatImage();
-            //TessShim();
+            TessShim();
             //NewRivenShim();
-            ChineseShim();
+            //ChineseShim();
+            //ChatLineExtractorShim();
         }
 
         private static void ChineseShim()
@@ -73,6 +75,47 @@ namespace DebugCLI
                     var gp = new ImageOCRBad.GenericParser();
                     var parsed = gp.PraseImage(crop);
                     System.IO.File.WriteAllText("debug.txt", parsed, Encoding.UTF8);
+                }
+            }
+        }
+
+        private static void ChatLineExtractorShim()
+        {
+            var cp = new ChatParser(new FakeLogger());
+            var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chat_new.png");
+            var lines = cp.ExtractChatLines(b);
+            for (int i = 0; i < lines.Length; i++)
+            {
+                lines[i].Save("line_" + i + ".png");
+                var username = cp.GetUsernameFromChatLine(lines[i]);
+                if (username != null)
+                    Console.WriteLine("Username: " + username);
+            }
+        }
+
+        private static void ChatMovingShim()
+        {
+            var input = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chat_new.png");
+            var samples = LineSampler.GetAllLineSamples(input);
+            var clickPoints= new Point[]{ new Point(283, 779), new Point(472, 978)};
+            var movedScreen = new Bitmap(@"C:\Users\david\Downloads\new_chat_blurr.png");
+            foreach (var clickPoint in clickPoints)
+            {
+                int chatLine = LineSampler.GetLineIndexFromPoint(clickPoint.X, clickPoint.Y);
+                var lineSamples = LineSampler.GetLineSamples(movedScreen, chatLine);
+                for (int i = 0; i < lineSamples.Length; i++)
+                {
+                    var origSample = samples[chatLine, i];
+                    var sample = lineSamples[i];
+                    var rDiff = origSample.R - sample.R;
+                    var gDiff = origSample.G - sample.G;
+                    var bDiff = origSample.B - sample.B;
+                    if ((origSample.R - sample.R) * (origSample.R - sample.R) +
+                        (origSample.G - sample.G) * (origSample.G - sample.G) +
+                        (origSample.B - sample.B) * (origSample.B - sample.B) > 225)
+                    {
+                        Console.WriteLine("Image different");
+                    }
                 }
             }
         }
@@ -110,7 +153,7 @@ namespace DebugCLI
             //var lp = new LineParser();
             //var result = lp.ParseLine(new Bitmap("line.png"));
 
-            var input = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\chinese1.png");
+            var input = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\b3b03224-fe3c-4db6-9d5f-7c1551a5be87.png");
             Bitmap cropped = null;
             if (input.Width == 4096)
             {
@@ -126,8 +169,13 @@ namespace DebugCLI
                 using (var cleaned = cleaner.CleanRiven(cropped))
                 {
                     cleaned.Save("cleaned.png");
-                    var parser = new RivenParser();
+                    var parser = new RivenParser("eng");
                     var riven = parser.ParseRivenTextFromImage(cleaned, null);
+                    try
+                    {
+                        //riven.ImageId = Guid.Parse(f.Name.Replace(".png", ""));
+                    }
+                    catch { }
                 }
             }
 
@@ -204,10 +252,20 @@ namespace DebugCLI
             return new Tuple<string, string, string>(timestamp, username, debugReason);
         }
 
+        private static void ParseRivenImage()
+        {
+            var rp = new RivenParser();
+            var b = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("74062b19-5158-4eb6-b26a-1b809f787994.png")).Select(file => new Bitmap(file)).FirstOrDefault();
+            var rc = new RivenCleaner();
+            var b2 = rc.CleanRiven(b);
+            b2.Save("debug_clean.png");
+            var text = rp.ParseRivenTextFromImage(b2, null);
+        }
+
         private static void ParseChatImage()
         {
             //var filePath = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Validation Inputs\error_blurry1.png";
-            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("(184).png")))
+            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("384fa372-61ce-433a-a623-03a79cfb96e8.png")))
             {
                 using (var bitmap = new Bitmap(filePath))
                 {
@@ -989,6 +1047,18 @@ namespace DebugCLI
         {
             var c = new GameCapture(new DummyLogger());
             var ss = new ScreenStateHandler();
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\new_glyph_1.png"))
+            {
+                var state = ss.GetScreenState(b);
+                Console.WriteLine("Is GlyphWindow: " + (ss.GetScreenState(b) == (ScreenState.GlyphWindow)) + " should be true. Is chat open: " + ss.IsChatOpen(b) + " should be false");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\new_glyph_1.png"))
+            {
+                var isLoading = ss.GetScreenState(b);
+                Console.WriteLine("Is GlyphWindow: " + (ss.GetScreenState(b) == (ScreenState.GlyphWindow)) + " should be true. Is chat open: " + ss.IsChatOpen(b) + " should be false");
+            }
 
             using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\loading.png"))
             {

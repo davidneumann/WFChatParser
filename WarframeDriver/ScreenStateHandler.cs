@@ -39,7 +39,7 @@ namespace WarframeDriver
 
         private bool IsGlyphScreen(Bitmap bitmap)
         {
-            var lightPixels = new Point[] { new Point(1953, 118), new Point(1983, 175), new Point(2045, 147), new Point(2118, 135), new Point(2185, 170) };
+            var lightPixels = new Point[] { new Point(1934, 116), new Point(1983, 175), new Point(2041, 147), new Point(2114, 135), new Point(2182, 170) };
             var darkPixels = new Point[] { new Point(1928, 142), new Point(1989, 163), new Point(2045, 119), new Point(2099, 133), new Point(2162, 159) };
             return !lightPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value < 0.65f)
                 && !darkPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value > 0.4f);

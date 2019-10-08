@@ -78,6 +78,7 @@ namespace Application.Actionables
                 _logger.Log("Worker queue working on: " + item.Message.Author + ":" + item.Message.EnhancedMessage);
                 var fullTimeSw = new Stopwatch();
                 fullTimeSw.Start();
+                var success = true;
                 foreach (var r in item.RivenWorkDetails)
                 {
                     var cropSW = new Stopwatch();
@@ -93,7 +94,7 @@ namespace Application.Actionables
                             _logger.Log(item.Message.Author + "'s riven image cleaned in: " + cleanSW.ElapsedMilliseconds + " ms.");
                             cleanSW.Stop();
                             //var rivens = new List<ChatMessages.Model.Riven>();
-                            //for (int i = 0; i < 3; i++)
+                            //for (int i = 0; i < 5; i++)
                             //{
                             //    var factor = rand.NextDouble() * 0.5f + 0.5f;
                             //    var scalingSW = new Stopwatch();
@@ -127,17 +128,24 @@ namespace Application.Actionables
                             //    ImageId = Guid.NewGuid(),
                             //    MasteryRank = rivens.Select(p => p.MasteryRank).GroupBy(mr => mr).OrderByDescending(g => g.Count()).Select(g => g.Key).First(),
                             //    Modifiers = rivens.Select(p => p.Modifiers).GroupBy(ms => ms.Aggregate("", (key, m) => key + $"{m.Curse}{m.Description}{m.Value}")).OrderByDescending(g => g.Count()).Select(g => g.First()).First(),
-                            //    Polarity = rivens.Select(p => p.Polarity).GroupBy(p => p).OrderByDescending(g => g.Count()).Select(g => g.Key).First(),
-                            //    Rank = rivens.Select(p => p.Rank).GroupBy(rank => rank).OrderByDescending(g => g.Count()).Select(g => g.Key).First(),
-                            //    Rolls = rivens.Select(p => p.Rolls).GroupBy(rolls => rolls).OrderByDescending(g => g.Count()).Select(g => g.Key).First()
+                            //    //Polarity = rivens.Select(p => p.Polarity).GroupBy(p => p).OrderByDescending(g => g.Count()).Select(g => g.Key).First(),
+                            //    //Rank = rivens.Select(p => p.Rank).GroupBy(rank => rank).OrderByDescending(g => g.Count()).Select(g => g.Key).First(),
+                            //    Rolls = rivens.Select(p => p.Rolls).GroupBy(rolls => rolls).OrderByDescending(g => g.Count()).Select(g => g.Key).First(),
+                            //    Name = rivens.Select(p => p.Name).GroupBy(name => name).OrderByDescending(g => g.Count()).Select(n => n.Key).First()
                             //};
+
                             //combineSW.Stop();
                             //_logger.Log(item.Message.Author + "'s riven parses combined in: " + combineSW.ElapsedMilliseconds + " ms.");
+
                             var riven = parser.ParseRivenTextFromImage(cleaned, r.RivenName);
+
                             riven.Polarity = parser.ParseRivenPolarityFromColorImage(croppedCopy);
                             riven.Rank = parser.ParseRivenRankFromColorImage(croppedCopy);
                             riven.Name = r.RivenName;
+                            if (riven.Name.ToLower().Trim() != r.RivenName.ToLower().Trim())
+                                success = false;
                             riven.MessagePlacementId = r.RivenIndex;
+
                             item.Message.Rivens.Add(riven);
                             var outputDir = Path.Combine("riven_images", DateTime.Now.ToString("yyyy_MM_dd"));
                             if (!Directory.Exists(outputDir))
@@ -161,9 +169,16 @@ namespace Application.Actionables
                         }
                     }
                 }
-                item.MessageCache.Enqueue(item.Message.Author + item.Message.EnhancedMessage);
-                item.MessageCacheDetails[item.Message.Author + item.Message.EnhancedMessage] = item.Message;
-                _logger.Log("Riven parsed and added " + item.Message.Author + "'s message to cache in: " + fullTimeSw.ElapsedMilliseconds + " ms.");
+                if (success)
+                {
+                    item.MessageCache.Enqueue(item.Message.Author + item.Message.EnhancedMessage);
+                    item.MessageCacheDetails[item.Message.Author + item.Message.EnhancedMessage] = item.Message;
+                    _logger.Log("Riven parsed and added " + item.Message.Author + "'s message to cache in: " + fullTimeSw.ElapsedMilliseconds + " ms.");
+                }
+                else
+                {
+                    _dataSender.AsyncSendDebugMessage("Failed to parse riven correctly");
+                }
                 _dataSender.AsyncSendChatMessage(item.Message);
             }
 
@@ -197,6 +212,30 @@ namespace Application.Actionables
             var controlSw = new Stopwatch();
             while (!c.IsCancellationRequested)
             {
+                var possibleBadState = true;
+                foreach (var bot in _bots)
+                {
+                    if(bot != null && bot.LastMessage != null && DateTime.Now.Subtract(bot.LastMessage).TotalMinutes < 15)
+                    {
+                        possibleBadState = false;
+                        break;
+                    }
+                }
+                if(possibleBadState)
+                {
+                    try
+                    {
+                        _dataSender.AsyncSendDebugMessage("CRITICIAL FAILURE DETECTED! No messages in 15 minutes from any bot! Attempting to restart PC").Wait();
+                    }
+                    catch { }
+                    var shutdown = new System.Diagnostics.Process()
+                    {
+                        StartInfo = new ProcessStartInfo("shutdown.exe", "/r /f /t 0")
+                    };
+                    shutdown.Start();
+                    break;
+                }
+
                 for (int i = 0; i < _bots.Length; i++)
                 {
                     var bot = _bots[i];
