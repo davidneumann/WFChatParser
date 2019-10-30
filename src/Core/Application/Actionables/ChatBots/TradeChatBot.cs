@@ -19,7 +19,7 @@ using static Application.ChatRivenBot;
 
 namespace Application.Actionables.ChatBots
 {
-    public class TradeChatBot : IActionable
+    public partial class TradeChatBot : IActionable
     {
         public bool IsRequestingControl => _requestingControl;
         private bool _requestingControl = true;
@@ -786,17 +786,6 @@ namespace Application.Actionables.ChatBots
                 _currentState = BotStates.StartWarframe;
                 _requestingControl = true;
             });
-        }
-
-        private enum BotStates
-        {
-            StartWarframe,
-            WaitForLoadScreen,
-            LogIn,
-            ClaimReward,
-            CloseWarframe,
-            NavigateToChat,
-            ParseChat
         }
 
         private async Task StartWarframe()
