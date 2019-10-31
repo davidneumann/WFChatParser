@@ -13,14 +13,14 @@ namespace Application.Actionables
 {
     internal abstract class BaseWarframeBot : IActionable
     {
-        private IKeyboard _keyboard;
-        private IScreenStateHandler _screenStateHandler;
-        private ILogger _logger;
-        private IGameCapture _gameCapture;
-        private CancellationToken _cancellationToken;
-        private WarframeClientInformation _warframeCredentials;
-        private IMouse _mouse;
-        private IDataSender _dataSender;
+        protected IKeyboard _keyboard;
+        protected IScreenStateHandler _screenStateHandler;
+        protected ILogger _logger;
+        protected IGameCapture _gameCapture;
+        protected CancellationToken _cancellationToken;
+        protected WarframeClientInformation _warframeCredentials;
+        protected IMouse _mouse;
+        protected IDataSender _dataSender;
         protected Process _warframeProcess;
 
         public abstract bool IsRequestingControl { get;}
@@ -45,7 +45,7 @@ namespace Application.Actionables
             _dataSender = dataSender;
         }
 
-        protected async Task<StartWarframeResult> StartWarframe()
+        protected async Task<StartWarframeResult> BaseStartWarframe()
         {
             var existingWarframes = System.Diagnostics.Process.GetProcessesByName("Warframe.x64").ToArray();
 
@@ -103,8 +103,8 @@ namespace Application.Actionables
 
         protected class StartWarframeResult
         {
-            protected StartState State { get; }
-            protected Process WarframeProcess { get; }
+            public StartState State { get; }
+            public Process WarframeProcess { get; }
 
             public StartWarframeResult(StartState state, Process process)
             {
@@ -136,7 +136,7 @@ namespace Application.Actionables
                 }
             }
         }
-        private Task CloseWarframe()
+        protected Task CloseWarframe()
         {
             _logger.Log("Closing warframe");
             return Task.Run(() =>
