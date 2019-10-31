@@ -33,6 +33,36 @@ namespace Application.Actionables.ChatWatcher
             _chatParser = chatParser;
         }
 
+        public override Task TakeControl()
+        {
+            _logger.Log(this.GetType().Name + ": " + _warframeCredentials.StartInfo.UserName + ":" + _warframeCredentials.Region + " taking control");
+
+            if (_warframeProcess == null || _warframeProcess.HasExited)
+                _currentState = BotStates.StartWarframe;
+
+            switch (_currentState)
+            {
+                case BotStates.StartWarframe:
+                    return StartWarframe();
+                case BotStates.WaitForLoadScreen:
+                    return WaitForLoadScreen();
+                case BotStates.LogIn:
+                case BotStates.ClaimReward:
+                case BotStates.CloseWarframe:
+                case BotStates.NavigateToChat:
+                case BotStates.ParseChat:
+                default:
+                    throw new NotImplementedException();
+            }
+
+            ////SHOULD NOT BE HERE
+            //CloseWarframe();
+            //_requestingControl = false;
+            //return;
+        }
+
+
+
         private async Task StartWarframe()
         {
             _requestingControl = false;
@@ -58,32 +88,18 @@ namespace Application.Actionables.ChatWatcher
             }
         }
 
-        public override Task TakeControl()
+        private async Task WaitForLoadScreen()
         {
-            _logger.Log(this.GetType().Name + ": " + _warframeCredentials.StartInfo.UserName + ":" + _warframeCredentials.Region + " taking control");
-
-            if (_warframeProcess == null || _warframeProcess.HasExited)
-                _currentState = BotStates.StartWarframe;
-
-            switch (_currentState)
+            try
             {
-                case BotStates.StartWarframe:
-                    _logger.Log("Starting warframe");
-                    return StartWarframe();
-                case BotStates.WaitForLoadScreen:
-                case BotStates.LogIn:
-                case BotStates.ClaimReward:
-                case BotStates.CloseWarframe:
-                case BotStates.NavigateToChat:
-                case BotStates.ParseChat:
-                default:
-                    throw new NotImplementedException();
+                await BaseWaitForLoadingScreen();
+                _currentState = BotStates.LogIn;
             }
-
-            ////SHOULD NOT BE HERE
-            //CloseWarframe();
-            //_requestingControl = false;
-            //return;
+            catch (LoginScreenTimeoutException)
+            {
+                _currentState = BotStates.CloseWarframe;
+            }
+            _requestingControl = true;
         }
     }
 }

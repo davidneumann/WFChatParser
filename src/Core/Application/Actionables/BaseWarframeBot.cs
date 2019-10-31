@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -47,6 +48,7 @@ namespace Application.Actionables
 
         protected async Task<StartWarframeResult> BaseStartWarframe()
         {
+            _logger.Log("Attempting to start warframe");
             var existingWarframes = System.Diagnostics.Process.GetProcessesByName("Warframe.x64").ToArray();
 
             var launcher = new System.Diagnostics.Process()
@@ -121,6 +123,35 @@ namespace Application.Actionables
             }
         }
 
+
+        protected async Task BaseWaitForLoadingScreen()
+        {
+            _logger.Log("Waiting for loading screen");
+            var startTime = DateTime.Now;
+            //We may have missed the loading screen. If we started WF then wait even longer to get to the login screen
+            while (DateTime.Now.Subtract(startTime).TotalMinutes < 1)
+            {
+                _screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle);
+                _mouse.MoveTo(0, 0);
+                await Task.Delay(17);
+                using (var screen = _gameCapture.GetFullImage())
+                {
+                    screen.Save("screen.png");
+                    if (_screenStateHandler.GetScreenState(screen) != Enums.ScreenState.LoginScreen)
+                    {
+                        await Task.Delay(1000);
+                    }
+                    else
+                    {
+                        return;
+                    }
+                }
+            }
+
+            //Didn't find the login screen within the time allowed
+            throw new LoginScreenTimeoutException();
+        }
+
         public void ShutDown()
         {
             if (_warframeProcess != null && !_warframeProcess.HasExited)
@@ -155,5 +186,11 @@ namespace Application.Actionables
         }
 
         public abstract Task TakeControl();
+
+        [Serializable]
+        protected class LoginScreenTimeoutException : Exception
+        {
+            public LoginScreenTimeoutException() { }
+        }
     }
 }
