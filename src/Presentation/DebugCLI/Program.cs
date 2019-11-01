@@ -232,7 +232,7 @@ namespace DebugCLI
                 }
 
                 if (!Regex.Match(RawMessage, @"^(\[\d\d:\d\d\]) ([-A-Za-z0-9._]+):?\s+(.+)").Success)
-                    debugReason = "Invalid username or timestamp!";
+                    debugReason = "Invalid username or timestamp!" + "\t\r\n" + RawMessage;
             }
             catch { debugReason = "Bade name: " + username; }
 

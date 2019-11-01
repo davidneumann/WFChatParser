@@ -529,7 +529,7 @@ namespace Application.Actionables.ChatBots
                 }
 
                 if (!Regex.Match(line.RawMessage, @"^(\[\d\d:\d\d\])\s*((?:\[DE\])?[-A-Za-z0-9._]+)[:\s]\s*(.+)").Success)
-                    debugReason = "Invalid username or timestamp!";
+                    debugReason = "Invalid username or timestamp!" + "\t\r\n" + line.RawMessage;
             }
             catch { debugReason = "Bade name: " + username; }
             var cm = new ChatMessageModel()
