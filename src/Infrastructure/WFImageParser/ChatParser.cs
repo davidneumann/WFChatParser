@@ -471,7 +471,7 @@ namespace WFImageParser
                         {
                             for (int y2 = 0; y2 < boolMask.GetLength(1); y2++)
                             {
-                                //if (shiftyMask.SoftMask[x2 - i, y2] > 0.3f)
+                                //if (shiftyMask.SoftMask[x2 - i, y2] > 0.66F)
                                 //{
                                 softMask[x2, y2] = shiftyMask.SoftMask[x2 - i, y2];
                                 softCount += softMask[x2, y2];
@@ -526,7 +526,7 @@ namespace WFImageParser
                 {
                     for (int y2 = 0; y2 < boolMask.GetLength(1); y2++)
                     {
-                        boolMask[x2, y2] = targetMask.SoftMask[x2, y2] > 0.5f;
+                        boolMask[x2, y2] = targetMask.SoftMask[x2, y2] > 0.66F;
                         if (boolMask[x2, y2])
                             hardCount++;
                     }
@@ -537,7 +537,7 @@ namespace WFImageParser
                 {
                     for (int y2 = 0; y2 < softMask.GetLength(1); y2++)
                     {
-                        softMask[x2, y2] = targetMask.SoftMask[x2, y2] > 0.5f ? targetMask.SoftMask[x2, y2] : 0f;
+                        softMask[x2, y2] = targetMask.SoftMask[x2, y2] > 0.66F ? targetMask.SoftMask[x2, y2] : 0f;
                         softCount += softMask[x2, y2];
                     }
                 }
@@ -801,7 +801,7 @@ namespace WFImageParser
         private Tuple<float, CharacterDetails, CoordinateList> FastGuessPartialCharacter(TargetMask targetMask, int lineOffset, bool takeLeastBad = false)
         {
             var targetWidth = targetMask.Width;
-            var minWidth = takeLeastBad ? 0 : targetWidth * 0.5f;
+            var minWidth = takeLeastBad ? 0 : targetWidth * 0.66F;
             var leastBadMatch = float.MinValue;
             CharacterDetails leastBadCharacter = null;
             CoordinateList leastBadMatchingPixels = null;
@@ -913,12 +913,12 @@ namespace WFImageParser
             var image = new ImageCache(chatLine);
             var lineOffset = 0;
             var lineHeight = chatLine.Height;
-            var minV = 0.3f;
+            var minV = 0.66F;
             string timestamp = string.Empty;
             for (int x = startX; x < chatLine.Width; x++)
             {
                 //Advance until next pixel
-                Point firstPixel = GetFirstPixel(image, 0.3f, ref chatRect, 34, 0, endX, prevMatchedCharacters, ref x);
+                Point firstPixel = GetFirstPixel(image, 0.66F, ref chatRect, 34, 0, endX, prevMatchedCharacters, ref x);
 
                 //Make sure we didn't escape
                 if (x >= chatRect.Right || firstPixel == Point.Empty)
@@ -1079,7 +1079,7 @@ namespace WFImageParser
                     //var results = new string[endLine - startLine];
                     for (int i = 0; i < offsets.Length; i++)
                     {
-                        var line = ParseLineBitmapScan(cache, 0.3f, xOffset, chatRect, lineHeight, offsets[i], 0, prevType);
+                        var line = ParseLineBitmapScan(cache, 0.66F, xOffset, chatRect, lineHeight, offsets[i], 0, prevType);
 
                         //Handle null results
                         if (line != null)
