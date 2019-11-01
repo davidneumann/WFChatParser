@@ -277,7 +277,7 @@ namespace Application.Actionables.ChatBots
                         }
                     }
 
-                    if(lineFailed)
+                    if (lineFailed)
                     {
                         foreach (var line in chatLines)
                         {
@@ -342,7 +342,18 @@ namespace Application.Actionables.ChatBots
             chatMessage.Region = _warframeCredentials.Region;
             if (chatMessage.DEBUGREASON != null && chatMessage.DEBUGREASON.Length > 0)
             {
-                await _dataSender.AsyncSendDebugMessage("Model incorrect: " + chatMessage.DEBUGREASON);
+                try
+                {
+                    using (var b = _gameCapture.GetFullImage())
+                    {
+                        chatMessage.DEBUGIMAGE = Path.Combine("debug", DateTime.Now.Ticks + ".png");
+                        b.Save(chatMessage.DEBUGIMAGE);
+                    }
+                }
+                catch { }
+                if (chatMessage.DEBUGIMAGE == null)
+                    chatMessage.DEBUGIMAGE = "Failed to save";
+                await _dataSender.AsyncSendDebugMessage("Model incorrect: " + chatMessage.DEBUGREASON +". See: " + chatMessage.DEBUGIMAGE);
                 return null;
             }
             return chatMessage;
@@ -368,6 +379,14 @@ namespace Application.Actionables.ChatBots
         {
             var clr = line as ChatMessageLineResult;
             var chatMessage = MakeChatModel(clr);
+            if (chatMessage.DEBUGREASON != null && chatMessage.DEBUGREASON.Length > 0)
+            {
+                using (var b = _gameCapture.GetFullImage())
+                {
+                    chatMessage.DEBUGIMAGE = Path.Combine("debug", DateTime.Now.Ticks + ".png");
+                    b.Save(chatMessage.DEBUGIMAGE);
+                }
+            }
 
             var rivenParseDetails = new List<RivenParseTaskWorkItemDetail>();
             foreach (var clickpoint in clr.ClickPoints)
@@ -819,7 +838,7 @@ namespace Application.Actionables.ChatBots
             {
 
                 //Yield to other tasks after 4 minutes of waiting
-                if(DateTime.Now.Subtract(start).TotalMinutes > 4f)
+                if (DateTime.Now.Subtract(start).TotalMinutes > 4f)
                 {
                     _currentState = BotStates.StartWarframe;
                     _requestingControl = true;
