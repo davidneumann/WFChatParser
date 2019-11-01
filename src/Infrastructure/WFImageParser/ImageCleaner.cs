@@ -78,6 +78,25 @@ namespace WFImageParser
 
         public void MakeGreyscaleImageFromArray(string outputDir, char character, byte[,] pixels)
         {
+            string name = ConvertCharacterToName(character);
+            using (var image = new Image<Rgba32>(pixels.GetLength(0), pixels.GetLength(1)))
+            {
+                for (int x = 0; x < image.Width; x++)
+                {
+                    for (int y = 0; y < image.Height; y++)
+                    {
+                        image[x, y] = new Rgba32(pixels[x, y], pixels[x, y], pixels[x, y]);
+                    }
+                }
+
+                if (!Directory.Exists(outputDir))
+                    Directory.CreateDirectory(outputDir);
+                image.Save(Path.Combine(outputDir, name + ".png"));
+            }
+        }
+
+        public static string ConvertCharacterToName(char character)
+        {
             var name = character.ToString();
             if (name.ToUpper() != name.ToLower() && name.ToUpper() == name)
                 name = name + "_upper";
@@ -101,20 +120,7 @@ namespace WFImageParser
                 name = "pipe";
             else if (name == "," || name[0] == ',')
                 name = "comma";
-            using (var image = new Image<Rgba32>(pixels.GetLength(0), pixels.GetLength(1)))
-            {
-                for (int x = 0; x < image.Width; x++)
-                {
-                    for (int y = 0; y < image.Height; y++)
-                    {
-                        image[x, y] = new Rgba32(pixels[x, y], pixels[x, y], pixels[x, y]);
-                    }
-                }
-
-                if (!Directory.Exists(outputDir))
-                    Directory.CreateDirectory(outputDir);
-                image.Save(Path.Combine(outputDir, name + ".png"));
-            }
+            return name;
         }
 
         public void SaveGreyscaleImage(string imagePath, string outputPath, float minV = 0.44f)

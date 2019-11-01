@@ -65,6 +65,7 @@ namespace DebugCLI
             //ChatLineExtractorShim();
             //GenerateCharStrings();
             TrainOnImages();
+            //TrainSpacesOnImages();
         }
 
         private static void ChatLineExtractorShim()
@@ -1412,10 +1413,19 @@ namespace DebugCLI
         //    Console.WriteLine(json);
         //}
 
+        private static void TrainSpacesOnImages()
+        {
+            var spaceTrainer = new OCRSpaceTrainer();
+            spaceTrainer.TrainOnImages(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Images", "newnewdata", GetSupportedCharacters().ToCharArray());
+        }
+
         private static void TrainOnImages()
         {
             var trainer = new OCRTrainer();
             trainer.TrainOnImages(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Images", "newnewdata");
+
+            var spaceTrainer = new OCRSpaceTrainer();
+            spaceTrainer.TrainOnImages(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Images", "newnewdata", GetSupportedCharacters().ToCharArray());
         }
 
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
@@ -1537,7 +1547,7 @@ namespace DebugCLI
 
         private static void GenerateCharStrings(int count = 35)
         {
-            var chars = "! # $ % & ' ( ) * + - . / 0 1 2 3 4 5 6 7 8 9 : ; < = > ? @ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z \\ ] ^ _ a b c d e f g h i j k l m n o p q r s t u v w x y z { | } ,".Replace(" ", "");
+            string chars = GetSupportedCharacters();
             //var str = chars;
             //while (str.Length > 80)
             //{
@@ -1572,7 +1582,7 @@ namespace DebugCLI
                     atlas.WriteLine(line);
                     sliceContents.Add(line);
                     lines++;
-                    if(sliceContents.Count >= 27)
+                    if (sliceContents.Count >= 27)
                     {
                         SaveSlice(slice++, sliceContents);
                         sliceContents.Clear();
@@ -1583,6 +1593,7 @@ namespace DebugCLI
                 {
                     Console.WriteLine(str);
                     atlas.WriteLine(str);
+                    sliceContents.Add(str);
                     lines++;
                     SaveSlice(slice++, sliceContents);
                 }
@@ -1619,6 +1630,11 @@ namespace DebugCLI
             //        fout.WriteLine(sb.ToString() + " [");
             //    }
             //}
+        }
+
+        private static string GetSupportedCharacters()
+        {
+            return "! # $ % & ' ( ) * + - . / 0 1 2 3 4 5 6 7 8 9 : ; < = > ? @ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z \\ ] ^ _ a b c d e f g h i j k l m n o p q r s t u v w x y z { | } ,".Replace(" ", "");
         }
 
         private static void SaveSlice(int v, List<string> sliceContents)
