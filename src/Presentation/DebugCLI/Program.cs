@@ -62,7 +62,8 @@ namespace DebugCLI
             //NewRivenShim();
             //ChatMovingShim();
             //ParseRivenImage();
-            ChatLineExtractorShim();
+            //ChatLineExtractorShim();
+            GenerateCharStrings();
         }
 
         private static void ChatLineExtractorShim()
@@ -83,7 +84,7 @@ namespace DebugCLI
         {
             var input = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chat_new.png");
             var samples = LineSampler.GetAllLineSamples(input);
-            var clickPoints= new Point[]{ new Point(283, 779), new Point(472, 978)};
+            var clickPoints = new Point[] { new Point(283, 779), new Point(472, 978) };
             var movedScreen = new Bitmap(@"C:\Users\david\Downloads\new_chat_blurr.png");
             foreach (var clickPoint in clickPoints)
             {
@@ -103,7 +104,7 @@ namespace DebugCLI
                         Console.WriteLine("Image different");
                     }
                 }
-            }            
+            }
         }
 
         private static void NewRivenShim()
@@ -1536,37 +1537,92 @@ namespace DebugCLI
         private static void GenerateCharStrings(int count = 35)
         {
             var chars = "! # $ % & ' ( ) * + - . / 0 1 2 3 4 5 6 7 8 9 : ; < = > ? @ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z \\ ] ^ _ a b c d e f g h i j k l m n o p q r s t u v w x y z { | } ,".Replace(" ", "");
-            var rand = new Random();
-            using (var fout = new StreamWriter("charstrings.txt"))
+            //var str = chars;
+            //while (str.Length > 80)
+            //{
+            //    Console.WriteLine(str.Substring(0, 80));
+            //    str = str.Substring(80);
+            //}
+
+
+            var output = new StringBuilder();
+            for (int i = 0; i < chars.Length; i++)
             {
-                var sb = new StringBuilder();
-                foreach (var character in chars)
+                var prefix = chars[i];
+                for (int j = 0; j < chars.Length; j++)
                 {
-                    //sb.Clear();
-                    //foreach (var otherCharacter in chars)
-                    //{
-                    //    sb.Append(character);
-                    //    sb.Append(otherCharacter);
-                    //    sb.Append(' ');
-                    //}
-                    //fout.WriteLine(sb.ToString().Trim());
-                    //sb.Append('.');
-                    //sb.Append('[');
-                    //sb.Append(character);
-                    //sb.AppendLine();
-                }
-                //fout.WriteLine(sb.ToString() + " [");
-                for (int i = 0; i < count; i++)
-                {
-                    sb.Clear();
-                    foreach (var character in chars.OrderBy(x => rand.Next()))
-                    {
-                        sb.Append(character + " ");
-                    }
-                    Console.WriteLine(sb.ToString().Trim() + "[" + "\n");
-                    fout.WriteLine(sb.ToString() + " [");
+                    output.Append(prefix);
+                    output.Append(' ');
+                    output.Append(chars[j]);
+                    output.Append(' ');
                 }
             }
+
+            var slice = 0;
+            var lines = 0;
+            using (var atlas = new StreamWriter("space_atlas.txt"))
+            {
+                var str = output.ToString();
+                var sliceContents = new List<string>();
+                while (str.Length > 80)
+                {
+                    string line = str.Substring(0, 80);
+                    Console.WriteLine(line);
+                    atlas.WriteLine(line);
+                    sliceContents.Add(line);
+                    lines++;
+                    if(sliceContents.Count >= 27)
+                    {
+                        SaveSlice(slice++, sliceContents);
+                        sliceContents.Clear();
+                    }
+                    str = str.Substring(80);
+                }
+                if (str.Length > 0)
+                {
+                    Console.WriteLine(str);
+                    atlas.WriteLine(str);
+                    lines++;
+                    SaveSlice(slice++, sliceContents);
+                }
+            }
+
+            //var rand = new Random();
+            //using (var fout = new StreamWriter("charstrings.txt"))
+            //{
+            //    var sb = new StringBuilder();
+            //    foreach (var character in chars)
+            //    {
+            //        //sb.Clear();
+            //        //foreach (var otherCharacter in chars)
+            //        //{
+            //        //    sb.Append(character);
+            //        //    sb.Append(otherCharacter);
+            //        //    sb.Append(' ');
+            //        //}
+            //        //fout.WriteLine(sb.ToString().Trim());
+            //        //sb.Append('.');
+            //        //sb.Append('[');
+            //        //sb.Append(character);
+            //        //sb.AppendLine();
+            //    }
+            //    //fout.WriteLine(sb.ToString() + " [");
+            //    for (int i = 0; i < count; i++)
+            //    {
+            //        sb.Clear();
+            //        foreach (var character in chars.OrderBy(x => rand.Next()))
+            //        {
+            //            sb.Append(character + " ");
+            //        }
+            //        Console.WriteLine(sb.ToString().Trim() + "[" + "\n");
+            //        fout.WriteLine(sb.ToString() + " [");
+            //    }
+            //}
+        }
+
+        private static void SaveSlice(int v, List<string> sliceContents)
+        {
+            File.WriteAllLines("slice_" + v.ToString() + ".txt", sliceContents);
         }
 
         private static void SpaceTest(int count = 35)
