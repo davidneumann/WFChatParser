@@ -31,7 +31,7 @@ namespace WFImageParser
                 var cache = new ImageCache(rgbImage);
                 var chatRect = new Rectangle(4, 763, 3236, 1350);
                 var offsets = OCRHelpers.LineOffsets;
-                var lineHeight = 36;
+                var lineHeight = 34;
                 var refLineIndex = 0;
                 for (int i = 0; i < offsets.Length && refLineIndex < referenceLines.Count; i++)
                 {
@@ -156,10 +156,10 @@ namespace WFImageParser
                 Console.Write("\rLooking at: " + g.Key);
                 return g.Select(t =>
                 {
-                    var arr = new float[maxWidths[t.Character], 36];
+                    var arr = new float[maxWidths[t.Character], 34];
                     for (int x = 0; x < maxWidths[t.Character] && x < t.Width; x++)
                     {
-                        for (int y = 0; y < 36; y++)
+                        for (int y = 0; y < 34; y++)
                         {
                             arr[x, y] = t.Mask[x, y];
                         }
@@ -172,12 +172,12 @@ namespace WFImageParser
             var pixelCounts = groupedCharArrays.Select(g =>
             {
                 Console.Write("\rLooking at: " + g.Key);
-                var arr = new float[maxWidths[g.Key], 36];
+                var arr = new float[maxWidths[g.Key], 34];
                 g.ToList().ForEach(t =>
                 {
                     for (int x = 0; x < maxWidths[g.Key]; x++)
                     {
-                        for (int y = 0; y < 36; y++)
+                        for (int y = 0; y < 34; y++)
                         {
                             arr[x, y] += t.Mask[x, y];
                         }

@@ -100,7 +100,7 @@ namespace WFImageParser
                         if (!_gapPairs.ContainsKey(gapPair.Left))
                             _gapPairs.Add(gapPair.Left, new Dictionary<string, int>());
                         if (gapPair.Gap > 0)
-                            _gapPairs[gapPair.Left].Add(gapPair.Right, gapPair.Gap - 1); //There is an off by 1 error in the gaps file currently
+                            _gapPairs[gapPair.Left].Add(gapPair.Right, gapPair.Gap); //- 1); //There is an off by 1 error in the gaps file currently
                         else
                             _gapPairs[gapPair.Left].Add(gapPair.Right, 0);
                     }
@@ -205,7 +205,7 @@ namespace WFImageParser
                 startX = targetMask.MinX;
                 endX = targetMask.MaxX + 1;
 
-                if (endX > startX && targetMask.PixelCount > 10)
+                if (endX > startX && targetMask.PixelCount > 7)
                 {
                     Tuple<float, CharacterDetails, CoordinateList> bestFit = GetBestMatchingCharacter(image, lineHeight, lineOffset, targetMask);
 
@@ -250,7 +250,7 @@ namespace WFImageParser
                             var pixelGap = safeRightX - safeLeftX;
                             if (_gapPairs.ContainsKey(lastCharacterDetails.Name)
                                 && _gapPairs[lastCharacterDetails.Name].ContainsKey(bestFit.Item2.Name)
-                                && pixelGap > _gapPairs[lastCharacterDetails.Name][bestFit.Item2.Name] + spaceWidth)
+                                && pixelGap >= _gapPairs[lastCharacterDetails.Name][bestFit.Item2.Name] + spaceWidth)
                             {
                                 if (currentLineType == LineType.NewMessage && !checkedKey)
                                 {
@@ -547,28 +547,22 @@ namespace WFImageParser
                 //We are in a bad state so be very aggressive
                 if (bestFit != null)
                 {
-                    var columnHunting = true;
-                    for (int x2 = targetMask.MinX; x2 <= targetMask.MaxX; x2++)
+                    //Blacklist any column that we matched to except last column
+                    var minX = image.Width;
+                    var maxX = 0;
+                    foreach (var p in bestFit.Item3)
                     {
-                        var columnCount = 0f;
-                        for (int y2 = lineOffset; y2 < lineOffset + lineHeight; y2++)
+                        if (p.X > maxX)
+                            maxX = p.X;
+                        if (p.X < minX)
+                            minX = p.X;
+                    }
+                    for (int x = minX; x < maxX-1; x++)
+                    {
+                        for (int y = lineOffset; y < lineOffset + 34; y++)
                         {
-                            if (image[x2, y2] < 0.2)
-                                bestFit.Item3.Add(new Point(x2, y2));
-                            else
-                                columnCount += image[x2, y2];
-                        }
-
-                        if (columnHunting && columnCount < 1.5)
-                        {
-                            for (int y2 = lineOffset; y2 < lineOffset + lineHeight; y2++)
-                            {
-                                bestFit.Item3.Add(new Point(x2, y2));
-                            }
-                        }
-                        else
-                        {
-                            columnHunting = false;
+                            if (!bestFit.Item3.Any(p => p.X == x && p.Y == y))
+                                bestFit.Item3.Add(x, y);
                         }
                     }
                 }
@@ -874,7 +868,7 @@ namespace WFImageParser
                     }
                 }
                 //var coverage = cleanTargetPixels.Where(p => p.X - startX > 0 && p.X - startX < character.Width && character.VMask[p.X - startX, p.Y - lineOffset] > minV).Count() / (float)character.PixelCount;
-                if (bestMatch > 0.85 || (bestMatch > 0.7 && takeLeastBad))
+                if (bestMatch > 0.92 || (bestMatch > 0.7 && takeLeastBad))
                 {
                     return new Tuple<float, CharacterDetails, CoordinateList>(bestMatch, bestCharacter, bestMatchingPixels);
                 }
@@ -890,7 +884,7 @@ namespace WFImageParser
             var lines = new System.Drawing.Bitmap[_lineOffsets.Length];
             for (int i = 0; i < _lineOffsets.Length; i++)
             {
-                lines[i] = new System.Drawing.Bitmap(chatRect.Width, 36);
+                lines[i] = new System.Drawing.Bitmap(chatRect.Width, 34);
                 for (int x = 0; x < lines[i].Width; x++)
                 {
                     for (int y = 0; y < lines[i].Height; y++)
@@ -924,13 +918,13 @@ namespace WFImageParser
             for (int x = startX; x < chatLine.Width; x++)
             {
                 //Advance until next pixel
-                Point firstPixel = GetFirstPixel(image, 0.3f, ref chatRect, 36, 0, endX, prevMatchedCharacters, ref x);
+                Point firstPixel = GetFirstPixel(image, 0.3f, ref chatRect, 34, 0, endX, prevMatchedCharacters, ref x);
 
                 //Make sure we didn't escape
                 if (x >= chatRect.Right || firstPixel == Point.Empty)
                     break;
 
-                var targetMask = OCRHelpers.FindCharacterMask(firstPixel, image, prevMatchedCharacters, chatRect.Left, chatRect.Right, 0, 36);
+                var targetMask = OCRHelpers.FindCharacterMask(firstPixel, image, prevMatchedCharacters, chatRect.Left, chatRect.Right, 0, 34);
 
                 if (currentLineType == LineType.Unknown)
                 {
@@ -1077,7 +1071,7 @@ namespace WFImageParser
                 {
                     var cache = new ImageCache(rgbImage);
                     var offsets = _lineOffsets;
-                    var lineHeight = 36;
+                    var lineHeight = 34;
                     var endLine = Math.Min(offsets.Length, lineParseCount);
                     var newMessageRegex = new Regex(@"^\[\d\d:\d\d\]", RegexOptions.Compiled);
                     var kickRegex = new Regex(@"\w was kicked.", RegexOptions.Compiled);
@@ -1085,7 +1079,7 @@ namespace WFImageParser
                     //var results = new string[endLine - startLine];
                     for (int i = 0; i < offsets.Length; i++)
                     {
-                        var line = ParseLineBitmapScan(cache, 0.3f, xOffset, chatRect, lineHeight, offsets[i], 6, prevType);
+                        var line = ParseLineBitmapScan(cache, 0.3f, xOffset, chatRect, lineHeight, offsets[i], 0, prevType);
 
                         //Handle null results
                         if (line != null)

@@ -93,6 +93,8 @@ namespace WFImageParser
         private void TrainOnImage(string imagePath, string textPath, List<SimpleGapPair> results)
         {
             Console.WriteLine("Training on image {0}. Total results: {1}", imagePath, results.Count);
+            var ic = new ImageCleaner();
+            ic.SaveChatColors(imagePath, "debug.png");
             var expectedLines = File.ReadAllLines(textPath).Select(line => line.Replace(" ", "")).ToArray();
 
             using (Image<Rgba32> rgbImage = Image.Load(imagePath))
@@ -116,7 +118,7 @@ namespace WFImageParser
             var chatRect = new Rectangle(4, 763, 3236, 1350);
             var startX = chatRect.Left;
             var endX = chatRect.Left;
-            var lineHeight = 36;
+            var lineHeight = 34;
 
             TargetMask targetLeft = null;
             var charIndex = 0;
@@ -162,7 +164,7 @@ namespace WFImageParser
                     var gapPair = new SimpleGapPair();
                     gapPair.Left = ImageCleaner.ConvertCharacterToName(expectedCharacters[charIndex]);
                     gapPair.Right = ImageCleaner.ConvertCharacterToName(expectedCharacters[charIndex+1]);
-                    gapPair.Gap = targetRight.MinX - targetLeft.MaxX;
+                    gapPair.Gap = targetRight.MinX - (targetLeft.MaxX+1);
                     charIndex += 2;
 
                     if (!results.Exists(existingPair => existingPair.Left == gapPair.Left && existingPair.Right == gapPair.Right))

@@ -57,14 +57,14 @@ namespace DebugCLI
             //VerifyNoErrors(2);
             //TestScreenHandler();
             //TestBot();
-            //ParseChatImage();
+            ParseChatImage();
             //TessShim();
             //NewRivenShim();
             //ChatMovingShim();
             //ParseRivenImage();
             //ChatLineExtractorShim();
             //GenerateCharStrings();
-            TrainOnImages();
+            //TrainOnImages();
             //TrainSpacesOnImages();
         }
 
@@ -257,6 +257,7 @@ namespace DebugCLI
                     var sb = new StringBuilder();
                     foreach (var line in lines)
                     {
+                        Console.WriteLine(line.RawMessage);
                         sb.AppendLine(line.RawMessage);
                     }
                     File.WriteAllText(filePath.Replace(".png", ".txt"), sb.ToString());
