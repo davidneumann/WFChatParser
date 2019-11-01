@@ -57,7 +57,7 @@ namespace DebugCLI
             //VerifyNoErrors(2);
             //TestScreenHandler();
             //TestBot();
-            ParseChatImage();
+            //ParseChatImage();
             //TessShim();
             //NewRivenShim();
             //ChatMovingShim();
@@ -66,6 +66,13 @@ namespace DebugCLI
             //GenerateCharStrings();
             //TrainOnImages();
             //TrainSpacesOnImages();
+            ModiDescrShim();
+        }
+
+        private static void ModiDescrShim()
+        {
+            var modi = new Modifier();
+
         }
 
         private static void ChatLineExtractorShim()

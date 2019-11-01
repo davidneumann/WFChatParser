@@ -1,4 +1,7 @@
-﻿using System.Linq;
+﻿using Newtonsoft.Json;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Text.RegularExpressions;
 
 namespace Application.ChatMessages.Model
@@ -10,7 +13,28 @@ namespace Application.ChatMessages.Model
         public bool Curse { get; set; }
 
         private static Regex _valRegx = new Regex(@"([-+]?[\d\.]+)");
-        private static string[] _possibleDescriptions = new string[] { "% Zoom", "% Weapon Recoil", "% Toxin", "% Status Duration", "% Status Chance", "% Critical Hit Chance for Slide Attack", "% Slash", "s Combo Duration", "% Reload Speed", "% Range", "% Puncture", "Punch Through", "% Projectile Speed", "% Multishot", "% Melee Damage", "% Magazine Capacity", "% Impact", "% Heat", "% Fire Rate(x2 for Bows)", "% Fire Rate", "% Finisher Damage", "% Electricity", "% Damage to Infested", "% Damage to Grineer", "% Damage to Corpus", "% Damage", "% Critical Damage", "% Critical Chance", "% Cold", "% Channeling Efficiency", "% Channeling Damage", "% Attack Speed", "% Ammo Maximum" };
+        private static string[] _possibleDescriptions = new string[] { "% Puncture", "% Melee Combo Efficiency", "Initial Combo", "% Toxin", "% Damage to Corpus", "% Critical Damage", "% Channeling Damage", "% Cold", "% Magazine Capacity", "% Damage", "% Reload Speed", "% Damage to Infested", "% Slash", "% Status Chance", "% Ammo Maximum", "% Multishot", "% Projectile Speed", "Punch Through", "% Weapon Recoil", "% Damage to Grineer", "% Impact", "% Status Duration", "% Fire Rate(x2 for Bows)", "% Critical Chance for Slide Attack", "% Fire Rate", "% Critical Chance", "% Zoom", "% Electricity", "Range", "% Finisher Damage", "% Melee Damage", "% Heat", "% Attack Speed", "s Combo Duration", "% Channeling Efficiency", "% Chance to gain extra Combo Count" };
+
+        private static bool _hasCheckedForUpdates = false;
+            
+        public Modifier()
+        {
+            if(!_hasCheckedForUpdates)
+            {
+                _hasCheckedForUpdates = true;
+                using (var client = new WebClient())
+                {
+                    try
+                    {
+                        _possibleDescriptions = JsonConvert.DeserializeObject<string[]>(client.DownloadString("https://10o.io/rivens/buffnames.json"));
+                    }
+                    catch
+                    {
+
+                    }
+                }
+            }
+        }
 
         public static Modifier ParseString(string modifier)
         {
