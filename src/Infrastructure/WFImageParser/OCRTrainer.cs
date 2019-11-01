@@ -33,7 +33,7 @@ namespace WFImageParser
                 var offsets = OCRHelpers.LineOffsets;
                 var lineHeight = 36;
                 var refLineIndex = 0;
-                for (int i = 0; i < offsets.Length; i++)
+                for (int i = 0; i < offsets.Length && refLineIndex < referenceLines.Count; i++)
                 {
                     var line = TrainOnLine(referenceLines[refLineIndex], xOffset, chatRect, cache, lineHeight, offsets[i]);
                     if (line.Count > 0 && line.Count == referenceLines[i].Length)
@@ -129,7 +129,7 @@ namespace WFImageParser
             return results;
         }
 
-        public void TrainOnImages(string trainingDir, string outputDir, int xOffset = 253)
+        public void TrainOnImages(string trainingDir, string outputDir, int xOffset = 10)
         {
             var trainingImagePaths = Directory.GetFiles(trainingDir).Where(f => f.EndsWith(".png")).ToArray();
             var trainingTextPaths = Directory.GetFiles(trainingDir).Where(f => f.EndsWith(".txt")).ToArray();

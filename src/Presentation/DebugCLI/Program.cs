@@ -63,7 +63,8 @@ namespace DebugCLI
             //ChatMovingShim();
             //ParseRivenImage();
             //ChatLineExtractorShim();
-            GenerateCharStrings();
+            //GenerateCharStrings();
+            TrainOnImages();
         }
 
         private static void ChatLineExtractorShim()
@@ -1414,7 +1415,7 @@ namespace DebugCLI
         private static void TrainOnImages()
         {
             var trainer = new OCRTrainer();
-            trainer.TrainOnImages(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Training Inputs", "newdata");
+            trainer.TrainOnImages(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Images", "newnewdata");
         }
 
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
