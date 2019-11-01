@@ -22,8 +22,34 @@ namespace WFImageParser
 
             expectedDistinctChars = expectedDistinctChars.Distinct().ToArray();
 
-            var expectedResults = expectedDistinctChars.Distinct().Count();
-            expectedResults = expectedResults * expectedResults;
+            var allPossiblePairs = new List<SimpleGapPair>();
+            for (int i = 0; i < expectedDistinctChars.Length; i++)
+            {
+                var prefix = ImageCleaner.ConvertCharacterToName(expectedDistinctChars[i]);
+                for (int j = 0; j < expectedDistinctChars.Length; j++)
+                {
+                    var suffix = ImageCleaner.ConvertCharacterToName(expectedDistinctChars[j]);
+                    allPossiblePairs.Add(new SimpleGapPair() { Left = prefix, Right = suffix });
+                }
+            }
+            //Add support for ] [
+            allPossiblePairs.Add(new SimpleGapPair() { Left = ImageCleaner.ConvertCharacterToName(']'), Right = ImageCleaner.ConvertCharacterToName(']') });
+            //Add support for (character) [
+            for (int i = 0; i < expectedDistinctChars.Length; i++)
+            {
+                if (expectedDistinctChars[i] == ']')
+                    continue;
+                allPossiblePairs.Add(new SimpleGapPair() { Left = ImageCleaner.ConvertCharacterToName(expectedDistinctChars[i]), Right = ImageCleaner.ConvertCharacterToName('[') });
+            }
+            //Add support for [ (char)
+            for (int i = 0; i < expectedDistinctChars.Length; i++)
+            {
+                if (expectedDistinctChars[i] == ']')
+                    continue;
+                allPossiblePairs.Add(new SimpleGapPair() { Left = ImageCleaner.ConvertCharacterToName('['), Right = ImageCleaner.ConvertCharacterToName(expectedDistinctChars[i]) });
+            }
+
+            var expectedResults = allPossiblePairs.Count;
 
             if (trainingImagePaths.Length != trainingTextPaths.Length)
                 throw new Exception("Unmatched training images and text files");
@@ -39,21 +65,25 @@ namespace WFImageParser
             if (results.Count != expectedResults)
             {
                 var missing = new List<SimpleGapPair>();
-                for (int i = 0; i < expectedDistinctChars.Length; i++)
+                var errorSb = new StringBuilder();
+                foreach (var result in results)
                 {
-                    var left = expectedDistinctChars[i];
-                    string leftName = ImageCleaner.ConvertCharacterToName(left);
-                    for (int j = 0; j < expectedDistinctChars.Length; j++)
+                    if (!allPossiblePairs.Exists(pair => pair.Left == result.Left && pair.Right == result.Right))
                     {
-                        var right = expectedDistinctChars[j];
-                        string rightName = ImageCleaner.ConvertCharacterToName(right);
-                        if (!results.Exists(pair => pair.Left == leftName && pair.Right == rightName))
-                        {
-                            missing.Add(new SimpleGapPair() { Left = leftName, Right = rightName });
-                        }
+                        errorSb.AppendLine(string.Format("Unexpected pair found: {0} {1}", result.Left, result.Right));
+                        missing.Add(result);
                     }
                 }
-                throw new Exception(string.Format("Not enough gaps found! Missing {0}", missing.Select(pair => string.Format("{0} {1}", pair.Left, pair.Right))));
+                foreach (var expectedPair in allPossiblePairs)
+                {
+                    if (!results.Exists(pair => pair.Left == expectedPair.Left && pair.Right == expectedPair.Right))
+                    {
+                        errorSb.AppendLine(string.Format("Expected pair not found: {0} {1}", expectedPair.Left, expectedPair.Right));
+                        missing.Add(expectedPair);
+                    }
+                }
+
+                throw new Exception("Invalid pairs detected\r\n " + errorSb.ToString());
             }
 
             var outputDir = new DirectoryInfo(outputPath);

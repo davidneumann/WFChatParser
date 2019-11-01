@@ -245,7 +245,7 @@ namespace DebugCLI
         private static void ParseChatImage()
         {
             //var filePath = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Validation Inputs\error_blurry1.png";
-            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("384fa372-61ce-433a-a623-03a79cfb96e8.png")))
+            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("new_bad_chat.png")))
             {
                 using (var bitmap = new Bitmap(filePath))
                 {
@@ -1567,6 +1567,36 @@ namespace DebugCLI
                     output.Append(chars[j]);
                     output.Append(' ');
                 }
+            }
+
+            //Add missing (char) [
+            //] [ must be the first item
+            output.Append(']');
+            output.Append(' ');
+            output.Append('[');
+            output.Append(' ');
+            for (int i = 0; i < chars.Length; i++)
+            {
+                if (chars[i] == ']')
+                    continue;
+
+                var suffix = "[";
+                output.Append(chars[i]);
+                output.Append(' ');
+                output.Append(suffix);
+                output.Append(' ');
+            }
+
+            //Add missing [ (char)
+            for (int i = 0; i < chars.Length; i++)
+            {
+                var prefix = '[';
+                if (chars[i] == ']')
+                    continue;
+                output.Append(prefix);
+                output.Append(' ');
+                output.Append(chars[i]);
+                output.Append(' ');
             }
 
             var slice = 0;
