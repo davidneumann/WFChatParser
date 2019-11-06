@@ -45,7 +45,8 @@ namespace WFImageParser
                 if (!_valueMapMask[x, y])
                 {
                     var hsvPixel = _converter.ToHsv(_image[x, y]);
-                    var v = Math.Max(0,(hsvPixel.V - 0.21f)) / (1f - 0.21f);
+                    var v = Math.Max(0, (hsvPixel.V - 0.21f)) / (1f - 0.21f);
+                    //var v = hsvPixel.V;
                     var color = GetColor(x, y);
                     if (color == ChatColor.Unknown || color == ChatColor.Redtext)
                         v = 0;

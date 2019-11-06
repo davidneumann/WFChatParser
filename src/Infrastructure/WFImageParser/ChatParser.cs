@@ -153,6 +153,10 @@ namespace WFImageParser
                 if (x >= chatRect.Right || firstPixel == Point.Empty)
                     break;
 
+
+                //if (startX >= 98 && lineOffset >= 1779)
+                //    System.Diagnostics.Debugger.Break();
+
                 var targetMask = OCRHelpers.FindCharacterMask(firstPixel, image, prevMatchedCharacters, chatRect.Left, chatRect.Right, lineOffset, lineOffset + lineHeight);
 
                 if (currentLineType == LineType.Unknown)
@@ -591,12 +595,14 @@ namespace WFImageParser
                 }
                 if (strength / count < 0.12 && targetMask.Width > 6)
                 {
-                    for (int y2 = 0; y2 < lineHeight; y2++)
-                    {
-                        prevMatchedCharacters.Add(new Point(targetMask.MinX + x2, lineOffset + y2));
-                        didRemove = true;
-                        newXFocus = x2 + targetMask.MinX;
-                    }
+                    break;
+                    //This is handled in the ImageCache floor [x,y] getter
+                    //for (int y2 = 0; y2 < lineHeight; y2++)
+                    //{
+                    //    prevMatchedCharacters.Add(new Point(targetMask.MinX + x2, lineOffset + y2));
+                    //    didRemove = true;
+                    //    newXFocus = x2 + targetMask.MinX;
+                    //}
                 }
                 else
                     break;
@@ -1079,7 +1085,8 @@ namespace WFImageParser
                     //var results = new string[endLine - startLine];
                     for (int i = 0; i < offsets.Length; i++)
                     {
-                        var line = ParseLineBitmapScan(cache, 0.3f, xOffset, chatRect, lineHeight, offsets[i], 0, prevType);
+                        //var line = ParseLineBitmapScan(cache, 0.3f, xOffset, chatRect, lineHeight, offsets[i], 0, prevType);
+                        var line = ParseLineBitmapScan(cache, 0f, xOffset, chatRect, lineHeight, offsets[i], 0, prevType);
 
                         //Handle null results
                         if (line != null)
