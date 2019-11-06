@@ -76,7 +76,7 @@ namespace DataStream
                 }
             }
             _webSocket = new WebSocket(_websocketHostname.AbsoluteUri);
-            _webSocket.Log.Output = (_, __) => { };
+            _webSocket.Log.Output = (data, dataString) => { try { this.AsyncSendLogMessage(data.Message + "\n " + dataString).Wait(); } catch { } };
             _webSocket.OnMessage += _webSocket_OnMessage;
             _webSocket.OnOpen += _webSocket_OnOpen;
             if (_shouldReconnect)
@@ -89,6 +89,14 @@ namespace DataStream
             foreach (var message in _connectionStrings)
             {
                 _webSocket.Send(message);
+            }
+            if (_DEBUGCloseMessage != null && _DEBUGCloseMessage.Length > 0)
+            {
+                try
+                {
+                    AsyncSendDebugMessage("Connection lost: " + _DEBUGCloseMessage).Wait();
+                }
+                catch { }
             }
         }
 
@@ -108,7 +116,7 @@ namespace DataStream
         private BackgroundWorker _reconnectWorker = new BackgroundWorker();
         private string _rawMessagePrefix;
         private JsonSerializerSettings _jsonSettings = new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore, ContractResolver = new CompactDataSenderResolver() };
-        
+        private string _DEBUGCloseMessage;
 
         private void Reconnect()
         {
@@ -130,6 +138,7 @@ namespace DataStream
         {
             if (_shouldReconnect)
             {
+                _DEBUGCloseMessage = e.ToString();
                 Reconnect();
             }
         }
