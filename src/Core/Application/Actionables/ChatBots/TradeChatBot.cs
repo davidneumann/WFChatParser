@@ -277,7 +277,7 @@ namespace Application.Actionables.ChatBots
                         }
                     }
 
-                    if(lineFailed)
+                    if (lineFailed)
                     {
                         foreach (var line in chatLines)
                         {
@@ -342,7 +342,13 @@ namespace Application.Actionables.ChatBots
             chatMessage.Region = _warframeCredentials.Region;
             if (chatMessage.DEBUGREASON != null && chatMessage.DEBUGREASON.Length > 0)
             {
-                await _dataSender.AsyncSendDebugMessage("Model incorrect: " + chatMessage.DEBUGREASON);
+                using (var b = _gameCapture.GetFullImage())
+                {
+                    chatMessage.DEBUGIMAGE = Path.Combine("debug", DateTime.Now.Ticks + ".png");
+                    b.Save(chatMessage.DEBUGIMAGE);
+                    chatMessage.DEBUGREASON += "\nSee: " + chatMessage.DEBUGIMAGE;
+                    await _dataSender.AsyncSendDebugMessage(chatMessage.DEBUGREASON);
+                }
                 return null;
             }
             return chatMessage;
@@ -368,6 +374,16 @@ namespace Application.Actionables.ChatBots
         {
             var clr = line as ChatMessageLineResult;
             var chatMessage = MakeChatModel(clr);
+            if (chatMessage.DEBUGREASON != null && chatMessage.DEBUGREASON.Length > 0)
+            {
+                using (var b = _gameCapture.GetFullImage())
+                {
+                    chatMessage.DEBUGIMAGE = Path.Combine("debug", DateTime.Now.Ticks + ".png");
+                    b.Save(chatMessage.DEBUGIMAGE);
+                    chatMessage.DEBUGREASON += "\nSee: " + chatMessage.DEBUGIMAGE;
+                    await _dataSender.AsyncSendDebugMessage(chatMessage.DEBUGREASON);
+                }
+            }
 
             var rivenParseDetails = new List<RivenParseTaskWorkItemDetail>();
             foreach (var clickpoint in clr.ClickPoints)
@@ -529,7 +545,7 @@ namespace Application.Actionables.ChatBots
                 }
 
                 if (!Regex.Match(line.RawMessage, @"^(\[\d\d:\d\d\])\s*((?:\[DE\])?[-A-Za-z0-9._]+)[:\s]\s*(.+)").Success)
-                    debugReason = "Invalid username or timestamp!";
+                    debugReason = "Invalid username or timestamp!\n" + line.RawMessage;
             }
             catch { debugReason = "Bade name: " + username; }
             var cm = new ChatMessageModel()
@@ -819,7 +835,7 @@ namespace Application.Actionables.ChatBots
             {
 
                 //Yield to other tasks after 4 minutes of waiting
-                if(DateTime.Now.Subtract(start).TotalMinutes > 4f)
+                if (DateTime.Now.Subtract(start).TotalMinutes > 4f)
                 {
                     _currentState = BotStates.StartWarframe;
                     _requestingControl = true;
