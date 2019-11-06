@@ -67,7 +67,7 @@ namespace WFImageParser
                     var pixelFound = false;
                     for (int y = lineOffset; y < lineOffset + lineHeight; y++)
                     {
-                        if (image[i, y] > 0.66F)
+                        if (image[i, y] > 0.3f)
                         {
                             x = i;
                             pixelFound = true;

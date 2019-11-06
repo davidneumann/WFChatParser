@@ -132,7 +132,7 @@ namespace WFImageParser
                     var pixelFound = false;
                     for (int y = lineVertOffset; y < lineVertOffset + lineHeight; y++)
                     {
-                        if (cache[i, y] > 0.66F)
+                        if (cache[i, y] > 0.3f)
                         {
                             x = i;
                             pixelFound = true;

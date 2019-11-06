@@ -45,15 +45,14 @@ namespace WFImageParser
                 if (!_valueMapMask[x, y])
                 {
                     var hsvPixel = _converter.ToHsv(_image[x, y]);
-                    //var v = Math.Max(0,(hsvPixel.V - 0.21f)) / (1f - 0.21f);
-                    var v = Math.Max(0, (hsvPixel.V - 0.5f) / (1f - 0.5f));
+                    var v = Math.Max(0,(hsvPixel.V - 0.21f)) / (1f - 0.21f);
                     var color = GetColor(x, y);
                     if (color == ChatColor.Unknown || color == ChatColor.Redtext)
                         v = 0;
                     else if (color == ChatColor.ChatTimestampName)
                         v = Math.Min(1f, (v / 0.8f)); //Timestamps and username max out at 0.8
                     //else if (color == ChatColor.Redtext)
-                    //    v += 0.66F;
+                    //    v += 0.3f;
                     _valueMap[x, y] = v;
                     _valueMapMask[x, y] = true;
                 }

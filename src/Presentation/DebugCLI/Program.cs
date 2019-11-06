@@ -887,7 +887,7 @@ namespace DebugCLI
                     var scales = 1;
                     for (int i = 1; i <= scales; i++)
                     {
-                        //var factor = rand.NextDouble() * 0.66F + 0.66F;
+                        //var factor = rand.NextDouble() * 0.5f + 0.5f;
                         var factor = (1.0 / scales) * i;
                         using (var cleanedScaledDown = new Bitmap(clean, new Size((int)(clean.Width * factor), (int)(clean.Height * factor))))
                         {

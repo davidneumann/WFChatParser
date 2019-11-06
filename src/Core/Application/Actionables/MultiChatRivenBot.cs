@@ -96,7 +96,7 @@ namespace Application.Actionables
                             //var rivens = new List<ChatMessages.Model.Riven>();
                             //for (int i = 0; i < 5; i++)
                             //{
-                            //    var factor = rand.NextDouble() * 0.66F + 0.66F;
+                            //    var factor = rand.NextDouble() * 0.5f + 0.5f;
                             //    var scalingSW = new Stopwatch();
                             //    scalingSW.Start();
                             //    using (var cleanedScaledDown = new Bitmap(cleaned, new Size((int)(cleaned.Width * factor), (int)(cleaned.Height * factor))))
