@@ -158,7 +158,7 @@ namespace DataStream
         {
             if (_shouldReconnect)
             {
-                _DEBUGCloseMessage = $"Code: {e.Code} Reason: {e.Reason} Was clean: {e.WasClean}";
+                _DEBUGErrorMessages.Add($"Code: {e.Code} Reason: {e.Reason} Was clean: {e.WasClean}");
                 Reconnect();
             }
         }
