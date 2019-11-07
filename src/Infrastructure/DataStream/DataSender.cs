@@ -11,6 +11,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using WebSocketSharp;
 
@@ -32,6 +33,8 @@ namespace DataStream
         public event EventHandler<SaveEventArgs> RequestSaveAll;
 
         private bool _shouldReconnect;
+
+        private List<string> _DEBUGErrorMessages = new List<string>();
 
         private DateTimeOffset _lastReconnectTime = DateTimeOffset.MinValue;
         public DataSender(Uri websocketHostname, IEnumerable<string> connectionMessages, 
@@ -79,9 +82,19 @@ namespace DataStream
             _webSocket.Log.Output = (data, dataString) => { try { this.AsyncSendLogMessage(data.Message + "\n " + dataString).Wait(); } catch { } };
             _webSocket.OnMessage += _webSocket_OnMessage;
             _webSocket.OnOpen += _webSocket_OnOpen;
+            _webSocket.OnError += _webSocket_OnError;
             if (_shouldReconnect)
                 _webSocket.OnClose += _webSocket_OnClose;
             _webSocket.Connect();
+        }
+
+        private void _webSocket_OnError(object sender, WebSocketSharp.ErrorEventArgs e)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("Message: " + e.Message);
+            sb.AppendLine("Exception: " + e.Exception.Message);
+            sb.AppendLine("Json: " + JsonConvert.SerializeObject(e));
+            _DEBUGErrorMessages.Add(sb.ToString());
         }
 
         private void _webSocket_OnOpen(object sender, EventArgs e)
@@ -90,13 +103,21 @@ namespace DataStream
             {
                 _webSocket.Send(message);
             }
-            if (_DEBUGCloseMessage != null && _DEBUGCloseMessage.Length > 0)
+            if (_DEBUGErrorMessages.Count > 0)
             {
-                try
+                var wasError = false;
+                foreach (var message in _DEBUGErrorMessages.ToArray())
                 {
-                    AsyncSendDebugMessage("Connection lost: " + _DEBUGCloseMessage).Wait();
+                    try
+                    {
+                        AsyncSendDebugMessage("Connection lost: " + message).Wait();
+                        _DEBUGErrorMessages.Remove(message);
+                    }
+                    catch { wasError = true; }
                 }
-                catch { }
+
+                if (!wasError)
+                    _DEBUGErrorMessages.Clear();
             }
         }
 
@@ -116,7 +137,6 @@ namespace DataStream
         private BackgroundWorker _reconnectWorker = new BackgroundWorker();
         private string _rawMessagePrefix;
         private JsonSerializerSettings _jsonSettings = new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore, ContractResolver = new CompactDataSenderResolver() };
-        private string _DEBUGCloseMessage;
 
         private void Reconnect()
         {
