@@ -834,10 +834,14 @@ namespace WFImageParser
                                 characterPixelsMatched += character.WeightMappings[x, y];// + targetMask.SoftMask[x,y];
                                 matchingPixels.Add(new Point(x + targetMask.MinX, y + lineOffset));
                             }
+                            else if (character.Name == "l_lower" && y <= 2 && !targetMask.Mask[x, y])
+                                characterPixelsMatched -= 0.5f;
                             else if (character.TotalWeights > 55 && targetMask.Mask[x, y] && !character.VMask[x, y])
                                 characterPixelsMatched -= targetMask.SoftMask[x, y] / 2;
                             else if (character.TotalWeights > 55 && character.VMask[x, y] && !targetMask.Mask[x, y])
                                 characterPixelsMatched -= character.WeightMappings[x, y] / 4;
+                            //else if (character.Width <= 4 && character.VMask[x, y] && !targetMask.Mask[x, y])
+                            //    characterPixelsMatched -= Math.Min(1f, character.WeightMappings[x,y] * 1.5f) * (character.Height - y / character.Height);
                             //else if (targetWidth > _maxCharWidth * 0.75 && x <= targetWidth / 3 && !character.VMask[x, y] && targetMask.Mask[x, y]) //The first few pixels are most important. Punish missing them
                             //{
                             //    characterPixelsMatched--;
@@ -919,12 +923,12 @@ namespace WFImageParser
             var image = new ImageCache(chatLine);
             var lineOffset = 0;
             var lineHeight = chatLine.Height;
-            var minV = 0.3f;
+            var minV = 0f;
             string timestamp = string.Empty;
             for (int x = startX; x < chatLine.Width; x++)
             {
                 //Advance until next pixel
-                Point firstPixel = GetFirstPixel(image, 0.3f, ref chatRect, 34, 0, endX, prevMatchedCharacters, ref x);
+                Point firstPixel = GetFirstPixel(image, 0f, ref chatRect, 34, 0, endX, prevMatchedCharacters, ref x);
 
                 //Make sure we didn't escape
                 if (x >= chatRect.Right || firstPixel == Point.Empty)
