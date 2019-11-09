@@ -353,7 +353,7 @@ namespace WFImageParser
             encodedName = encodedName.Replace(".png", "").Replace(".txt", "").Replace("alt_", "");
             if (encodedName.Contains("___"))
             {
-                return encodedName.Split(new string[] { "___" }, StringSplitOptions.RemoveEmptyEntries).Aggregate("", (acc, iter) => acc + iter);
+                return encodedName.Split(new string[] { "___" }, StringSplitOptions.RemoveEmptyEntries).Aggregate("", (acc, iter) => acc + GetCharacterName(iter));
             }
             if (encodedName.EndsWith("_upper"))
                 encodedName = encodedName.Substring(0, encodedName.IndexOf('_')).ToUpper();
