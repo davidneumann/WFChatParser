@@ -57,14 +57,14 @@ namespace DebugCLI
             //VerifyNoErrors(2);
             //TestScreenHandler();
             //TestBot();
-            ParseChatImage();
+            //ParseChatImage();
             //TessShim();
             //NewRivenShim();
             //ChatMovingShim();
             //ParseRivenImage();
             //ChatLineExtractorShim();
             //GenerateCharStrings();
-            //TrainOnImages();
+            TrainOnImages();
             //TrainSpacesOnImages();
         }
 
@@ -1423,11 +1423,13 @@ namespace DebugCLI
 
         private static void TrainOnImages()
         {
+            var sourceDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\Spaces";
+            var outputDir = "newnewnewdata";
             var trainer = new OCRTrainer();
-            trainer.TrainOnImages(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Images", "newnewdata");
+            trainer.TrainOnImages(sourceDir, outputDir);
 
             var spaceTrainer = new OCRSpaceTrainer();
-            spaceTrainer.TrainOnImages(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Images", "newnewdata", GetSupportedCharacters().ToCharArray());
+            spaceTrainer.TrainOnImages(sourceDir, outputDir, GetSupportedCharacters().ToCharArray());
         }
 
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
@@ -1547,46 +1549,36 @@ namespace DebugCLI
             return errorCount;
         }
 
+        private class GeneratedPair
+        {
+            public char Left { get; set; }
+            public char Right { get; set; }
+        }
+
         private static void GenerateCharStrings(int count = 35)
         {
             string chars = GetSupportedCharacters();
-            //var str = chars;
-            //while (str.Length > 80)
-            //{
-            //    Console.WriteLine(str.Substring(0, 80));
-            //    str = str.Substring(80);
-            //}
 
-
-            var output = new StringBuilder();
+            var pairs = new List<GeneratedPair>();
             for (int i = 0; i < chars.Length; i++)
             {
                 var prefix = chars[i];
                 for (int j = 0; j < chars.Length; j++)
                 {
-                    output.Append(prefix);
-                    output.Append(' ');
-                    output.Append(chars[j]);
-                    output.Append(' ');
+                    pairs.Add(new GeneratedPair() { Left = prefix, Right = chars[j] });
                 }
             }
 
             //Add missing (char) [
             //] [ must be the first item
-            output.Append(']');
-            output.Append(' ');
-            output.Append('[');
-            output.Append(' ');
+            pairs.Add(new GeneratedPair() { Left = ']', Right = '[' });
             for (int i = 0; i < chars.Length; i++)
             {
                 if (chars[i] == ']')
                     continue;
 
-                var suffix = "[";
-                output.Append(chars[i]);
-                output.Append(' ');
-                output.Append(suffix);
-                output.Append(' ');
+                var suffix = '[';
+                pairs.Add(new GeneratedPair() { Left = chars[i], Right = suffix });
             }
 
             //Add missing [ (char)
@@ -1595,73 +1587,87 @@ namespace DebugCLI
                 var prefix = '[';
                 if (chars[i] == ']')
                     continue;
-                output.Append(prefix);
-                output.Append(' ');
-                output.Append(chars[i]);
-                output.Append(' ');
+                pairs.Add(new GeneratedPair() { Left = prefix, Right = chars[i] });
             }
 
-            var slice = 0;
-            var lines = 0;
-            using (var atlas = new StreamWriter("space_atlas.txt"))
-            {
-                var str = output.ToString();
-                var sliceContents = new List<string>();
-                while (str.Length > 80)
-                {
-                    string line = str.Substring(0, 80);
-                    Console.WriteLine(line);
-                    atlas.WriteLine(line);
-                    sliceContents.Add(line);
-                    lines++;
-                    if (sliceContents.Count >= 27)
-                    {
-                        SaveSlice(slice++, sliceContents);
-                        sliceContents.Clear();
-                    }
-                    str = str.Substring(80);
-                }
-                if (str.Length > 0)
-                {
-                    Console.WriteLine(str);
-                    atlas.WriteLine(str);
-                    sliceContents.Add(str);
-                    lines++;
-                    SaveSlice(slice++, sliceContents);
-                }
-            }
 
-            //var rand = new Random();
-            //using (var fout = new StreamWriter("charstrings.txt"))
+            SaveSafeOutputToFile(GetSafeOutputFromPairs(pairs, " "), "space_atlas.txt", "space_slice");
+            //using (var atlas = new StreamWriter("space_atlas.txt"))
             //{
-            //    var sb = new StringBuilder();
-            //    foreach (var character in chars)
+            //    var slice = 0;
+            //    var lines = 0;
+            //    string str = GetSafeOutputFromPairs(pairs, ' ');
+            //    var sliceContents = new List<string>();
+            //    while (str.Length > 80)
             //    {
-            //        //sb.Clear();
-            //        //foreach (var otherCharacter in chars)
-            //        //{
-            //        //    sb.Append(character);
-            //        //    sb.Append(otherCharacter);
-            //        //    sb.Append(' ');
-            //        //}
-            //        //fout.WriteLine(sb.ToString().Trim());
-            //        //sb.Append('.');
-            //        //sb.Append('[');
-            //        //sb.Append(character);
-            //        //sb.AppendLine();
-            //    }
-            //    //fout.WriteLine(sb.ToString() + " [");
-            //    for (int i = 0; i < count; i++)
-            //    {
-            //        sb.Clear();
-            //        foreach (var character in chars.OrderBy(x => rand.Next()))
+            //        string line = str.Substring(0, 80);
+            //        Console.WriteLine(line);
+            //        atlas.WriteLine(line);
+            //        sliceContents.Add(line);
+            //        lines++;
+            //        if (sliceContents.Count >= 27)
             //        {
-            //            sb.Append(character + " ");
+            //            SaveSlice(slice++, sliceContents, "space_slice");
+            //            sliceContents.Clear();
             //        }
-            //        Console.WriteLine(sb.ToString().Trim() + "[" + "\n");
-            //        fout.WriteLine(sb.ToString() + " [");
+            //        str = str.Substring(80);
+            //    }
+            //    if (str.Length > 0)
+            //    {
+            //        Console.WriteLine(str);
+            //        atlas.WriteLine(str);
+            //        sliceContents.Add(str);
+            //        lines++;
+            //        SaveSlice(slice++, sliceContents, "space_slice");
             //    }
             //}
+
+            //Generate two character combos for overlap detection
+            SaveSafeOutputToFile(GetSafeOutputFromPairs(pairs, string.Empty), "overlaps.txt", "overlap_slice");
+        }
+
+        private static void SaveSafeOutputToFile(string safeOutput, string outputFileName, string slicePrefix)
+        {
+            var lines = safeOutput.Split(new char[] { '\n' });
+            var groupCount = lines.Length / 27;
+            if (lines.Length % 27 != 0)
+                groupCount++;
+            for (int i = 0; i < groupCount; i++)
+            {
+                var startIndex = i * 27;
+                var count = 27;
+                if (startIndex + count >= lines.Length)
+                    count = lines.Length - startIndex;
+                SaveSlice(i, lines.Skip(startIndex).Take(count).Select(str => str.Trim()), slicePrefix);
+            }
+
+            File.WriteAllLines(outputFileName, lines.Select(str => str.Trim()));
+        }
+
+        private static string GetSafeOutputFromPairs(List<GeneratedPair> pairs, string seperator)
+        {
+            var lineCount = 0;
+            var sb = new StringBuilder();
+            foreach (var pair in pairs)
+            {
+                var subStr = $"{pair.Left}{seperator}{pair.Right} ";
+                if (lineCount + subStr.Length > 80)
+                {
+                    sb.AppendLine();
+                    if (subStr.StartsWith("!") || subStr.StartsWith("/"))
+                        subStr = ". " + subStr;
+                    lineCount = subStr.Length;
+                }
+                else
+                {
+                    if (lineCount == 0 && (subStr.StartsWith("!") || subStr.StartsWith("/")))
+                        subStr = ". " + subStr;
+                    lineCount += subStr.Length;
+                }
+                sb.Append(subStr);
+            }
+
+            return sb.ToString();
         }
 
         private static string GetSupportedCharacters()
@@ -1669,9 +1675,22 @@ namespace DebugCLI
             return "! # $ % & ' ( ) * + - . / 0 1 2 3 4 5 6 7 8 9 : ; < = > ? @ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z \\ ] ^ _ a b c d e f g h i j k l m n o p q r s t u v w x y z { | } ,".Replace(" ", "");
         }
 
-        private static void SaveSlice(int v, List<string> sliceContents)
+        private static void SaveSlice(int sliceNumber, IEnumerable<string> sliceContents, string sliceType)
         {
-            File.WriteAllLines("slice_" + v.ToString() + ".txt", sliceContents);
+            var output = sliceContents;
+            if (sliceContents.Count() == 27)
+                output = sliceContents.Prepend("CLEAR").Append("CLEAR");
+            else
+            {
+                var emptyNeeded = 27 - sliceContents.Count();
+                var newOutput = new List<string>(sliceContents);
+                for (int i = 0; i < emptyNeeded; i++)
+                {
+                    newOutput.Add("EMPTY");
+                }
+                output = newOutput.Prepend("CLEAR").Append("CLEAR");
+            }
+            File.WriteAllLines(sliceType.TrimEnd('_') + "_" + sliceNumber.ToString() + ".txt", output);
         }
 
         private static void SpaceTest(int count = 35)

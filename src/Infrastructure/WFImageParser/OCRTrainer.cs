@@ -137,9 +137,12 @@ namespace WFImageParser
             var characters = new List<TrainingSampleCharacter>();
 
             Console.WriteLine("Looking at training images");
+            var lastLineLength = 0;
             for (int i = 0; i < trainingImagePaths.Length; i++)
             {
+                Console.Write("\r".PadRight(lastLineLength, ' '));
                 Console.Write("\r" + trainingImagePaths[i]);
+                lastLineLength = trainingImagePaths[i].Length + 1;
                 var correctText = File.ReadAllLines(trainingTextPaths[i]).Select(line => line.Replace(" ", "").ToArray()).ToList();
                 var results = TrainOnImage(trainingImagePaths[i], correctText, xOffset);
                 results.SelectMany(list => list).ToList().ForEach(t => characters.Add(t));
