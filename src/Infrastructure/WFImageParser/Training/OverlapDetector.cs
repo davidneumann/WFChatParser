@@ -29,14 +29,14 @@ namespace WFImageParser.Training
                             //throw new Exception("Overlap detected on " + input + " chat line " + (i + 1) + " y of " + OCRHelpers.LineOffsets[i]);
 
                             //TODO: implement this
-                            //List<(char left, char right)> touchingChars = FindTouchingChars(cache, i, expectedLines[i].Replace(" ", ""));
+                            List<(char left, char right)> touchingChars = FindTouchingChars(cache, i, expectedLines[i].Replace(" ", "").ToCharArray());
                         }
                     }
                 }
             }
         }
 
-        private static List<(char left, char right)> FindTouchingChars(ImageCache cache, int i, string v)
+        private static List<(char left, char right)> FindTouchingChars(ImageCache cache, int i, char[] expectedCharacters)
         {
             throw new NotImplementedException();
         }

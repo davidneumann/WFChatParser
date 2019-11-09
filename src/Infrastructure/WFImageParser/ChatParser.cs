@@ -17,12 +17,13 @@ using System.Numerics;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using WFImageParser.GlyphRecognition;
 
 namespace WFImageParser
 {
-    public class ChatParser : IChatParser
+    public partial class ChatParser : IChatParser
     {
-        private List<CharacterDetails> _scannedCharacters = new List<CharacterDetails>();
+        private List<GlyphDetails> _scannedCharacters = new List<GlyphDetails>();
         private Dictionary<string, Dictionary<string, int>> _gapPairs = new Dictionary<string, Dictionary<string, int>>();
         private int _maxCharWidth = 0;
         private int _minCharWidth = int.MaxValue;
@@ -58,7 +59,7 @@ namespace WFImageParser
             {
                 foreach (var file in Directory.GetFiles("ocrdata").Where(f => f.EndsWith(".png")))
                 {
-                    var character = new CharacterDetails()
+                    var character = new GlyphDetails()
                     {
                         Name = (new FileInfo(file)).Name.Replace(".png", ""),
                         TotalWeights = 0f
@@ -121,13 +122,6 @@ namespace WFImageParser
         private Queue<string> _sentItems = new Queue<string>();
         private ILogger _logger;
 
-        public class SimpleGapPair
-        {
-            public string Left { get; set; }
-            public string Right { get; set; }
-            public int Gap { get; set; }
-        }
-
         private BaseLineParseResult ParseLineBitmapScan(ImageCache image, float minV, int xOffset, Rectangle chatRect, int lineHeight, int lineOffset, float spaceWidth, LineType prevLineType)
         {
             BaseLineParseResult result = null;
@@ -138,7 +132,7 @@ namespace WFImageParser
             var lastCharacterEndX = startX;
             var prevMatchedCharacters = new CoordinateList();
             TargetMask prevTargetMask = null;
-            CharacterDetails lastCharacterDetails = null;
+            GlyphDetails lastCharacterDetails = null;
             var wordStartX = -1;
             var currentWord = new StringBuilder();
             List<ClickPoint> clickPoints = new List<ClickPoint>();
@@ -212,7 +206,7 @@ namespace WFImageParser
 
                 if (endX > startX && targetMask.PixelCount > 7)
                 {
-                    Tuple<float, CharacterDetails, CoordinateList> bestFit = GetBestMatchingCharacter(image, lineHeight, lineOffset, targetMask);
+                    Tuple<float, GlyphDetails, CoordinateList> bestFit = GetBestMatchingCharacter(image, lineHeight, lineOffset, targetMask);
 
                     if (bestFit != null && bestFit.Item2 != null && endX != lastCharacterEndX)
                     {
@@ -354,7 +348,7 @@ namespace WFImageParser
             else return null;
         }
 
-        private static string GetCharacterName(Tuple<float, CharacterDetails, CoordinateList> bestFit)
+        private static string GetCharacterName(Tuple<float, GlyphDetails, CoordinateList> bestFit)
         {
             var name = bestFit.Item2.Name.Replace(".png", "").Replace(".txt", "").Replace("alt_", "");
             if (name.EndsWith("_upper"))
@@ -382,7 +376,7 @@ namespace WFImageParser
             return name;
         }
 
-        private Tuple<float, CharacterDetails, CoordinateList> GetBestMatchingCharacter(ImageCache image, int lineHeight, int lineOffset, TargetMask targetMask)
+        private Tuple<float, GlyphDetails, CoordinateList> GetBestMatchingCharacter(ImageCache image, int lineHeight, int lineOffset, TargetMask targetMask)
         {
             var bestFit = FastGuessPartialCharacter(targetMask, lineOffset);
             //Try shifting
@@ -575,7 +569,7 @@ namespace WFImageParser
 
             //We can allow loose fits on smaller characters
             if (bestFit != null && bestFit.Item1 < 0.20f && bestFit.Item2 != null)
-                bestFit = new Tuple<float, CharacterDetails, CoordinateList>(float.MinValue, null, null);
+                bestFit = new Tuple<float, GlyphDetails, CoordinateList>(float.MinValue, null, null);
 
             return bestFit;
         }
@@ -712,7 +706,7 @@ namespace WFImageParser
             return foundRiven;
         }
 
-        private Tuple<float, CharacterDetails, CoordinateList> FastGuessCharacter(TargetMask targetMask, int lineOffset)
+        private Tuple<float, GlyphDetails, CoordinateList> FastGuessCharacter(TargetMask targetMask, int lineOffset)
         {
             var targetWidth = targetMask.Width + 2;
 
@@ -725,7 +719,7 @@ namespace WFImageParser
             //Else it will be anything as we may be dealing with a partial match
 
             var bestMatchConf = 0f;
-            CharacterDetails bestMatchCharacter = null;
+            GlyphDetails bestMatchCharacter = null;
             CoordinateList bestMatchingPixels = null;
 
             foreach (var character in cannidates)
@@ -801,20 +795,20 @@ namespace WFImageParser
                 }
             }
 
-            return new Tuple<float, CharacterDetails, CoordinateList>(bestMatchConf, bestMatchCharacter, bestMatchingPixels);
+            return new Tuple<float, GlyphDetails, CoordinateList>(bestMatchConf, bestMatchCharacter, bestMatchingPixels);
         }
 
-        private Tuple<float, CharacterDetails, CoordinateList> FastGuessPartialCharacter(TargetMask targetMask, int lineOffset, bool takeLeastBad = false)
+        private Tuple<float, GlyphDetails, CoordinateList> FastGuessPartialCharacter(TargetMask targetMask, int lineOffset, bool takeLeastBad = false)
         {
             var targetWidth = targetMask.Width;
             var minWidth = takeLeastBad ? 0 : targetWidth * 0.5f;
             var leastBadMatch = float.MinValue;
-            CharacterDetails leastBadCharacter = null;
+            GlyphDetails leastBadCharacter = null;
             CoordinateList leastBadMatchingPixels = null;
             foreach (var group in _scannedCharacters.Where(c => c.Width >= minWidth && c.Width <= targetWidth + 2).OrderByDescending(c => c.Width).GroupBy(c => c.Width))
             {
                 var bestMatch = float.MinValue;
-                CharacterDetails bestCharacter = null;
+                GlyphDetails bestCharacter = null;
                 CoordinateList bestMatchingPixels = null;
                 foreach (var character in group)
                 {
@@ -880,11 +874,11 @@ namespace WFImageParser
                 //var coverage = cleanTargetPixels.Where(p => p.X - startX > 0 && p.X - startX < character.Width && character.VMask[p.X - startX, p.Y - lineOffset] > minV).Count() / (float)character.PixelCount;
                 if (bestMatch > 0.92 || (bestMatch > 0.7 && takeLeastBad))
                 {
-                    return new Tuple<float, CharacterDetails, CoordinateList>(bestMatch, bestCharacter, bestMatchingPixels);
+                    return new Tuple<float, GlyphDetails, CoordinateList>(bestMatch, bestCharacter, bestMatchingPixels);
                 }
             }
             if (takeLeastBad && leastBadCharacter != null)
-                return new Tuple<float, CharacterDetails, CoordinateList>(leastBadMatch, leastBadCharacter, leastBadMatchingPixels);
+                return new Tuple<float, GlyphDetails, CoordinateList>(leastBadMatch, leastBadCharacter, leastBadMatchingPixels);
             return null;
         }
 
@@ -915,7 +909,7 @@ namespace WFImageParser
             var lastCharacterEndX = startX;
             var prevMatchedCharacters = new CoordinateList();
             TargetMask prevTargetMask = null;
-            CharacterDetails lastCharacterDetails = null;
+            GlyphDetails lastCharacterDetails = null;
             var wordStartX = -1;
             var currentWord = new StringBuilder();
             var currentLineType = LineType.Unknown;
@@ -981,7 +975,7 @@ namespace WFImageParser
 
                 if (endX > startX && targetMask.PixelCount > 10)
                 {
-                    Tuple<float, CharacterDetails, CoordinateList> bestFit = GetBestMatchingCharacter(image, lineHeight, lineOffset, targetMask);
+                    Tuple<float, GlyphDetails, CoordinateList> bestFit = GetBestMatchingCharacter(image, lineHeight, lineOffset, targetMask);
 
                     if (bestFit != null && bestFit.Item2 != null && endX != lastCharacterEndX)
                     {
@@ -1221,17 +1215,6 @@ namespace WFImageParser
         {
             var duplicateCache = new Queue<string>(_sentItems.Where(i => i != key));
             _sentItems = duplicateCache;
-        }
-
-        private class CharacterDetails
-        {
-            public bool[,] VMask { get; set; }
-            public float[,] WeightMappings { get; set; }
-            //public int PixelCount { get; set; }
-            public string Name { get; set; }
-            public int Width { get; set; }
-            public int Height { get; set; }
-            public float TotalWeights { get; internal set; }
         }
     }
 }
