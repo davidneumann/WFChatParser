@@ -93,8 +93,7 @@ namespace WFImageParser
         private void TrainOnImage(string imagePath, string textPath, List<SimpleGapPair> results)
         {
             Console.WriteLine("Training on image {0}. Total results: {1}", imagePath, results.Count);
-            var ic = new ImageCleaner();
-            ic.SaveChatColors(imagePath, "debug.png");
+            ImageCleaner.SaveSoftMask(imagePath, "debug.png");
             var expectedLines = File.ReadAllLines(textPath).Select(line => line.Replace(" ", "")).ToArray();
 
             using (Image<Rgba32> rgbImage = Image.Load(imagePath))

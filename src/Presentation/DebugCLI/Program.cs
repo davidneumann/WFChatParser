@@ -254,9 +254,8 @@ namespace DebugCLI
                 using (var bitmap = new Bitmap(filePath))
                 {
                     var cp = new ChatParser(new FakeLogger());
-                    var ic = new ImageCleaner();
                     //ic.SaveSoftMask(filePath, "error_blurry1_white.png");
-                    ic.SaveSoftMask(filePath, filePath.Replace(".png", "_white.png"));
+                    ImageCleaner.SaveSoftMask(filePath, filePath.Replace(".png", "_white.png"));
                     var lines = cp.ParseChatImage(bitmap);
                     var sb = new StringBuilder();
                     foreach (var line in lines)
@@ -272,9 +271,7 @@ namespace DebugCLI
         private static void TestRedText()
         {
             var input = @"C:\Users\david\OneDrive\Documents\WFChatParser\ErrorImages\Screenshot (175).png";
-            var cleaner = new ImageCleaner();
-            cleaner.SaveChatColors(input, "test.png");
-            cleaner.SaveSoftMask(input, "test2.png");
+            ImageCleaner.SaveSoftMask(input, "test2.png");
             var cp = new ChatParser(new FakeLogger());
             var lines = cp.ParseChatImage(new Bitmap(input), false, false, 50);
         }
