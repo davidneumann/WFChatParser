@@ -55,6 +55,8 @@ namespace WFImageParser
                         //Timestamps and username max out at 0.8
                         v = Math.Min(1f, (v / 0.8f));
                     }
+                    else if (color == ChatColor.Text)
+                        v = Math.Min(1f, (v / 0.937f));
                     //else if (color == ChatColor.Redtext)
                     //    v += 0.3f;
 
