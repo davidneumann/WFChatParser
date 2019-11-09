@@ -13,7 +13,10 @@ namespace WFImageParser.Training
         public static void DetectOverlaps(string sourceDir)
         {
             if (Directory.Exists(Path.Combine("overlaps", "hits")))
+            {
                 Directory.Delete(Path.Combine("overlaps", "hits"), true);
+                System.Threading.Thread.Sleep(1000);
+            }
             Directory.CreateDirectory(Path.Combine("overlaps", "hits"));
 
             var inputs = GetValidInputs(sourceDir);
@@ -98,7 +101,7 @@ namespace WFImageParser.Training
                             }
                             maskBitmap.Save(Path.Combine("overlaps", "hits",
                                 ImageCleaner.ConvertCharacterToName(expectedCharacters[characterIndex])
-                                + "___"
+                                + ","
                                 + ImageCleaner.ConvertCharacterToName(expectedCharacters[characterIndex + 1])
                                 + ".png"));
 

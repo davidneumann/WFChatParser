@@ -351,9 +351,9 @@ namespace WFImageParser
         private static string GetCharacterName(string encodedName)//Tuple<float, GlyphDetails, CoordinateList> bestFit)
         {
             encodedName = encodedName.Replace(".png", "").Replace(".txt", "").Replace("alt_", "");
-            if (encodedName.Contains("___"))
+            if (encodedName.Contains(","))
             {
-                return encodedName.Split(new string[] { "___" }, StringSplitOptions.RemoveEmptyEntries).Aggregate("", (acc, iter) => acc + GetCharacterName(iter));
+                return encodedName.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Aggregate("", (acc, iter) => acc + GetCharacterName(iter));
             }
             if (encodedName.EndsWith("_upper"))
                 encodedName = encodedName.Substring(0, encodedName.IndexOf('_')).ToUpper();
