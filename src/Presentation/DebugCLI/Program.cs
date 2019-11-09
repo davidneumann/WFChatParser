@@ -66,7 +66,7 @@ namespace DebugCLI
             //ChatLineExtractorShim();
             //GenerateCharStrings();
             //TrainOnImages();
-            FindOverlappingLines();
+            //FindOverlappingLines();
             //TrainSpacesOnImages();
         }
 
@@ -1437,12 +1437,12 @@ namespace DebugCLI
         private static void FindOverlappingLines()
         {
             const string sourceDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\Overlaps";
-            if (!Directory.Exists("overlaps"))
-                Directory.CreateDirectory("overlaps");
-            foreach (var image in Directory.GetFiles(sourceDir).Where(f => f.EndsWith(".png")))
-            {
-                ImageCleaner.SaveSoftMask(image, Path.Combine("overlaps", (new FileInfo(image)).Name));
-            }
+            //if (!Directory.Exists("overlaps"))
+            //    Directory.CreateDirectory("overlaps");
+            //foreach (var image in Directory.GetFiles(sourceDir).Where(f => f.EndsWith(".png")))
+            //{
+            //    ImageCleaner.SaveSoftMask(image, Path.Combine("overlaps", (new FileInfo(image)).Name));
+            //}
             OverlapDetector.DetectOverlaps(sourceDir);
         }
 

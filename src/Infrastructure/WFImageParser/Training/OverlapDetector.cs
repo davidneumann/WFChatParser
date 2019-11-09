@@ -4,6 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
+using WFImageParser.GlyphRecognition;
 
 namespace WFImageParser.Training
 {
@@ -11,6 +12,10 @@ namespace WFImageParser.Training
     {
         public static void DetectOverlaps(string sourceDir)
         {
+            if (Directory.Exists(Path.Combine("overlaps", "hits")))
+                Directory.Delete(Path.Combine("overlaps", "hits"), true);
+            Directory.CreateDirectory(Path.Combine("overlaps", "hits"));
+
             var inputs = GetValidInputs(sourceDir);
             foreach (var input in inputs)
             {
@@ -36,9 +41,90 @@ namespace WFImageParser.Training
             }
         }
 
-        private static List<(char left, char right)> FindTouchingChars(ImageCache cache, int i, char[] expectedCharacters)
+        private static List<(char left, char right)> FindTouchingChars(ImageCache cache, int offsetIndex, char[] expectedCharacters)
         {
-            throw new NotImplementedException();
+            var chatRect = new Rectangle(4, 763, 3236, 1350);
+            var prevMatchedCharacters = new CoordinateList();
+            var characterIndex = 0;
+            var touchingChars = new List<(char left, char right)>();
+            for (int x = chatRect.Left; x < chatRect.Right; x++)
+            {
+                //Advance until next pixel
+                Point firstPixel = ChatParser.GetFirstPixel(cache, chatRect.Right, OCRHelpers.LINEHEIGHT, OCRHelpers.LineOffsets[offsetIndex], x, prevMatchedCharacters);
+
+                //Make sure we didn't escape
+                if (firstPixel == System.Drawing.Point.Empty)
+                    return touchingChars;
+
+                var targetMask = OCRHelpers.FindCharacterMask(firstPixel, cache, prevMatchedCharacters, chatRect.Left, chatRect.Right,
+                    OCRHelpers.LineOffsets[offsetIndex], OCRHelpers.LineOffsets[offsetIndex] + OCRHelpers.LINEHEIGHT);
+                if (targetMask.Width > 0)
+                {
+                    var possibleMatches = GlyphDatabase.KnownGlyphs.Where(g => g.Width >= targetMask.Width - 1 && g.Width <= targetMask.Width + 1);
+                    float bestDiff = float.NaN;
+                    foreach (var match in possibleMatches)
+                    {
+                        var maxWidth = Math.Max(targetMask.Width, match.Width);
+                        float diff = 0f;
+                        for (int scanX = 0; scanX < maxWidth; scanX++)
+                        {
+                            for (int scanY = 0; scanY < OCRHelpers.LINEHEIGHT; scanY++)
+                            {
+                                if (scanX >= targetMask.Width)
+                                    diff -= match.WeightMappings[scanX, scanY];
+                                else if (scanX >= match.Width)
+                                    diff -= targetMask.SoftMask[scanX, scanY];
+                                else
+                                    diff -= Math.Abs(match.WeightMappings[scanX, scanY] - targetMask.SoftMask[scanX, scanY]);
+                            }
+                        }
+                        if (float.IsNaN(bestDiff) || diff > bestDiff)
+                            bestDiff = diff;
+                    }
+
+                    if (float.IsNaN(bestDiff) || (-bestDiff / targetMask.SoftPixelCount) > 0.5f)
+                    {
+                        touchingChars.Add((expectedCharacters[characterIndex], expectedCharacters[characterIndex + 1]));
+                        using (var maskBitmap = new Bitmap(targetMask.Width, OCRHelpers.LINEHEIGHT))
+                        {
+                            for (int bitmapX = 0; bitmapX < maskBitmap.Width; bitmapX++)
+                            {
+                                for (int bitmapY = 0; bitmapY < maskBitmap.Height; bitmapY++)
+                                {
+                                    var value = (int)(targetMask.SoftMask[bitmapX, bitmapY] * 255);
+                                    var c = Color.FromArgb(value, value, value);
+                                    maskBitmap.SetPixel(bitmapX, bitmapY, c);
+                                }
+                            }
+                            maskBitmap.Save(Path.Combine("overlaps", "hits",
+                                ImageCleaner.ConvertCharacterToName(expectedCharacters[characterIndex])
+                                + "___"
+                                + ImageCleaner.ConvertCharacterToName(expectedCharacters[characterIndex + 1])
+                                + ".png"));
+
+                            characterIndex += 2;
+                        }
+                    }
+                    else
+                        characterIndex++;
+
+                    x = targetMask.MaxX;
+                    for (int maskX = 0; maskX < targetMask.Mask.GetLength(0); maskX++)
+                    {
+                        for (int maskY = 0; maskY < targetMask.Mask.GetLength(1); maskY++)
+                        {
+                            if (targetMask.Mask[maskX, maskY])
+                                prevMatchedCharacters.Add(targetMask.MinX + maskX, OCRHelpers.LineOffsets[offsetIndex] + maskY);
+                        }
+                    }
+                    continue;
+
+                }
+                else
+                    throw new Exception("Target mask of no width found!?");
+            }
+
+            return touchingChars;
         }
 
         private static int GetCharacterCount(int offsetIndex, ImageCache cache)
