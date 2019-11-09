@@ -58,7 +58,7 @@ namespace DebugCLI
             //VerifyNoErrors(2);
             //TestScreenHandler();
             //TestBot();
-            //ParseChatImage();
+            ParseChatImage();
             //TessShim();
             //NewRivenShim();
             //ChatMovingShim();
@@ -66,7 +66,7 @@ namespace DebugCLI
             //ChatLineExtractorShim();
             //GenerateCharStrings();
             //TrainOnImages();
-            FindOverlappingLines();
+            //FindOverlappingLines();
             //TrainSpacesOnImages();
         }
 
@@ -251,7 +251,7 @@ namespace DebugCLI
             //                            .Select(f => new FileInfo(f))
             //                            .Where(f => f.Name.StartsWith("637") && !f.Name.Contains("_white") && f.Name.EndsWith(".png"))
             //                            .Select(f => f.FullName))
-            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("637088513572425518.png")))
+            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("637088582867894820.png")))
             {
                 using (var bitmap = new Bitmap(filePath))
                 {
