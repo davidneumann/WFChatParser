@@ -9,7 +9,7 @@ using System.Linq;
 //using System.Drawing;
 using System.Text;
 
-namespace WFImageParser
+namespace WFImageParser.Training
 {
     public class OCRTrainer
     {
@@ -61,7 +61,7 @@ namespace WFImageParser
             for (int x = xOffset; x < chatRect.Right; x++)
             {
                 //Advance until next pixel
-                var firstPixel = Point.Empty;
+                var firstPixel = System.Drawing.Point.Empty;
                 for (int i = endX; i < chatRect.Right; i++)
                 {
                     var pixelFound = false;
@@ -71,7 +71,7 @@ namespace WFImageParser
                         {
                             x = i;
                             pixelFound = true;
-                            firstPixel = new Point(i, y);
+                            firstPixel = new System.Drawing.Point(i, y);
                             break;
                         }
                     }
@@ -83,7 +83,7 @@ namespace WFImageParser
                 }
 
                 //Make sure we didn't escape
-                if (x >= chatRect.Right || firstPixel == Point.Empty)
+                if (x >= chatRect.Right || firstPixel == System.Drawing.Point.Empty)
                     break;
 
                 startX = chatRect.Right;

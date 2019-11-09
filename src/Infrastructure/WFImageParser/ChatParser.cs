@@ -147,10 +147,11 @@ namespace WFImageParser
             for (int x = xOffset; x < chatRect.Right; x++)
             {
                 //Advance until next pixel
-                Point firstPixel = GetFirstPixel(image, minV, ref chatRect, lineHeight, lineOffset, endX, prevMatchedCharacters, ref x);
+                System.Drawing.Point firstPixel = GetFirstPixel(image, chatRect.Right, lineHeight, lineOffset, endX, prevMatchedCharacters);
+                x = firstPixel.X;
 
                 //Make sure we didn't escape
-                if (x >= chatRect.Right || firstPixel == Point.Empty)
+                if (x >= chatRect.Right || firstPixel == System.Drawing.Point.Empty)
                     break;
 
 
@@ -579,7 +580,7 @@ namespace WFImageParser
             return bestFit;
         }
 
-        private static void RemoveSeenPixels(ImageCache image, float minV, ref Rectangle chatRect, int lineHeight, int lineOffset, CoordinateList prevMatchedCharacters, ref int wordStartX, ref int x, ref Point firstPixel, ref TargetMask targetMask)
+        private static void RemoveSeenPixels(ImageCache image, float minV, ref Rectangle chatRect, int lineHeight, int lineOffset, CoordinateList prevMatchedCharacters, ref int wordStartX, ref int x, ref System.Drawing.Point firstPixel, ref TargetMask targetMask)
         {
             var didRemove = false;
             var newXFocus = targetMask.MinX;
@@ -618,7 +619,7 @@ namespace WFImageParser
                         {
                             x = i;
                             pixelFound = true;
-                            firstPixel = new Point(i, y);
+                            firstPixel = new System.Drawing.Point(i, y);
                             break;
                         }
                     }
@@ -634,19 +635,18 @@ namespace WFImageParser
                 wordStartX = targetMask.MinX;
         }
 
-        private static Point GetFirstPixel(ImageCache image, float minV, ref Rectangle chatRect, int lineHeight, int lineOffset, int endX, CoordinateList prevMatchedCharacters, ref int x)
+        internal static System.Drawing.Point GetFirstPixel(ImageCache image, int chatRectRight, int lineHeight, int lineOffset, int startX, CoordinateList prevMatchedCharacters)
         {
-            var firstPixel = Point.Empty;
-            for (int i = endX; i < chatRect.Right; i++)
+            var firstPixel = System.Drawing.Point.Empty;
+            for (int i = startX; i < chatRectRight; i++)
             {
                 var pixelFound = false;
                 for (int y = lineOffset; y < lineOffset + lineHeight; y++)
                 {
-                    if (image[i, y] > minV && !prevMatchedCharacters.Any(p => p.X == i && p.Y == y))
+                    if (image[i, y] > 0f && !prevMatchedCharacters.Any(p => p.X == i && p.Y == y))
                     {
-                        x = i;
                         pixelFound = true;
-                        firstPixel = new Point(i, y);
+                        firstPixel = new System.Drawing.Point(i, y);
                         break;
                     }
                 }
@@ -928,10 +928,11 @@ namespace WFImageParser
             for (int x = startX; x < chatLine.Width; x++)
             {
                 //Advance until next pixel
-                Point firstPixel = GetFirstPixel(image, 0f, ref chatRect, 34, 0, endX, prevMatchedCharacters, ref x);
+                System.Drawing.Point firstPixel = GetFirstPixel(image, chatRect.Right, 34, 0, endX, prevMatchedCharacters);
+                x = firstPixel.X;
 
                 //Make sure we didn't escape
-                if (x >= chatRect.Right || firstPixel == Point.Empty)
+                if (x >= chatRect.Right || firstPixel == System.Drawing.Point.Empty)
                     break;
 
                 var targetMask = OCRHelpers.FindCharacterMask(firstPixel, image, prevMatchedCharacters, chatRect.Left, chatRect.Right, 0, 34);

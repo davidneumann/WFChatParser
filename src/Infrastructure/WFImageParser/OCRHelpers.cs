@@ -14,7 +14,9 @@ namespace WFImageParser
     {
         internal static int[] LineOffsets = new int[] { 768, 818, 868, 917, 967, 1016, 1066, 1115, 1165, 1215, 1264, 1314, 1363, 1413, 1463, 1512, 1562, 1611, 1661, 1711, 1760, 1810, 1859, 1909, 1958, 2008, 2058 };
 
-        internal static List<Point> FindCharacterPixelPoints(Point firstPixel, ImageCache image, CoordinateList blacklistedPoints, int minX, int maxX, int minY, int maxY)
+        public static int LINEHEIGHT = 34;
+
+        internal static List<Point> FindCharacterPixelPoints(System.Drawing.Point firstPixel, ImageCache image, CoordinateList blacklistedPoints, int minX, int maxX, int minY, int maxY)
         {
             var characterPoints = new CoordinateList();
             AddConnectedPoints(characterPoints, firstPixel, image, blacklistedPoints, minX, maxX, minY, maxY);
@@ -25,14 +27,14 @@ namespace WFImageParser
             //Account for gaps such as in i or j
             for (int y = characterPoints.Where(p => p.X == midX).Max(p => p.Y)+1; y < maxY; y++)
             {
-                AddConnectedPoints(characterPoints, new Point(midX, y), image, blacklistedPoints, minX, maxX, minY, maxY);
+                AddConnectedPoints(characterPoints, new System.Drawing.Point(midX, y), image, blacklistedPoints, minX, maxX, minY, maxY);
             }
             //Scan up from new midpoint for gap characters that have a bit sticking out the front. Account for gaps like in ;
             midX = (int)characterPoints.Average(p => p.X);
             var highestY = characterPoints.Min(p => p.X == midX ? p.Y : maxY);
             for (int i = highestY; i >= minY; i--)
             {
-                AddConnectedPoints(characterPoints, new Point(midX, i), image, blacklistedPoints, minX, maxX, minY, maxY);
+                AddConnectedPoints(characterPoints, new System.Drawing.Point(midX, i), image, blacklistedPoints, minX, maxX, minY, maxY);
             }
             //Account for crazy gaps such as in %
             var foundNewPixels = false;
@@ -43,7 +45,7 @@ namespace WFImageParser
                 for (int y = characterPoints.Where(p => p.X == maxCharX).Min(p => p.Y)+1; y < minY + ((maxY - minY) * 0.75f); y++)
                 {
                     var origCount = characterPoints.Count;
-                    AddConnectedPoints(characterPoints, new Point(maxCharX, y), image, blacklistedPoints, minX, maxX, minY, maxY);
+                    AddConnectedPoints(characterPoints, new System.Drawing.Point(maxCharX, y), image, blacklistedPoints, minX, maxX, minY, maxY);
                     if (characterPoints.Count > origCount)
                         foundNewPixels = true;
                 }
@@ -62,11 +64,11 @@ namespace WFImageParser
             else
                 return 0f;
         }
-        private static void AddConnectedPoints(CoordinateList existingPoints, Point firstPixel, ImageCache image, CoordinateList blacklistedPoints, int minX, int maxX, int minY, int maxY)
+        private static void AddConnectedPoints(CoordinateList existingPoints, System.Drawing.Point firstPixel, ImageCache image, CoordinateList blacklistedPoints, int minX, int maxX, int minY, int maxY)
         {
             if (image[firstPixel.X, firstPixel.Y] <= 0 && firstPixel.X >= minX && firstPixel.X < maxX && firstPixel.Y >= minY && firstPixel.Y < maxY)
                 return;
-            var q = new Queue<Point>();
+            var q = new Queue<System.Drawing.Point>();
             if (!existingPoints.Exists(firstPixel))
             {
                 existingPoints.Add(firstPixel);
@@ -80,7 +82,7 @@ namespace WFImageParser
                     !existingPoints.Exists(n.X + 1, n.Y) && 
                     (blacklistedPoints == null || !blacklistedPoints.Exists(n.X + 1 , n.Y)))
                 {
-                    var np = new Point(n.X + 1, n.Y);
+                    var np = new System.Drawing.Point(n.X + 1, n.Y);
                     existingPoints.Add(np);
                     q.Enqueue(np);
                 }
@@ -89,7 +91,7 @@ namespace WFImageParser
                     !existingPoints.Exists(n.X - 1, n.Y) &&
                     (blacklistedPoints == null || !blacklistedPoints.Exists(n.X - 1, n.Y)))
                 {
-                    var np = new Point(n.X - 1, n.Y);
+                    var np = new System.Drawing.Point(n.X - 1, n.Y);
                     existingPoints.Add(np);
                     q.Enqueue(np);
                 }
@@ -98,7 +100,7 @@ namespace WFImageParser
                      !existingPoints.Exists(n.X, n.Y - 1) &&
                      (blacklistedPoints == null || !blacklistedPoints.Exists(n.X, n.Y - 1)))
                 {
-                    var np = new Point(n.X, n.Y - 1);
+                    var np = new System.Drawing.Point(n.X, n.Y - 1);
                     existingPoints.Add(np);
                     q.Enqueue(np);
                 }
@@ -107,7 +109,7 @@ namespace WFImageParser
                      !existingPoints.Exists(n.X, n.Y + 1) &&
                      (blacklistedPoints == null || !blacklistedPoints.Exists(n.X , n.Y + 1)))
                 {
-                    var np = new Point(n.X, n.Y + 1);
+                    var np = new System.Drawing.Point(n.X, n.Y + 1);
                     existingPoints.Add(np);
                     q.Enqueue(np);
                 }
@@ -119,7 +121,7 @@ namespace WFImageParser
             throw new NotImplementedException();
         }
 
-        internal static TargetMask FindCharacterMask(Point firstPixel, ImageCache image, CoordinateList blacklistedPoints, int minX, int maxX, int minY, int maxY)
+        internal static TargetMask FindCharacterMask(System.Drawing.Point firstPixel, ImageCache image, CoordinateList blacklistedPoints, int minX, int maxX, int minY, int maxY)
         {
             var points = FindCharacterPixelPoints(firstPixel, image, blacklistedPoints, minX, maxX, minY, maxY);
             var minPointX = points.Min(p => p.X);

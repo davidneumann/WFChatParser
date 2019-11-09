@@ -33,6 +33,7 @@ using static Application.ChatRivenBot;
 using Application.LogParser;
 using Application.Logger;
 using Application.ChatBoxParsing;
+using WFImageParser.Training;
 
 namespace DebugCLI
 {
@@ -64,7 +65,8 @@ namespace DebugCLI
             //ParseRivenImage();
             //ChatLineExtractorShim();
             //GenerateCharStrings();
-            TrainOnImages();
+            //TrainOnImages();
+            FindOverlappingLines();
             //TrainSpacesOnImages();
         }
 
@@ -1430,6 +1432,18 @@ namespace DebugCLI
 
             var spaceTrainer = new OCRSpaceTrainer();
             spaceTrainer.TrainOnImages(sourceDir, outputDir, GetSupportedCharacters().ToCharArray());
+        }
+
+        private static void FindOverlappingLines()
+        {
+            const string sourceDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\Overlaps";
+            if (!Directory.Exists("overlaps"))
+                Directory.CreateDirectory("overlaps");
+            foreach (var image in Directory.GetFiles(sourceDir).Where(f => f.EndsWith(".png")))
+            {
+                ImageCleaner.SaveSoftMask(image, Path.Combine("overlaps", (new FileInfo(image)).Name));
+            }
+            OverlapDetector.DetectOverlaps(sourceDir);
         }
 
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)

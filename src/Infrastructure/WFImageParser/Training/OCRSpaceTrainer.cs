@@ -9,7 +9,7 @@ using System.Linq;
 using System.Text;
 using static WFImageParser.ChatParser;
 
-namespace WFImageParser
+namespace WFImageParser.Training
 {
     public class OCRSpaceTrainer
     {
@@ -125,7 +125,7 @@ namespace WFImageParser
             for (int x = chatRect.Left; x < chatRect.Right; x++)
             {
                 //Advance until next pixel
-                var firstPixel = Point.Empty;
+                var firstPixel = System.Drawing.Point.Empty;
                 for (int i = endX; i < chatRect.Right; i++)
                 {
                     var pixelFound = false;
@@ -135,7 +135,7 @@ namespace WFImageParser
                         {
                             x = i;
                             pixelFound = true;
-                            firstPixel = new Point(i, y);
+                            firstPixel = new System.Drawing.Point(i, y);
                             break;
                         }
                     }
@@ -147,7 +147,7 @@ namespace WFImageParser
                 }
 
                 //Make sure we didn't escape
-                if (x >= chatRect.Right || firstPixel == Point.Empty)
+                if (x >= chatRect.Right || firstPixel == System.Drawing.Point.Empty)
                     break;
 
                 var targetMask = OCRHelpers.FindCharacterMask(firstPixel, cache, null, chatRect.Left, chatRect.Right, lineVertOffset, lineVertOffset + lineHeight);
