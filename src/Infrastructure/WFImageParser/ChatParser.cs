@@ -210,7 +210,7 @@ namespace WFImageParser
 
                     if (bestFit != null && bestFit.Item2 != null && endX != lastCharacterEndX)
                     {
-                        string name = GetCharacterName(bestFit);
+                        string name = GetCharacterName(bestFit.Item2.Name);
 
                         ////Check if we skipped past a space
                         if (prevTargetMask != null && prevTargetMask.PixelCount > 0)
@@ -348,32 +348,36 @@ namespace WFImageParser
             else return null;
         }
 
-        private static string GetCharacterName(Tuple<float, GlyphDetails, CoordinateList> bestFit)
+        private static string GetCharacterName(string encodedName)//Tuple<float, GlyphDetails, CoordinateList> bestFit)
         {
-            var name = bestFit.Item2.Name.Replace(".png", "").Replace(".txt", "").Replace("alt_", "");
-            if (name.EndsWith("_upper"))
-                name = name.Substring(0, name.IndexOf('_')).ToUpper();
-            else if (name.EndsWith("_lower"))
-                name = name.Substring(0, name.IndexOf('_')).ToLower();
-            if (name == "colon")
-                name = ":";
-            else if (name == "asterix")
-                name = "*";
-            else if (name == "gt")
-                name = ">";
-            else if (name == "lt")
-                name = "<";
-            else if (name == "backSlash")
-                name = "\\";
-            else if (name == "question")
-                name = "?";
-            else if (name == "forwardSlash")
-                name = "/";
-            else if (name == "pipe")
-                name = "|";
-            else if (name == "comma")
-                name = ",";
-            return name;
+            encodedName = encodedName.Replace(".png", "").Replace(".txt", "").Replace("alt_", "");
+            if (encodedName.Contains("___"))
+            {
+                return encodedName.Split(new string[] { "___" }, StringSplitOptions.RemoveEmptyEntries).Aggregate("", (acc, iter) => acc + iter);
+            }
+            if (encodedName.EndsWith("_upper"))
+                encodedName = encodedName.Substring(0, encodedName.IndexOf('_')).ToUpper();
+            else if (encodedName.EndsWith("_lower"))
+                encodedName = encodedName.Substring(0, encodedName.IndexOf('_')).ToLower();
+            if (encodedName == "colon")
+                encodedName = ":";
+            else if (encodedName == "asterix")
+                encodedName = "*";
+            else if (encodedName == "gt")
+                encodedName = ">";
+            else if (encodedName == "lt")
+                encodedName = "<";
+            else if (encodedName == "backSlash")
+                encodedName = "\\";
+            else if (encodedName == "question")
+                encodedName = "?";
+            else if (encodedName == "forwardSlash")
+                encodedName = "/";
+            else if (encodedName == "pipe")
+                encodedName = "|";
+            else if (encodedName == "comma")
+                encodedName = ",";
+            return encodedName;
         }
 
         private Tuple<float, GlyphDetails, CoordinateList> GetBestMatchingCharacter(ImageCache image, int lineHeight, int lineOffset, TargetMask targetMask)
@@ -979,7 +983,7 @@ namespace WFImageParser
 
                     if (bestFit != null && bestFit.Item2 != null && endX != lastCharacterEndX)
                     {
-                        string name = GetCharacterName(bestFit);
+                        string name = GetCharacterName(bestFit.Item2.Name);
 
                         ////Check if we skipped past a space
                         if (prevTargetMask != null && prevTargetMask.PixelCount > 0)
