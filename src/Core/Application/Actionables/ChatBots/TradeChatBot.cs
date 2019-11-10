@@ -342,13 +342,18 @@ namespace Application.Actionables.ChatBots
             chatMessage.Region = _warframeCredentials.Region;
             if (chatMessage.DEBUGREASON != null && chatMessage.DEBUGREASON.Length > 0)
             {
-                using (var b = _gameCapture.GetFullImage())
+                try
                 {
-                    chatMessage.DEBUGIMAGE = Path.Combine("debug", DateTime.Now.Ticks + ".png");
-                    b.Save(chatMessage.DEBUGIMAGE);
-                    chatMessage.DEBUGREASON += "\nSee: " + chatMessage.DEBUGIMAGE;
-                    await _dataSender.AsyncSendDebugMessage(chatMessage.DEBUGREASON);
+                    using (var b = _gameCapture.GetFullImage())
+                    {
+                        chatMessage.DEBUGIMAGE = Path.Combine("debug", DateTime.Now.Ticks + ".png");
+                        b.Save(chatMessage.DEBUGIMAGE);
+                    }
                 }
+                catch { }
+                if (chatMessage.DEBUGIMAGE == null)
+                    chatMessage.DEBUGIMAGE = "Failed to save";
+                await _dataSender.AsyncSendDebugMessage("Model incorrect: " + chatMessage.DEBUGREASON +". See: " + chatMessage.DEBUGIMAGE);
                 return null;
             }
             return chatMessage;
@@ -545,7 +550,7 @@ namespace Application.Actionables.ChatBots
                 }
 
                 if (!Regex.Match(line.RawMessage, @"^(\[\d\d:\d\d\])\s*((?:\[DE\])?[-A-Za-z0-9._]+)[:\s]\s*(.+)").Success)
-                    debugReason = "Invalid username or timestamp!\n" + line.RawMessage;
+                    debugReason = "Invalid username or timestamp!" + "\t\r\n" + line.RawMessage;
             }
             catch { debugReason = "Bade name: " + username; }
             var cm = new ChatMessageModel()
