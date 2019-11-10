@@ -207,7 +207,9 @@ namespace WFImageParser
                                 safeName = safeName.Split(',').First();
                             if (
                                 (
-                                    lastColor == ChatColor.ChatTimestampName && image.GetColor(firstPixel.X, firstPixel.Y) != ChatColor.ChatTimestampName
+                                    lastColor == ChatColor.ChatTimestampName 
+                                    && image.GetColor(firstPixel.X, firstPixel.Y) != ChatColor.ChatTimestampName
+                                    && bestFit.Item2.Name != "colon"
                                 )
                                 ||
                                 (
