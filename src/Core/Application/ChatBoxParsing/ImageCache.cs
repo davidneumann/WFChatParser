@@ -63,6 +63,8 @@ namespace Application.ChatLineExtractor
                     }
                     else if (color == ChatColor.Text)
                         v = Math.Min(1f, (v / (0.937f - backgroundNoiseValue)));
+                    else if (color == ChatColor.ItemLink)
+                        v = Math.Min(1f, (v / (1f - backgroundNoiseValue)));
                     //else if (color == ChatColor.Redtext)
                     //    v += 0.3f;
 
