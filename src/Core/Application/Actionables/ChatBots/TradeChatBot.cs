@@ -437,12 +437,12 @@ namespace Application.Actionables.ChatBots
                 {
                     if (!foundRivenWindow)
                     {
-                        using (var b = _gameCapture.GetFullImage())
-                        {
-                            string filename = System.IO.Path.Combine("debug", "riven_" + Guid.NewGuid().ToString() + ".png");
-                            b.Save(filename);
-                            _logger.Log("Could not find riven window. See: " + filename);
-                        }
+                        //using (var b = _gameCapture.GetFullImage())
+                        //{
+                        //    string filename = System.IO.Path.Combine("debug", "riven_" + Guid.NewGuid().ToString() + ".png");
+                        //    b.Save(filename);
+                        //    _logger.Log("Could not find riven window. See: " + filename);
+                        //}
                     }
 
                     _chatParser.InvalidCache(line.GetKey());
