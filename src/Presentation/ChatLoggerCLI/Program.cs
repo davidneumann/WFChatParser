@@ -28,7 +28,7 @@ namespace ChatLoggerCLI
         private static List<IDisposable> _disposables = new List<IDisposable>();
         private static CancellationTokenSource _cancellationSource;
         private static DataSender _dataSender;
-        private static bool _cleanExistRequested = false;
+        private static bool _cleanExitRequested = false;
 
         public static void Main(string[] args)
         {
@@ -87,6 +87,7 @@ namespace ChatLoggerCLI
                 }).ToArray();
 
                 Console.WriteLine("Data sender connecting");
+                SendOldErrorLog();
 
                 _dataSender.RequestToKill += (s, e) =>
                 {
@@ -192,10 +193,10 @@ namespace ChatLoggerCLI
             }
             catch (Exception e)
             {
-                _dataSender.AsyncSendDebugMessage(e.ToString()).Wait();                
+                _dataSender.AsyncSendDebugMessage(e.ToString()).Wait();
             }
 
-            if (!_cleanExistRequested)
+            if (!_cleanExitRequested)
             {
                 //Failure state detected! Try to clean up images in case that was the issue
                 try
@@ -220,6 +221,28 @@ namespace ChatLoggerCLI
                 };
                 shutdown.Start();
             }
+        }
+
+        private static void SendOldErrorLog()
+        {
+            try
+            {
+                const string Path = "error.old.txt";
+                if (File.Exists(Path))
+                {
+                    using (var fs = new FileStream("error.old.txt", FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    {
+                        using (var sr = new StreamReader(fs, Encoding.Default))
+                        {
+                            var contents = sr.ReadToEnd();
+
+                            _dataSender.AsyncSendDebugMessage("Past client failed catastrophically.\n " + contents).Wait();
+                        }
+                    }
+                    File.Delete(Path);
+                }
+            }
+            catch { }
         }
 
         private static void LogParser_OnNewMessage(LogMessage msg)
@@ -314,7 +337,7 @@ namespace ChatLoggerCLI
 
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
         {
-            _cleanExistRequested = true;
+            _cleanExitRequested = true;
             _cancellationSource.Cancel();
             foreach (var item in _disposables)
             {
