@@ -13,7 +13,7 @@ namespace PerfTest
     {
         static void Main(string[] args)
         {
-            var c = new ChatParser(new FakeLogger());
+            var c = new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "english"));
             var sw = new Stopwatch();
             var times = new List<TimeSpan>();
 

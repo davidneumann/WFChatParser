@@ -292,7 +292,7 @@ namespace Application
                                     if (!processedCorrectly)
                                     {
                                         var path = SaveScreenToDebug(screen);
-                                        if(path != null)
+                                        if (path != null)
                                             _dataSender.AsyncSendDebugMessage("Failed to parse correctly. See: " + path);
                                         _chatParser.InvalidCache(line.GetKey());
                                         break;
@@ -365,7 +365,14 @@ namespace Application
 
         private static void CloseWarframe()
         {
-            System.Diagnostics.Process.GetProcessesByName("Warframe.x64").ToList().ForEach(p => p.Kill());
+            System.Diagnostics.Process.GetProcessesByName("Warframe.x64").ToList().ForEach(p =>
+            {
+                try
+                {
+                    p.Kill();
+                }
+                catch { }
+            });
         }
 
         private static ChatMessageModel MakeChatModel(LineParseResult.ChatMessageLineResult line)
@@ -424,7 +431,16 @@ namespace Application
 
             var chatMessage = MakeChatModel(line as LineParseResult.ChatMessageLineResult);
             if (chatMessage.DEBUGREASON != null && chatMessage.DEBUGREASON.Length > 0)
+            {
+                using (var b = _gameCapture.GetFullImage())
+                {
+                    chatMessage.DEBUGIMAGE = System.IO.Path.Combine("debug", DateTime.Now.Ticks + ".png");
+                    b.Save(chatMessage.DEBUGIMAGE);
+                    chatMessage.DEBUGREASON += "\nSee: " + chatMessage.DEBUGIMAGE;
+                    _dataSender.AsyncSendDebugMessage(chatMessage.DEBUGREASON).Wait();
+                }
                 return false;
+            }
             if (clr.ClickPoints.Count == 0)
                 _dataSender.AsyncSendChatMessage(chatMessage);
             else
@@ -642,7 +658,7 @@ namespace Application
             }
         }
 
-        private void NavigateToGlyphScreen(bool retry=true)
+        private void NavigateToGlyphScreen(bool retry = true)
         {
             //Ensure we are controlling a warframe
             var tries = 0;

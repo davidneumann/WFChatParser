@@ -35,6 +35,7 @@ using Application.Logger;
 using Application.ChatBoxParsing.ChatLineExtractor;
 using Application.ChatBoxParsing;
 using Application.ChatBoxParsing.CustomChatParsing;
+using WFImageParser.Training;
 
 namespace DebugCLI
 {
@@ -63,6 +64,14 @@ namespace DebugCLI
             //TessShim();
             //NewRivenShim();
             NewChatParsingShim();
+            //ChatMovingShim();
+            //ParseRivenImage();
+            //ChatLineExtractorShim();
+            //GenerateCharStrings();
+            //TrainOnImages();
+            //FindOverlappingLines();
+            //TrainSpacesOnImages();
+            ChineseChatShim();
         }
 
         private static string[] NewChatParsingShim(string path = null)
@@ -77,7 +86,7 @@ namespace DebugCLI
                 path = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chinese_tradechat_2.png";
             var input = new Bitmap(path);
 
-            var cle = new ChatLineExtractor();
+            var cle = new Application.ChatBoxParsing.ChatLineExtractor.ChatLineExtractor();
             var lines = cle.ExtractChatLines(input);
             for (int i = 0; i < lines.Length; i++)
             {
@@ -106,7 +115,7 @@ namespace DebugCLI
             File.WriteAllLines("chinese.txt", result);
 
             sw.Stop();
-            Console.WriteLine("Parsed 1 image in: " + sw.Elapsed.TotalSeconds  + " seconds.");
+            Console.WriteLine("Parsed 1 image in: " + sw.Elapsed.TotalSeconds + " seconds.");
 
             return result.ToArray();
 
@@ -124,6 +133,83 @@ namespace DebugCLI
             //Console.WriteLine(lp.ParseLine(b));
             //b.Dispose();
             //return null;
+        }
+
+        private static void ChineseChatShim()
+        {
+            var cp = new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "chinese"));
+            const string source = @"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\fake_chinese_wrap_altered.png";
+            ImageCleaner.SaveSoftMask(source, "lines_white.png");
+            using (var b = new Bitmap(source))
+            {
+                foreach (var line in Directory.GetFiles(Environment.CurrentDirectory).Where(f => f.StartsWith("line_") && f.EndsWith(".png")))
+                {
+                    File.Delete(line);
+                }
+                var lines = cp.ParseUsernamesFromChatImage(b, false);
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    Rectangle rect = lines[i].LineRect;
+                    using (var lineBitmap = new Bitmap(rect.Width, rect.Height))
+                    {
+                        for (int x = 0; x < lineBitmap.Width; x++)
+                        {
+                            for (int y = 0; y < lineBitmap.Height; y++)
+                            {
+                                lineBitmap.SetPixel(x, y, b.GetPixel(rect.Left + x, rect.Top + y));
+                            }
+                        }
+                        lineBitmap.Save("line_" + i + ".png");
+                    }
+
+                    var tessLines = WFImageParser.ChatLineExtractor.ExtractChatLines(b, rect);
+                    for (int j = 0; j < tessLines.Length; j++)
+                    {
+                        tessLines[j].Save("line_" + i + "_" + j + ".png");
+                    }
+                }
+            }
+        }
+
+        private static void ChatLineExtractorShim()
+        {
+            var cp = new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "english"));
+            var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chat_new.png");
+            var lines = cp.ExtractChatLines(b);
+            for (int i = 0; i < lines.Length; i++)
+            {
+                lines[i].Save("line_" + i + ".png");
+                var username = cp.GetUsernameFromChatLine(lines[i]);
+                if (username != null)
+                    Console.WriteLine("Username: " + username);
+            }
+        }
+
+        private static void ChatMovingShim()
+        {
+            var input = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chat_new.png");
+            var samples = LineSampler.GetAllLineSamples(input);
+            var clickPoints = new Point[] { new Point(283, 779), new Point(472, 978) };
+            var movedScreen = new Bitmap(@"C:\Users\david\Downloads\new_chat_blurr.png");
+            foreach (var clickPoint in clickPoints)
+            {
+                int chatLine = LineSampler.GetLineIndexFromPoint(clickPoint.X, clickPoint.Y);
+                var lineSamples = LineSampler.GetLineSamples(movedScreen, chatLine);
+                for (int i = 0; i < lineSamples.Length; i++)
+                {
+                    var origSample = samples[chatLine, i];
+                    var sample = lineSamples[i];
+                    var rDiff = origSample.R - sample.R;
+                    var gDiff = origSample.G - sample.G;
+                    var bDiff = origSample.B - sample.B;
+                    if ((origSample.R - sample.R) * (origSample.R - sample.R) +
+                        (origSample.G - sample.G) * (origSample.G - sample.G) +
+                        (origSample.B - sample.B) * (origSample.B - sample.B) > 225)
+                    {
+                        Console.WriteLine("Image different");
+                    }
+                }
+            }
         }
 
         private static void NewRivenShim()
@@ -159,7 +245,8 @@ namespace DebugCLI
             //var lp = new LineParser();
             //var result = lp.ParseLine(new Bitmap("line.png"));
 
-            using (var cropped = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\bad_parse2.png"))
+            var f = new FileInfo(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\4f41dd91-628e-40f4-8b68-2642fd86c4c8.png");
+            using (var cropped = new Bitmap(f.FullName))
             {
                 var cleaner = new RivenCleaner();
                 using (var cleaned = cleaner.CleanRiven(cropped))
@@ -167,6 +254,11 @@ namespace DebugCLI
                     cleaned.Save("cleaned.png");
                     var parser = new RivenParser();
                     var riven = parser.ParseRivenTextFromImage(cleaned, null);
+                    try
+                    {
+                        riven.ImageId = Guid.Parse(f.Name.Replace(".png", ""));
+                    }
+                    catch { }
                 }
             }
 
@@ -177,7 +269,7 @@ namespace DebugCLI
 
         private static void FindErrorAgain()
         {
-            var cp = new ChatParser(new FakeLogger());
+            var cp = new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "english"));
             foreach (var file in Directory.GetFiles(@"\\DESKTOP-BJRVJJQ\ChatLog\debug").Where(f => f.Contains("131992381447623296")))
             {
                 var lines = cp.ParseChatImage(new Bitmap(file));
@@ -243,21 +335,35 @@ namespace DebugCLI
             return new Tuple<string, string, string>(timestamp, username, debugReason);
         }
 
+        private static void ParseRivenImage()
+        {
+            var rp = new RivenParser();
+            var b = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("74062b19-5158-4eb6-b26a-1b809f787994.png")).Select(file => new Bitmap(file)).FirstOrDefault();
+            var rc = new RivenCleaner();
+            var b2 = rc.CleanRiven(b);
+            b2.Save("debug_clean.png");
+            var text = rp.ParseRivenTextFromImage(b2, null);
+        }
+
         private static void ParseChatImage()
         {
             //var filePath = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Validation Inputs\error_blurry1.png";
-            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("(184).png")))
+            //foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai")
+            //                            .Select(f => new FileInfo(f))
+            //                            .Where(f => f.Name.StartsWith("637") && !f.Name.Contains("_white") && f.Name.EndsWith(".png"))
+            //                            .Select(f => f.FullName))
+            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("chinese_chat.png")))
             {
                 using (var bitmap = new Bitmap(filePath))
                 {
-                    var cp = new ChatParser(new FakeLogger());
-                    var ic = new ImageCleaner();
+                    var cp = new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "chinese"));
                     //ic.SaveSoftMask(filePath, "error_blurry1_white.png");
-                    ic.SaveSoftMask(filePath, filePath.Replace(".png", "_white.png"));
+                    ImageCleaner.SaveSoftMask(filePath, filePath.Replace(".png", "_white.png"));
                     var lines = cp.ParseChatImage(bitmap);
                     var sb = new StringBuilder();
                     foreach (var line in lines)
                     {
+                        Console.WriteLine(line.RawMessage);
                         sb.AppendLine(line.RawMessage);
                     }
                     File.WriteAllText(filePath.Replace(".png", ".txt"), sb.ToString());
@@ -268,10 +374,8 @@ namespace DebugCLI
         private static void TestRedText()
         {
             var input = @"C:\Users\david\OneDrive\Documents\WFChatParser\ErrorImages\Screenshot (175).png";
-            var cleaner = new ImageCleaner();
-            cleaner.SaveChatColors(input, "test.png");
-            cleaner.SaveSoftMask(input, "test2.png");
-            var cp = new ChatParser(new FakeLogger());
+            ImageCleaner.SaveSoftMask(input, "test2.png");
+            var cp = new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "english"));
             var lines = cp.ParseChatImage(new Bitmap(input), false, false, 50);
         }
 
@@ -580,7 +684,7 @@ namespace DebugCLI
                 obs,
                 password,
                 new KeyboardHelper(),
-                new ChatParser(new FakeLogger()),
+                new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "english")),
                 dataSender,
                 new RivenCleaner(),
                 new RivenParserFactory(),
@@ -841,7 +945,7 @@ namespace DebugCLI
             fullImage.Dispose();
 
             var chatIcon = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chaticon.png");
-            var cp = new ChatParser(new FakeLogger());
+            var cp = new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "english"));
             var isChat = cp.IsChatFocused(chatIcon);
         }
 
@@ -1014,7 +1118,7 @@ namespace DebugCLI
 
         private static void VisualizeClickpoints()
         {
-            var cp = new ChatParser(new FakeLogger());
+            var cp = new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "english"));
             var r = cp.ParseChatImage(new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\bad.png"));
             var list = new CoordinateList();
             r.Where(r1 => r1 is ChatMessageLineResult).Cast<ChatMessageLineResult>().SelectMany(r1 => r1.ClickPoints).ToList().ForEach(p => list.Add(p.X, p.Y));
@@ -1028,6 +1132,52 @@ namespace DebugCLI
         {
             var c = new GameCapture(new DummyLogger());
             var ss = new ScreenStateHandler();
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\chinese_login.png"))
+            {
+                var state = ss.GetScreenState(b);
+                Console.WriteLine($"Is Login: {ss.GetScreenState(b) == ScreenState.LoginScreen} should be true.");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\chinese_main_menu.png"))
+            {
+                var state = ss.GetScreenState(b);
+                Console.WriteLine($"Is main menu: {ss.GetScreenState(b) == ScreenState.MainMenu} should be true.");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\chinese_profile_menu.png"))
+            {
+                var state = ss.GetScreenState(b);
+                Console.WriteLine($"Is profile menu: {ss.GetScreenState(b) == ScreenState.ProfileMenu} should be true.");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\chinese_glyph_screen_no_filter.png"))
+            {
+                var state = ss.GetScreenState(b);
+                Console.WriteLine($"Is glyph screen: {ss.GetScreenState(b) == ScreenState.GlyphWindow} should be true. Chat open: {ss.IsChatOpen(b)} should be false. Chat collapsed {ss.IsChatCollapsed(b)} should be true.");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\chinese_glyph_screen_no_filter.png"))
+            {
+                Console.WriteLine($"Are filters present in chinese glyph screen {ss.GlyphFiltersPresent(b)} should be false.");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\chinese_glyph_with_filters.png"))
+            {
+                Console.WriteLine($"Are filters present in chinese glyph screen {ss.GlyphFiltersPresent(b)} should be true.");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\new_glyph_1.png"))
+            {
+                var state = ss.GetScreenState(b);
+                Console.WriteLine("Is GlyphWindow: " + (ss.GetScreenState(b) == (ScreenState.GlyphWindow)) + " should be true. Is chat open: " + ss.IsChatOpen(b) + " should be false");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\new_glyph_1.png"))
+            {
+                var isLoading = ss.GetScreenState(b);
+                Console.WriteLine("Is GlyphWindow: " + (ss.GetScreenState(b) == (ScreenState.GlyphWindow)) + " should be true. Is chat open: " + ss.IsChatOpen(b) + " should be false");
+            }
 
             using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\loading.png"))
             {
@@ -1187,7 +1337,7 @@ namespace DebugCLI
             b.Save("test.png");
             b.Dispose();
 
-            var p = new ChatParser(new FakeLogger());
+            var p = new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "english"));
             var results = p.ParseChatImage(new Bitmap(image), true, true, 27).Where(r => r is ChatMessageLineResult).Cast<ChatMessageLineResult>();
 
             var clean = new ImageCleaner();
@@ -1316,7 +1466,7 @@ namespace DebugCLI
         {
             var cleaner = new ImageCleaner();
             cleaner.SaveChatColors(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png", @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input_white.png");
-            var p = new ChatParser(new FakeLogger());
+            var p = new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "english"));
             var r = p.ParseChatImage(new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png"));
             foreach (var line in r)
             {
@@ -1402,10 +1552,33 @@ namespace DebugCLI
         //    Console.WriteLine(json);
         //}
 
+        private static void TrainSpacesOnImages()
+        {
+            var spaceTrainer = new OCRSpaceTrainer();
+            spaceTrainer.TrainOnImages(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Images", "newnewdata", GetSupportedCharacters().ToCharArray());
+        }
+
         private static void TrainOnImages()
         {
+            var sourceDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\Chinese\Spaces";
+            var outputDir = "chineseData";
             var trainer = new OCRTrainer();
-            trainer.TrainOnImages(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Training Inputs", "newdata");
+            trainer.TrainOnImages(sourceDir, outputDir);
+
+            var spaceTrainer = new OCRSpaceTrainer();
+            spaceTrainer.TrainOnImages(sourceDir, outputDir, GetSupportedCharacters().ToCharArray());
+        }
+
+        private static void FindOverlappingLines()
+        {
+            const string sourceDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\Chinese\Overlaps";
+            //if (!Directory.Exists("overlaps"))
+            //    Directory.CreateDirectory("overlaps");
+            //foreach (var image in Directory.GetFiles(sourceDir).Where(f => f.EndsWith(".png")))
+            //{
+            //    ImageCleaner.SaveSoftMask(image, Path.Combine("overlaps", (new FileInfo(image)).Name));
+            //}
+            OverlapDetector.DetectOverlaps(sourceDir, Path.Combine("ocrdata", "chinese"));
         }
 
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
@@ -1439,9 +1612,11 @@ namespace DebugCLI
                 Console.WriteLine($"=={fileInfo.Name}==");
                 var masterKeyFile = trainingImages[k];
                 var correctResults = File.ReadAllLines(trainingText[k]).Select(line => line.Trim()).ToArray();
-                //var c = new ChatParser(new FakeLogger());
-                //var cleaner = new ImageCleaner();
-                //cleaner.SaveChatColors(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name));
+
+                var c = new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "english"));
+                var cleaner = new ImageCleaner();
+                cleaner.SaveChatColors(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name));
+
                 var sw = new Stopwatch();
                 sw.Restart();
                 //var fullResults = c.ParseChatImage(new Bitmap(masterKeyFile), xOffset, false, false);
@@ -1528,40 +1703,148 @@ namespace DebugCLI
             return errorCount;
         }
 
+        private class GeneratedPair
+        {
+            public char Left { get; set; }
+            public char Right { get; set; }
+        }
+
         private static void GenerateCharStrings(int count = 35)
         {
-            var chars = "! # $ % & ' ( ) * + - . / 0 1 2 3 4 5 6 7 8 9 : ; < = > ? @ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z \\ ] ^ _ a b c d e f g h i j k l m n o p q r s t u v w x y z { | } ,".Replace(" ", "");
-            var rand = new Random();
-            using (var fout = new StreamWriter("charstrings.txt"))
+            string chars = GetSupportedCharacters();
+
+            var pairs = new List<GeneratedPair>();
+            for (int i = 0; i < chars.Length; i++)
             {
-                var sb = new StringBuilder();
-                foreach (var character in chars)
+                var prefix = chars[i];
+                for (int j = 0; j < chars.Length; j++)
                 {
-                    //sb.Clear();
-                    //foreach (var otherCharacter in chars)
-                    //{
-                    //    sb.Append(character);
-                    //    sb.Append(otherCharacter);
-                    //    sb.Append(' ');
-                    //}
-                    //fout.WriteLine(sb.ToString().Trim());
-                    //sb.Append('.');
-                    //sb.Append('[');
-                    //sb.Append(character);
-                    //sb.AppendLine();
-                }
-                //fout.WriteLine(sb.ToString() + " [");
-                for (int i = 0; i < count; i++)
-                {
-                    sb.Clear();
-                    foreach (var character in chars.OrderBy(x => rand.Next()))
-                    {
-                        sb.Append(character + " ");
-                    }
-                    Console.WriteLine(sb.ToString().Trim() + "[" + "\n");
-                    fout.WriteLine(sb.ToString() + " [");
+                    pairs.Add(new GeneratedPair() { Left = prefix, Right = chars[j] });
                 }
             }
+
+            //Add missing (char) [
+            //] [ must be the first item
+            pairs.Add(new GeneratedPair() { Left = ']', Right = '[' });
+            for (int i = 0; i < chars.Length; i++)
+            {
+                if (chars[i] == ']')
+                    continue;
+
+                var suffix = '[';
+                pairs.Add(new GeneratedPair() { Left = chars[i], Right = suffix });
+            }
+
+            //Add missing [ (char)
+            for (int i = 0; i < chars.Length; i++)
+            {
+                var prefix = '[';
+                if (chars[i] == ']')
+                    continue;
+                pairs.Add(new GeneratedPair() { Left = prefix, Right = chars[i] });
+            }
+
+
+            SaveSafeOutputToFile(GetSafeOutputFromPairs(pairs, " "), "space_atlas.txt", "space_slice");
+            //using (var atlas = new StreamWriter("space_atlas.txt"))
+            //{
+            //    var slice = 0;
+            //    var lines = 0;
+            //    string str = GetSafeOutputFromPairs(pairs, ' ');
+            //    var sliceContents = new List<string>();
+            //    while (str.Length > 80)
+            //    {
+            //        string line = str.Substring(0, 80);
+            //        Console.WriteLine(line);
+            //        atlas.WriteLine(line);
+            //        sliceContents.Add(line);
+            //        lines++;
+            //        if (sliceContents.Count >= 27)
+            //        {
+            //            SaveSlice(slice++, sliceContents, "space_slice");
+            //            sliceContents.Clear();
+            //        }
+            //        str = str.Substring(80);
+            //    }
+            //    if (str.Length > 0)
+            //    {
+            //        Console.WriteLine(str);
+            //        atlas.WriteLine(str);
+            //        sliceContents.Add(str);
+            //        lines++;
+            //        SaveSlice(slice++, sliceContents, "space_slice");
+            //    }
+            //}
+
+            //Generate two character combos for overlap detection
+            SaveSafeOutputToFile(GetSafeOutputFromPairs(pairs, string.Empty), "overlaps.txt", "overlap_slice");
+        }
+
+        private static void SaveSafeOutputToFile(string safeOutput, string outputFileName, string slicePrefix)
+        {
+            var lines = safeOutput.Split(new char[] { '\n' });
+            var groupCount = lines.Length / 27;
+            if (lines.Length % 27 != 0)
+                groupCount++;
+            for (int i = 0; i < groupCount; i++)
+            {
+                var startIndex = i * 27;
+                var count = 27;
+                if (startIndex + count >= lines.Length)
+                    count = lines.Length - startIndex;
+                SaveSlice(i, lines.Skip(startIndex).Take(count).Select(str => str.Trim()), slicePrefix);
+            }
+
+            File.WriteAllLines(outputFileName, lines.Select(str => str.Trim()));
+        }
+
+        private static string GetSafeOutputFromPairs(List<GeneratedPair> pairs, string seperator)
+        {
+            var lineCount = 0;
+            var sb = new StringBuilder();
+            foreach (var pair in pairs)
+            {
+                var subStr = $"{pair.Left}{seperator}{pair.Right} ";
+                if (lineCount + subStr.Length > 80)
+                {
+                    sb.AppendLine();
+                    if (subStr.StartsWith("!") || subStr.StartsWith("/"))
+                        subStr = ". " + subStr;
+                    lineCount = subStr.Length;
+                }
+                else
+                {
+                    if (lineCount == 0 && (subStr.StartsWith("!") || subStr.StartsWith("/")))
+                        subStr = ". " + subStr;
+                    lineCount += subStr.Length;
+                }
+                sb.Append(subStr);
+            }
+
+            return sb.ToString();
+        }
+
+        private static string GetSupportedCharacters()
+        {
+            return "! # $ % & ' ( ) * + - . / 0 1 2 3 4 5 6 7 8 9 : ; < = > ? @ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z \\ ] ^ _ a b c d e f g h i j k l m n o p q r s t u v w x y z { | } ,".Replace(" ", "");
+        }
+
+        private static void SaveSlice(int sliceNumber, IEnumerable<string> sliceContents, string sliceType)
+        {
+            var output = sliceContents;
+            if (sliceContents.Count() == 27)
+                output = sliceContents.Prepend("CLEAR").Append("CLEAR");
+            else
+            {
+                var emptyNeeded = 27 - sliceContents.Count();
+                var newOutput = new List<string>(sliceContents);
+                for (int i = 0; i < emptyNeeded; i++)
+                {
+                    newOutput.Add("EMPTY");
+                }
+                output = newOutput.Prepend("CLEAR").Append("CLEAR");
+            }
+            File.WriteAllLines(sliceType.TrimEnd('_') + "_" + sliceNumber.ToString() + ".txt", output);
         }
 
         private static void SpaceTest(int count = 35)

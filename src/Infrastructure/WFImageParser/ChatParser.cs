@@ -17,21 +17,18 @@ using System.Numerics;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using WFImageParser.GlyphRecognition;
 
 namespace WFImageParser
 {
-    public class ChatParser : IChatParser
+    public partial class ChatParser : IChatParser
     {
-        private List<CharacterDetails> _scannedCharacters = new List<CharacterDetails>();
-        private Dictionary<string, Dictionary<string, int>> _gapPairs = new Dictionary<string, Dictionary<string, int>>();
-        private int _maxCharWidth = 0;
-        private int _minCharWidth = int.MaxValue;
+        private GlyphDatabase _glyphDatabase;
 
-        private static readonly string GAPSFILE = Path.Combine("ocrdata", "gaps.json");
         //private static readonly string[] _suffixes = new string[] { "ada]", "ata]", "bin]", "bo]", "cak]", "can]", "con]", "cron]", "cta]", "des]", "dex]", "do]", "dra]", "lis]", "mag]", "nak]", "nem]", "nent]", "nok]", "pha]", "sus]", "tak]", "tia]", "tin]", "tio]", "tis]", "ton]", "tor]", "tox]", "tron]" };
         private static readonly List<string> _suffixes = new List<string>();
         private static readonly List<Regex> _blacklistedRegex = new List<Regex>();
-        public ChatParser(ILogger logger)
+        public ChatParser(ILogger logger, string dataDirectory)
         {
             _logger = logger;
 
@@ -55,59 +52,9 @@ namespace WFImageParser
                 }
             }
 
-            var converter = new ColorSpaceConverter();
-            if (Directory.Exists("ocrdata"))
-            {
-                foreach (var file in Directory.GetFiles("ocrdata").Where(f => f.EndsWith(".png")))
-                {
-                    var character = new CharacterDetails()
-                    {
-                        Name = (new FileInfo(file)).Name.Replace(".png", ""),
-                        TotalWeights = 0f
-                    };
-                    using (Image<Rgba32> image = Image.Load(file))
-                    {
-                        character.VMask = new bool[image.Width, image.Height];
-                        character.WeightMappings = new float[image.Width, image.Height];
-                        for (int x = 0; x < image.Width; x++)
-                        {
-                            for (int y = 0; y < image.Height; y++)
-                            {
-                                character.WeightMappings[x, y] = (float)image[x, y].R / (float)byte.MaxValue;
-                                character.TotalWeights += character.WeightMappings[x, y];
-                                if (character.WeightMappings[x, y] > 0)
-                                {
-                                    character.VMask[x, y] = true;
-                                }
-                                else
-                                    character.VMask[x, y] = false;
-                            }
-                        }
-                        character.Width = image.Width;
-                        character.Height = image.Height;
-                        _scannedCharacters.Add(character);
-                        if (character.Width > _maxCharWidth)
-                            _maxCharWidth = character.Width;
-                        if (character.Width < _minCharWidth)
-                            _minCharWidth = character.Width;
-                    }
-                }
-
-                //Load up gap pairs
-                if (File.Exists(GAPSFILE))
-                {
-                    var gapPairs = JsonConvert.DeserializeObject<SimpleGapPair[]>(File.ReadAllText(GAPSFILE));
-                    foreach (var gapPair in gapPairs)
-                    {
-                        if (!_gapPairs.ContainsKey(gapPair.Left))
-                            _gapPairs.Add(gapPair.Left, new Dictionary<string, int>());
-                        if (gapPair.Gap > 0)
-                            _gapPairs[gapPair.Left].Add(gapPair.Right, gapPair.Gap - 1); //There is an off by 1 error in the gaps file currently
-                        else
-                            _gapPairs[gapPair.Left].Add(gapPair.Right, 0);
-                    }
-                }
-            }
+            if (!Directory.Exists(dataDirectory))
+                throw new FileNotFoundException("Missing data directory", dataDirectory);
+            _glyphDatabase = new GlyphDatabase(dataDirectory);
         }
 
         //private int[] _lineOffsets = new int[] { 5, 55, 105, 154, 204, 253, 303, 352, 402, 452, 501, 551, 600, 650, 700, 749, 799, 848, 898, 948, 997, 1047, 1096, 1146, 1195, 1245, 1295 };
@@ -123,13 +70,6 @@ namespace WFImageParser
         private Queue<string> _sentItems = new Queue<string>();
         private ILogger _logger;
 
-        public class SimpleGapPair
-        {
-            public string Left { get; set; }
-            public string Right { get; set; }
-            public int Gap { get; set; }
-        }
-
         private BaseLineParseResult ParseLineBitmapScan(ImageCache image, float minV, int xOffset, Rectangle chatRect, int lineHeight, int lineOffset, float spaceWidth, LineType prevLineType)
         {
             BaseLineParseResult result = null;
@@ -140,7 +80,7 @@ namespace WFImageParser
             var lastCharacterEndX = startX;
             var prevMatchedCharacters = new CoordinateList();
             TargetMask prevTargetMask = null;
-            CharacterDetails lastCharacterDetails = null;
+            GlyphDetails lastCharacterDetails = null;
             var wordStartX = -1;
             var currentWord = new StringBuilder();
             List<ClickPoint> clickPoints = new List<ClickPoint>();
@@ -149,30 +89,16 @@ namespace WFImageParser
             for (int x = xOffset; x < chatRect.Right; x++)
             {
                 //Advance until next pixel
-                var firstPixel = Point.Empty;
-                for (int i = endX; i < chatRect.Right; i++)
-                {
-                    var pixelFound = false;
-                    for (int y = lineOffset; y < lineOffset + lineHeight; y++)
-                    {
-                        if (image[i, y] > minV && !prevMatchedCharacters.Any(p => p.X == i && p.Y == y))
-                        {
-                            x = i;
-                            pixelFound = true;
-                            firstPixel = new Point(i, y);
-                            break;
-                        }
-                    }
-
-                    if (pixelFound)
-                    {
-                        break;
-                    }
-                }
+                System.Drawing.Point firstPixel = GetFirstPixel(image, chatRect.Right, lineHeight, lineOffset, endX, prevMatchedCharacters);
+                x = firstPixel.X;
 
                 //Make sure we didn't escape
-                if (x >= chatRect.Right || firstPixel == Point.Empty)
+                if (x >= chatRect.Right || firstPixel == System.Drawing.Point.Empty)
                     break;
+
+
+                //if (startX >= 98 && lineOffset >= 1779)
+                //    System.Diagnostics.Debugger.Break();
 
                 var targetMask = OCRHelpers.FindCharacterMask(firstPixel, image, prevMatchedCharacters, chatRect.Left, chatRect.Right, lineOffset, lineOffset + lineHeight);
 
@@ -193,7 +119,7 @@ namespace WFImageParser
                     }
 
                     var color = image.GetColor(maxPoint.X, maxPoint.Y);
-                    if(color == ImageCache.ChatColor.Ignored)
+                    if (color == ImageCache.ChatColor.Ignored)
                     {
                         _logger.Log("Ignored color detected while parsing chat line");
                         return null;
@@ -221,293 +147,18 @@ namespace WFImageParser
                     }
                 }
 
-                var didRemove = false;
-                var newXFocus = targetMask.MinX;
-                for (int x2 = 0; x2 < targetMask.Width; x2++)
-                {
-                    var count = 0;
-                    var strength = 0f;
-                    for (int y2 = 0; y2 < lineHeight; y2++)
-                    {
-                        strength += targetMask.SoftMask[x2, y2];
-                        if (targetMask.SoftMask[x2, y2] > 0)
-                            count++;
-                    }
-                    if (strength / count < 0.12 && targetMask.Width > 6)
-                    {
-                        for (int y2 = 0; y2 < lineHeight; y2++)
-                        {
-                            prevMatchedCharacters.Add(new Point(targetMask.MinX + x2, lineOffset + y2));
-                            didRemove = true;
-                            newXFocus = x2 + targetMask.MinX;
-                        }
-                    }
-                    else
-                        break;
-                }
-                if (didRemove)
-                {
-                    for (int i = newXFocus; i < chatRect.Right; i++)
-                    {
-                        var pixelFound = false;
-                        for (int y = lineOffset; y < lineOffset + lineHeight; y++)
-                        {
-                            if (image[i, y] > minV && !prevMatchedCharacters.Any(p => p.X == i && p.Y == y))
-                            {
-                                x = i;
-                                pixelFound = true;
-                                firstPixel = new Point(i, y);
-                                break;
-                            }
-                        }
-
-                        if (pixelFound)
-                        {
-                            break;
-                        }
-                    }
-                    targetMask = OCRHelpers.FindCharacterMask(firstPixel, image, prevMatchedCharacters, chatRect.Left, chatRect.Right, lineOffset, lineOffset + lineHeight);
-                }
-                if (wordStartX < 0)
-                    wordStartX = targetMask.MinX;
+                RemoveSeenPixels(image, minV, ref chatRect, lineHeight, lineOffset, prevMatchedCharacters, ref wordStartX, ref x, ref firstPixel, ref targetMask);
 
                 startX = targetMask.MinX;
                 endX = targetMask.MaxX + 1;
 
-                if (endX > startX && targetMask.PixelCount > 10)
+                if (endX > startX && targetMask.PixelCount > 7)
                 {
-                    var bestFit = FastGuessPartialCharacter(targetMask, lineOffset);
-                    //Try shifting
-                    if (bestFit == null)
-                    {
-                        //using (var debug = new Image<Rgba32>(targetMask.Width, targetMask.SoftMask.GetLength(1)))
-                        //{
-                        //    for (int x2 = 0; x2 < debug.Width; x2++)
-                        //    {
-                        //        for (int y2 = 0; y2 < debug.Height; y2++)
-                        //        {
-                        //            debug[x2, y2] = new Rgba32(targetMask.SoftMask[x2, y2], targetMask.SoftMask[x2, y2], targetMask.SoftMask[x2, y2]);
-                        //        }
-                        //    }
-                        //    debug.Save("debug_target.png");
-                        //}
-
-                        var shiftyMask = targetMask;
-                        for (int i = 0; i < 2; i++)//Try trimming left
-                        {
-                            if (shiftyMask.Width - 1 <= 0)
-                                break;
-                            //PIVOT
-                            var boolMask = new bool[shiftyMask.Width - 1, shiftyMask.Mask.GetLength(1)];
-                            var hardCount = 0;
-                            for (int x2 = 0; x2 < boolMask.GetLength(0); x2++)
-                            {
-                                for (int y2 = 0; y2 < boolMask.GetLength(1); y2++)
-                                {
-                                    boolMask[x2, y2] = shiftyMask.Mask[x2 + 1, y2];
-                                    if (boolMask[x2, y2])
-                                        hardCount++;
-                                }
-                            }
-                            var softCount = 0f;
-                            var softMask = new float[boolMask.GetLength(0), boolMask.GetLength(1)];
-                            for (int x2 = 0; x2 < boolMask.GetLength(0); x2++)
-                            {
-                                for (int y2 = 0; y2 < boolMask.GetLength(1); y2++)
-                                {
-                                    softMask[x2, y2] = shiftyMask.SoftMask[x2 + 1, y2];
-                                    softCount += softMask[x2, y2];
-                                }
-                            }
-
-                            var clippedMask = new TargetMask(boolMask, shiftyMask.MaxX, shiftyMask.MinX + 1, shiftyMask.Width - 1, hardCount, softCount, softMask);
-                            shiftyMask = clippedMask;
-
-                            //using (var debug = new Image<Rgba32>(shiftyMask.Width, shiftyMask.SoftMask.GetLength(1)))
-                            //{
-                            //    for (int x2 = 0; x2 < debug.Width; x2++)
-                            //    {
-                            //        for (int y2 = 0; y2 < debug.Height; y2++)
-                            //        {
-                            //            debug[x2, y2] = new Rgba32(shiftyMask.SoftMask[x2, y2], shiftyMask.SoftMask[x2, y2], shiftyMask.SoftMask[x2, y2]);
-                            //        }
-                            //    }
-                            //    debug.Save("debug_shift.png");
-                            //}
-                            var partialMatch = FastGuessPartialCharacter(clippedMask, lineOffset);
-                            //We need to be sure that this new match is solid and not just better than the existing one
-                            if (partialMatch != null && partialMatch.Item1 > 0.7)
-                            {
-                                bestFit = partialMatch;
-                                break;
-                            }
-                        }
-                        if (bestFit == null)
-                        {
-                            shiftyMask = targetMask;
-                            for (int i = 1; i <= 2; i++)//Try padding left
-                            {
-                                //PIVOT
-                                var boolMask = new bool[shiftyMask.Width + 1, shiftyMask.Mask.GetLength(1)];
-                                var hardCount = 0;
-                                for (int x2 = i; x2 < boolMask.GetLength(0); x2++)
-                                {
-                                    for (int y2 = 0; y2 < boolMask.GetLength(1); y2++)
-                                    {
-                                        if (shiftyMask.SoftMask[x2 - i, y2] > 0f)
-                                        {
-                                            boolMask[x2, y2] = shiftyMask.Mask[x2 - i, y2];
-                                            if (boolMask[x2, y2])
-                                                hardCount++;
-                                        }
-                                    }
-                                }
-                                var softCount = 0f;
-                                var softMask = new float[boolMask.GetLength(0), boolMask.GetLength(1)];
-                                for (int x2 = i; x2 < boolMask.GetLength(0); x2++)
-                                {
-                                    for (int y2 = 0; y2 < boolMask.GetLength(1); y2++)
-                                    {
-                                        //if (shiftyMask.SoftMask[x2 - i, y2] > 0.3f)
-                                        //{
-                                        softMask[x2, y2] = shiftyMask.SoftMask[x2 - i, y2];
-                                        softCount += softMask[x2, y2];
-                                        //}
-                                    }
-                                }
-
-                                var clippedMask = new TargetMask(boolMask, shiftyMask.MaxX, shiftyMask.MinX, shiftyMask.Width + 1, hardCount, softCount, softMask);
-                                shiftyMask = clippedMask;
-
-                                //using (var debug = new Image<Rgba32>(shiftyMask.Width, shiftyMask.SoftMask.GetLength(1)))
-                                //{
-                                //    for (int x2 = 0; x2 < debug.Width; x2++)
-                                //    {
-                                //        for (int y2 = 0; y2 < debug.Height; y2++)
-                                //        {
-                                //            debug[x2, y2] = new Rgba32(shiftyMask.SoftMask[x2, y2], shiftyMask.SoftMask[x2, y2], shiftyMask.SoftMask[x2, y2]);
-                                //        }
-                                //    }
-                                //    debug.Save("debug_shift.png");
-                                //}
-                                var partialMatch = FastGuessPartialCharacter(clippedMask, lineOffset);
-                                //We need to be sure that this new match is solid and not just better than the existing one
-                                if (partialMatch != null && partialMatch.Item1 > 0.7)
-                                {
-                                    bestFit = partialMatch;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    //If all else has failed hope that we are on some sort of horrible overlap and take the best we can find
-                    if (bestFit == null)
-                    {
-                        //var tmpBlacklist = new CoordinateList();
-                        //tmpBlacklist.AddRange(prevMatchedCharacters);
-                        //Point tmpPixel = Point.Empty;
-                        //for (int x2 = 0; x2 < targetMask.Width; x2++)
-                        //{
-                        //    for (int y2 = 0; y2 < lineHeight; y2++)
-                        //    {
-                        //        if (targetMask.SoftMask[x2, y2] < 0.3)
-                        //            tmpBlacklist.Add(new Point(x2 + targetMask.MinX, y2 + lineOffset));
-                        //        else if (tmpPixel == Point.Empty)
-                        //            tmpPixel = new Point(x2 + targetMask.MinX, y2 + lineOffset);
-                        //    }
-                        //}
-                        //var frontMask = OCRHelpers.FindCharacterMask(tmpPixel, image, tmpBlacklist, targetMask.MinX, targetMask.MaxX, lineOffset, lineOffset + lineHeight);
-                        var boolMask = new bool[targetMask.Mask.GetLength(0), targetMask.Mask.GetLength(1)];
-                        var hardCount = 0;
-                        for (int x2 = 0; x2 < boolMask.GetLength(0); x2++)
-                        {
-                            for (int y2 = 0; y2 < boolMask.GetLength(1); y2++)
-                            {
-                                boolMask[x2, y2] = targetMask.SoftMask[x2, y2] > 0.5f;
-                                if (boolMask[x2, y2])
-                                    hardCount++;
-                            }
-                        }
-                        var softMask = new float[targetMask.Mask.GetLength(0), targetMask.Mask.GetLength(1)];
-                        var softCount = 0f;
-                        for (int x2 = 0; x2 < softMask.GetLength(0); x2++)
-                        {
-                            for (int y2 = 0; y2 < softMask.GetLength(1); y2++)
-                            {
-                                softMask[x2, y2] = targetMask.SoftMask[x2, y2] > 0.5f ? targetMask.SoftMask[x2, y2] : 0f;
-                                softCount += softMask[x2, y2];
-                            }
-                        }
-                        var frontMask = new TargetMask(boolMask, targetMask.MaxX, targetMask.MinX, targetMask.Width, hardCount, softCount, softMask);
-                        bestFit = FastGuessPartialCharacter(frontMask, lineOffset, true);
-                        //Cleanup any lingering pixels
-                        //We are in a bad state so be very aggressive
-                        if (bestFit != null)
-                        {
-                            var columnHunting = true;
-                            for (int x2 = targetMask.MinX; x2 <= targetMask.MaxX; x2++)
-                            {
-                                var columnCount = 0f;
-                                for (int y2 = lineOffset; y2 < lineOffset + lineHeight; y2++)
-                                {
-                                    if (image[x2, y2] < 0.2)
-                                        bestFit.Item3.Add(new Point(x2, y2));
-                                    else
-                                        columnCount += image[x2, y2];
-                                }
-
-                                if (columnHunting && columnCount < 1.5)
-                                {
-                                    for (int y2 = lineOffset; y2 < lineOffset + lineHeight; y2++)
-                                    {
-                                        bestFit.Item3.Add(new Point(x2, y2));
-                                    }
-                                }
-                                else
-                                {
-                                    columnHunting = false;
-                                }
-                            }
-                        }
-                    }
-                    //else if (bestFit.Item1 < 0.7)
-                    //{
-                    //    var fuzzyMask = OCRHelpers.FindCharacterMask(firstPixel, image, prevMatchedCharacters, Math.Max(0.29f, minV - 0.2f), chatRect.Left, chatRect.Right, lineOffset, lineOffset + lineHeight);
-                    //    var fuzzFit = FastGuessCharacter(targetMask, lineOffset);
-                    //    if (fuzzFit.Item1 > bestFit.Item1)
-                    //        bestFit = fuzzFit;
-                    //}
-
-                    //We can allow loose fits on smaller characters
-                    if (bestFit != null && bestFit.Item1 < 0.20f && bestFit.Item2 != null)
-                        bestFit = new Tuple<float, CharacterDetails, CoordinateList>(float.MinValue, null, null);
+                    Tuple<float, GlyphDetails, CoordinateList> bestFit = GetBestMatchingCharacter(image, lineHeight, lineOffset, targetMask);
 
                     if (bestFit != null && bestFit.Item2 != null && endX != lastCharacterEndX)
                     {
-                        var name = bestFit.Item2.Name.Replace(".png", "").Replace(".txt", "").Replace("alt_", "");
-                        if (name.EndsWith("_upper"))
-                            name = name.Substring(0, name.IndexOf('_')).ToUpper();
-                        else if (name.EndsWith("_lower"))
-                            name = name.Substring(0, name.IndexOf('_')).ToLower();
-                        if (name == "colon")
-                            name = ":";
-                        else if (name == "asterix")
-                            name = "*";
-                        else if (name == "gt")
-                            name = ">";
-                        else if (name == "lt")
-                            name = "<";
-                        else if (name == "backSlash")
-                            name = "\\";
-                        else if (name == "question")
-                            name = "?";
-                        else if (name == "forwardSlash")
-                            name = "/";
-                        else if (name == "pipe")
-                            name = "|";
-                        else if (name == "comma")
-                            name = ",";
-
+                        string name = GetCharacterName(bestFit.Item2.Name);
 
                         ////Check if we skipped past a space
                         if (prevTargetMask != null && prevTargetMask.PixelCount > 0)
@@ -544,9 +195,12 @@ namespace WFImageParser
                                     break;
                             }
                             var pixelGap = safeRightX - safeLeftX;
-                            if (_gapPairs.ContainsKey(lastCharacterDetails.Name)
-                                && _gapPairs[lastCharacterDetails.Name].ContainsKey(bestFit.Item2.Name)
-                                && pixelGap > _gapPairs[lastCharacterDetails.Name][bestFit.Item2.Name] + spaceWidth)
+                            var safeName = bestFit.Item2.Name;
+                            if (safeName.Contains(","))
+                                safeName = safeName.Split(',').First();
+                            if (_glyphDatabase.GapPairs.ContainsKey(lastCharacterDetails.Name)
+                                && _glyphDatabase.GapPairs[lastCharacterDetails.Name].ContainsKey(safeName)
+                                && pixelGap >= _glyphDatabase.GapPairs[lastCharacterDetails.Name][safeName] + spaceWidth)
                             {
                                 if (currentLineType == LineType.NewMessage && !checkedKey)
                                 {
@@ -580,9 +234,11 @@ namespace WFImageParser
                         prevMatchedCharacters.AddRange(bestFit.Item3);
                         prevTargetMask = targetMask;
                         lastCharacterDetails = bestFit.Item2;
+                        if (lastCharacterDetails.Name.Contains(","))
+                            lastCharacterDetails.Name = lastCharacterDetails.Name.Split(',').Last();
 
                         //Due to new char IDing system we can safely jump a bit ahead to prevent double reading
-                        if (endX - startX > _maxCharWidth * 0.6 && targetMask.PixelCount - prevMatchedCharacters.Count > targetMask.PixelCount * 0.3)
+                        if (endX - startX > _glyphDatabase.MaxCharWidth * 0.6 && targetMask.PixelCount - prevMatchedCharacters.Count > targetMask.PixelCount * 0.3)
                             endX = x = lastCharacterEndX;
                         else
                             endX = x = lastCharacterEndX + 2;
@@ -598,6 +254,18 @@ namespace WFImageParser
                     endX = startX = Math.Max(endX + 1, targetMask.MaxX + 1);
                 }
             }
+
+            //Handle messages with no content due to a line wrap
+            if (rawMessage.Length <= 0 && result is ChatMessageLineResult)
+            {
+                var clr = result as ChatMessageLineResult;
+                if (clr.Username == null || clr.Username.Length <= 0)
+                {
+                    ((ChatMessageLineResult)result).Username = currentWord.ToString().Trim().TrimEnd(':');
+                }
+                rawMessage.Append(" ");
+            }
+
             if (rawMessage.Length > 0)
             {
                 AppendSpace(image, lineHeight, lineOffset, rawMessage, message, wordStartX, currentWord, clickPoints);
@@ -613,7 +281,7 @@ namespace WFImageParser
                         var matches = enhancedRegex.Match(message.ToString().Trim());
                         clr.EnhancedMessage = matches.Groups[1].Value;
                     }
-                    else if(currentLineType == LineType.Continuation)
+                    else if (currentLineType == LineType.Continuation)
                     {
                         clr.EnhancedMessage = message.ToString();
                     }
@@ -631,6 +299,364 @@ namespace WFImageParser
                 }
             }
             else return null;
+        }
+
+        private static string GetCharacterName(string encodedName)//Tuple<float, GlyphDetails, CoordinateList> bestFit)
+        {
+            encodedName = encodedName.Replace(".png", "").Replace(".txt", "").Replace("alt_", "");
+            if (encodedName.Contains(","))
+            {
+                return encodedName.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Aggregate("", (acc, iter) => acc + GetCharacterName(iter));
+            }
+            if (encodedName.EndsWith("_upper"))
+                encodedName = encodedName.Substring(0, encodedName.IndexOf('_')).ToUpper();
+            else if (encodedName.EndsWith("_lower"))
+                encodedName = encodedName.Substring(0, encodedName.IndexOf('_')).ToLower();
+            if (encodedName == "colon")
+                encodedName = ":";
+            else if (encodedName == "asterix")
+                encodedName = "*";
+            else if (encodedName == "gt")
+                encodedName = ">";
+            else if (encodedName == "lt")
+                encodedName = "<";
+            else if (encodedName == "backSlash")
+                encodedName = "\\";
+            else if (encodedName == "question")
+                encodedName = "?";
+            else if (encodedName == "forwardSlash")
+                encodedName = "/";
+            else if (encodedName == "pipe")
+                encodedName = "|";
+            else if (encodedName == "comma")
+                encodedName = ",";
+            return encodedName;
+        }
+
+        private Tuple<float, GlyphDetails, CoordinateList> GetBestMatchingCharacter(ImageCache image, int lineHeight, int lineOffset, TargetMask targetMask)
+        {
+            var bestFit = FastGuessPartialCharacter(targetMask, lineOffset);
+            //Try trimming any, and then to the left of, column with less than 15% of the height worth of pixels 
+            if (bestFit == null)
+            {
+                bestFit = GuessQuickSplitResult(targetMask, lineOffset);
+            }
+            //Try shifting
+            if (bestFit == null)
+            {
+                //using (var debug = new Image<Rgba32>(targetMask.Width, targetMask.SoftMask.GetLength(1)))
+                //{
+                //    for (int x2 = 0; x2 < debug.Width; x2++)
+                //    {
+                //        for (int y2 = 0; y2 < debug.Height; y2++)
+                //        {
+                //            debug[x2, y2] = new Rgba32(targetMask.SoftMask[x2, y2], targetMask.SoftMask[x2, y2], targetMask.SoftMask[x2, y2]);
+                //        }
+                //    }
+                //    debug.Save("debug_target.png");
+                //}
+
+                var shiftyMask = targetMask;
+                for (int i = 0; i < 2; i++)//Try trimming left
+                {
+                    if (shiftyMask.Width - 1 <= 0)
+                        break;
+                    //PIVOT
+                    var boolMask = new bool[shiftyMask.Width - 1, shiftyMask.Mask.GetLength(1)];
+                    var hardCount = 0;
+                    for (int x2 = 0; x2 < boolMask.GetLength(0); x2++)
+                    {
+                        for (int y2 = 0; y2 < boolMask.GetLength(1); y2++)
+                        {
+                            boolMask[x2, y2] = shiftyMask.Mask[x2 + 1, y2];
+                            if (boolMask[x2, y2])
+                                hardCount++;
+                        }
+                    }
+                    var softCount = 0f;
+                    var softMask = new float[boolMask.GetLength(0), boolMask.GetLength(1)];
+                    for (int x2 = 0; x2 < boolMask.GetLength(0); x2++)
+                    {
+                        for (int y2 = 0; y2 < boolMask.GetLength(1); y2++)
+                        {
+                            softMask[x2, y2] = shiftyMask.SoftMask[x2 + 1, y2];
+                            softCount += softMask[x2, y2];
+                        }
+                    }
+
+                    var clippedMask = new TargetMask(boolMask, shiftyMask.MaxX, shiftyMask.MinX + 1, shiftyMask.Width - 1, hardCount, softCount, softMask);
+                    shiftyMask = clippedMask;
+
+                    //using (var debug = new Image<Rgba32>(shiftyMask.Width, shiftyMask.SoftMask.GetLength(1)))
+                    //{
+                    //    for (int x2 = 0; x2 < debug.Width; x2++)
+                    //    {
+                    //        for (int y2 = 0; y2 < debug.Height; y2++)
+                    //        {
+                    //            debug[x2, y2] = new Rgba32(shiftyMask.SoftMask[x2, y2], shiftyMask.SoftMask[x2, y2], shiftyMask.SoftMask[x2, y2]);
+                    //        }
+                    //    }
+                    //    debug.Save("debug_shift.png");
+                    //}
+                    var partialMatch = FastGuessPartialCharacter(clippedMask, lineOffset);
+                    //We need to be sure that this new match is solid and not just better than the existing one
+                    if (partialMatch != null && partialMatch.Item1 > 0.7)
+                    {
+                        bestFit = partialMatch;
+                        break;
+                    }
+                }
+                if (bestFit == null)
+                {
+                    shiftyMask = targetMask;
+                    for (int i = 1; i <= 2; i++)//Try padding left
+                    {
+                        //PIVOT
+                        var boolMask = new bool[shiftyMask.Width + 1, shiftyMask.Mask.GetLength(1)];
+                        var hardCount = 0;
+                        for (int x2 = i; x2 < boolMask.GetLength(0); x2++)
+                        {
+                            for (int y2 = 0; y2 < boolMask.GetLength(1); y2++)
+                            {
+                                if (shiftyMask.SoftMask[x2 - i, y2] > 0f)
+                                {
+                                    boolMask[x2, y2] = shiftyMask.Mask[x2 - i, y2];
+                                    if (boolMask[x2, y2])
+                                        hardCount++;
+                                }
+                            }
+                        }
+                        var softCount = 0f;
+                        var softMask = new float[boolMask.GetLength(0), boolMask.GetLength(1)];
+                        for (int x2 = i; x2 < boolMask.GetLength(0); x2++)
+                        {
+                            for (int y2 = 0; y2 < boolMask.GetLength(1); y2++)
+                            {
+                                //if (shiftyMask.SoftMask[x2 - i, y2] > 0.3f)
+                                //{
+                                softMask[x2, y2] = shiftyMask.SoftMask[x2 - i, y2];
+                                softCount += softMask[x2, y2];
+                                //}
+                            }
+                        }
+
+                        var clippedMask = new TargetMask(boolMask, shiftyMask.MaxX, shiftyMask.MinX, shiftyMask.Width + 1, hardCount, softCount, softMask);
+                        shiftyMask = clippedMask;
+
+                        //using (var debug = new Image<Rgba32>(shiftyMask.Width, shiftyMask.SoftMask.GetLength(1)))
+                        //{
+                        //    for (int x2 = 0; x2 < debug.Width; x2++)
+                        //    {
+                        //        for (int y2 = 0; y2 < debug.Height; y2++)
+                        //        {
+                        //            debug[x2, y2] = new Rgba32(shiftyMask.SoftMask[x2, y2], shiftyMask.SoftMask[x2, y2], shiftyMask.SoftMask[x2, y2]);
+                        //        }
+                        //    }
+                        //    debug.Save("debug_shift.png");
+                        //}
+                        var partialMatch = FastGuessPartialCharacter(clippedMask, lineOffset);
+                        //We need to be sure that this new match is solid and not just better than the existing one
+                        if (partialMatch != null && partialMatch.Item1 > 0.7)
+                        {
+                            bestFit = partialMatch;
+                            break;
+                        }
+                    }
+                }
+            }
+            //If all else has failed hope that we are on some sort of horrible overlap and take the best we can find
+            if (bestFit == null)
+            {
+                //var tmpBlacklist = new CoordinateList();
+                //tmpBlacklist.AddRange(prevMatchedCharacters);
+                //Point tmpPixel = Point.Empty;
+                //for (int x2 = 0; x2 < targetMask.Width; x2++)
+                //{
+                //    for (int y2 = 0; y2 < lineHeight; y2++)
+                //    {
+                //        if (targetMask.SoftMask[x2, y2] < 0.3)
+                //            tmpBlacklist.Add(new Point(x2 + targetMask.MinX, y2 + lineOffset));
+                //        else if (tmpPixel == Point.Empty)
+                //            tmpPixel = new Point(x2 + targetMask.MinX, y2 + lineOffset);
+                //    }
+                //}
+                //var frontMask = OCRHelpers.FindCharacterMask(tmpPixel, image, tmpBlacklist, targetMask.MinX, targetMask.MaxX, lineOffset, lineOffset + lineHeight);
+                var boolMask = new bool[targetMask.Mask.GetLength(0), targetMask.Mask.GetLength(1)];
+                var hardCount = 0;
+                for (int x2 = 0; x2 < boolMask.GetLength(0); x2++)
+                {
+                    for (int y2 = 0; y2 < boolMask.GetLength(1); y2++)
+                    {
+                        boolMask[x2, y2] = targetMask.SoftMask[x2, y2] > 0.5f;
+                        if (boolMask[x2, y2])
+                            hardCount++;
+                    }
+                }
+                var softMask = new float[targetMask.Mask.GetLength(0), targetMask.Mask.GetLength(1)];
+                var softCount = 0f;
+                for (int x2 = 0; x2 < softMask.GetLength(0); x2++)
+                {
+                    for (int y2 = 0; y2 < softMask.GetLength(1); y2++)
+                    {
+                        softMask[x2, y2] = targetMask.SoftMask[x2, y2] > 0.5f ? targetMask.SoftMask[x2, y2] : 0f;
+                        softCount += softMask[x2, y2];
+                    }
+                }
+                var frontMask = new TargetMask(boolMask, targetMask.MaxX, targetMask.MinX, targetMask.Width, hardCount, softCount, softMask);
+                bestFit = FastGuessPartialCharacter(frontMask, lineOffset, true);
+                //Cleanup any lingering pixels
+                //We are in a bad state so be very aggressive
+                if (bestFit != null)
+                {
+                    //Blacklist any column that we matched to except last column
+                    var minX = image.Width;
+                    var maxX = 0;
+                    foreach (var p in bestFit.Item3)
+                    {
+                        if (p.X > maxX)
+                            maxX = p.X;
+                        if (p.X < minX)
+                            minX = p.X;
+                    }
+                    for (int x = minX; x < maxX - 1; x++)
+                    {
+                        for (int y = lineOffset; y < lineOffset + 34; y++)
+                        {
+                            if (!bestFit.Item3.Any(p => p.X == x && p.Y == y))
+                                bestFit.Item3.Add(x, y);
+                        }
+                    }
+                }
+            }
+
+            //We can allow loose fits on smaller characters
+            if (bestFit != null && bestFit.Item1 < 0.20f && bestFit.Item2 != null)
+                bestFit = new Tuple<float, GlyphDetails, CoordinateList>(float.MinValue, null, null);
+
+            return bestFit;
+        }
+
+        private Tuple<float, GlyphDetails, CoordinateList> GuessQuickSplitResult(TargetMask targetMask, int lineOffset)
+        {
+            var lowUseColumn = 0;
+            for (int x = (int)(targetMask.Width * 0.66f); x > 0; x--)
+            {
+                var colCount = 0f;
+                for (int y = 0; y < OCRHelpers.LINEHEIGHT; y++)
+                {
+                    colCount += targetMask.SoftMask[x, y];
+                }
+                if (colCount < 3f)
+                {
+                    lowUseColumn = x;
+                    break;
+                }
+            }
+
+            //If we didn't find one then abort
+            if (lowUseColumn == 0)
+                return null;
+
+            //Take everything up to this column with almost nothing in it
+            var width = lowUseColumn;
+            var pixelCount = 0;
+            var softPixelCount = 0f;
+            var boolMask = new bool[width, OCRHelpers.LINEHEIGHT];
+            var softMask = new float[width, OCRHelpers.LINEHEIGHT];
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < OCRHelpers.LINEHEIGHT; y++)
+                {
+                    boolMask[x, y] = targetMask.Mask[x, y];
+                    softMask[x, y] = targetMask.SoftMask[x, y];
+                    if (boolMask[x, y])
+                        pixelCount++;
+                    softPixelCount += softMask[x, y];
+                }
+            }
+
+            var quickMask = new TargetMask(boolMask, lowUseColumn, targetMask.MinX, width, pixelCount, softPixelCount, softMask);
+            return FastGuessPartialCharacter(quickMask, lineOffset);
+        }
+
+        private static void RemoveSeenPixels(ImageCache image, float minV, ref Rectangle chatRect, int lineHeight, int lineOffset, CoordinateList prevMatchedCharacters, ref int wordStartX, ref int x, ref System.Drawing.Point firstPixel, ref TargetMask targetMask)
+        {
+            var didRemove = false;
+            var newXFocus = targetMask.MinX;
+            for (int x2 = 0; x2 < targetMask.Width; x2++)
+            {
+                var count = 0;
+                var strength = 0f;
+                for (int y2 = 0; y2 < lineHeight; y2++)
+                {
+                    strength += targetMask.SoftMask[x2, y2];
+                    if (targetMask.SoftMask[x2, y2] > 0)
+                        count++;
+                }
+                if (strength / count < 0.12 && targetMask.Width > 6)
+                {
+                    break;
+                    //This is handled in the ImageCache floor [x,y] getter
+                    //for (int y2 = 0; y2 < lineHeight; y2++)
+                    //{
+                    //    prevMatchedCharacters.Add(new Point(targetMask.MinX + x2, lineOffset + y2));
+                    //    didRemove = true;
+                    //    newXFocus = x2 + targetMask.MinX;
+                    //}
+                }
+                else
+                    break;
+            }
+            if (didRemove)
+            {
+                for (int i = newXFocus; i < chatRect.Right; i++)
+                {
+                    var pixelFound = false;
+                    for (int y = lineOffset; y < lineOffset + lineHeight; y++)
+                    {
+                        if (image[i, y] > minV && !prevMatchedCharacters.Any(p => p.X == i && p.Y == y))
+                        {
+                            x = i;
+                            pixelFound = true;
+                            firstPixel = new System.Drawing.Point(i, y);
+                            break;
+                        }
+                    }
+
+                    if (pixelFound)
+                    {
+                        break;
+                    }
+                }
+                targetMask = OCRHelpers.FindCharacterMask(firstPixel, image, prevMatchedCharacters, chatRect.Left, chatRect.Right, lineOffset, lineOffset + lineHeight);
+            }
+            if (wordStartX < 0)
+                wordStartX = targetMask.MinX;
+        }
+
+        internal static System.Drawing.Point GetFirstPixel(ImageCache image, int chatRectRight, int lineHeight, int lineOffset, int startX, CoordinateList prevMatchedCharacters)
+        {
+            var firstPixel = System.Drawing.Point.Empty;
+            for (int i = startX; i < chatRectRight; i++)
+            {
+                var pixelFound = false;
+                for (int y = lineOffset; y < lineOffset + lineHeight; y++)
+                {
+                    if (image[i, y] > 0f && !prevMatchedCharacters.Any(p => p.X == i && p.Y == y))
+                    {
+                        pixelFound = true;
+                        firstPixel = new System.Drawing.Point(i, y);
+                        break;
+                    }
+                }
+
+                if (pixelFound)
+                {
+                    break;
+                }
+            }
+
+            return firstPixel;
         }
 
         private void AppendSpace(ImageCache image, int lineHeight, int lineOffset, StringBuilder rawMessage, StringBuilder message, int wordStartX, StringBuilder currentWord, List<ClickPoint> clickPoints)
@@ -661,10 +687,10 @@ namespace WFImageParser
                     Point point = Point.Empty;
                     for (int y = lineOffset + (int)(lineHeight * 0.75f); y > lineOffset && y > 0; y--)
                     {
-                        for (int x = wordStartX + _minCharWidth; x < wordStartX + _maxCharWidth && x < image.Width; x++)
+                        for (int x = wordStartX + _glyphDatabase.MinCharWidth; x < wordStartX + _glyphDatabase.MaxCharWidth && x < image.Width; x++)
                         {
                             var hsvPixel = image.GetHsv(x, y);
-                            if (image.GetColor(x,y) == ImageCache.ChatColor.ItemLink)
+                            if (image.GetColor(x, y) == ImageCache.ChatColor.ItemLink)
                             {
                                 foundRiven = true;
                                 point = new Point(x, y);
@@ -677,7 +703,7 @@ namespace WFImageParser
                     if (foundRiven)
                     {
                         var str = rawMessage.ToString();
-                        str = str.Substring(str.LastIndexOf('[')+1) + currentWord.Substring(0, currentWord.IndexOf(']'));
+                        str = str.Substring(str.LastIndexOf('[') + 1) + currentWord.Substring(0, currentWord.IndexOf(']'));
                         clickPoints.Add(new ClickPoint() { X = point.X, Y = point.Y, Index = clickPoints.Count, RivenName = str });
                     }
                 }
@@ -685,20 +711,20 @@ namespace WFImageParser
             return foundRiven;
         }
 
-        private Tuple<float, CharacterDetails, CoordinateList> FastGuessCharacter(TargetMask targetMask, int lineOffset)
+        private Tuple<float, GlyphDetails, CoordinateList> FastGuessCharacter(TargetMask targetMask, int lineOffset)
         {
             var targetWidth = targetMask.Width + 2;
 
-            var cannidates = _scannedCharacters;
+            var cannidates = _glyphDatabase.KnownGlyphs;
             //Try to only look at similiar sized characters when we are looking at a medium width character.
-            //if (targetWidth <= _maxCharWidth / 2 && targetWidth > Math.Ceiling(_maxCharWidth * 0.15))
-            //    cannidates = _scannedCharacters.Where(c => c.Width >= targetWidth * 0.8f && c.Width <= targetWidth * 1.2f).ToList();
-            //else if (targetWidth <= Math.Ceiling(_maxCharWidth * 0.15)) //Only smalls
-            //    cannidates = _scannedCharacters.Where(c => c.Width <= Math.Ceiling(_maxCharWidth * 0.15)).ToList();
+            //if (targetWidth <= _glyphDatabase.MaxCharWidth / 2 && targetWidth > Math.Ceiling(_glyphDatabase.MaxCharWidth * 0.15))
+            //    cannidates = _glyphDatabase.KnownGlyphs.Where(c => c.Width >= targetWidth * 0.8f && c.Width <= targetWidth * 1.2f).ToList();
+            //else if (targetWidth <= Math.Ceiling(_glyphDatabase.MaxCharWidth * 0.15)) //Only smalls
+            //    cannidates = _glyphDatabase.KnownGlyphs.Where(c => c.Width <= Math.Ceiling(_glyphDatabase.MaxCharWidth * 0.15)).ToList();
             //Else it will be anything as we may be dealing with a partial match
 
             var bestMatchConf = 0f;
-            CharacterDetails bestMatchCharacter = null;
+            GlyphDetails bestMatchCharacter = null;
             CoordinateList bestMatchingPixels = null;
 
             foreach (var character in cannidates)
@@ -774,20 +800,31 @@ namespace WFImageParser
                 }
             }
 
-            return new Tuple<float, CharacterDetails, CoordinateList>(bestMatchConf, bestMatchCharacter, bestMatchingPixels);
+            return new Tuple<float, GlyphDetails, CoordinateList>(bestMatchConf, bestMatchCharacter, bestMatchingPixels);
         }
 
-        private Tuple<float, CharacterDetails, CoordinateList> FastGuessPartialCharacter(TargetMask targetMask, int lineOffset, bool takeLeastBad = false)
+        private Tuple<float, GlyphDetails, CoordinateList> FastGuessPartialCharacter(TargetMask targetMask, int lineOffset, bool takeLeastBad = false)
         {
             var targetWidth = targetMask.Width;
             var minWidth = takeLeastBad ? 0 : targetWidth * 0.5f;
             var leastBadMatch = float.MinValue;
-            CharacterDetails leastBadCharacter = null;
+            GlyphDetails leastBadCharacter = null;
             CoordinateList leastBadMatchingPixels = null;
-            foreach (var group in _scannedCharacters.Where(c => c.Width >= minWidth && c.Width <= targetWidth + 2).OrderByDescending(c => c.Width).GroupBy(c => c.Width))
+            IEnumerable<IGrouping<int, GlyphDetails>> possibleGroups =
+                _glyphDatabase.KnownGlyphs
+                    .Where((c) =>
+                    {
+                        if (c.Name.Contains(",") && !takeLeastBad)
+                            return c.Width >= targetMask.Width - 1 && c.Width <= targetMask.Width + 1;
+                        else
+                            return c.Width >= minWidth && c.Width <= targetWidth + 2;
+                    })
+                    .OrderByDescending(c => c.Width)
+                    .GroupBy(c => c.Width);
+            foreach (var group in possibleGroups)
             {
                 var bestMatch = float.MinValue;
-                CharacterDetails bestCharacter = null;
+                GlyphDetails bestCharacter = null;
                 CoordinateList bestMatchingPixels = null;
                 foreach (var character in group)
                 {
@@ -807,11 +844,15 @@ namespace WFImageParser
                                 characterPixelsMatched += character.WeightMappings[x, y];// + targetMask.SoftMask[x,y];
                                 matchingPixels.Add(new Point(x + targetMask.MinX, y + lineOffset));
                             }
+                            else if (character.Name == "l_lower" && y <= 2 && !targetMask.Mask[x, y])
+                                characterPixelsMatched -= 0.5f;
                             else if (character.TotalWeights > 55 && targetMask.Mask[x, y] && !character.VMask[x, y])
                                 characterPixelsMatched -= targetMask.SoftMask[x, y] / 2;
                             else if (character.TotalWeights > 55 && character.VMask[x, y] && !targetMask.Mask[x, y])
                                 characterPixelsMatched -= character.WeightMappings[x, y] / 4;
-                            //else if (targetWidth > _maxCharWidth * 0.75 && x <= targetWidth / 3 && !character.VMask[x, y] && targetMask.Mask[x, y]) //The first few pixels are most important. Punish missing them
+                            //else if (character.Width <= 4 && character.VMask[x, y] && !targetMask.Mask[x, y])
+                            //    characterPixelsMatched -= Math.Min(1f, character.WeightMappings[x,y] * 1.5f) * (character.Height - y / character.Height);
+                            //else if (targetWidth > _glyphDatabase.MaxCharWidth * 0.75 && x <= targetWidth / 3 && !character.VMask[x, y] && targetMask.Mask[x, y]) //The first few pixels are most important. Punish missing them
                             //{
                             //    characterPixelsMatched--;
                             //}
@@ -847,16 +888,304 @@ namespace WFImageParser
                     }
                 }
                 //var coverage = cleanTargetPixels.Where(p => p.X - startX > 0 && p.X - startX < character.Width && character.VMask[p.X - startX, p.Y - lineOffset] > minV).Count() / (float)character.PixelCount;
-                if (bestMatch > 0.85 || (bestMatch > 0.7 && takeLeastBad))
+                if (bestMatch > 0.92 || (bestMatch > 0.7 && takeLeastBad))
                 {
-                    return new Tuple<float, CharacterDetails, CoordinateList>(bestMatch, bestCharacter, bestMatchingPixels);
+                    return new Tuple<float, GlyphDetails, CoordinateList>(bestMatch, bestCharacter, bestMatchingPixels);
                 }
             }
             if (takeLeastBad && leastBadCharacter != null)
-                return new Tuple<float, CharacterDetails, CoordinateList>(leastBadMatch, leastBadCharacter, leastBadMatchingPixels);
+                return new Tuple<float, GlyphDetails, CoordinateList>(leastBadMatch, leastBadCharacter, leastBadMatchingPixels);
             return null;
         }
 
+        public System.Drawing.Bitmap[] ExtractChatLines(System.Drawing.Bitmap fullScreenImage)
+        {
+            var chatRect = new Rectangle(4, 763, 3236, 1350);
+            var lines = new System.Drawing.Bitmap[_lineOffsets.Length];
+            for (int i = 0; i < _lineOffsets.Length; i++)
+            {
+                lines[i] = new System.Drawing.Bitmap(chatRect.Width, 34);
+                for (int x = 0; x < lines[i].Width; x++)
+                {
+                    for (int y = 0; y < lines[i].Height; y++)
+                    {
+                        lines[i].SetPixel(x, y, fullScreenImage.GetPixel(chatRect.X + x, _lineOffsets[i] + y));
+                    }
+                }
+            }
+
+            return lines;
+        }
+
+        public string GetUsernameFromChatLine(System.Drawing.Bitmap chatLine)
+        {
+            var chatRect = new Rectangle(0, 0, chatLine.Width, chatLine.Height);
+            var startX = 0;
+            var endX = 0;
+            var lastCharacterEndX = startX;
+            var prevMatchedCharacters = new CoordinateList();
+            TargetMask prevTargetMask = null;
+            GlyphDetails lastCharacterDetails = null;
+            var wordStartX = -1;
+            var currentWord = new StringBuilder();
+            var currentLineType = LineType.Unknown;
+            var checkedKey = false;
+            var image = new ImageCache(chatLine);
+            var lineOffset = 0;
+            var lineHeight = chatLine.Height;
+            var minV = 0f;
+            string timestamp = string.Empty;
+            for (int x = startX; x < chatLine.Width; x++)
+            {
+                //Advance until next pixel
+                System.Drawing.Point firstPixel = GetFirstPixel(image, chatRect.Right, 34, 0, endX, prevMatchedCharacters);
+                x = firstPixel.X;
+
+                //Make sure we didn't escape
+                if (x >= chatRect.Right || firstPixel == System.Drawing.Point.Empty)
+                    break;
+
+                var targetMask = OCRHelpers.FindCharacterMask(firstPixel, image, prevMatchedCharacters, chatRect.Left, chatRect.Right, 0, 34);
+
+                if (currentLineType == LineType.Unknown)
+                {
+                    Point maxPoint = new Point(-1);
+                    var maxPointV = float.MinValue;
+                    for (int x2 = 0; x2 < targetMask.Width; x2++)
+                    {
+                        for (int y2 = 0; y2 < lineHeight; y2++)
+                        {
+                            if (targetMask.SoftMask[x2, y2] > maxPointV)
+                            {
+                                maxPoint = new Point(x2 + targetMask.MinX, y2 + lineOffset);
+                                maxPointV = targetMask.SoftMask[x2, y2];
+                            }
+                        }
+                    }
+
+                    var color = image.GetColor(maxPoint.X, maxPoint.Y);
+                    if (color == ImageCache.ChatColor.Ignored)
+                    {
+                        _logger.Log("Ignored color detected while parsing chat line");
+                        return null;
+                    }
+                    //if (color == ImageCache.ChatColor.Redtext)
+                    //{
+                    //    result = new RedtextLineResult();
+                    //    currentLineType = LineType.RedText;
+                    //}
+                    if (color == ImageCache.ChatColor.Text || color == ImageCache.ChatColor.ItemLink)
+                    {
+                        return null;
+                    }
+                    else if (color == ImageCache.ChatColor.ChatTimestampName)
+                    {
+                        currentLineType = LineType.NewMessage;
+                    }
+                }
+
+                RemoveSeenPixels(image, minV, ref chatRect, lineHeight, lineOffset, prevMatchedCharacters, ref wordStartX, ref x, ref firstPixel, ref targetMask);
+
+                startX = targetMask.MinX;
+                endX = targetMask.MaxX + 1;
+
+                if (endX > startX && targetMask.PixelCount > 10)
+                {
+                    Tuple<float, GlyphDetails, CoordinateList> bestFit = GetBestMatchingCharacter(image, lineHeight, lineOffset, targetMask);
+
+                    if (bestFit != null && bestFit.Item2 != null && endX != lastCharacterEndX)
+                    {
+                        string name = GetCharacterName(bestFit.Item2.Name);
+
+                        ////Check if we skipped past a space
+                        if (prevTargetMask != null && prevTargetMask.PixelCount > 0)
+                        {
+                            var safeRightX = -1;
+                            var safeLeftX = -1;
+                            //We need to account for all the random pixels that are added from noise
+                            //Search from right to left on the prev mask for a column that has a pixel with 2 ore more neighbors
+                            for (int i = prevTargetMask.Width - 1; i > 0; i--)
+                            {
+                                for (int y = 0; y < lineHeight; y++)
+                                {
+                                    if (OCRHelpers.NeighborCount(prevTargetMask, i, y) > 1)
+                                    {
+                                        safeLeftX = prevTargetMask.MinX + i;
+                                        break;
+                                    }
+                                }
+                                if (safeLeftX > -1)
+                                    break;
+                            }
+                            //Search from left to right on current mask for a column that has a pixel with 2 or more neighbors
+                            for (int i = 0; i < targetMask.Width; i++)
+                            {
+                                for (int y = 0; y < lineHeight; y++)
+                                {
+                                    if (OCRHelpers.NeighborCount(targetMask, i, y) > 1)
+                                    {
+                                        safeRightX = targetMask.MinX + i + 1;
+                                        break;
+                                    }
+                                }
+                                if (safeRightX > -1)
+                                    break;
+                            }
+                            var pixelGap = safeRightX - safeLeftX;
+                            int spaceWidth = 6;
+                            if (_glyphDatabase.GapPairs.ContainsKey(lastCharacterDetails.Name)
+                                && _glyphDatabase.GapPairs[lastCharacterDetails.Name].ContainsKey(bestFit.Item2.Name)
+                                && pixelGap > _glyphDatabase.GapPairs[lastCharacterDetails.Name][bestFit.Item2.Name] + spaceWidth)
+                            {
+                                if (currentLineType == LineType.NewMessage)
+                                {
+                                    if (timestamp == string.Empty)
+                                        timestamp = currentWord.ToString().Trim();
+                                    else
+                                        return currentWord.ToString().Trim().TrimEnd(':');
+                                }
+
+                                currentWord.Clear();
+                                wordStartX = targetMask.MinX;
+
+                            }
+                        }
+
+                        //Add character
+                        currentWord.Append(name);
+
+                        lastCharacterEndX = startX + bestFit.Item2.Width - 2;
+                        prevMatchedCharacters.AddRange(bestFit.Item3);
+                        prevTargetMask = targetMask;
+                        lastCharacterDetails = bestFit.Item2;
+
+                        //Due to new char IDing system we can safely jump a bit ahead to prevent double reading
+                        if (endX - startX > _glyphDatabase.MaxCharWidth * 0.6 && targetMask.PixelCount - prevMatchedCharacters.Count > targetMask.PixelCount * 0.3)
+                            endX = x = lastCharacterEndX;
+                        else
+                            endX = x = lastCharacterEndX + 2;
+                    }
+                    else //failed to ID the character, skip it
+                    {
+                        //AppendSpace(image, lineHeight, lineOffset, rawMessage, message, wordStartX, currentWord, clickPoints);
+                        x = lastCharacterEndX = endX = targetMask.MaxX + 1;
+                    }
+                }
+                else
+                {
+                    endX = startX = Math.Max(endX + 1, targetMask.MaxX + 1);
+                }
+            }
+
+            return null;
+        }
+
+        public class UsernameParseResult
+        {
+            public System.Drawing.Rectangle LineRect;
+            public string Timestamp;
+            public string Username;
+
+            public void Append(int lineOffset)
+            {
+                if(LineRect.Bottom + OCRHelpers.LINEHEIGHT > lineOffset)
+                {
+                    LineRect = new System.Drawing.Rectangle(LineRect.Left, LineRect.Y, LineRect.Width, (lineOffset + OCRHelpers.LINEHEIGHT) - LineRect.Top);
+                }
+            }
+
+            internal string GetKey()
+            {
+                return Timestamp + Username;
+            }
+        }
+        public UsernameParseResult[] ParseUsernamesFromChatImage(System.Drawing.Bitmap bitmapImage, bool isScrolledUp)
+        {
+            var chatRect = new Rectangle(4, 763, 3236, 1350);
+            var results = new List<UsernameParseResult>();
+            using (var mem = new MemoryStream())
+            {
+                bitmapImage.Save(mem, System.Drawing.Imaging.ImageFormat.Png);
+                mem.Seek(0, SeekOrigin.Begin);
+                using (Image<Rgba32> rgbImage = Image.Load(mem))
+                {
+                    var cache = new ImageCache(rgbImage);
+                    var offsets = _lineOffsets;
+                    var lineHeight = OCRHelpers.LINEHEIGHT;
+                    var endLine = offsets.Length;
+                    var newMessageRegex = new Regex(@"^\[\d\d:\d\d\]", RegexOptions.Compiled);
+                    var prevLineType = LineType.Unknown;
+                    //var results = new string[endLine - startLine];
+                    for (int i = 0; i < offsets.Length; i++)
+                    {
+                        //var line = ParseLineBitmapScan(cache, 0.3f, xOffset, chatRect, lineHeight, offsets[i], 0, prevType);
+                        var line = ParseLineBitmapScan(cache, 0f, chatRect.Left, chatRect, lineHeight, offsets[i], 0, prevLineType);
+
+                        if (line == null)
+                        {
+                            prevLineType = LineType.Unknown;
+                            continue;
+                        }
+                        else
+                            prevLineType = line.LineType;
+
+                        // There may be more to this chat message below the current scrolled amount when looking at the final line
+                        if (isScrolledUp)
+                        {
+                            if (i == offsets.Length - 1 && line != null && line.LineType == LineType.Continuation && results.Count > 0)
+                            {
+                                _logger.Log("Last line in chat box is contiuation. Removing last real message to prevent partial cut off.");
+                                var last = results.Last();
+                                results.Remove(last);
+                            }
+                            else if (i == offsets.Length - 1 && line != null && line.LineType == LineType.NewMessage)
+                            {
+                                _logger.Log("Last line in chat box is a new message. Possible contiuation off screen, not adding.");
+                                continue;
+                            }
+                        }
+
+                        if (i >= endLine && line.LineType != LineType.Continuation)
+                            break;
+
+                        //Add new messages
+                        if (line.RawMessage != null && line.LineType == LineType.NewMessage)
+                        {
+                            var clr = line as ChatMessageLineResult;
+                            if (clr.Timestamp != string.Empty && clr.Username != string.Empty)
+                            {
+                                var result = new UsernameParseResult()
+                                {
+                                    LineRect = new System.Drawing.Rectangle(chatRect.Left, _lineOffsets[i], chatRect.Width, OCRHelpers.LINEHEIGHT),
+                                    Timestamp = clr.Timestamp,
+                                    Username = clr.Username
+                                };
+                                results.Add(result);
+                            }
+                        }
+                        //Append continuation of messages onto last message
+                        else if (results.Count > 0 && line.RawMessage != null && line.LineType == LineType.Continuation)
+                        {
+                            var last = results.Last() as UsernameParseResult;
+                            _logger.Log("Appending continuation to last message.");
+                            last.Append(_lineOffsets[i]);
+                        }
+                    }
+                }
+            }
+
+            //Add results to cache
+            foreach (var result in results)
+            {
+                _sentItems.Enqueue(result.GetKey());
+            }
+            while (_sentItems.Count > 100)
+            {
+                _sentItems.Dequeue();
+            }
+
+            return results.ToArray();
+        }
         public BaseLineParseResult[] ParseChatImage(System.Drawing.Bitmap bitmapImage, int xOffset, bool useCache, bool isScrolledUp, int lineParseCount = 27)
         {
             var chatRect = new Rectangle(4, 763, 3236, 1350);
@@ -869,7 +1198,7 @@ namespace WFImageParser
                 {
                     var cache = new ImageCache(rgbImage);
                     var offsets = _lineOffsets;
-                    var lineHeight = 36;
+                    var lineHeight = 34;
                     var endLine = Math.Min(offsets.Length, lineParseCount);
                     var newMessageRegex = new Regex(@"^\[\d\d:\d\d\]", RegexOptions.Compiled);
                     var kickRegex = new Regex(@"\w was kicked.", RegexOptions.Compiled);
@@ -877,7 +1206,8 @@ namespace WFImageParser
                     //var results = new string[endLine - startLine];
                     for (int i = 0; i < offsets.Length; i++)
                     {
-                        var line = ParseLineBitmapScan(cache, 0.3f, xOffset, chatRect, lineHeight, offsets[i], 6, prevType);
+                        //var line = ParseLineBitmapScan(cache, 0.3f, xOffset, chatRect, lineHeight, offsets[i], 0, prevType);
+                        var line = ParseLineBitmapScan(cache, 0f, xOffset, chatRect, lineHeight, offsets[i], 0, prevType);
 
                         //Handle null results
                         if (line != null)
@@ -982,8 +1312,8 @@ namespace WFImageParser
 
         public bool IsChatFocused(System.Drawing.Bitmap chatIconBitmap)
         {
-            var darkPixels = new Point[] { new Point(23, 15), new Point(30, 35), new Point(37, 15), new Point(43, 35)};
-            var lightPixles = new Point[] { new Point(17, 25), new Point(24, 12), new Point(26, 19), new Point(32, 24), new Point(40, 32), new Point(30, 43)};
+            var darkPixels = new Point[] { new Point(23, 15), new Point(30, 35), new Point(37, 15), new Point(43, 35) };
+            var lightPixles = new Point[] { new Point(17, 25), new Point(24, 12), new Point(26, 19), new Point(32, 24), new Point(40, 32), new Point(30, 43) };
             if (darkPixels.Any(p =>
             {
                 var pixel = chatIconBitmap.GetPixel(p.X, p.Y);
@@ -1007,17 +1337,6 @@ namespace WFImageParser
         {
             var duplicateCache = new Queue<string>(_sentItems.Where(i => i != key));
             _sentItems = duplicateCache;
-        }
-
-        private class CharacterDetails
-        {
-            public bool[,] VMask { get; set; }
-            public float[,] WeightMappings { get; set; }
-            //public int PixelCount { get; set; }
-            public string Name { get; set; }
-            public int Width { get; set; }
-            public int Height { get; set; }
-            public float TotalWeights { get; internal set; }
         }
     }
 }

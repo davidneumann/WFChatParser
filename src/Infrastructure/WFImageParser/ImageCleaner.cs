@@ -57,7 +57,7 @@ namespace WFImageParser
             }
         }
 
-        public void SaveSoftMask(string input, string outputPath)
+        public static void SaveSoftMask(string input, string outputPath)
         {
             using (var rgbImage = Image.Load(input))
             {
@@ -77,6 +77,25 @@ namespace WFImageParser
         }
 
         public void MakeGreyscaleImageFromArray(string outputDir, char character, byte[,] pixels)
+        {
+            string name = ConvertCharacterToName(character);
+            using (var image = new Image<Rgba32>(pixels.GetLength(0), pixels.GetLength(1)))
+            {
+                for (int x = 0; x < image.Width; x++)
+                {
+                    for (int y = 0; y < image.Height; y++)
+                    {
+                        image[x, y] = new Rgba32(pixels[x, y], pixels[x, y], pixels[x, y]);
+                    }
+                }
+
+                if (!Directory.Exists(outputDir))
+                    Directory.CreateDirectory(outputDir);
+                image.Save(Path.Combine(outputDir, name + ".png"));
+            }
+        }
+
+        public static string ConvertCharacterToName(char character)
         {
             var name = character.ToString();
             if (name.ToUpper() != name.ToLower() && name.ToUpper() == name)
@@ -101,45 +120,32 @@ namespace WFImageParser
                 name = "pipe";
             else if (name == "," || name[0] == ',')
                 name = "comma";
-            using (var image = new Image<Rgba32>(pixels.GetLength(0), pixels.GetLength(1)))
-            {
-                for (int x = 0; x < image.Width; x++)
-                {
-                    for (int y = 0; y < image.Height; y++)
-                    {
-                        image[x, y] = new Rgba32(pixels[x, y], pixels[x, y], pixels[x, y]);
-                    }
-                }
-
-                if (!Directory.Exists(outputDir))
-                    Directory.CreateDirectory(outputDir);
-                image.Save(Path.Combine(outputDir, name + ".png"));
-            }
+            return name;
         }
 
-        public void SaveGreyscaleImage(string imagePath, string outputPath, float minV = 0.44f)
-        {
-            var converter = new ColorSpaceConverter();
+        //public void SaveGreyscaleImage(string imagePath, string outputPath, float minV = 0.44f)
+        //{
+        //    var converter = new ColorSpaceConverter();
 
-            using (Image<Rgba32> rgbImage = Image.Load(imagePath))
-            {
-                for (int i = 0; i < rgbImage.Width * rgbImage.Height; i++)
-                {
-                    var x = i % rgbImage.Width;
-                    var y = i / rgbImage.Width;
-                    var pixel = rgbImage[x, y];
-                    var hsvPixel = converter.ToHsv(pixel);
-                    if (hsvPixel.V > minV)
-                    {
-                        rgbImage[x, y] = Rgba32.Black;
-                    }
-                    else
-                        rgbImage[x, y] = Rgba32.White;
-                }
+        //    using (Image<Rgba32> rgbImage = Image.Load(imagePath))
+        //    {
+        //        for (int i = 0; i < rgbImage.Width * rgbImage.Height; i++)
+        //        {
+        //            var x = i % rgbImage.Width;
+        //            var y = i / rgbImage.Width;
+        //            var pixel = rgbImage[x, y];
+        //            var hsvPixel = converter.ToHsv(pixel);
+        //            if (hsvPixel.V > minV)
+        //            {
+        //                rgbImage[x, y] = Rgba32.Black;
+        //            }
+        //            else
+        //                rgbImage[x, y] = Rgba32.White;
+        //        }
 
-                rgbImage.Save(outputPath);
-            }
-        }
+        //        rgbImage.Save(outputPath);
+        //    }
+        //}
 
         internal bool IsChatColor(Hsv hsvPixel)
         {

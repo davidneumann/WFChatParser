@@ -8,8 +8,10 @@ using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using WebSocketSharp;
 
@@ -31,6 +33,8 @@ namespace DataStream
         public event EventHandler<SaveEventArgs> RequestSaveAll;
 
         private bool _shouldReconnect;
+
+        private List<string> _DEBUGErrorMessages = new List<string>();
 
         private DateTimeOffset _lastReconnectTime = DateTimeOffset.MinValue;
         public DataSender(Uri websocketHostname, IEnumerable<string> connectionMessages, 
@@ -75,12 +79,22 @@ namespace DataStream
                 }
             }
             _webSocket = new WebSocket(_websocketHostname.AbsoluteUri);
-            _webSocket.Log.Output = (_, __) => { };
+            _webSocket.Log.Output = (data, dataString) => { try { this.AsyncSendLogMessage(data.Message + "\n " + dataString).Wait(); } catch { } };
             _webSocket.OnMessage += _webSocket_OnMessage;
             _webSocket.OnOpen += _webSocket_OnOpen;
+            _webSocket.OnError += _webSocket_OnError;
             if (_shouldReconnect)
                 _webSocket.OnClose += _webSocket_OnClose;
             _webSocket.Connect();
+        }
+
+        private void _webSocket_OnError(object sender, WebSocketSharp.ErrorEventArgs e)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("Message: " + e.Message);
+            sb.AppendLine("Exception: " + e.Exception.Message);
+            sb.AppendLine("Json: " + JsonConvert.SerializeObject(e));
+            _DEBUGErrorMessages.Add(sb.ToString());
         }
 
         private void _webSocket_OnOpen(object sender, EventArgs e)
@@ -88,6 +102,22 @@ namespace DataStream
             foreach (var message in _connectionStrings)
             {
                 _webSocket.Send(message);
+            }
+            if (_DEBUGErrorMessages.Count > 0)
+            {
+                var wasError = false;
+                foreach (var message in _DEBUGErrorMessages.ToArray())
+                {
+                    try
+                    {
+                        AsyncSendDebugMessage("Connection lost: " + message).Wait();
+                        _DEBUGErrorMessages.Remove(message);
+                    }
+                    catch { wasError = true; }
+                }
+
+                if (!wasError)
+                    _DEBUGErrorMessages.Clear();
             }
         }
 
@@ -107,7 +137,6 @@ namespace DataStream
         private BackgroundWorker _reconnectWorker = new BackgroundWorker();
         private string _rawMessagePrefix;
         private JsonSerializerSettings _jsonSettings = new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore, ContractResolver = new CompactDataSenderResolver() };
-        
 
         private void Reconnect()
         {
@@ -129,6 +158,7 @@ namespace DataStream
         {
             if (_shouldReconnect)
             {
+                _DEBUGErrorMessages.Add($"Code: {e.Code} Reason: {e.Reason} Was clean: {e.WasClean}");
                 Reconnect();
             }
         }
@@ -140,6 +170,22 @@ namespace DataStream
                 try { AsyncSendDebugMessage("Kill acknowledged. Requesting a stop.").Wait(); }
                 catch { }
                 RequestToKill?.Invoke(this, EventArgs.Empty);
+            }
+            else if(e.Data.Substring(e.Data.LastIndexOf(":") + 1).Trim() == "RESTART")
+            {
+                try
+                {
+                    AsyncSendDebugMessage("Attempting to restart computer").Wait();
+                    var shutdown = new System.Diagnostics.Process()
+                    {
+                        StartInfo = new ProcessStartInfo("shutdown.exe", "/r /f /t 0")
+                    };
+                    shutdown.Start();
+                }
+                catch
+                {
+                    AsyncSendDebugMessage("FAILED TO RESTART COMPUTER!").Wait();
+                }
             }
             else if(e.Data.Substring(e.Data.LastIndexOf(":") + 1).Trim().StartsWith("SAVE"))
             {
