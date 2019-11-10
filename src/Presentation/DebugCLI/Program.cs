@@ -365,7 +365,7 @@ namespace DebugCLI
                 Directory.CreateDirectory(outputDir);
             var sw = new Stopwatch();
             var rc = new RivenCleaner();
-            foreach (var riven in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.Contains("riven")))
+            foreach (var riven in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.Contains("0a218c17-f4db-4fe2-b640-16249df9dc05")))
             {
                 sw.Restart();
                 using (var b = new Bitmap(riven))
@@ -375,6 +375,13 @@ namespace DebugCLI
                         rivenImage = rp.CropToRiven(b);
                     var b2 = rc.CleanRiven(rivenImage);
                     var text = rp.ParseRivenTextFromImage(b2, null);
+                    foreach (var modi in text.Modifiers)
+                    {
+                        if(!Modifier.PossibleDescriptions["zh"].Contains(modi.Description))
+                        {
+                            Console.WriteLine("Invalid modifier found!");
+                        }
+                    }
                     sw.Stop();
                     Console.WriteLine("Finished cleaning and parsing in: " + sw.Elapsed.TotalSeconds + " seconds.");
                     b2.Save(Path.Combine(outputDir, (new FileInfo(riven)).Name));
