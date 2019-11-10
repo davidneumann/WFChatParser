@@ -97,6 +97,12 @@ namespace DebugCLI
                         }
                         lineBitmap.Save("line_" + i + ".png");
                     }
+
+                    var tessLines = ChatLineExtractor.ExtractChatLines(b, rect);
+                    for (int j = 0; j < tessLines.Length; j++)
+                    {
+                        tessLines[j].Save("line_" + i + "_" + j + ".png");
+                    }
                 }
             }
         }
