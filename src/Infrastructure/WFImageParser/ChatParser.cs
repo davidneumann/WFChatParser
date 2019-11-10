@@ -389,7 +389,7 @@ namespace WFImageParser
         {
             var bestFit = FastGuessPartialCharacter(targetMask, lineOffset);
             //Try trimming any, and then to the left of, column with less than 15% of the height worth of pixels 
-            if(bestFit == null)
+            if (bestFit == null)
             {
                 bestFit = GuessQuickSplitResult(targetMask, lineOffset);
             }
@@ -626,7 +626,7 @@ namespace WFImageParser
                     softPixelCount += softMask[x, y];
                 }
             }
-            
+
             var quickMask = new TargetMask(boolMask, lowUseColumn, targetMask.MinX, width, pixelCount, softPixelCount, softMask);
             return FastGuessPartialCharacter(quickMask, lineOffset);
         }
@@ -1132,6 +1132,109 @@ namespace WFImageParser
             return null;
         }
 
+        public class UsernameParseResult
+        {
+            public System.Drawing.Rectangle LineRect;
+            public string Timestamp;
+            public string Username;
+
+            public void Append(int lineOffset)
+            {
+                if(LineRect.Bottom == lineOffset)
+                {
+                    LineRect = new System.Drawing.Rectangle(LineRect.Left, LineRect.Y, LineRect.Width, LineRect.Height + OCRHelpers.LINEHEIGHT);
+                }
+            }
+
+            internal string GetKey()
+            {
+                return Timestamp + Username;
+            }
+        }
+        public UsernameParseResult[] ParseUsernamesFromChatImage(System.Drawing.Bitmap bitmapImage, bool isScrolledUp)
+        {
+            var chatRect = new Rectangle(4, 763, 3236, 1350);
+            var results = new List<UsernameParseResult>();
+            using (var mem = new MemoryStream())
+            {
+                bitmapImage.Save(mem, System.Drawing.Imaging.ImageFormat.Png);
+                mem.Seek(0, SeekOrigin.Begin);
+                using (Image<Rgba32> rgbImage = Image.Load(mem))
+                {
+                    var cache = new ImageCache(rgbImage);
+                    var offsets = _lineOffsets;
+                    var lineHeight = OCRHelpers.LINEHEIGHT;
+                    var endLine = offsets.Length;
+                    var newMessageRegex = new Regex(@"^\[\d\d:\d\d\]", RegexOptions.Compiled);
+                    var prevLineType = LineType.Unknown;
+                    //var results = new string[endLine - startLine];
+                    for (int i = 0; i < offsets.Length; i++)
+                    {
+                        //var line = ParseLineBitmapScan(cache, 0.3f, xOffset, chatRect, lineHeight, offsets[i], 0, prevType);
+                        var line = ParseLineBitmapScan(cache, 0f, chatRect.Left, chatRect, lineHeight, offsets[i], 0, prevLineType);
+
+                        if (line == null)
+                            continue;
+                        else
+                            prevLineType = line.LineType;
+
+                        // There may be more to this chat message below the current scrolled amount when looking at the final line
+                        if (isScrolledUp)
+                        {
+                            if (i == offsets.Length - 1 && line != null && line.LineType == LineType.Continuation && results.Count > 0)
+                            {
+                                _logger.Log("Last line in chat box is contiuation. Removing last real message to prevent partial cut off.");
+                                var last = results.Last();
+                                results.Remove(last);
+                            }
+                            else if (i == offsets.Length - 1 && line != null && line.LineType == LineType.NewMessage)
+                            {
+                                _logger.Log("Last line in chat box is a new message. Possible contiuation off screen, not adding.");
+                                continue;
+                            }
+                        }
+
+                        if (i >= endLine && line.LineType != LineType.Continuation)
+                            break;
+
+                        //Add new messages
+                        if (line.RawMessage != null && line.LineType == LineType.NewMessage)
+                        {
+                            var clr = line as ChatMessageLineResult;
+                            if (clr.Timestamp != string.Empty && clr.Username != string.Empty)
+                            {
+                                var result = new UsernameParseResult()
+                                {
+                                    LineRect = new System.Drawing.Rectangle(chatRect.Left, _lineOffsets[i], chatRect.Width, OCRHelpers.LINEHEIGHT),
+                                    Timestamp = clr.Timestamp,
+                                    Username = clr.Username
+                                };
+                                results.Add(result);
+                            }
+                        }
+                        //Append continuation of messages onto last message
+                        else if (results.Count > 0 && line.RawMessage != null && line.LineType == LineType.Continuation)
+                        {
+                            var last = results.Last() as UsernameParseResult;
+                            _logger.Log("Appending continuation to last message.");
+                            last.Append(_lineOffsets[i]);
+                        }
+                    }
+                }
+            }
+
+            //Add results to cache
+            foreach (var result in results)
+            {
+                _sentItems.Enqueue(result.GetKey());
+            }
+            while (_sentItems.Count > 100)
+            {
+                _sentItems.Dequeue();
+            }
+
+            return results.ToArray();
+        }
         public BaseLineParseResult[] ParseChatImage(System.Drawing.Bitmap bitmapImage, int xOffset, bool useCache, bool isScrolledUp, int lineParseCount = 27)
         {
             var chatRect = new Rectangle(4, 763, 3236, 1350);
