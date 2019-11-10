@@ -89,6 +89,7 @@ namespace WFImageParser
             List<ClickPoint> clickPoints = new List<ClickPoint>();
             var currentLineType = LineType.Unknown;
             var checkedKey = false;
+            ChatColor lastColor = ChatColor.Unknown;
             for (int x = xOffset; x < chatRect.Right; x++)
             {
                 //Advance until next pixel
@@ -204,9 +205,16 @@ namespace WFImageParser
                             var safeName = bestFit.Item2.Name;
                             if (safeName.Contains(","))
                                 safeName = safeName.Split(',').First();
-                            if (_glyphDatabase.GapPairs.ContainsKey(lastCharacterDetails.Name)
-                                && _glyphDatabase.GapPairs[lastCharacterDetails.Name].ContainsKey(safeName)
-                                && pixelGap >= _glyphDatabase.GapPairs[lastCharacterDetails.Name][safeName] + spaceWidth)
+                            if (
+                                (
+                                    lastColor == ChatColor.ChatTimestampName && image.GetColor(firstPixel.X, firstPixel.Y) != ChatColor.ChatTimestampName
+                                )
+                                ||
+                                (
+                                    _glyphDatabase.GapPairs.ContainsKey(lastCharacterDetails.Name)
+                                    && _glyphDatabase.GapPairs[lastCharacterDetails.Name].ContainsKey(safeName)
+                                    && pixelGap >= _glyphDatabase.GapPairs[lastCharacterDetails.Name][safeName] + spaceWidth)
+                                )
                             {
                                 if (currentLineType == LineType.NewMessage && !checkedKey)
                                 {
@@ -240,6 +248,7 @@ namespace WFImageParser
                         prevMatchedCharacters.AddRange(bestFit.Item3);
                         prevTargetMask = targetMask;
                         lastCharacterDetails = bestFit.Item2;
+                        lastColor = image.GetColor(firstPixel.X, firstPixel.Y);
                         if (lastCharacterDetails.Name.Contains(","))
                         {
                             lastCharacterDetails = new GlyphDetails(lastCharacterDetails.VMask, lastCharacterDetails.WeightMappings, lastCharacterDetails.Name.Split(',').Last(),
