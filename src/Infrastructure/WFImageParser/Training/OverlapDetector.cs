@@ -10,6 +10,7 @@ namespace WFImageParser.Training
 {
     public static class OverlapDetector
     {
+        private static GlyphDatabase _glyphDatabase = new GlyphDatabase(Path.Combine("ocrdata", "english"));
         public static void DetectOverlaps(string sourceDir)
         {
             if (Directory.Exists(Path.Combine("overlaps", "hits")))
@@ -63,7 +64,7 @@ namespace WFImageParser.Training
                     OCRHelpers.LineOffsets[offsetIndex], OCRHelpers.LineOffsets[offsetIndex] + OCRHelpers.LINEHEIGHT);
                 if (targetMask.Width > 0)
                 {
-                    var possibleMatches = GlyphDatabase.KnownGlyphs.Where(g => g.Width >= targetMask.Width - 1 && g.Width <= targetMask.Width + 1);
+                    var possibleMatches = _glyphDatabase.KnownGlyphs.Where(g => g.Width >= targetMask.Width - 1 && g.Width <= targetMask.Width + 1);
                     float bestDiff = float.NaN;
                     foreach (var match in possibleMatches)
                     {

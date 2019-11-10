@@ -10,21 +10,21 @@ using static WFImageParser.ChatParser;
 
 namespace WFImageParser.GlyphRecognition
 {
-    internal static class GlyphDatabase
+    internal class GlyphDatabase
     {
-        public static GlyphDetails[] KnownGlyphs { get;  private set; }
-        private static Dictionary<string, Dictionary<string, int>> _gapPairs = new Dictionary<string, Dictionary<string, int>>();
-        public static int MaxCharWidth { get; private set; } = 0;
-        public static int MinCharWidth { get; private set; } = 0;
+        public GlyphDetails[] KnownGlyphs { get; private set; }
+        public Dictionary<string, Dictionary<string, int>> GapPairs { get; private set; } = new Dictionary<string, Dictionary<string, int>>();
+        public int MaxCharWidth { get; private set; } = 0;
+        public int MinCharWidth { get; private set; } = 0;
 
-        private static readonly string GAPSFILE = Path.Combine("ocrdata", "gaps.json");
+        //private static readonly string GAPSFILE = Path.Combine("ocrdata", "gaps.json");
 
-        static GlyphDatabase()
+        public GlyphDatabase(string dataDirectory)
         {
             var knownGlyphs = new List<GlyphDetails>();
-            if (Directory.Exists("ocrdata"))
+            if (Directory.Exists(dataDirectory))
             {
-                foreach (var file in Directory.GetFiles("ocrdata").Where(f => f.EndsWith(".png")))
+                foreach (var file in Directory.GetFiles(dataDirectory).Where(f => f.EndsWith(".png")))
                 {
                     var character = new GlyphDetails()
                     {
@@ -60,17 +60,18 @@ namespace WFImageParser.GlyphRecognition
                 }
 
                 //Load up gap pairs
-                if (File.Exists(GAPSFILE))
+                var gapsFile = Path.Combine(dataDirectory, "gaps.json");
+                if (File.Exists(gapsFile))
                 {
-                    var gapPairs = JsonConvert.DeserializeObject<SimpleGapPair[]>(File.ReadAllText(GAPSFILE));
+                    var gapPairs = JsonConvert.DeserializeObject<SimpleGapPair[]>(File.ReadAllText(gapsFile));
                     foreach (var gapPair in gapPairs)
                     {
-                        if (!_gapPairs.ContainsKey(gapPair.Left))
-                            _gapPairs.Add(gapPair.Left, new Dictionary<string, int>());
+                        if (!GapPairs.ContainsKey(gapPair.Left))
+                            GapPairs.Add(gapPair.Left, new Dictionary<string, int>());
                         if (gapPair.Gap > 0)
-                            _gapPairs[gapPair.Left].Add(gapPair.Right, gapPair.Gap); //- 1); //There is an off by 1 error in the gaps file currently
+                            GapPairs[gapPair.Left].Add(gapPair.Right, gapPair.Gap); //- 1); //There is an off by 1 error in the gaps file currently
                         else
-                            _gapPairs[gapPair.Left].Add(gapPair.Right, 0);
+                            GapPairs[gapPair.Left].Add(gapPair.Right, 0);
                     }
                 }
             }

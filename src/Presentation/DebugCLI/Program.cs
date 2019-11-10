@@ -56,9 +56,9 @@ namespace DebugCLI
             //FindErrorAgain();
             //TestRivenParsing();
             //VerifyNoErrors(2);
-            TestScreenHandler();
+            //TestScreenHandler();
             //TestBot();
-            //ParseChatImage();
+            ParseChatImage();
             //TessShim();
             //NewRivenShim();
             //ChatMovingShim();
@@ -68,11 +68,38 @@ namespace DebugCLI
             //TrainOnImages();
             //FindOverlappingLines();
             //TrainSpacesOnImages();
+            //ChineseChatShim();
+        }
+
+        private static void ChineseChatShim()
+        {
+            var cp = new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "english"));
+            const string source = @"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\chinese_chat.png";
+            ImageCleaner.SaveSoftMask(source, "lines_white.png");
+            using (var b = new Bitmap(source))
+            {
+                var lines = cp.ParseUsernamesFromChatImage(b, false);
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    Rectangle rect = lines[i].LineRect;
+                    using (var lineBitmap = new Bitmap(rect.Width, rect.Height))
+                    {
+                        for (int x = 0; x < lineBitmap.Width; x++)
+                        {
+                            for (int y = 0; y < lineBitmap.Height; y++)
+                            {
+                                lineBitmap.SetPixel(x, y, b.GetPixel(rect.Left + x, rect.Top + y));
+                            }
+                        }
+                        lineBitmap.Save("line_" + i + ".png");
+                    }
+                }
+            }
         }
 
         private static void ChatLineExtractorShim()
         {
-            var cp = new ChatParser(new FakeLogger());
+            var cp = new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "english"));
             var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chat_new.png");
             var lines = cp.ExtractChatLines(b);
             for (int i = 0; i < lines.Length; i++)
@@ -168,7 +195,7 @@ namespace DebugCLI
 
         private static void FindErrorAgain()
         {
-            var cp = new ChatParser(new FakeLogger());
+            var cp = new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "english"));
             foreach (var file in Directory.GetFiles(@"\\DESKTOP-BJRVJJQ\ChatLog\debug").Where(f => f.Contains("131992381447623296")))
             {
                 var lines = cp.ParseChatImage(new Bitmap(file));
@@ -255,7 +282,7 @@ namespace DebugCLI
             {
                 using (var bitmap = new Bitmap(filePath))
                 {
-                    var cp = new ChatParser(new FakeLogger());
+                    var cp = new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "english"));
                     //ic.SaveSoftMask(filePath, "error_blurry1_white.png");
                     ImageCleaner.SaveSoftMask(filePath, filePath.Replace(".png", "_white.png"));
                     var lines = cp.ParseChatImage(bitmap);
@@ -274,7 +301,7 @@ namespace DebugCLI
         {
             var input = @"C:\Users\david\OneDrive\Documents\WFChatParser\ErrorImages\Screenshot (175).png";
             ImageCleaner.SaveSoftMask(input, "test2.png");
-            var cp = new ChatParser(new FakeLogger());
+            var cp = new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "english"));
             var lines = cp.ParseChatImage(new Bitmap(input), false, false, 50);
         }
 
@@ -583,7 +610,7 @@ namespace DebugCLI
                 obs,
                 password,
                 new KeyboardHelper(),
-                new ChatParser(new FakeLogger()),
+                new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "english")),
                 dataSender,
                 new RivenCleaner(),
                 new RivenParserFactory(),
@@ -844,7 +871,7 @@ namespace DebugCLI
             fullImage.Dispose();
 
             var chatIcon = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chaticon.png");
-            var cp = new ChatParser(new FakeLogger());
+            var cp = new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "english"));
             var isChat = cp.IsChatFocused(chatIcon);
         }
 
@@ -1017,7 +1044,7 @@ namespace DebugCLI
 
         private static void VisualizeClickpoints()
         {
-            var cp = new ChatParser(new FakeLogger());
+            var cp = new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "english"));
             var r = cp.ParseChatImage(new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\bad.png"));
             var list = new CoordinateList();
             r.Where(r1 => r1 is ChatMessageLineResult).Cast<ChatMessageLineResult>().SelectMany(r1 => r1.ClickPoints).ToList().ForEach(p => list.Add(p.X, p.Y));
@@ -1236,7 +1263,7 @@ namespace DebugCLI
             b.Save("test.png");
             b.Dispose();
 
-            var p = new ChatParser(new FakeLogger());
+            var p = new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "english"));
             var results = p.ParseChatImage(new Bitmap(image), true, true, 27).Where(r => r is ChatMessageLineResult).Cast<ChatMessageLineResult>();
 
             var clean = new ImageCleaner();
@@ -1365,7 +1392,7 @@ namespace DebugCLI
         {
             var cleaner = new ImageCleaner();
             cleaner.SaveChatColors(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png", @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input_white.png");
-            var p = new ChatParser(new FakeLogger());
+            var p = new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "english"));
             var r = p.ParseChatImage(new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png"));
             foreach (var line in r)
             {
@@ -1511,7 +1538,7 @@ namespace DebugCLI
                 Console.WriteLine($"=={fileInfo.Name}==");
                 var masterKeyFile = trainingImages[k];
                 var correctResults = File.ReadAllLines(trainingText[k]).Select(line => line.Trim()).ToArray();
-                var c = new ChatParser(new FakeLogger());
+                var c = new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "english"));
                 var cleaner = new ImageCleaner();
                 cleaner.SaveChatColors(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name));
                 var sw = new Stopwatch();

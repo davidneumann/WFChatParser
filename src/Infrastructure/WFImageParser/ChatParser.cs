@@ -23,16 +23,12 @@ namespace WFImageParser
 {
     public partial class ChatParser : IChatParser
     {
-        private List<GlyphDetails> _scannedCharacters = new List<GlyphDetails>();
-        private Dictionary<string, Dictionary<string, int>> _gapPairs = new Dictionary<string, Dictionary<string, int>>();
-        private int _maxCharWidth = 0;
-        private int _minCharWidth = int.MaxValue;
+        private GlyphDatabase _glyphDatabase;
 
-        private static readonly string GAPSFILE = Path.Combine("ocrdata", "gaps.json");
         //private static readonly string[] _suffixes = new string[] { "ada]", "ata]", "bin]", "bo]", "cak]", "can]", "con]", "cron]", "cta]", "des]", "dex]", "do]", "dra]", "lis]", "mag]", "nak]", "nem]", "nent]", "nok]", "pha]", "sus]", "tak]", "tia]", "tin]", "tio]", "tis]", "ton]", "tor]", "tox]", "tron]" };
         private static readonly List<string> _suffixes = new List<string>();
         private static readonly List<Regex> _blacklistedRegex = new List<Regex>();
-        public ChatParser(ILogger logger)
+        public ChatParser(ILogger logger, string dataDirectory)
         {
             _logger = logger;
 
@@ -54,59 +50,9 @@ namespace WFImageParser
                 }
             }
 
-            var converter = new ColorSpaceConverter();
-            if (Directory.Exists("ocrdata"))
-            {
-                foreach (var file in Directory.GetFiles("ocrdata").Where(f => f.EndsWith(".png")))
-                {
-                    var character = new GlyphDetails()
-                    {
-                        Name = (new FileInfo(file)).Name.Replace(".png", ""),
-                        TotalWeights = 0f
-                    };
-                    using (Image<Rgba32> image = Image.Load(file))
-                    {
-                        character.VMask = new bool[image.Width, image.Height];
-                        character.WeightMappings = new float[image.Width, image.Height];
-                        for (int x = 0; x < image.Width; x++)
-                        {
-                            for (int y = 0; y < image.Height; y++)
-                            {
-                                character.WeightMappings[x, y] = (float)image[x, y].R / (float)byte.MaxValue;
-                                character.TotalWeights += character.WeightMappings[x, y];
-                                if (character.WeightMappings[x, y] > 0)
-                                {
-                                    character.VMask[x, y] = true;
-                                }
-                                else
-                                    character.VMask[x, y] = false;
-                            }
-                        }
-                        character.Width = image.Width;
-                        character.Height = image.Height;
-                        _scannedCharacters.Add(character);
-                        if (character.Width > _maxCharWidth)
-                            _maxCharWidth = character.Width;
-                        if (character.Width < _minCharWidth)
-                            _minCharWidth = character.Width;
-                    }
-                }
-
-                //Load up gap pairs
-                if (File.Exists(GAPSFILE))
-                {
-                    var gapPairs = JsonConvert.DeserializeObject<SimpleGapPair[]>(File.ReadAllText(GAPSFILE));
-                    foreach (var gapPair in gapPairs)
-                    {
-                        if (!_gapPairs.ContainsKey(gapPair.Left))
-                            _gapPairs.Add(gapPair.Left, new Dictionary<string, int>());
-                        if (gapPair.Gap > 0)
-                            _gapPairs[gapPair.Left].Add(gapPair.Right, gapPair.Gap); //- 1); //There is an off by 1 error in the gaps file currently
-                        else
-                            _gapPairs[gapPair.Left].Add(gapPair.Right, 0);
-                    }
-                }
-            }
+            if (!Directory.Exists(dataDirectory))
+                throw new FileNotFoundException("Missing data directory", dataDirectory);
+            _glyphDatabase = new GlyphDatabase(dataDirectory);
         }
 
         //private int[] _lineOffsets = new int[] { 5, 55, 105, 154, 204, 253, 303, 352, 402, 452, 501, 551, 600, 650, 700, 749, 799, 848, 898, 948, 997, 1047, 1096, 1146, 1195, 1245, 1295 };
@@ -250,9 +196,9 @@ namespace WFImageParser
                             var safeName = bestFit.Item2.Name;
                             if (safeName.Contains(","))
                                 safeName = safeName.Split(',').First();
-                            if (_gapPairs.ContainsKey(lastCharacterDetails.Name)
-                                && _gapPairs[lastCharacterDetails.Name].ContainsKey(safeName)
-                                && pixelGap >= _gapPairs[lastCharacterDetails.Name][safeName] + spaceWidth)
+                            if (_glyphDatabase.GapPairs.ContainsKey(lastCharacterDetails.Name)
+                                && _glyphDatabase.GapPairs[lastCharacterDetails.Name].ContainsKey(safeName)
+                                && pixelGap >= _glyphDatabase.GapPairs[lastCharacterDetails.Name][safeName] + spaceWidth)
                             {
                                 if (currentLineType == LineType.NewMessage && !checkedKey)
                                 {
@@ -290,7 +236,7 @@ namespace WFImageParser
                             lastCharacterDetails.Name = lastCharacterDetails.Name.Split(',').Last();
 
                         //Due to new char IDing system we can safely jump a bit ahead to prevent double reading
-                        if (endX - startX > _maxCharWidth * 0.6 && targetMask.PixelCount - prevMatchedCharacters.Count > targetMask.PixelCount * 0.3)
+                        if (endX - startX > _glyphDatabase.MaxCharWidth * 0.6 && targetMask.PixelCount - prevMatchedCharacters.Count > targetMask.PixelCount * 0.3)
                             endX = x = lastCharacterEndX;
                         else
                             endX = x = lastCharacterEndX + 2;
@@ -739,7 +685,7 @@ namespace WFImageParser
                     Point point = Point.Empty;
                     for (int y = lineOffset + (int)(lineHeight * 0.75f); y > lineOffset && y > 0; y--)
                     {
-                        for (int x = wordStartX + _minCharWidth; x < wordStartX + _maxCharWidth && x < image.Width; x++)
+                        for (int x = wordStartX + _glyphDatabase.MinCharWidth; x < wordStartX + _glyphDatabase.MaxCharWidth && x < image.Width; x++)
                         {
                             var hsvPixel = image.GetHsv(x, y);
                             if (image.GetColor(x, y) == ImageCache.ChatColor.ItemLink)
@@ -767,12 +713,12 @@ namespace WFImageParser
         {
             var targetWidth = targetMask.Width + 2;
 
-            var cannidates = _scannedCharacters;
+            var cannidates = _glyphDatabase.KnownGlyphs;
             //Try to only look at similiar sized characters when we are looking at a medium width character.
-            //if (targetWidth <= _maxCharWidth / 2 && targetWidth > Math.Ceiling(_maxCharWidth * 0.15))
-            //    cannidates = _scannedCharacters.Where(c => c.Width >= targetWidth * 0.8f && c.Width <= targetWidth * 1.2f).ToList();
-            //else if (targetWidth <= Math.Ceiling(_maxCharWidth * 0.15)) //Only smalls
-            //    cannidates = _scannedCharacters.Where(c => c.Width <= Math.Ceiling(_maxCharWidth * 0.15)).ToList();
+            //if (targetWidth <= _glyphDatabase.MaxCharWidth / 2 && targetWidth > Math.Ceiling(_glyphDatabase.MaxCharWidth * 0.15))
+            //    cannidates = _glyphDatabase.KnownGlyphs.Where(c => c.Width >= targetWidth * 0.8f && c.Width <= targetWidth * 1.2f).ToList();
+            //else if (targetWidth <= Math.Ceiling(_glyphDatabase.MaxCharWidth * 0.15)) //Only smalls
+            //    cannidates = _glyphDatabase.KnownGlyphs.Where(c => c.Width <= Math.Ceiling(_glyphDatabase.MaxCharWidth * 0.15)).ToList();
             //Else it will be anything as we may be dealing with a partial match
 
             var bestMatchConf = 0f;
@@ -863,7 +809,7 @@ namespace WFImageParser
             GlyphDetails leastBadCharacter = null;
             CoordinateList leastBadMatchingPixels = null;
             IEnumerable<IGrouping<int, GlyphDetails>> possibleGroups =
-                _scannedCharacters
+                _glyphDatabase.KnownGlyphs
                     .Where((c) =>
                     {
                         if (c.Name.Contains(",") && !takeLeastBad)
@@ -904,7 +850,7 @@ namespace WFImageParser
                                 characterPixelsMatched -= character.WeightMappings[x, y] / 4;
                             //else if (character.Width <= 4 && character.VMask[x, y] && !targetMask.Mask[x, y])
                             //    characterPixelsMatched -= Math.Min(1f, character.WeightMappings[x,y] * 1.5f) * (character.Height - y / character.Height);
-                            //else if (targetWidth > _maxCharWidth * 0.75 && x <= targetWidth / 3 && !character.VMask[x, y] && targetMask.Mask[x, y]) //The first few pixels are most important. Punish missing them
+                            //else if (targetWidth > _glyphDatabase.MaxCharWidth * 0.75 && x <= targetWidth / 3 && !character.VMask[x, y] && targetMask.Mask[x, y]) //The first few pixels are most important. Punish missing them
                             //{
                             //    characterPixelsMatched--;
                             //}
@@ -1085,9 +1031,9 @@ namespace WFImageParser
                             }
                             var pixelGap = safeRightX - safeLeftX;
                             int spaceWidth = 6;
-                            if (_gapPairs.ContainsKey(lastCharacterDetails.Name)
-                                && _gapPairs[lastCharacterDetails.Name].ContainsKey(bestFit.Item2.Name)
-                                && pixelGap > _gapPairs[lastCharacterDetails.Name][bestFit.Item2.Name] + spaceWidth)
+                            if (_glyphDatabase.GapPairs.ContainsKey(lastCharacterDetails.Name)
+                                && _glyphDatabase.GapPairs[lastCharacterDetails.Name].ContainsKey(bestFit.Item2.Name)
+                                && pixelGap > _glyphDatabase.GapPairs[lastCharacterDetails.Name][bestFit.Item2.Name] + spaceWidth)
                             {
                                 if (currentLineType == LineType.NewMessage)
                                 {
@@ -1112,7 +1058,7 @@ namespace WFImageParser
                         lastCharacterDetails = bestFit.Item2;
 
                         //Due to new char IDing system we can safely jump a bit ahead to prevent double reading
-                        if (endX - startX > _maxCharWidth * 0.6 && targetMask.PixelCount - prevMatchedCharacters.Count > targetMask.PixelCount * 0.3)
+                        if (endX - startX > _glyphDatabase.MaxCharWidth * 0.6 && targetMask.PixelCount - prevMatchedCharacters.Count > targetMask.PixelCount * 0.3)
                             endX = x = lastCharacterEndX;
                         else
                             endX = x = lastCharacterEndX + 2;
