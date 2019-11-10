@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Application.Enums;
+using Newtonsoft.Json;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -36,14 +37,18 @@ namespace Application.ChatMessages.Model
             }
         }
 
-        public static Modifier ParseString(string modifier)
+        public static Modifier ParseString(string modifier, ClientLanguage clientLanguage)
         {
             var result = new Modifier();
             var val = 0f;
             float.TryParse(_valRegx.Match(modifier).Value, out val);
             result.Value = val;
             var roughDesc = _valRegx.Replace(modifier, "").TrimEnd();
-            var description = _possibleDescriptions.OrderBy(desc => Utils.LevenshteinDistance.Compute(roughDesc, desc)).First();
+            var description = roughDesc;
+            if (clientLanguage == ClientLanguage.English)
+                description = _possibleDescriptions.OrderBy(desc => Utils.LevenshteinDistance.Compute(roughDesc, desc)).First();
+            else if (clientLanguage == ClientLanguage.Chinese)
+                description = roughDesc.Replace(" ", "");
             result.Description = description;
             return result;
         }

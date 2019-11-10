@@ -3,6 +3,7 @@ using Application;
 using Application.Actionables;
 using Application.Actionables.ChatBots;
 using Application.Data;
+using Application.Enums;
 using Application.LogParser;
 using DataStream;
 using ImageOCR;
@@ -33,7 +34,7 @@ namespace ChatLoggerCLI
         {
             Console.CancelKeyPress += Console_CancelKeyPress;
 
-            var rivenParser = new RivenParser();
+            var rivenParser = new RivenParser(ClientLanguage.English);
             _disposables.Add(rivenParser);
             Console.WriteLine("Starting up image parser");
 
@@ -127,7 +128,7 @@ namespace ChatLoggerCLI
                 var bot = new MultiChatRivenBot(warframeCredentials, new MouseHelper(),
                     new KeyboardHelper(),
                     new ScreenStateHandler(),
-                    new RivenParserFactory(),
+                    new RivenParserFactory(ClientLanguage.English),
                     new RivenCleaner(),
                     _dataSender,
                     gc,

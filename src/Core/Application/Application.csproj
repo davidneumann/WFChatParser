@@ -1377,6 +1377,9 @@
     <None Update="data\tessdata\chi_sim.traineddata">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="data\tessdata\chi_sim_vert.traineddata">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="data\tessdata\configs\ambigs.train">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

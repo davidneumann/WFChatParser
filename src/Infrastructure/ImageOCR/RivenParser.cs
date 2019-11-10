@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Tesseract;
 using Application.Utils;
 using Application.Data;
+using Application.Enums;
 
 namespace ImageOCR
 {
@@ -27,9 +28,11 @@ namespace ImageOCR
 
         private LineParser _lineParser;
         private WordParser _wordParser;
+        private ClientLanguage _clientLanguage;
 
-        public RivenParser()
+        public RivenParser(ClientLanguage clientLanguage)
         {
+            _clientLanguage = clientLanguage;
             string dataPath = DataHelper.TessDataPath;
             string language = "chi_sim+eng";
             _engine = new TesseractEngine(dataPath, language, EngineMode.Default, "bazaar");
@@ -158,7 +161,7 @@ namespace ImageOCR
 
                 if (modis.Count > 0)
                 {
-                    var modiObjects = modis.Select(m => Modifier.ParseString(m)).ToArray();
+                    var modiObjects = modis.Select(m => Modifier.ParseString(m, _clientLanguage)).ToArray();
                     //Handle curses
                     if (name.Contains("-") && modiObjects.Length == 4)
                     {

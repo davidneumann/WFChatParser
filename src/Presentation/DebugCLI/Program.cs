@@ -237,7 +237,7 @@ namespace DebugCLI
         private static void NewRivenShim()
         {
             var rc = new RivenCleaner();
-            var rp = new RivenParser();
+            var rp = new RivenParser(ClientLanguage.English);
             //var newRiven = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\new_riven.png");
             var fullImage = new Bitmap(@"\\desktop-3414ubq\Warframes\Bot Client\debug\debug.png");
             var newRiven = rp.CropToRiven(fullImage);
@@ -274,7 +274,7 @@ namespace DebugCLI
                 using (var cleaned = cleaner.CleanRiven(cropped))
                 {
                     cleaned.Save("cleaned.png");
-                    var parser = new RivenParser();
+                    var parser = new RivenParser(ClientLanguage.English);
                     var riven = parser.ParseRivenTextFromImage(cleaned, null);
                     try
                     {
@@ -359,23 +359,27 @@ namespace DebugCLI
 
         private static void ParseRivenImage()
         {
-            var rp = new RivenParser();
+            var rp = new RivenParser(ClientLanguage.Chinese);
             var outputDir = "debug_rivens";
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
+            var sw = new Stopwatch();
+            var rc = new RivenCleaner();
             foreach (var riven in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.Contains("riven")))
             {
+                sw.Restart();
                 using (var b = new Bitmap(riven))
                 {
-                    var rc = new RivenCleaner();
                     var rivenImage = b;
                     if (b.Width == 4096)
                         rivenImage = rp.CropToRiven(b);
                     var b2 = rc.CleanRiven(rivenImage);
-                    b2.Save(Path.Combine(outputDir, (new FileInfo(riven)).Name));
                     var text = rp.ParseRivenTextFromImage(b2, null);
+                    sw.Stop();
+                    Console.WriteLine("Finished cleaning and parsing in: " + sw.Elapsed.TotalSeconds + " seconds.");
+                    b2.Save(Path.Combine(outputDir, (new FileInfo(riven)).Name));
                     var textFileName = (new FileInfo(riven)).Name;
-                    textFileName = textFileName.Substring(0, textFileName.LastIndexOf(".")) + ".txt";
+                    textFileName = Path.Combine(outputDir, textFileName.Substring(0, textFileName.LastIndexOf(".")) + ".json");
                     File.WriteAllText(textFileName, JsonConvert.SerializeObject(text));
                     if (rivenImage != b)
                         rivenImage.Dispose();
@@ -383,7 +387,6 @@ namespace DebugCLI
                         b2.Dispose();
                 }
             }
-            
         }
 
         private static void ParseChatImage()
@@ -425,7 +428,7 @@ namespace DebugCLI
             var images = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\")/*.SelectMany(f => new string[] { f, f, f, f, f, })*/.Where(f => f.EndsWith(".png")).ToArray();
             Console.WriteLine("Riven inputs: " + images.Length);
             var rc = new RivenCleaner();
-            var rp = new RivenParser();
+            var rp = new RivenParser(ClientLanguage.English);
             var bitmaps = images.Select(f =>
             {
                 var bitmap = new Bitmap(f);
@@ -599,7 +602,7 @@ namespace DebugCLI
 
         private static void WinOcrTest()
         {
-            var rp = new RivenParser();
+            var rp = new RivenParser(ClientLanguage.English);
             var rc = new RivenCleaner();
             if (!Directory.Exists("riven_stuff"))
                 Directory.CreateDirectory("riven_stuff");
@@ -728,7 +731,7 @@ namespace DebugCLI
                 new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish),
                 dataSender,
                 new RivenCleaner(),
-                new RivenParserFactory(),
+                new RivenParserFactory(ClientLanguage.English),
                 new Application.LogParser.RedTextParser(logParser));
             bot.AsyncRun(token);
         }
@@ -740,7 +743,7 @@ namespace DebugCLI
                 using (var cropped = new Bitmap(error.FullName))
                 {
                     var cleaner = new RivenCleaner();
-                    var rp = new RivenParser();
+                    var rp = new RivenParser(ClientLanguage.English);
                     //var cropped = rp.CropToRiven(new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\error.png"));
                     using (var cleaned = cleaner.CleanRiven(cropped))
                     {
@@ -752,7 +755,7 @@ namespace DebugCLI
             }
             //var cropped = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\error.png");
             //var cleaner = new RivenCleaner();
-            //var rp = new RivenParser();
+            //var rp = new RivenParser(ClientLanguage.English);
             ////var cropped = rp.CropToRiven(new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\error.png"));
             //var cleaned = cleaner.CleanRiven(cropped);
             //cleaned.Save("cleaned.png");
@@ -992,7 +995,7 @@ namespace DebugCLI
 
         private static void TestRivenParsing()
         {
-            var rp = new RivenParser();
+            var rp = new RivenParser(ClientLanguage.English);
             var bads = new List<string>();
             //foreach (var name in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs").Where(f => f.EndsWith(".png")))
             //var badIds = new HashSet<string>(File.ReadAllLines(@"C:\users\david\Downloads\bad_rivens.txt"));
@@ -1370,7 +1373,7 @@ namespace DebugCLI
         private static void TestRivenStuff()
         {
             var c = new GameCapture(new DummyLogger());
-            var rp = new RivenParser();
+            var rp = new RivenParser(ClientLanguage.English);
             var ss = new ScreenStateHandler();
 
             var image = "test.png";
@@ -1463,7 +1466,7 @@ namespace DebugCLI
         private static void SimulateParseRiven()
         {
             var rc = new RivenCleaner();
-            var rp = new RivenParser();
+            var rp = new RivenParser(ClientLanguage.English);
             //const string image = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\input.png";
             //var srcBitmap = new Bitmap(image);
             //var bitmap = srcBitmap.Clone(new Rectangle(1757, 463, 582, 831), PixelFormat.DontCare);
@@ -1478,7 +1481,7 @@ namespace DebugCLI
         //private static void PrepareRivens()
         //{
         //    var r = new RivenCleaner();
-        //    var p = new RivenParser();
+        //    var p = new RivenParser(ClientLanguage.English);
 
         //    var totalSw = new Stopwatch();
         //    var opSw = new Stopwatch();
