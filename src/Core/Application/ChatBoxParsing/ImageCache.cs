@@ -79,12 +79,12 @@ namespace Application.ChatLineExtractor
         public int Width { get { return _image.Width; } }
         public int Height { get { return _image.Height; } }
 
-        internal SixLabors.ImageSharp.ColorSpaces.Hsv GetHsv(int x, int y)
+        public SixLabors.ImageSharp.ColorSpaces.Hsv GetHsv(int x, int y)
         {
             return _converter.ToHsv(_image[x, y]);
         }
 
-        internal ChatColor GetColor(int x, int y)
+        public ChatColor GetColor(int x, int y)
         {
             var hsvPixel = GetHsv(x, y);
 
@@ -102,7 +102,7 @@ namespace Application.ChatLineExtractor
             return ChatColor.Unknown;
         }
 
-        internal enum ChatColor
+        public enum ChatColor
         {
             Unknown,
             ChatTimestampName,

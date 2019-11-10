@@ -1,4 +1,5 @@
-﻿using Application.ChatMessages.Model;
+﻿using Application.ChatLineExtractor;
+using Application.ChatMessages.Model;
 using Application.Data;
 using Application.Interfaces;
 using Application.LineParseResult;
@@ -19,6 +20,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using WFImageParser.GlyphRecognition;
+using static Application.ChatLineExtractor.ImageCache;
 
 namespace WFImageParser
 {

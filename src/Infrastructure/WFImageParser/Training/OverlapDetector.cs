@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Application.ChatLineExtractor;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
