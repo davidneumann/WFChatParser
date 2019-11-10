@@ -278,11 +278,11 @@ namespace DebugCLI
             //                            .Select(f => new FileInfo(f))
             //                            .Where(f => f.Name.StartsWith("637") && !f.Name.Contains("_white") && f.Name.EndsWith(".png"))
             //                            .Select(f => f.FullName))
-            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("637086559684964790.png")))
+            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("chinese_chat.png")))
             {
                 using (var bitmap = new Bitmap(filePath))
                 {
-                    var cp = new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "english"));
+                    var cp = new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "chinese"));
                     //ic.SaveSoftMask(filePath, "error_blurry1_white.png");
                     ImageCleaner.SaveSoftMask(filePath, filePath.Replace(".png", "_white.png"));
                     var lines = cp.ParseChatImage(bitmap);
@@ -1486,8 +1486,8 @@ namespace DebugCLI
 
         private static void TrainOnImages()
         {
-            var sourceDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\Spaces";
-            var outputDir = "newnewnewdata";
+            var sourceDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\Chinese\Spaces";
+            var outputDir = "chineseData";
             var trainer = new OCRTrainer();
             trainer.TrainOnImages(sourceDir, outputDir);
 
@@ -1497,14 +1497,14 @@ namespace DebugCLI
 
         private static void FindOverlappingLines()
         {
-            const string sourceDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\Overlaps";
+            const string sourceDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\Chinese\Overlaps";
             //if (!Directory.Exists("overlaps"))
             //    Directory.CreateDirectory("overlaps");
             //foreach (var image in Directory.GetFiles(sourceDir).Where(f => f.EndsWith(".png")))
             //{
             //    ImageCleaner.SaveSoftMask(image, Path.Combine("overlaps", (new FileInfo(image)).Name));
             //}
-            OverlapDetector.DetectOverlaps(sourceDir);
+            OverlapDetector.DetectOverlaps(sourceDir, Path.Combine("ocrdata", "chinese"));
         }
 
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)

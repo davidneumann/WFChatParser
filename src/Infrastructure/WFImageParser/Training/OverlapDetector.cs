@@ -10,8 +10,7 @@ namespace WFImageParser.Training
 {
     public static class OverlapDetector
     {
-        private static GlyphDatabase _glyphDatabase = new GlyphDatabase(Path.Combine("ocrdata", "english"));
-        public static void DetectOverlaps(string sourceDir)
+        public static void DetectOverlaps(string sourceDir, string dataDirectory)
         {
             if (Directory.Exists(Path.Combine("overlaps", "hits")))
             {
@@ -38,19 +37,20 @@ namespace WFImageParser.Training
                             //throw new Exception("Overlap detected on " + input + " chat line " + (i + 1) + " y of " + OCRHelpers.LineOffsets[i]);
 
                             //TODO: implement this
-                            List<(char left, char right)> touchingChars = FindTouchingChars(cache, i, expectedLines[i].Replace(" ", "").ToCharArray());
+                            List<(char left, char right)> touchingChars = FindTouchingChars(cache, i, expectedLines[i].Replace(" ", "").ToCharArray(), dataDirectory);
                         }
                     }
                 }
             }
         }
 
-        private static List<(char left, char right)> FindTouchingChars(ImageCache cache, int offsetIndex, char[] expectedCharacters)
+        private static List<(char left, char right)> FindTouchingChars(ImageCache cache, int offsetIndex, char[] expectedCharacters, string dataDirectory)
         {
             var chatRect = new Rectangle(4, 763, 3236, 1350);
             var prevMatchedCharacters = new CoordinateList();
             var characterIndex = 0;
             var touchingChars = new List<(char left, char right)>();
+            var glyphDatabase = new GlyphDatabase(dataDirectory);
             for (int x = chatRect.Left; x < chatRect.Right; x++)
             {
                 //Advance until next pixel
@@ -64,7 +64,7 @@ namespace WFImageParser.Training
                     OCRHelpers.LineOffsets[offsetIndex], OCRHelpers.LineOffsets[offsetIndex] + OCRHelpers.LINEHEIGHT);
                 if (targetMask.Width > 0)
                 {
-                    var possibleMatches = _glyphDatabase.KnownGlyphs.Where(g => g.Width >= targetMask.Width - 1 && g.Width <= targetMask.Width + 1);
+                    var possibleMatches = glyphDatabase.KnownGlyphs.Where(g => g.Width >= targetMask.Width - 1 && g.Width <= targetMask.Width + 1);
                     float bestDiff = float.NaN;
                     foreach (var match in possibleMatches)
                     {
@@ -86,7 +86,7 @@ namespace WFImageParser.Training
                             bestDiff = diff;
                     }
 
-                    if (float.IsNaN(bestDiff) || (-bestDiff / targetMask.SoftPixelCount) > 0.5f)
+                    if (float.IsNaN(bestDiff) || (-bestDiff / targetMask.SoftPixelCount) > 0.55f)
                     {
                         touchingChars.Add((expectedCharacters[characterIndex], expectedCharacters[characterIndex + 1]));
                         using (var maskBitmap = new Bitmap(targetMask.Width, OCRHelpers.LINEHEIGHT))
