@@ -696,7 +696,6 @@ namespace Application.Actionables.ChatBots
                 }
                 using (var screen = _gameCapture.GetFullImage())
                 {
-                    screen.Save("screen.png");
                     var state = _screenStateHandler.GetScreenState(screen);
                     if (state == ScreenState.GlyphWindow)
                     {
@@ -726,7 +725,6 @@ namespace Application.Actionables.ChatBots
             _screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle);
             using (var screen = _gameCapture.GetFullImage())
             {
-                screen.Save("screen.png");
                 var state = _screenStateHandler.GetScreenState(screen);
                 if (state == Enums.ScreenState.MainMenu)
                 {
@@ -764,7 +762,7 @@ namespace Application.Actionables.ChatBots
                 else if (!retry)
                 {
                     var path = SaveScreenToDebug(screen);
-                    await _dataSender.AsyncSendDebugMessage("Failed to navigate to mian menu. See: " + path);
+                    await _dataSender.AsyncSendDebugMessage("Failed to navigate to main menu. See: " + path);
                     throw new NavigationException(ScreenState.MainMenu);
                 }
             }

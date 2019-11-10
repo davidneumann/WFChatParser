@@ -56,9 +56,9 @@ namespace DebugCLI
             //FindErrorAgain();
             //TestRivenParsing();
             //VerifyNoErrors(2);
-            //TestScreenHandler();
+            TestScreenHandler();
             //TestBot();
-            ParseChatImage();
+            //ParseChatImage();
             //TessShim();
             //NewRivenShim();
             //ChatMovingShim();
@@ -1031,6 +1031,40 @@ namespace DebugCLI
         {
             var c = new GameCapture(new DummyLogger());
             var ss = new ScreenStateHandler();
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\chinese_login.png"))
+            {
+                var state = ss.GetScreenState(b);
+                Console.WriteLine($"Is Login: {ss.GetScreenState(b) == ScreenState.LoginScreen} should be true.");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\chinese_main_menu.png"))
+            {
+                var state = ss.GetScreenState(b);
+                Console.WriteLine($"Is main menu: {ss.GetScreenState(b) == ScreenState.MainMenu} should be true.");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\chinese_profile_menu.png"))
+            {
+                var state = ss.GetScreenState(b);
+                Console.WriteLine($"Is profile menu: {ss.GetScreenState(b) == ScreenState.ProfileMenu} should be true.");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\chinese_glyph_screen_no_filter.png"))
+            {
+                var state = ss.GetScreenState(b);
+                Console.WriteLine($"Is glyph screen: {ss.GetScreenState(b) == ScreenState.GlyphWindow} should be true. Chat open: {ss.IsChatOpen(b)} should be false. Chat collapsed {ss.IsChatCollapsed(b)} should be true.");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\chinese_glyph_screen_no_filter.png"))
+            {
+                Console.WriteLine($"Are filters present in chinese glyph screen {ss.GlyphFiltersPresent(b)} should be false.");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\chinese_glyph_with_filters.png"))
+            {
+                Console.WriteLine($"Are filters present in chinese glyph screen {ss.GlyphFiltersPresent(b)} should be true.");
+            }
 
             using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\new_glyph_1.png"))
             {

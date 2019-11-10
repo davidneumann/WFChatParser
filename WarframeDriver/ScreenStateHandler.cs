@@ -39,26 +39,61 @@ namespace WarframeDriver
 
         private bool IsGlyphScreen(Bitmap bitmap)
         {
-            var lightPixels = new Point[] { new Point(1934, 116), new Point(1983, 175), new Point(2041, 147), new Point(2114, 135), new Point(2182, 170) };
-            var darkPixels = new Point[] { new Point(1928, 142), new Point(1989, 163), new Point(2045, 119), new Point(2099, 133), new Point(2162, 159) };
-            return !lightPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value < 0.65f)
-                && !darkPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value > 0.4f);
+            var englishLightPixels = new Point[] { new Point(1934, 116), new Point(1983, 175), new Point(2041, 147), new Point(2114, 135), new Point(2182, 170) };
+            var englishDarkPixels = new Point[] { new Point(1928, 142), new Point(1989, 163), new Point(2045, 119), new Point(2099, 133), new Point(2162, 159) };
+
+            var chineseLightPixels = new Point[] { new Point(1969, 109), new Point(2023, 158), new Point(2056, 168), new Point(2079, 105), new Point(2098, 109), new Point(2124, 167) };
+            var chineseDarkPixels = new Point[] { new Point(1959, 147), new Point(1991, 149), new Point(2014, 116), new Point(2067, 123), new Point(2072, 148), new Point(2106, 170) };
+            return
+                (
+                    !englishLightPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value < 0.65f)
+                    && !englishDarkPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value > 0.4f)
+                )
+                ||
+                (
+                    !chineseLightPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value < 0.65f)
+                    && !chineseDarkPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value > 0.4f)
+                );
         }
 
         private bool IsProfileMenu(Bitmap bitmap)
         {
-            var lightPixels = new Point[] { new Point(569, 929), new Point(585, 956), new Point(659, 980), new Point(673, 926), new Point(760, 951) };
-            var darkPixels = new Point[] { new Point(571, 957), new Point(647, 953), new Point(694, 932), new Point(749, 940), new Point(810, 932) };
-            return !lightPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value < 0.65f)
-                && !darkPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value > 0.4f);
+            //English anchors
+            var englishLightPixels = new Point[] { new Point(569, 929), new Point(585, 956), new Point(659, 980), new Point(673, 926), new Point(760, 951) };
+            var englishDarkPixels = new Point[] { new Point(571, 957), new Point(647, 953), new Point(694, 932), new Point(749, 940), new Point(810, 932) };
+
+            var chineseLightPixels = new Point[] { new Point(559, 921), new Point(550, 943), new Point(566, 965), new Point(599, 928), new Point(611, 952), new Point(655, 973), new Point(721, 919) };
+            var chineseDarkPixels = new Point[] { new Point(553, 959), new Point(589, 931), new Point(622, 957), new Point(667, 931), new Point(669, 958), new Point(711, 945) };
+            return
+                (
+                    !englishLightPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value < 0.65f)
+                    && !englishDarkPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value > 0.4f)
+                )
+                ||
+                (
+                    !chineseLightPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value < 0.65f)
+                    && !chineseDarkPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value > 0.4f)
+                );
         }
 
         private bool IsMainMenu(Bitmap bitmap)
         {
-            var lightPixels = new Point[] { new Point(554, 959), new Point(650, 975), new Point(680, 933), new Point(778, 950), new Point(810, 977) };
-            var darkPixels = new Point[] { new Point(568, 942), new Point(626, 972), new Point(700, 948), new Point(771, 939), new Point(902, 956) };
-            return !lightPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value < 0.65f)
-                && !darkPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value > 0.4f);
+            //English anchors
+            var englishLightPixels = new Point[] { new Point(554, 959), new Point(650, 975), new Point(680, 933), new Point(778, 950), new Point(810, 977) };
+            var englishDarkPixels = new Point[] { new Point(568, 942), new Point(626, 972), new Point(700, 948), new Point(771, 939), new Point(902, 956) };
+
+            var chineseLightPixels = new Point[] { new Point(556, 977), new Point(576, 966), new Point(603, 922), new Point(661, 981), new Point(687, 917), new Point(708, 965) };
+            var chineseDarkPixels = new Point[] { new Point(544, 967), new Point(564, 967), new Point(587, 947), new Point(590, 922), new Point(603, 931), new Point(658, 959), new Point(689, 935), new Point(719, 967) };
+            return
+                (
+                    !englishLightPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value < 0.65f)
+                    && !englishDarkPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value > 0.4f)
+                )
+                ||
+                (
+                    !chineseLightPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value < 0.65f)
+                    && !chineseDarkPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value > 0.4f)
+                );
         }
 
         private bool IsWarframeControl(Bitmap bitmap)
@@ -90,10 +125,23 @@ namespace WarframeDriver
 
         private bool IsLoginScreen(Bitmap bitmap)
         {
-            var lightPixels = new Point[] { new Point(2885, 1324), new Point(2913, 1347), new Point(2928, 1325), new Point(2960, 1339), new Point(3005, 1346) };
-            var darkPixels = new Point[] { new Point(2878, 1336), new Point(2894, 1335), new Point(2921, 1335), new Point(2951, 1328), new Point(2994, 1346) };
-            return !lightPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value < 0.65f)
-                && !darkPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value > 0.4f);
+            //English anchors
+            var englishLightPixels = new Point[] { new Point(2885, 1324), new Point(2913, 1347), new Point(2928, 1325), new Point(2960, 1339), new Point(3005, 1346) };
+            var englishDarkPixels = new Point[] { new Point(2878, 1336), new Point(2894, 1335), new Point(2921, 1335), new Point(2951, 1328), new Point(2994, 1346) };
+
+            //Chinese anchors
+            var chineseLightPixels = new Point[] { new Point(2908, 1318), new Point(2923, 1329), new Point(2930, 1322), new Point(2922, 1354) };
+            var chineseDarkPixels = new Point[] { new Point(2907, 1340), new Point(2924, 1341), new Point(2936, 1350), new Point(2963, 1338), new Point(2987, 1323) };
+            return
+                (
+                    !englishLightPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value < 0.65f)
+                    && !englishDarkPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value > 0.4f)
+                )
+                ||
+                (
+                    !chineseLightPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value < 0.65f)
+                    && !chineseDarkPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value > 0.4f)
+                );
         }
 
         public bool IsExitable(Bitmap b)
@@ -192,8 +240,8 @@ namespace WarframeDriver
 
         public bool GlyphFiltersPresent(Bitmap bitmap)
         {
-            var lightPixels = new Point[] { new Point(367, 256), new Point(401, 275), new Point(427, 257), new Point(440, 272), new Point(456, 255) };
-            var darkPixels = new Point[] { new Point(369, 261), new Point(395, 271), new Point(419, 264), new Point(447, 251), new Point(460, 265) };
+            var lightPixels = new Point[] { new Point(374, 257), new Point(377, 266), new Point(372, 276), new Point(435, 256), new Point(421, 276) };
+            var darkPixels = new Point[] { new Point(369, 261), new Point(367, 272), new Point(382, 269), new Point(392, 270), new Point(422, 266) };
             return !lightPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value <= 0.5f)
                 && !darkPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value >= 0.5f);
         }
