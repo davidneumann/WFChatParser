@@ -153,6 +153,9 @@ namespace WFImageParser
                 startX = targetMask.MinX;
                 endX = targetMask.MaxX + 1;
 
+                //if (startX >= 195 && lineOffset >= 1583)
+                //    System.Diagnostics.Debugger.Break();
+
                 if (endX > startX && targetMask.PixelCount > 7)
                 {
                     Tuple<float, GlyphDetails, CoordinateList> bestFit = GetBestMatchingCharacter(image, lineHeight, lineOffset, targetMask);
@@ -236,7 +239,10 @@ namespace WFImageParser
                         prevTargetMask = targetMask;
                         lastCharacterDetails = bestFit.Item2;
                         if (lastCharacterDetails.Name.Contains(","))
-                            lastCharacterDetails.Name = lastCharacterDetails.Name.Split(',').Last();
+                        {
+                            lastCharacterDetails = new GlyphDetails(lastCharacterDetails.VMask, lastCharacterDetails.WeightMappings, lastCharacterDetails.Name.Split(',').Last(),
+                                lastCharacterDetails.Width, lastCharacterDetails.Height, lastCharacterDetails.TotalWeights);
+                        }
 
                         //Due to new char IDing system we can safely jump a bit ahead to prevent double reading
                         if (endX - startX > _glyphDatabase.MaxCharWidth * 0.6 && targetMask.PixelCount - prevMatchedCharacters.Count > targetMask.PixelCount * 0.3)
@@ -336,7 +342,61 @@ namespace WFImageParser
 
         private Tuple<float, GlyphDetails, CoordinateList> GetBestMatchingCharacter(ImageCache image, int lineHeight, int lineOffset, TargetMask targetMask)
         {
-            var bestFit = FastGuessPartialCharacter(targetMask, lineOffset);
+            Tuple<float, GlyphDetails, CoordinateList> bestFit = null;
+            //Handle initial overlap
+            if (targetMask.Width > 7) //[ has a width of 7.  // _glyphDatabase.MaxCharWidth)
+            {
+                //Try to seperate the characters
+                //[ is the skinniest known overlapping character
+                var smallestOverlapGlyph = _glyphDatabase.KnownGlyphs.First(g => g.Name == "[");
+
+                //m_lower has the lowest value column at 2.015686 total soft pixels (past ['s width)
+                var lowestValueColumn = targetMask.Width - 1;
+                for (int x = smallestOverlapGlyph.Width; x < targetMask.Width; x++)
+                {
+                    var total = 0f;
+                    for (int y = 0; y < OCRHelpers.LINEHEIGHT; y++)
+                    {
+                        total += targetMask.SoftMask[x, y];
+                    }
+                    if (total <= 1.9f)
+                    {
+                        lowestValueColumn = x;
+                        break;
+                    }
+                }
+
+                //Make a new target mask out of just this leftmost portion
+                var width = lowestValueColumn + 2; //Take an extra column with us to help the next parse
+                if (width < targetMask.Width)
+                {
+                    var mask = new bool[width, OCRHelpers.LINEHEIGHT];
+                    var softMask = new float[width, OCRHelpers.LINEHEIGHT];
+                    var pixelCount = 0;
+                    var softPixelCount = 0f;
+                    for (int x = 0; x < width; x++)
+                    {
+                        for (int y = 0; y < OCRHelpers.LINEHEIGHT; y++)
+                        {
+                            mask[x, y] = targetMask.Mask[x, y];
+                            if (mask[x, y])
+                                pixelCount++;
+                            softMask[x, y] = targetMask.SoftMask[x, y];
+                            softPixelCount += softMask[x, y];
+                        }
+                    }
+                    targetMask = new TargetMask(mask, targetMask.MinX + width, targetMask.MinX, width, pixelCount, softPixelCount, softMask);
+                }
+
+                ////Allow a known overlap
+                //var firstGuess = FastGuessPartialCharacter(targetMask, lineOffset);
+                //if (firstGuess != null && firstGuess.Item2.Name.Contains(",") && firstGuess.Item2.Width - 1 >= targetMask.Width && firstGuess.Item2.Width + 1 <= targetMask.Width)
+                //    bestFit = firstGuess;
+                //else
+            }
+
+            bestFit = FastGuessPartialCharacter(targetMask, lineOffset);
+
             //Try trimming any, and then to the left of, column with less than 15% of the height worth of pixels 
             if (bestFit == null)
             {
@@ -1089,7 +1149,7 @@ namespace WFImageParser
 
             public void Append(int lineOffset)
             {
-                if(LineRect.Bottom + OCRHelpers.LINEHEIGHT > lineOffset)
+                if (LineRect.Bottom + OCRHelpers.LINEHEIGHT > lineOffset)
                 {
                     LineRect = new System.Drawing.Rectangle(LineRect.Left, LineRect.Y, LineRect.Width, (lineOffset + OCRHelpers.LINEHEIGHT) - LineRect.Top);
                 }

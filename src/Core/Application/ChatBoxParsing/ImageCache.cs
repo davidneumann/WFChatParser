@@ -1,8 +1,12 @@
 ﻿using Application.Utils;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.ColorSpaces.Conversion;
+using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -10,24 +14,30 @@ namespace Application.ChatLineExtractor
 {
     public class ImageCache
     {
-        private readonly Bitmap _image;
-        private readonly float[,] _valueMap;
-        private readonly bool[,] _valueMapMask;
+        private Image<Rgba32> _image;
+        private float[,] _valueMap;
+        private bool[,] _valueMapMask;
+        private ColorSpaceConverter _converter = new ColorSpaceConverter();
+        //private Hsv[,] _valueMap;
 
-        private readonly byte[] _imageBytes;
-        private readonly int _stride;
-
-        public ImageCache(Bitmap image)
+        public ImageCache(Image<Rgba32> image)
         {
             this._image = image;
             _valueMap = new float[image.Width, image.Height];
             _valueMapMask = new bool[image.Width, image.Height];
+        }
 
-            var data = image.LockBits(new Rectangle(0, 0, image.Width, image.Height), ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
-            _imageBytes = new byte[data.Stride * image.Height];
-            _stride = data.Stride;
-            Marshal.Copy(data.Scan0, _imageBytes, 0, _imageBytes.Length);
-            image.UnlockBits(data);
+        public ImageCache(System.Drawing.Bitmap bitmap)
+        {
+            using (MemoryStream mem = new MemoryStream())
+            {
+                bitmap.Save(mem, System.Drawing.Imaging.ImageFormat.Png);
+                mem.Seek(0, SeekOrigin.Begin);
+                this._image = SixLabors.ImageSharp.Image.Load(mem);
+            }
+
+            _valueMap = new float[this._image.Width, this._image.Height];
+            _valueMapMask = new bool[this._image.Width, this._image.Height];
         }
 
         public float this[int x, int y]
@@ -36,17 +46,29 @@ namespace Application.ChatLineExtractor
             {
                 if (!_valueMapMask[x, y])
                 {
-                    var hsvPixel = GetPixel(x, y).ToHsv();
-                    var v = Math.Max(0, (hsvPixel.Value - 0.6f)) / (1f - 0.6f);
-                    var color = GetColor(hsvPixel);
+                    var hsvPixel = _converter.ToHsv(_image[x, y]);
+                    var v = hsvPixel.V;
+                    //A pure white pixel behind the chat box will have a v of 0.251
+                    //We need to remove this from everything
+                    const float backgroundNoiseValue = 0.251f;
+                    v -= backgroundNoiseValue;
+
+                    var color = GetColor(x, y);
                     if (color == ChatColor.Unknown || color == ChatColor.Redtext)
                         v = 0;
                     else if (color == ChatColor.ChatTimestampName)
-                        v = Math.Max(0, (Math.Min(1f, (hsvPixel.Value / 0.8f)) - 0.6f)) / (1f - 0.6f); //Timestamps and username max out at 0.8
+                    {
+                        //Timestamps and username max out at 0.8 before being drained by background
+                        v = Math.Min(1f, (v / (0.8f - backgroundNoiseValue)));
+                    }
+                    else if (color == ChatColor.Text)
+                        v = Math.Min(1f, (v / (0.937f - backgroundNoiseValue)));
                     //else if (color == ChatColor.Redtext)
                     //    v += 0.3f;
-                    if (v > 1f || v < 0)
-                        System.Diagnostics.Debugger.Break();
+
+                    //Drop all now normalized Vs below our min treshhold.
+                    //const float minTreshold = 0.4f;
+                    //v = Math.Max(0, (v - minTreshold)) / (1f - minTreshold);
                     _valueMap[x, y] = v;
                     _valueMapMask[x, y] = true;
                 }
@@ -57,34 +79,27 @@ namespace Application.ChatLineExtractor
         public int Width { get { return _image.Width; } }
         public int Height { get { return _image.Height; } }
 
-        internal Hsv GetHsv(int x, int y)
+        internal SixLabors.ImageSharp.ColorSpaces.Hsv GetHsv(int x, int y)
         {
-            return GetPixel(x, y).ToHsv();
+            return _converter.ToHsv(_image[x, y]);
         }
 
-        internal ChatColor GetColor(Hsv hsvPixel)
+        internal ChatColor GetColor(int x, int y)
         {
-            if ((hsvPixel.Hue >= 175 && hsvPixel.Hue <= 190)
-                && hsvPixel.Saturation > 0.1) //green
+            var hsvPixel = GetHsv(x, y);
+
+
+            if ((hsvPixel.H >= 175 && hsvPixel.H <= 190)
+                && hsvPixel.S > 0.1) //green
                 return ChatColor.ChatTimestampName;
-            if (hsvPixel.Saturation < 0.3) //white
+            if (hsvPixel.S < 0.3) //white
                 return ChatColor.Text;
-            if (hsvPixel.Hue >= 190 && hsvPixel.Hue <= 210 && hsvPixel.Value >= 0.25) // blue
+            if (hsvPixel.H >= 190 && hsvPixel.H <= 210 && hsvPixel.V >= 0.25) // blue
                 return ChatColor.ItemLink;
-            if ((hsvPixel.Hue <= 1 || hsvPixel.Hue >= 359) && hsvPixel.Saturation >= 0.7f && hsvPixel.Saturation <= 0.8f) //redtext
+            if ((hsvPixel.H <= 1 || hsvPixel.H >= 359) && hsvPixel.S >= 0.7f && hsvPixel.S <= 0.8f) //redtext
                 return ChatColor.Ignored;
 
             return ChatColor.Unknown;
-        }
-        internal ChatColor GetColor(int x, int y)
-        {
-            return GetColor(GetHsv(x, y));
-        }
-
-        private Color GetPixel(int x, int y)
-        {
-            var offset = y * _stride + x * 3;
-            return Color.FromArgb(_imageBytes[offset + 2], _imageBytes[offset + 1], _imageBytes[offset]);
         }
 
         internal enum ChatColor
@@ -96,5 +111,10 @@ namespace Application.ChatLineExtractor
             ItemLink,
             Ignored
         }
+
+        //internal Hsv GetHsv(int x, int y)
+        //{
+        //    return _converter.ToHsv(_image[x, y]);
+        //}
     }
 }

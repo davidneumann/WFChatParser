@@ -10,7 +10,7 @@ using static WFImageParser.ChatParser;
 
 namespace WFImageParser.GlyphRecognition
 {
-    internal class GlyphDatabase
+    public class GlyphDatabase
     {
         public GlyphDetails[] KnownGlyphs { get; private set; }
         public Dictionary<string, Dictionary<string, int>> GapPairs { get; private set; } = new Dictionary<string, Dictionary<string, int>>();
@@ -24,35 +24,31 @@ namespace WFImageParser.GlyphRecognition
             {
                 foreach (var file in Directory.GetFiles(dataDirectory).Where(f => f.EndsWith(".png")))
                 {
-                    var character = new GlyphDetails()
-                    {
-                        Name = (new FileInfo(file)).Name.Replace(".png", ""),
-                        TotalWeights = 0f
-                    };
                     using (Image<Rgba32> image = Image.Load(file))
                     {
-                        character.VMask = new bool[image.Width, image.Height];
-                        character.WeightMappings = new float[image.Width, image.Height];
+                        var vMask = new bool[image.Width, image.Height];
+                        var weightMappings = new float[image.Width, image.Height];
+                        var totalWeight = 0f;
                         for (int x = 0; x < image.Width; x++)
                         {
                             for (int y = 0; y < image.Height; y++)
                             {
-                                character.WeightMappings[x, y] = (float)image[x, y].R / (float)byte.MaxValue;
-                                character.TotalWeights += character.WeightMappings[x, y];
-                                if (character.WeightMappings[x, y] > 0)
+                                weightMappings[x, y] = (float)image[x, y].R / (float)byte.MaxValue;
+                                totalWeight += weightMappings[x, y];
+                                if (weightMappings[x, y] > 0)
                                 {
-                                    character.VMask[x, y] = true;
+                                    vMask[x, y] = true;
                                 }
                                 else
-                                    character.VMask[x, y] = false;
+                                    vMask[x, y] = false;
                             }
                         }
-                        character.Width = image.Width;
-                        character.Height = image.Height;
+                        var character = new GlyphDetails(vMask, weightMappings, (new FileInfo(file)).Name.Replace(".png", ""),
+                            image.Width, image.Height, totalWeight);
                         knownGlyphs.Add(character);
-                        if (character.Width > MaxCharWidth)
+                        if (character.Width > MaxCharWidth && !character.Name.Contains(","))
                             MaxCharWidth = character.Width;
-                        if (MinCharWidth == 0 || character.Width < MinCharWidth)
+                        if (!character.Name.Contains(",") && (MinCharWidth == 0 || character.Width < MinCharWidth))
                             MinCharWidth = character.Width;
                     }
                 }

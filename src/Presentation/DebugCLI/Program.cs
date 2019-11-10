@@ -37,6 +37,7 @@ using Application.ChatBoxParsing;
 using Application.ChatBoxParsing.CustomChatParsing;
 using WFImageParser.Training;
 using Application.Data;
+using WFImageParser.GlyphRecognition;
 
 namespace DebugCLI
 {
@@ -61,12 +62,12 @@ namespace DebugCLI
             //VerifyNoErrors(2);
             //TestScreenHandler();
             //TestBot();
-            //ParseChatImage();
+            ParseChatImage();
             //TessShim();
             //NewRivenShim();
             //NewChatParsingShim();
             //ChatMovingShim();
-            ParseRivenImage();
+            //ParseRivenImage();
             //ChatLineExtractorShim();
             //GenerateCharStrings();
             //TrainOnImages();
@@ -74,6 +75,82 @@ namespace DebugCLI
             //TrainSpacesOnImages();
             //ChineseChatShim();
             //ModiDescrShim();
+            //GlyphAudit();
+        }
+
+        private class GlyphAuditItem
+        {
+            public float Value { get; set; }
+            public string Name { get; set; }
+        }
+        private static void GlyphAudit()
+        {
+            var eGD = new GlyphDatabase(DataHelper.OcrDataPathEnglish);
+
+            //Find smallest known leftmost glyph that can overlap
+            //Find the lowest connective tissue
+            GlyphAuditItem smallestLeftmostGlyph = null;
+            foreach (var glyph in eGD.KnownGlyphs.Where(g => g.Name.Contains(",")))
+            {
+                var leftGlyphName = glyph.Name.Split(',').First();
+                var leftGlyph = eGD.KnownGlyphs.First(g => g.Name == leftGlyphName);
+                if (smallestLeftmostGlyph == null || smallestLeftmostGlyph.Value > leftGlyph.Width)
+                {
+                    smallestLeftmostGlyph = new GlyphAuditItem() { Name = leftGlyph.Name, Value = leftGlyph.Width };
+                }
+            }
+            if (smallestLeftmostGlyph != null)
+                Console.WriteLine($"{smallestLeftmostGlyph.Name} is smallest leftmost glyph with width {smallestLeftmostGlyph.Value}");
+
+            var topLowest = new GlyphAuditItem[] { null, null, null, null, null, null, null, null, null, null };
+            foreach (var glyph in eGD.KnownGlyphs)
+            {
+                if (glyph.Name.Contains(","))
+                    continue;
+
+                var lowestTotal = float.NaN;
+                if (glyph.Width <= smallestLeftmostGlyph.Value)
+                    continue;
+                for (int x = (int)smallestLeftmostGlyph.Value; x < glyph.Width-2; x++)
+                {
+                    var total = 0f;
+                    for (int y = 0; y < glyph.Height; y++)
+                    {
+                        total += glyph.WeightMappings[x, y];
+                    }
+                    if (total <= 0.2f)
+                        continue;
+                    if (float.IsNaN(lowestTotal))
+                        lowestTotal = total;
+                    else
+                        lowestTotal = Math.Min(lowestTotal, total);
+                }
+
+                for (int i = 0; i < topLowest.Length; i++)
+                {
+                    if(topLowest[i] == null || topLowest[i].Value > lowestTotal)
+                    {
+                        //Shift everyone right;
+                        var oldValue = topLowest[i];
+                        for (int j = i + 1; j < topLowest.Length - 1; j++)
+                        {
+                            var temp = topLowest[j];
+                            topLowest[j] = oldValue;
+                            oldValue = temp;
+                        }
+                        //Store result
+                        topLowest[i] = new GlyphAuditItem() { Name = glyph.Name, Value = lowestTotal };
+                        break;
+                    }
+                }
+            }
+
+            foreach (var lowest in topLowest)
+            {
+                if (lowest == null)
+                    continue;
+                Console.WriteLine($"{lowest.Name} {lowest.Value}");
+            }
         }
 
         private static string[] NewChatParsingShim(string path = null)
@@ -377,7 +454,7 @@ namespace DebugCLI
                     var text = rp.ParseRivenTextFromImage(b2, null);
                     foreach (var modi in text.Modifiers)
                     {
-                        if(!Modifier.PossibleDescriptions["zh"].Contains(modi.Description))
+                        if (!Modifier.PossibleDescriptions["zh"].Contains(modi.Description))
                         {
                             Console.WriteLine("Invalid modifier found!");
                         }
@@ -403,7 +480,7 @@ namespace DebugCLI
             //                            .Select(f => new FileInfo(f))
             //                            .Where(f => f.Name.StartsWith("637") && !f.Name.Contains("_white") && f.Name.EndsWith(".png"))
             //                            .Select(f => f.FullName))
-            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("637089184317904696.png")))
+            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("637089657757603235.png")))
             {
                 using (var bitmap = new Bitmap(filePath))
                 {
