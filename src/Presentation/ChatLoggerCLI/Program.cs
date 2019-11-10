@@ -234,9 +234,15 @@ namespace ChatLoggerCLI
                     {
                         using (var sr = new StreamReader(fs, Encoding.Default))
                         {
-                            var contents = sr.ReadToEnd();
+                            var error = new StringBuilder();
+                            while (!sr.EndOfStream)
+                            {
+                                var line = sr.ReadLine();
+                                if (!line.Contains("WARNING! LEAK!"))
+                                    error.AppendLine(line);
+                            }
 
-                            _dataSender.AsyncSendDebugMessage("Past client failed catastrophically.\n " + contents).Wait();
+                            _dataSender.AsyncSendDebugMessage("Past client failed catastrophically.\n " + error.ToString()).Wait();
                         }
                     }
                     File.Delete(Path);
