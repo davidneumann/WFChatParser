@@ -17,8 +17,6 @@ namespace WFImageParser.GlyphRecognition
         public int MaxCharWidth { get; private set; } = 0;
         public int MinCharWidth { get; private set; } = 0;
 
-        //private static readonly string GAPSFILE = Path.Combine("ocrdata", "gaps.json");
-
         public GlyphDatabase(string dataDirectory)
         {
             var knownGlyphs = new List<GlyphDetails>();

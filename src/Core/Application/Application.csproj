@@ -114,6 +114,9 @@
     <None Update="data\ocrdata\B_upper.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="data\ocrdata\chinese\Z_upper.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="data\ocrdata\colon.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

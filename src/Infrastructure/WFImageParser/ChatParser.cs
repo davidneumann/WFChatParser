@@ -1,4 +1,5 @@
 ﻿using Application.ChatMessages.Model;
+using Application.Data;
 using Application.Interfaces;
 using Application.LineParseResult;
 using Application.Logger;
@@ -44,9 +45,9 @@ namespace WFImageParser
             }
 
             //Load blacklists
-            if (Directory.Exists("ocrdata") && File.Exists(@"ocrdata\MessageBlacklists.txt"))
+            if (File.Exists(Path.Combine(DataHelper.OcrDataPathEnglish, @"MessageBlacklists.txt")))
             {
-                foreach (var line in File.ReadAllLines(@"ocrdata\MessageBlacklists.txt"))
+                foreach (var line in File.ReadAllLines(Path.Combine(DataHelper.OcrDataPathEnglish, @"MessageBlacklists.txt")))
                 {
                     _blacklistedRegex.Add(new Regex(line, RegexOptions.Compiled));
                 }

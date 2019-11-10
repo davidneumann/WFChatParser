@@ -31,11 +31,19 @@ namespace Application.Data
             }
         }
 
-        public static string OcrDataPath
+        public static string OcrDataPathEnglish
         {
             get
             {
-                return Path.Combine(DataPath, "ocrdata");
+                return Path.Combine(DataPath, "ocrdata", "english");
+            }
+        }
+
+        public static string OcrDataPathChinese
+        {
+            get
+            {
+                return Path.Combine(DataPath, "ocrdata", "chinese");
             }
         }
     }

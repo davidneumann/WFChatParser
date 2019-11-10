@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using Application.Data;
 using Application.Logger;
 using WFImageParser;
 
@@ -13,7 +14,7 @@ namespace PerfTest
     {
         static void Main(string[] args)
         {
-            var c = new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "english"));
+            var c = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish);
             var sw = new Stopwatch();
             var times = new List<TimeSpan>();
 

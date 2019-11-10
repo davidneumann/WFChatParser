@@ -29,8 +29,8 @@ namespace Application.ChatBoxParsing.CustomChatParsing
         public CustomChatLineParser() : base()
         {
             //Load blacklists
-            var blacklistFile = Path.Combine(DataHelper.OcrDataPath, "MessageBlacklists.txt");
-            if (Directory.Exists(DataHelper.OcrDataPath) && File.Exists(blacklistFile))
+            var blacklistFile = Path.Combine(DataHelper.OcrDataPathEnglish, "MessageBlacklists.txt");
+            if (Directory.Exists(DataHelper.OcrDataPathEnglish) && File.Exists(blacklistFile))
             {
                 foreach (var line in File.ReadAllLines(blacklistFile))
                 {
@@ -38,9 +38,9 @@ namespace Application.ChatBoxParsing.CustomChatParsing
                 }
             }
 
-            if (Directory.Exists("ocrdata"))
+            if (Directory.Exists(DataHelper.OcrDataPathEnglish))
             {
-                foreach (var file in Directory.GetFiles("ocrdata").Where(f => f.EndsWith(".png")))
+                foreach (var file in Directory.GetFiles(DataHelper.OcrDataPathEnglish).Where(f => f.EndsWith(".png")))
                 {
                     var character = new CharacterDetails()
                     {
@@ -78,7 +78,7 @@ namespace Application.ChatBoxParsing.CustomChatParsing
                 }
 
                 //Load up gap pairs
-                var gapsFile = Path.Combine(DataHelper.OcrDataPath, "gaps.json");
+                var gapsFile = Path.Combine(DataHelper.OcrDataPathEnglish, "gaps.json");
                 if (File.Exists(gapsFile))
                 {
                     var gapPairs = JsonConvert.DeserializeObject<SimpleGapPair[]>(File.ReadAllText(gapsFile));
