@@ -58,7 +58,7 @@ namespace DebugCLI
             //VerifyNoErrors(2);
             //TestScreenHandler();
             //TestBot();
-            ParseChatImage();
+            //ParseChatImage();
             //TessShim();
             //NewRivenShim();
             //ChatMovingShim();
@@ -68,16 +68,20 @@ namespace DebugCLI
             //TrainOnImages();
             //FindOverlappingLines();
             //TrainSpacesOnImages();
-            //ChineseChatShim();
+            ChineseChatShim();
         }
 
         private static void ChineseChatShim()
         {
-            var cp = new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "english"));
-            const string source = @"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\chinese_chat.png";
+            var cp = new ChatParser(new FakeLogger(), Path.Combine("ocrdata", "chinese"));
+            const string source = @"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\fake_chinese_wrap_altered.png";
             ImageCleaner.SaveSoftMask(source, "lines_white.png");
             using (var b = new Bitmap(source))
             {
+                foreach (var line in Directory.GetFiles(Environment.CurrentDirectory).Where(f => f.StartsWith("line_") && f.EndsWith(".png")))
+                {
+                    File.Delete(line);
+                }
                 var lines = cp.ParseUsernamesFromChatImage(b, false);
                 for (int i = 0; i < lines.Length; i++)
                 {

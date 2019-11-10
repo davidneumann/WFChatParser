@@ -1086,9 +1086,9 @@ namespace WFImageParser
 
             public void Append(int lineOffset)
             {
-                if(LineRect.Bottom == lineOffset)
+                if(LineRect.Bottom + OCRHelpers.LINEHEIGHT > lineOffset)
                 {
-                    LineRect = new System.Drawing.Rectangle(LineRect.Left, LineRect.Y, LineRect.Width, LineRect.Height + OCRHelpers.LINEHEIGHT);
+                    LineRect = new System.Drawing.Rectangle(LineRect.Left, LineRect.Y, LineRect.Width, (lineOffset + OCRHelpers.LINEHEIGHT) - LineRect.Top);
                 }
             }
 
@@ -1120,7 +1120,10 @@ namespace WFImageParser
                         var line = ParseLineBitmapScan(cache, 0f, chatRect.Left, chatRect, lineHeight, offsets[i], 0, prevLineType);
 
                         if (line == null)
+                        {
+                            prevLineType = LineType.Unknown;
                             continue;
+                        }
                         else
                             prevLineType = line.LineType;
 
