@@ -66,13 +66,13 @@ namespace DebugCLI
             //NewRivenShim();
             //NewChatParsingShim();
             //ChatMovingShim();
-            //ParseRivenImage();
+            ParseRivenImage();
             //ChatLineExtractorShim();
             //GenerateCharStrings();
             //TrainOnImages();
             //FindOverlappingLines();
             //TrainSpacesOnImages();
-            ChineseChatShim();
+            //ChineseChatShim();
         }
 
         private static string[] NewChatParsingShim(string path = null)
@@ -354,11 +354,30 @@ namespace DebugCLI
         private static void ParseRivenImage()
         {
             var rp = new RivenParser();
-            var b = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("74062b19-5158-4eb6-b26a-1b809f787994.png")).Select(file => new Bitmap(file)).FirstOrDefault();
-            var rc = new RivenCleaner();
-            var b2 = rc.CleanRiven(b);
-            b2.Save("debug_clean.png");
-            var text = rp.ParseRivenTextFromImage(b2, null);
+            var outputDir = "debug_rivens";
+            if (!Directory.Exists(outputDir))
+                Directory.CreateDirectory(outputDir);
+            foreach (var riven in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.Contains("riven")))
+            {
+                using (var b = new Bitmap(riven))
+                {
+                    var rc = new RivenCleaner();
+                    var rivenImage = b;
+                    if (b.Width == 4096)
+                        rivenImage = rp.CropToRiven(b);
+                    var b2 = rc.CleanRiven(rivenImage);
+                    b2.Save(Path.Combine(outputDir, (new FileInfo(riven)).Name));
+                    var text = rp.ParseRivenTextFromImage(b2, null);
+                    var textFileName = (new FileInfo(riven)).Name;
+                    textFileName = textFileName.Substring(0, textFileName.LastIndexOf(".")) + ".txt";
+                    File.WriteAllText(textFileName, JsonConvert.SerializeObject(text));
+                    if (rivenImage != b)
+                        rivenImage.Dispose();
+                    if (b2 != b)
+                        b2.Dispose();
+                }
+            }
+            
         }
 
         private static void ParseChatImage()
@@ -368,11 +387,11 @@ namespace DebugCLI
             //                            .Select(f => new FileInfo(f))
             //                            .Where(f => f.Name.StartsWith("637") && !f.Name.Contains("_white") && f.Name.EndsWith(".png"))
             //                            .Select(f => f.FullName))
-            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("chinese_chat.png")))
+            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("637089184317904696.png")))
             {
                 using (var bitmap = new Bitmap(filePath))
                 {
-                    var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathChinese);
+                    var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish);
                     //ic.SaveSoftMask(filePath, "error_blurry1_white.png");
                     ImageCleaner.SaveSoftMask(filePath, filePath.Replace(".png", "_white.png"));
                     var lines = cp.ParseChatImage(bitmap);
