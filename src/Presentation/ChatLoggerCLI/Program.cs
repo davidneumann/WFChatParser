@@ -242,7 +242,8 @@ namespace ChatLoggerCLI
                                     error.AppendLine(line);
                             }
 
-                            _dataSender.AsyncSendDebugMessage("Past client failed catastrophically.\n " + error.ToString()).Wait();
+                            if(error.Length > 3)
+                                _dataSender.AsyncSendDebugMessage("Past client failed catastrophically.\n " + error.ToString()).Wait();
                         }
                     }
                     File.Delete(Path);

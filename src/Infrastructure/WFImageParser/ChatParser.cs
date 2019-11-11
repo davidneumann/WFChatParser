@@ -293,6 +293,7 @@ namespace WFImageParser
                 if (currentLineType == LineType.NewMessage || currentLineType == LineType.Continuation)
                 {
                     var clr = result as ChatMessageLineResult;
+                    clr.MessageBounds = new System.Drawing.Rectangle(chatRect.Left, lineOffset, chatRect.Width, OCRHelpers.LINEHEIGHT);
                     clr.ClickPoints = clickPoints;
                     clr.RawMessage = rawMessage.ToString().Trim();
                     if (currentLineType == LineType.NewMessage)
@@ -1260,10 +1261,10 @@ namespace WFImageParser
 
             return results.ToArray();
         }
-        public BaseLineParseResult[] ParseChatImage(System.Drawing.Bitmap bitmapImage, int xOffset, bool useCache, bool isScrolledUp, int lineParseCount = 27)
+        public ChatMessageLineResult[] ParseChatImage(System.Drawing.Bitmap bitmapImage, int xOffset, bool useCache, bool isScrolledUp, int lineParseCount = 27)
         {
             var chatRect = new Rectangle(4, 763, 3236, 1350);
-            var results = new List<BaseLineParseResult>();
+            var results = new List<ChatMessageLineResult>();
             using (var mem = new MemoryStream())
             {
                 bitmapImage.Save(mem, System.Drawing.Imaging.ImageFormat.Png);
@@ -1325,7 +1326,7 @@ namespace WFImageParser
                             var clr = line as ChatMessageLineResult;
                             if (clr.Timestamp != string.Empty && clr.Username != string.Empty)
                             {
-                                results.Add(line);
+                                results.Add(clr);
                             }
                         }
                         //Append continuation of messages onto last message
@@ -1334,7 +1335,7 @@ namespace WFImageParser
                         {
                             var last = results.Last() as ChatMessageLineResult;
                             _logger.Log("Appending continuation to last message. Last: " + last.RawMessage + " cont: " + line.RawMessage);
-                            last.Append(line as ChatMessageLineResult);
+                            last.Append(line as ChatMessageLineResult, OCRHelpers.LINEHEIGHT, offsets[i]);
                         }
                     }
                 }
@@ -1358,7 +1359,7 @@ namespace WFImageParser
             throw new NotImplementedException();
         }
 
-        public BaseLineParseResult[] ParseChatImage(System.Drawing.Bitmap image)
+        public ChatMessageLineResult[] ParseChatImage(System.Drawing.Bitmap image)
         {
             return ParseChatImage(image, 3, true, false);
         }

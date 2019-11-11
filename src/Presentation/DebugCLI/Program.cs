@@ -226,9 +226,7 @@ namespace DebugCLI
                 {
                     File.Delete(line);
                 }
-                var test = cp.ParseChatImage(b);
                 var lines = cp.ParseUsernamesFromChatImage(b, false);
-                var lines2 = cp.ParseUsernamesFromChatImage(b, false);
                 for (int i = 0; i < lines.Length; i++)
                 {
                     Rectangle rect = lines[i].LineRect;
@@ -259,7 +257,7 @@ namespace DebugCLI
                             fullMessage.EnhancedMessage = $"{fullMessage.Timestamp} {fullMessage.Username}{fullMessage.EnhancedMessage}";
                         }
                         else
-                            fullMessage.Append(parsedLine);
+                            fullMessage.Append(parsedLine, 0, 0);
                     }
 
                     var debug = JsonConvert.SerializeObject(fullMessage);
@@ -491,8 +489,32 @@ namespace DebugCLI
                     ImageCleaner.SaveSoftMask(filePath, filePath.Replace(".png", "_white.png"));
                     var lines = cp.ParseChatImage(bitmap);
                     var sb = new StringBuilder();
-                    foreach (var line in lines)
+                    try
                     {
+                        var oldDebugs = Directory.GetFiles(Environment.CurrentDirectory).Select(f => new FileInfo(f)).Where(fi => fi.Name.StartsWith("debug_chat_line") && fi.Name.EndsWith(".png"));
+                        foreach (var item in oldDebugs)
+                        {
+                            File.Delete(item.FullName);
+                        }
+                    }
+                    catch
+                    {
+
+                    }
+                    for (int i = 0; i < lines.Length; i++)
+                    {
+                        var line = lines[i];
+                        using (var b = new Bitmap(line.MessageBounds.Width, line.MessageBounds.Height))
+                        {
+                            for (int x = 0; x < b.Width; x++)
+                            {
+                                for (int y = 0; y < b.Height; y++)
+                                {
+                                    b.SetPixel(x, y, bitmap.GetPixel(line.MessageBounds.Left + x, line.MessageBounds.Top + y));
+                                }
+                            }
+                            b.Save("debug_chat_line_" + i + ".png");
+                        }
                         Console.WriteLine(line.RawMessage);
                         sb.AppendLine(line.RawMessage);
                     }
@@ -1691,7 +1713,7 @@ namespace DebugCLI
         private static void TrainOnImages()
         {
             var sourceDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\Chinese\Spaces";
-            var outputDir = "chineseData";
+            var outputDir = "newChineseData";
             var trainer = new OCRTrainer();
             trainer.TrainOnImages(sourceDir, outputDir);
 

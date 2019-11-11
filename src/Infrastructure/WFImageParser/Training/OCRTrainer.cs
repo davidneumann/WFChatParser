@@ -25,6 +25,7 @@ namespace WFImageParser.Training
         {
             var cleaner = new ImageCleaner();
             //cleaner.SaveChatColors(imagePath, "debug.png");
+            ImageCleaner.SaveSoftMask(imagePath, "debug_training.png");
 
             var results = new List<List<TrainingSampleCharacter>>();
             using (Image<Rgba32> rgbImage = Image.Load(imagePath))
@@ -36,6 +37,11 @@ namespace WFImageParser.Training
                 var refLineIndex = 0;
                 for (int i = 0; i < offsets.Length && refLineIndex < referenceLines.Count; i++)
                 {
+                    if (referenceLines[i].Length == 0)
+                    {
+                        refLineIndex++;
+                        continue;
+                    }
                     var line = TrainOnLine(referenceLines[refLineIndex], xOffset, chatRect, cache, lineHeight, offsets[i]);
                     if (line.Count > 0 && line.Count == referenceLines[i].Length)
                     {

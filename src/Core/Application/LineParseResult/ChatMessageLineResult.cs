@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -11,8 +12,15 @@ namespace Application.LineParseResult
         public string Timestamp { get; set; } = string.Empty;
         public string EnhancedMessage { get; set; }
         public List<ClickPoint> ClickPoints { get; set; }
-        public void Append(ChatMessageLineResult wrappedLine)
+
+        public Rectangle MessageBounds { get; set; }
+        public void Append(ChatMessageLineResult wrappedLine, int lineHeight, int lineOffset)
         {
+            if (MessageBounds.Bottom + lineHeight > lineOffset)
+            {
+                MessageBounds = new System.Drawing.Rectangle(MessageBounds.Left, MessageBounds.Y, MessageBounds.Width, 
+                    (lineOffset + lineHeight) - MessageBounds.Top);
+            }
             //Trim all lines
             this.RawMessage = this.RawMessage.Trim();
             wrappedLine.RawMessage = wrappedLine.RawMessage.Trim();
