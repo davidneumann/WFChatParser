@@ -156,8 +156,8 @@ namespace WFImageParser
                 startX = targetMask.MinX;
                 endX = targetMask.MaxX + 1;
 
-                if (startX >= 110 && lineOffset >= 1087)
-                    System.Diagnostics.Debugger.Break();
+                //if (startX >= 110 && lineOffset >= 1087)
+                //    System.Diagnostics.Debugger.Break();
 
                 if (endX > startX && targetMask.PixelCount > 7)
                 {
