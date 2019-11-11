@@ -15,7 +15,7 @@ namespace Application.Interfaces
         /// </summary>
         /// <param name="imagePath">The path to the chat window image.</param>
         /// <returns>The chat window text and click points for rivens.</returns>
-        LineParseResult.BaseLineParseResult[] ParseChatImage(Bitmap image, bool useCache, bool isScrolledUp, int lineParseCount);
+        LineParseResult.ChatMessageLineResult[] ParseChatImage(Bitmap image, bool useCache, bool isScrolledUp, int lineParseCount);
 
         bool IsScrollbarPresent(Bitmap fullScreenBitmap);
 

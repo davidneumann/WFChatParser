@@ -1364,7 +1364,7 @@ namespace WFImageParser
             return ParseChatImage(image, 3, true, false);
         }
 
-        public BaseLineParseResult[] ParseChatImage(System.Drawing.Bitmap image, bool useCache, bool isScrolledUp, int lineParseCount)
+        public ChatMessageLineResult[] ParseChatImage(System.Drawing.Bitmap image, bool useCache, bool isScrolledUp, int lineParseCount)
         {
             return ParseChatImage(image, 3, useCache, isScrolledUp, lineParseCount);
         }
