@@ -481,14 +481,17 @@ namespace DebugCLI
             //                            .Select(f => new FileInfo(f))
             //                            .Where(f => f.Name.StartsWith("637") && !f.Name.Contains("_white") && f.Name.EndsWith(".png"))
             //                            .Select(f => f.FullName))
-            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("fake_chinese_wrap_altered.png")))
+            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("chinese_chat.png")))
             {
                 using (var bitmap = new Bitmap(filePath))
                 {
                     var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathChinese);
                     //ic.SaveSoftMask(filePath, "error_blurry1_white.png");
                     ImageCleaner.SaveSoftMask(filePath, filePath.Replace(".png", "_white.png"));
+                    var sw = new Stopwatch();
+                    sw.Start();
                     var lines = cp.ParseChatImage(bitmap);
+                    sw.Stop();
                     var sb = new StringBuilder();
                     try
                     {

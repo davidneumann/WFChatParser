@@ -539,6 +539,7 @@ namespace WFImageParser
                     }
                 }
             }
+
             //If all else has failed hope that we are on some sort of horrible overlap and take the best we can find
             if (bestFit == null)
             {
