@@ -62,7 +62,7 @@ namespace DebugCLI
             //VerifyNoErrors(2);
             //TestScreenHandler();
             //TestBot();
-            ParseChatImage();
+            //ParseChatImage();
             //TessShim();
             //NewRivenShim();
             //NewChatParsingShim();
@@ -73,7 +73,7 @@ namespace DebugCLI
             //TrainOnImages();
             //FindOverlappingLines();
             //TrainSpacesOnImages();
-            //ChineseChatShim();
+            ChineseChatShim();
             //ModiDescrShim();
             //GlyphAudit();
         }
@@ -259,6 +259,7 @@ namespace DebugCLI
                         else
                             fullMessage.Append(parsedLine, 0, 0);
                     }
+                    fullMessage.MessageBounds = rect;
 
                     var debug = JsonConvert.SerializeObject(fullMessage);
                 }
