@@ -156,8 +156,8 @@ namespace WFImageParser
                 startX = targetMask.MinX;
                 endX = targetMask.MaxX + 1;
 
-                //if (startX >= 195 && lineOffset >= 1583)
-                //    System.Diagnostics.Debugger.Break();
+                if (startX >= 110 && lineOffset >= 1087)
+                    System.Diagnostics.Debugger.Break();
 
                 if (endX > startX && targetMask.PixelCount > 7)
                 {
@@ -620,7 +620,7 @@ namespace WFImageParser
                 {
                     colCount += targetMask.SoftMask[x, y];
                 }
-                if (colCount < 3f)
+                if (colCount < 1.9f)
                 {
                     lowUseColumn = x;
                     break;
@@ -1407,7 +1407,7 @@ namespace WFImageParser
             return true;
         }
 
-        public void InvalidCache(string key)
+        public void InvalidateCache(string key)
         {
             var duplicateCache = new Queue<string>(_sentItems.Where(i => i != key));
             _sentItems = duplicateCache;

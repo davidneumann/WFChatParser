@@ -20,6 +20,6 @@ namespace Application.Interfaces
         bool IsScrollbarPresent(Bitmap fullScreenBitmap);
 
         bool IsChatFocused(Bitmap chatIconBitmap);
-        void InvalidCache(string key);
+        void InvalidateCache(string key);
     }
 }

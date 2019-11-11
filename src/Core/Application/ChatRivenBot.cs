@@ -294,7 +294,7 @@ namespace Application
                                         var path = SaveScreenToDebug(screen);
                                         if (path != null)
                                             _dataSender.AsyncSendDebugMessage("Failed to parse correctly. See: " + path);
-                                        _chatParser.InvalidCache(line.GetKey());
+                                        _chatParser.InvalidateCache(line.GetKey());
                                         break;
                                     }
                                 }
@@ -480,7 +480,7 @@ namespace Application
                     //If something went wrong clear this item from caches so it may be tried again
                     if (!foundRivenWindow || crop == null)
                     {
-                        _chatParser.InvalidCache(line.GetKey());
+                        _chatParser.InvalidateCache(line.GetKey());
                         if (crop != null)
                         {
                             crop.Dispose();

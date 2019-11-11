@@ -211,7 +211,7 @@ namespace Application.Actionables.ChatBots
                         var line = chatLines[i];
                         if (lineFailed)
                         {
-                            _chatParser.InvalidCache(line.GetKey());
+                            _chatParser.InvalidateCache(line.GetKey());
                             continue;
                         }
                         _logger.Log("Processing message: " + line.RawMessage);
@@ -247,7 +247,7 @@ namespace Application.Actionables.ChatBots
                                 //    await _dataSender.AsyncSendDebugMessage("Failed to parse correctly. See: " + path);
                                 //else
                                 //    await _dataSender.AsyncSendDebugMessage("Failed to parse correctly. Also failed to save image");
-                                _chatParser.InvalidCache(line.GetKey());
+                                _chatParser.InvalidateCache(line.GetKey());
                                 lineFailed = true;
                                 break;
                             }
@@ -281,7 +281,7 @@ namespace Application.Actionables.ChatBots
                     {
                         foreach (var line in chatLines)
                         {
-                            _chatParser.InvalidCache(line.GetKey());
+                            _chatParser.InvalidateCache(line.GetKey());
                         }
                     }
                     else
@@ -445,7 +445,7 @@ namespace Application.Actionables.ChatBots
                         //}
                     }
 
-                    _chatParser.InvalidCache(line.GetKey());
+                    _chatParser.InvalidateCache(line.GetKey());
                     if (crop != null)
                     {
                         crop.Dispose();
@@ -525,7 +525,7 @@ namespace Application.Actionables.ChatBots
                     (origSample.G - sample.G) * (origSample.G - sample.G) +
                     (origSample.B - sample.B) * (origSample.B - sample.B) > 225)
                 {
-                    _chatParser.InvalidCache(line.GetKey());
+                    _chatParser.InvalidateCache(line.GetKey());
                     _logger.Log("Chat box has changed. Aborting riven clicks.");
                     return false;
                 }

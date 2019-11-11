@@ -344,7 +344,7 @@ namespace Application
                     lineSw.Start();
                     if (linesBad)
                     {
-                        lines.ToList().ForEach(l => _chatParser.InvalidCache(l.GetKey()));
+                        lines.ToList().ForEach(l => _chatParser.InvalidateCache(l.GetKey()));
                         break;
                     }
                     //if (line.LineType == LineParseResult.LineType.RedText)
@@ -420,7 +420,7 @@ namespace Application
                             }
                             else
                             {
-                                _chatParser.InvalidCache(line.GetKey());
+                                _chatParser.InvalidateCache(line.GetKey());
                                 linesBad = true;
                                 rivenParseTime += rivenSW.Elapsed.TotalSeconds;
                                 break;
@@ -450,7 +450,7 @@ namespace Application
                             if (!foundRiven || crop == null)
                             {
                                 linesBad = true;
-                                _chatParser.InvalidCache(line.GetKey());
+                                _chatParser.InvalidateCache(line.GetKey());
                                 if (crop != null)
                                     crop.Dispose();
                                 rivenParseTime += rivenSW.Elapsed.TotalSeconds;
@@ -467,7 +467,7 @@ namespace Application
                             if (riven == null)
                             {
                                 //crop.Dispose();
-                                _chatParser.InvalidCache(line.GetKey());
+                                _chatParser.InvalidateCache(line.GetKey());
                                 linesBad = true;
                                 rivenParseTime += rivenSW.Elapsed.TotalSeconds;
                                 break;
@@ -523,7 +523,7 @@ namespace Application
                         }
                         if (linesBad)
                         {
-                            lines.ToList().ForEach(l => _chatParser.InvalidCache(l.GetKey()));
+                            lines.ToList().ForEach(l => _chatParser.InvalidateCache(l.GetKey()));
                             break;
                         }
                         if (message.DEBUGREASON != null)

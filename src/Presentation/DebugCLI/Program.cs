@@ -226,7 +226,9 @@ namespace DebugCLI
                 {
                     File.Delete(line);
                 }
+                var test = cp.ParseChatImage(b);
                 var lines = cp.ParseUsernamesFromChatImage(b, false);
+                var lines2 = cp.ParseUsernamesFromChatImage(b, false);
                 for (int i = 0; i < lines.Length; i++)
                 {
                     Rectangle rect = lines[i].LineRect;
@@ -480,7 +482,7 @@ namespace DebugCLI
             //                            .Select(f => new FileInfo(f))
             //                            .Where(f => f.Name.StartsWith("637") && !f.Name.Contains("_white") && f.Name.EndsWith(".png"))
             //                            .Select(f => f.FullName))
-            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("Screenshot (77).png")))
+            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("637089844208907415.png")))
             {
                 using (var bitmap = new Bitmap(filePath))
                 {
