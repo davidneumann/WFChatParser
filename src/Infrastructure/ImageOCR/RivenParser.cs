@@ -114,11 +114,13 @@ namespace ImageOCR
                 else if (line.Length > 0 && (newModiRegex.Match(line).Success && line.Contains(' ')) && (currentStep == Step.ReadingName || currentStep == Step.ReadingModifiers))
                 {
                     result.Name = name;
-                    if (parsedName != null)
+                    if (parsedName != null && _clientLanguage == ClientLanguage.English)
                     {
                         result.Name = parsedName;
                         name = result.Name;
                     }
+                    else
+                        result.Name = name;
                     currentStep = Step.ReadingModifiers;
                     modis.Add(line);
                 }

@@ -26,6 +26,7 @@
     <ProjectReference Include="..\..\..\WarframeDriver\WarframeDriver.csproj" />
     <ProjectReference Include="..\..\Common\Common\Common.csproj" />
     <ProjectReference Include="..\..\Core\Application\Application.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\ChineseChatParser\ChineseChatParser.csproj" />
     <ProjectReference Include="..\..\Infrastructure\DataStream\DataStream.csproj" />
     <ProjectReference Include="..\..\Infrastructure\ImageOCR\ImageOCR.csproj" />
     <ProjectReference Include="..\..\Infrastructure\WFGameCapture\WFGameCapture.csproj" />

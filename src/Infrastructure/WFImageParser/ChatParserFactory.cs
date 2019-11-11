@@ -1,4 +1,5 @@
-﻿using Application.Interfaces;
+﻿using Application.Enums;
+using Application.Interfaces;
 using Application.Logger;
 using System;
 using System.Collections.Generic;
@@ -17,9 +18,12 @@ namespace WFImageParser
             _dataDirectory = dataDirectory;
         }
 
-        public IChatParser CreateChatParser()
+        public IChatParser CreateChatParser(ClientLanguage clientLanguage)
         {
-            return new ChatParser(_logger, _dataDirectory);
+            if (clientLanguage == ClientLanguage.English)
+                return new ChatParser(_logger, _dataDirectory);
+            else
+                throw new NotImplementedException();
         }
     }
 }

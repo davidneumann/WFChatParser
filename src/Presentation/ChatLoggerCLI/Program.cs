@@ -5,6 +5,7 @@ using Application.Actionables.ChatBots;
 using Application.Data;
 using Application.Enums;
 using Application.LogParser;
+using ChineseChatParser;
 using DataStream;
 using ImageOCR;
 using Microsoft.Extensions.Configuration;
@@ -40,8 +41,8 @@ namespace ChatLoggerCLI
 
             Console.WriteLine("Loading config for data sender");
             IConfiguration config = new ConfigurationBuilder()
-              .AddJsonFile("appsettings.json", true, true)
-              .AddJsonFile("appsettings.development.json", true, true)
+              //.AddJsonFile("appsettings.json", true, true)
+              //.AddJsonFile("appsettings.development.json", true, true)
               .AddJsonFile("appsettings.production.json", true, true)
               .Build();
 
@@ -55,6 +56,8 @@ namespace ChatLoggerCLI
                 config["DataSender:RivenImageMessagePrefix"],
                 config["DataSender:LogMessagePrefix"],
                 config["DataSender:LogLineMessagePrefix"]);
+
+            var logger = new Application.Logger.Logger(_dataSender, _cancellationSource.Token);
 
             try
             {
@@ -91,6 +94,7 @@ namespace ChatLoggerCLI
 
                 _dataSender.RequestToKill += (s, e) =>
                 {
+                    logger.Log("Request to kill received");
                     Console_CancelKeyPress(null, null);
                 };
                 _dataSender.RequestSaveAll += (s, e) =>
@@ -123,18 +127,18 @@ namespace ChatLoggerCLI
                 redtextthing.OnRedText += Redtextthing_OnRedText;
                 logParser.OnNewMessage += LogParser_OnNewMessage;
 
-                var logger = new Application.Logger.Logger(_dataSender, _cancellationSource.Token);
                 var gc = new GameCapture(logger);
                 var obs = GetObsSettings(config["Credentials:Key"], config["Credentials:Salt"]);
+                logger.Log("Starting bot. Expected " + warframeCredentials.Length + " clients");
                 var bot = new MultiChatRivenBot(warframeCredentials, new MouseHelper(),
                     new KeyboardHelper(),
                     new ScreenStateHandler(),
-                    new RivenParserFactory(ClientLanguage.English),
+                    new RivenParserFactory(ClientLanguage.Chinese),
                     new RivenCleaner(),
                     _dataSender,
                     gc,
                     logger,
-                    new ChatParserFactory(logger, DataHelper.OcrDataPathEnglish));
+                    new ChineseChatParserFactory(logger));
 
                 var drive = DriveInfo.GetDrives().First(d => d.Name == Path.GetPathRoot(Environment.CurrentDirectory));
                 logger.Log("Starting bot on drive: " + Path.GetPathRoot(Environment.CurrentDirectory) + ". Available space: " + drive.AvailableFreeSpace + " bytes");

@@ -221,18 +221,24 @@ namespace Application.Actionables.ChatBots
                             bool success = true;
                             if (_messageCacheDetails.ContainsKey(clr.Username + clr.EnhancedMessage))
                             {
+                                _logger.Log("Found in cache, sending that.");
                                 modelsToSend.Add(SendCaceResult(line, clr));
                             }
                             else if (clr.ClickPoints.Count == 0)
                             {
+                                _logger.Log("No clickpoints found. Sending simple message");
                                 var result = await ProcessAndSendSimpleMessage(line);
                                 if (result == null)
+                                {
+                                    _logger.Log("Failed to send simple message. Aborting");
                                     success = false;
+                                }
                                 else
                                     modelsToSend.Add(result);
                             }
                             else
                             {
+                                _logger.Log("Attempting to process click points");
                                 var result = await ProcessChatMessageLineResult(_rivenCropper, line);
                                 if (result == null)
                                     success = false;
@@ -381,6 +387,7 @@ namespace Application.Actionables.ChatBots
             var chatMessage = MakeChatModel(clr);
             if (chatMessage.DEBUGREASON != null && chatMessage.DEBUGREASON.Length > 0)
             {
+                _logger.Log("Debug reason found on chat message during processing");
                 using (var b = _gameCapture.GetFullImage())
                 {
                     chatMessage.DEBUGIMAGE = Path.Combine("debug", DateTime.Now.Ticks + ".png");
@@ -393,6 +400,7 @@ namespace Application.Actionables.ChatBots
             var rivenParseDetails = new List<RivenParseTaskWorkItemDetail>();
             foreach (var clickpoint in clr.ClickPoints)
             {
+                _logger.Log($"Attempting to click on click point {clickpoint.X},{clickpoint.Y}");
                 //Click riven
                 _mouse.MoveTo(clickpoint.X, clickpoint.Y);
                 await Task.Delay(17);
@@ -474,7 +482,10 @@ namespace Application.Actionables.ChatBots
                         }
                     }
                 }
-                rivenParseDetails.Add(new RivenParseTaskWorkItemDetail() { RivenIndex = clickpoint.Index, RivenName = clickpoint.RivenName, CroppedRivenBitmap = crop });
+                var workItem = new RivenParseTaskWorkItemDetail() { RivenIndex = clickpoint.Index, RivenName = clickpoint.RivenName, CroppedRivenBitmap = crop };
+                if (_warframeCredentials.Region == "T_ZH")
+                    workItem.RivenName = null;
+                rivenParseDetails.Add(workItem);
             }
 
             return new RivenParseTaskWorkItem()

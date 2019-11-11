@@ -1,5 +1,6 @@
 ﻿using Application.Actionables.ChatBots;
 using Application.ChatMessages.Model;
+using Application.Enums;
 using Application.Interfaces;
 using Application.Logger;
 using System;
@@ -141,9 +142,12 @@ namespace Application.Actionables
 
                             riven.Polarity = parser.ParseRivenPolarityFromColorImage(croppedCopy);
                             riven.Rank = parser.ParseRivenRankFromColorImage(croppedCopy);
-                            riven.Name = r.RivenName;
-                            if (riven.Name.ToLower().Trim() != r.RivenName.ToLower().Trim())
-                                success = false;
+                            if (r.RivenName != null && r.RivenName.Length > 0)
+                            {
+                                riven.Name = r.RivenName;
+                                if (riven.Name.ToLower().Trim() != r.RivenName.ToLower().Trim())
+                                    success = false;
+                            }
                             riven.MessagePlacementId = r.RivenIndex;
 
                             item.Message.Rivens.Add(riven);
@@ -206,7 +210,11 @@ namespace Application.Actionables
 
             for (int i = 0; i < _bots.Length; i++)
             {
-                _bots[i] = new TradeChatBot(_rivenWorkQueue, _rivenParserFactory.CreateRivenParser(), c, _warframeCredentials[i], _mouse, _keyboard, _screenStateHandler, _logger, _gameCapture, _dataSender, _chatParserFactory.CreateChatParser());
+                var language = ClientLanguage.English;
+                if (_warframeCredentials[i].Region == "T_ZH")
+                    language = ClientLanguage.Chinese;
+
+                _bots[i] = new TradeChatBot(_rivenWorkQueue, _rivenParserFactory.CreateRivenParser(), c, _warframeCredentials[i], _mouse, _keyboard, _screenStateHandler, _logger, _gameCapture, _dataSender, _chatParserFactory.CreateChatParser(language));
             }
 
             var controlSw = new Stopwatch();
@@ -252,7 +260,11 @@ namespace Application.Actionables
                         {
                             _logger.Log("Exception: " + e.ToString());
                             bot.ShutDown();
-                            _bots[i] = new TradeChatBot(_rivenWorkQueue, _rivenParserFactory.CreateRivenParser(), c, _warframeCredentials[i], _mouse, _keyboard, _screenStateHandler, _logger, _gameCapture, _dataSender, _chatParserFactory.CreateChatParser());
+
+                            var language = ClientLanguage.English;
+                            if (_warframeCredentials[i].Region == "T_ZH")
+                                language = ClientLanguage.Chinese;
+                            _bots[i] = new TradeChatBot(_rivenWorkQueue, _rivenParserFactory.CreateRivenParser(), c, _warframeCredentials[i], _mouse, _keyboard, _screenStateHandler, _logger, _gameCapture, _dataSender, _chatParserFactory.CreateChatParser(language));
                         }
                         _logger.Log(_warframeCredentials[i].StartInfo.UserName + ":" + _warframeCredentials[i].Region + " finished task in: " + controlSw.Elapsed.TotalSeconds + " seconds.");
                         controlSw.Stop();

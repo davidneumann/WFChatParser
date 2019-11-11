@@ -62,7 +62,7 @@ namespace DebugCLI
             //VerifyNoErrors(2);
             //TestScreenHandler();
             //TestBot();
-            //ParseChatImage();
+            ParseChatImage();
             //TessShim();
             //NewRivenShim();
             //NewChatParsingShim();
@@ -73,7 +73,7 @@ namespace DebugCLI
             //TrainOnImages();
             //FindOverlappingLines();
             //TrainSpacesOnImages();
-            ChineseChatShim();
+            //ChineseChatShim();
             //ModiDescrShim();
             //GlyphAudit();
         }
@@ -481,11 +481,11 @@ namespace DebugCLI
             //                            .Select(f => new FileInfo(f))
             //                            .Where(f => f.Name.StartsWith("637") && !f.Name.Contains("_white") && f.Name.EndsWith(".png"))
             //                            .Select(f => f.FullName))
-            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("637089844208907415.png")))
+            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("fake_chinese_wrap_altered.png")))
             {
                 using (var bitmap = new Bitmap(filePath))
                 {
-                    var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish);
+                    var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathChinese);
                     //ic.SaveSoftMask(filePath, "error_blurry1_white.png");
                     ImageCleaner.SaveSoftMask(filePath, filePath.Replace(".png", "_white.png"));
                     var lines = cp.ParseChatImage(bitmap);

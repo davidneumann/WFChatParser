@@ -101,7 +101,8 @@ namespace Application
                                 riven.Rank = parser.ParseRivenRankFromColorImage(croppedCopy);
 
                                 riven.MessagePlacementId = r.RivenIndex;
-                                riven.Name = r.RivenName;
+                                if(r.RivenName != null && r.RivenName.Length > 0)
+                                    riven.Name = r.RivenName;
                                 _dataSender.AsyncSendRivenImage(riven.ImageId, croppedCopy);
                                 r.CroppedRivenBitmap.Dispose();
                                 item.Message.Rivens.Add(riven);
