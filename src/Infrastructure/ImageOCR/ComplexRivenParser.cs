@@ -21,8 +21,13 @@ namespace ImageOCRBad
 
         public void DebugGetLineDetails(Bitmap b)
         {
-            GetLineDetails(new RivenImage(b));
+            var lines = GetLineDetails(new RivenImage(b));
+            foreach (var rect in lines.OrderByDescending(r => r.LineRect.Height).Select(ld => ld.LineRect))
+            {
+                Console.WriteLine($"Line {rect.X},{rect.Y} {rect.Width}x{rect.Height}");
+            }
         }
+
         private List<LineDetails> GetLineDetails(RivenImage croppedRiven)
         {
             if (croppedRiven.Width != 466)
@@ -58,16 +63,25 @@ namespace ImageOCRBad
             }
 
             //Warm up the cache
-            croppedRiven.CacheRect(new Rectangle(376, 0, 87, 42)); //Drain/polairty
-            croppedRiven.CacheRect(new Rectangle(51, 565, 362, 34)); //MR/rerolls
+            Rectangle drainRect = new Rectangle(376, 0, 87, 42);
+            croppedRiven.CacheRect(drainRect); //Drain/polairty
+            Rectangle MRRollRect = new Rectangle(51, 565, 362, 34);
+            croppedRiven.CacheRect(MRRollRect); //MR/rerolls
             var leftBackgroundRect = new Rectangle(croppedRiven.Width / 3 - 7, 46, 15, _bodyBottomY - 46); //Left scan line for background
             var rightBackgroundRect = new Rectangle((croppedRiven.Width / 3) * 2 - 7, 46, 15, _bodyBottomY - 46); //Right scan line for background
             croppedRiven.CacheRect(leftBackgroundRect);
             croppedRiven.CacheRect(rightBackgroundRect);
 
+            //Add the two we know about
             var results = new List<LineDetails>();
+            results.Add(new LineDetails(drainRect));
+            results.Add(new LineDetails(MRRollRect));
+
             var pastBackground = false;
             var startY = 0;
+            var onLine = false;
+            Rectangle bodyRect = Rectangle.Empty;
+            var nameHeight = 0;
             for (int y = 46; y < _bodyBottomY; y++)
             {
                 if (!pastBackground)
@@ -83,16 +97,44 @@ namespace ImageOCRBad
                     else
                     {
                         pastBackground = true;
-                        croppedRiven.CacheRect(new Rectangle(8, y, 450, _bodyBottomY - y));//Rest of the text
+                        bodyRect = new Rectangle(8, y, 450, _bodyBottomY - y);
+                        croppedRiven.CacheRect(bodyRect);//Rest of the text
                     }
                 }
                 if (pastBackground)//Not else as we need the first occurance
                 {
-                    if (startY == 0)
-                        startY = y;
-                    else
+                    var purpleFound = false;
+                    for (int x = bodyRect.Left; x < bodyRect.Right; x++)
                     {
+                        if (croppedRiven.IsPurple(x, y) || croppedRiven.HasNeighbor(x, y))
+                        {
+                            purpleFound = true;
+                            break;
+                        }
+                    }
+                    if (purpleFound && startY == 0) // Top of line
+                        startY = y;
+                    else if(!purpleFound && startY > 0) //Bottom of line
+                    {
+                        var height = y - startY;
+                        if(nameHeight == 0)
+                            nameHeight = height; //First line will always be a name line
 
+                        //Two modifier lines can overlap given tall enough characters
+                        //Two+ modifier lines will always be taller than the name
+                        if (height > nameHeight * 1.1f)
+                        {
+                            //We expect a name to be about 1.35x as tall
+                            height = height / 2;
+                            results.Add(new LineDetails(new Rectangle(bodyRect.Left, startY, bodyRect.Width, height)));
+                            results.Add(new LineDetails(new Rectangle(bodyRect.Left, startY + height, bodyRect.Width, height)));
+                        }
+                        else
+                        {
+                            results.Add(new LineDetails(new Rectangle(bodyRect.Left, startY, bodyRect.Width, height)));
+                        }
+
+                        startY = 0;
                     }
                 }
             }
@@ -115,14 +157,50 @@ namespace ImageOCRBad
                             debugBitmap.SetPixel(x, y, Color.White);
                     }
                 }
+
+                //Draw a box around each line
+                foreach (var rect in results.Select(ld => ld.LineRect))
+                {
+                    for (int x = rect.Left - 1; x < rect.Right + 1; x++)
+                    {
+                        if (x < 0 || x >= debugBitmap.Width)
+                            continue;
+                        //Top line
+                        for (int y = rect.Top - 1; y < rect.Top + 1; y++)
+                        {
+                            if (y < 0 || y >= debugBitmap.Height)
+                                continue;
+                            debugBitmap.SetPixel(x, y, Color.Red);
+                        }
+                        //Bottom line
+                        for (int y = rect.Bottom -1; y < rect.Bottom + 1; y++)
+                        {
+                            if (y < 0 || y >= debugBitmap.Height)
+                                continue;
+                            debugBitmap.SetPixel(x, y, Color.Red);
+                        }
+                    }
+                    for (int y = rect.Top - 1; y < rect.Bottom + 1; y++)
+                    {
+                        if (y < 0 || y >= debugBitmap.Height)
+                            continue;
+                        //Left line
+                        for (int x = rect.Left - 1; x < rect.Left + 1; x++)
+                        {
+                            if (x < 0 || x >= debugBitmap.Width)
+                                continue;
+                            debugBitmap.SetPixel(x, y, Color.Red);
+                        }
+                        for (int x = rect.Right - 1; x < rect.Right + 1; x++)
+                        {
+                            if (x < 0 || x >= debugBitmap.Width)
+                                continue;
+                            debugBitmap.SetPixel(x, y, Color.Red);
+                        }
+                    }
+                }
                 debugBitmap.Save("debug_complex_riven.png");
             }
-
-            //Add drain
-            results.Add(new LineDetails(new Rectangle(375, 2, 47, 39)));
-
-            //Add MR and rolls
-            results.Add(new LineDetails(new Rectangle(53, 565, 358, 31)));
 
             return results;
         }
@@ -230,11 +308,39 @@ namespace ImageOCRBad
         private class LineDetails
         {
             public Rectangle LineRect { get; set; }
-            public List<Rectangle> CharacterRects { get; set; } = new List<Rectangle>();
 
-            public LineDetails(Rectangle lineRect)
+            private RivenImage _rivenImage;
+
+            private List<Rectangle> _charaRects = new List<Rectangle>();
+            public List<Rectangle> CharacterRects
+            {
+                get
+                {
+                    if (CharacterRects.Count == 0)
+                        UpdateCharacterRects();
+                    return CharacterRects;
+                }
+            }
+
+            public LineDetails(Rectangle lineRect, RivenImage rivenImage)
             {
                 LineRect = lineRect;
+                _rivenImage = rivenImage;
+            }
+
+            public void UpdateCharacterRects()
+            {
+                for (int x = LineRect.Left; x < LineRect.Right; x++)
+                {
+                    if (x < 0 || x >= _rivenImage.Width)
+                        continue;
+                    for (int y = LineRect.Top; y < LineRect.Bottom; y++)
+                    {
+                        if (y < 0 || y >= _rivenImage.Height)
+                            continue;
+
+                    }
+                }
             }
         }
     }
