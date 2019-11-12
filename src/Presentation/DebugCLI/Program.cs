@@ -54,8 +54,8 @@ namespace DebugCLI
         {
             Console.CancelKeyPress += Console_CancelKeyPress;
 
-            if (!Directory.Exists(outputDir))
-                Directory.CreateDirectory(outputDir);
+            //if (!Directory.Exists(outputDir))
+            //    Directory.CreateDirectory(outputDir);
 
             //Console.Write("Enter target name [ex, WFBot:Bot2]: ");
             //var target = Console.ReadLine();
