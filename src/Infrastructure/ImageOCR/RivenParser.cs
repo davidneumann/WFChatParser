@@ -122,7 +122,7 @@ namespace ImageOCR
                         name = result.Name;
                     }
                     else
-                        result.Name = name;
+                        result.Name = name.Replace("—", "-"); ;
                     currentStep = Step.ReadingModifiers;
                     modis.Add(line);
                 }
@@ -165,6 +165,7 @@ namespace ImageOCR
                     }
                 }
 
+                name = name.Replace("—", "-");
                 if (modis.Count > 0)
                 {
                     var modiObjects = modis.Select(m => Modifier.ParseString(m, _clientLanguage)).ToArray();
