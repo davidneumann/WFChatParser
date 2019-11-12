@@ -96,18 +96,10 @@ namespace WFImageParser
                                 outputImage[outputImage.Width / 2 - 30 + x, y + 650] = foreground;
                         }
                     }
-                    refX = 65;
-                    refY = 704;
-                    //Copy MR & rerolls
-                    for (int x = 0; x < 450; x++)
-                    {
-                        for (int y = 0; y < 42; y++)
-                        {
-                            var p = image[refX + x, refY + y];
-                            if (IsPurple(p))
-                                outputImage[outputImage.Width / 2 - (450 / 2) + x, y + 650 + 55 + 20] = foreground;
-                        }
-                    }
+
+                    //MR and Rerolls
+                    CopyMRAndRerolls(outputImage, image, out refX, out refY, foreground);
+
 
                     //Clean up bottom corners
                     for (int x = 0; x < 18; x++)
@@ -125,48 +117,48 @@ namespace WFImageParser
                         }
                     }
 
-                    //Remove centered lock icon
-                    for (int x = outputImage.Width / 2 - 12; x < outputImage.Width / 2 - 12 + 48; x++)
-                    {
-                        for (int y = outputImage.Height - 50; y < outputImage.Height; y++)
-                        {
-                            outputImage[x, y] = background;
-                        }
-                    }
-                    //Remove left lock icon
-                    for (int x = 122; x < 122 + 30; x++)
-                    {
-                        for (int y = outputImage.Height - 50; y < outputImage.Height; y++)
-                        {
-                            outputImage[x, y] = background;
-                        }
-                    }
-                    //Remove right roll icon
-                    var startX = -1;
-                    for (int x = (int)(outputImage.Width * 0.68); x < outputImage.Width; x++)
-                    {
-                        if (startX >= 0)
-                            break;
-                        for (int y = outputImage.Height - 50; y < outputImage.Height; y++)
-                        {
-                            if (outputImage[x, y].R < 128)
-                            {
-                                startX = x;
-                                break;
-                            }
-                        }
-                    }
-                    if (startX > 0)
-                    {
-                        var endX = Math.Min(startX + 42, outputImage.Width);
-                        for (int x = startX; x < endX; x++)
-                        {
-                            for (int y = outputImage.Height - 50; y < outputImage.Height; y++)
-                            {
-                                outputImage[x, y] = background;
-                            }
-                        }
-                    }
+                    ////Remove centered lock icon
+                    //for (int x = outputImage.Width / 2 - 12; x < outputImage.Width / 2 - 12 + 48; x++)
+                    //{
+                    //    for (int y = outputImage.Height - 50; y < outputImage.Height; y++)
+                    //    {
+                    //        outputImage[x, y] = background;
+                    //    }
+                    //}
+                    ////Remove left lock icon
+                    //for (int x = 122; x < 122 + 30; x++)
+                    //{
+                    //    for (int y = outputImage.Height - 50; y < outputImage.Height; y++)
+                    //    {
+                    //        outputImage[x, y] = background;
+                    //    }
+                    //}
+                    ////Remove right roll icon
+                    //var startX = -1;
+                    //for (int x = (int)(outputImage.Width * 0.68); x < outputImage.Width; x++)
+                    //{
+                    //    if (startX >= 0)
+                    //        break;
+                    //    for (int y = outputImage.Height - 50; y < outputImage.Height; y++)
+                    //    {
+                    //        if (outputImage[x, y].R < 128)
+                    //        {
+                    //            startX = x;
+                    //            break;
+                    //        }
+                    //    }
+                    //}
+                    //if (startX > 0)
+                    //{
+                    //    var endX = Math.Min(startX + 42, outputImage.Width);
+                    //    for (int x = startX; x < endX; x++)
+                    //    {
+                    //        for (int y = outputImage.Height - 50; y < outputImage.Height; y++)
+                    //        {
+                    //            outputImage[x, y] = background;
+                    //        }
+                    //    }
+                    //}
                 }
 
                 outputImage.Mutate(i => i.Pad(outputImage.Width + 20, outputImage.Height + 20).BackgroundColor(background));
@@ -181,6 +173,70 @@ namespace WFImageParser
             var smallCropped = result.Clone(new System.Drawing.Rectangle(0, 0, result.Width, result.Height - 1), System.Drawing.Imaging.PixelFormat.Format1bppIndexed);
             result.Dispose();
             return smallCropped;
+        }
+
+        private void CopyMRAndRerolls(Image<Rgba32> outputImage, Image<Rgba32> image, out int refX, out int refY, Rgba32 foreground)
+        {
+            refX = 65;
+            refY = 704;
+            //Identify all the characters
+            var charRects = new List<System.Drawing.Rectangle>();
+            var onChar = false;
+            var charStartX = 450;
+            var charEndX = 450;
+            //This footer is between 65,704 and is 450 wide 42 tall
+            for (int x = 65 + 450 - 1; x >= 65; x--)
+            {
+                var foundPixel = false;
+                for (int y = 704; y < 704 + 42; y++)
+                {
+                    var p = image[x, y];
+                    if (IsPurple(p))
+                    {
+                        if (!onChar)
+                            charEndX = x;
+                        onChar = true;
+                        foundPixel = true;
+                        break;
+                    }
+                }
+                if (!foundPixel && onChar)
+                {
+                    charStartX = x + 1;
+                    onChar = false;
+                    charRects.Add(new System.Drawing.Rectangle(charStartX, 704, charEndX - charStartX + 1, 42));
+                }
+            }
+            //Remove all characters who are invalid.
+            //Copy MR & rerolls
+            //Riven footer will be either
+            //MR (lock) X         (reroll) X
+            //          MR (lock) X
+
+            //If we have any thing with an x beyond 388 then it's MR (lock) x     (reroll) x
+            var rerolls = charRects.Where(r => r.Left > 388).OrderBy(r => r.Left).Skip(1).ToArray();
+            //MR will always be the 3rd+ character on the left side
+            var mr = charRects.Where(r => r.Left < 388).OrderBy(r => r.Left).Skip(3);
+            foreach (var item in rerolls)
+                CopyCharToOutput(outputImage, image, foreground, item);
+            foreach (var item in mr)
+                CopyCharToOutput(outputImage, image, foreground, item);
+        }
+
+        private void CopyCharToOutput(Image<Rgba32> outputImage, Image<Rgba32> image, Rgba32 foreground, System.Drawing.Rectangle charRect)
+        {
+            for (int x = charRect.Left; x <= charRect.Right; x++)
+            {
+                for (int y = charRect.Top; y < charRect.Bottom; y++)
+                {
+                    var p = image[x, y];
+                    if (IsPurple(p))
+                    {
+                        //outputImage[outputImage.Width / 2 - (450 / 2) + (x - 450 - 65), (y - charRect.Top) + 650 + 55 + 20] = foreground;
+                        outputImage[x - 85, (y - charRect.Top) + 650 + 55 + 20] = foreground;
+                    }
+                }
+            }
         }
 
         public void PrepareRivenFromFullscreenImage(string imagePath, string outputPath)

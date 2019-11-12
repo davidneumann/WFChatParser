@@ -333,3 +333,5 @@ ASALocalRun/
 **/appsettings.development.json
 **/appsettings.staging.json
 **/appsettings.production.json
+
+**/secret.txt

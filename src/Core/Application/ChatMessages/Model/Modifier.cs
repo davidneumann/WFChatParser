@@ -33,7 +33,6 @@ namespace Application.ChatMessages.Model
                 {
                     try
                     {
-                        //_possibleDescriptions["en"] = JsonConvert.DeserializeObject<string[]>(client.DownloadString("https://10o.io/rivens/buffnames.json"));
                         var fullJson = JObject.Parse(client.DownloadString("https://10o.io/rivens/rivendata.json"));
                         _possibleDescriptions["en"] = fullJson["buffs"].Cast<KeyValuePair<string, JToken>>().Select(p => (string)p.Value["text"]["en"]).Select(str => str.Replace("|val|", "").Trim()).Distinct().ToArray();
                         _possibleDescriptions["zh"] = fullJson["buffs"].Cast<KeyValuePair<string, JToken>>().Select(p => (string)p.Value["text"]["zh"]).Select(str => str.Replace("|val|", "").Trim()).Distinct().ToArray();

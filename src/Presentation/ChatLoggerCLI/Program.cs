@@ -27,7 +27,7 @@ namespace ChatLoggerCLI
     public class Program
     {
         private static List<IDisposable> _disposables = new List<IDisposable>();
-        private static CancellationTokenSource _cancellationSource;
+        private static CancellationTokenSource _cancellationSource = new CancellationTokenSource();
         private static DataSender _dataSender;
         private static bool _cleanExitRequested = false;
 
@@ -120,8 +120,6 @@ namespace ChatLoggerCLI
                 };
 
                 //var password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"]);
-
-                _cancellationSource = new CancellationTokenSource();
 
                 var logParser = new WarframeLogParser();
                 var redtextthing = new RedTextParser(logParser);

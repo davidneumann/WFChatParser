@@ -143,7 +143,9 @@ namespace ImageOCR
                 {
                     //MR o 16 D14
                     //MR 6 10 . 02
-                    var matches = Regex.Match(line, @"MR[^\d]*(\d+)[^\d]*(\d+)?");
+                    //var matches = Regex.Match(line, @"MR[^\d]*(\d+)[^\d]*(\d+)?");
+                    //Should now either be x or x     x
+                    var matches = Regex.Match(line, @"(\d+)\s*(\d+)?");
                     if (matches.Success)
                     {
                         if (matches.Groups[2].Success)
@@ -178,7 +180,7 @@ namespace ImageOCR
                     result.Modifiers = modiObjects;
                 }
             }
-#if DEBUG
+#if DEBUG && false
             Console.WriteLine(debug.ToString());
 #endif
             result.ImageId = Guid.NewGuid();
@@ -198,7 +200,7 @@ namespace ImageOCR
                 y = lineRect.Bottom;
             }
 
-#if DEBUG
+#if DEBUG && false
             foreach (var file in Directory.GetFiles(Environment.CurrentDirectory).Select(f => new FileInfo(f)).Where(f => f.Name.StartsWith("debug_")))
             {
                 try
@@ -281,7 +283,7 @@ namespace ImageOCR
                                 }
                             }
 
-#if DEBUG
+#if DEBUG && false
                             try
                             {
                                 padding.Save("debug_ " + allLines.Count + ".png");
@@ -312,7 +314,7 @@ namespace ImageOCR
                     }
                 }
             }
-#if DEBUG
+#if DEBUG && false
             try
             {
                 var debugs = Directory.GetFiles(Environment.CurrentDirectory).Where(f => f.Substring(f.LastIndexOf("\\") + 1).StartsWith("debug_")).OrderBy(f => f).Select(f => new Bitmap(f)).ToArray();

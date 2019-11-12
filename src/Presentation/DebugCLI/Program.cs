@@ -38,6 +38,8 @@ using Application.ChatBoxParsing.CustomChatParsing;
 using WFImageParser.Training;
 using Application.Data;
 using WFImageParser.GlyphRecognition;
+using System.Net;
+using HtmlAgilityPack;
 
 namespace DebugCLI
 {
@@ -62,12 +64,12 @@ namespace DebugCLI
             //VerifyNoErrors(2);
             //TestScreenHandler();
             //TestBot();
-            ParseChatImage();
+            //ParseChatImage();
             //TessShim();
             //NewRivenShim();
             //NewChatParsingShim();
             //ChatMovingShim();
-            //ParseRivenImage();
+            ParseRivenImage();
             //ChatLineExtractorShim();
             //GenerateCharStrings();
             //TrainOnImages();
@@ -76,6 +78,247 @@ namespace DebugCLI
             //ChineseChatShim();
             //ModiDescrShim();
             //GlyphAudit();
+            //TestRivens();
+
+        }
+
+        public static void ClearCurrentConsoleLine()
+        {
+            int currentLineCursor = Console.CursorTop;
+            Console.SetCursorPosition(0, Console.CursorTop);
+            Console.Write(new string(' ', Console.WindowWidth));
+            Console.SetCursorPosition(0, currentLineCursor);
+        }
+
+        private static bool AreRivensSame(Riven lhs, Riven rhs)
+        {
+            if (lhs.Modifiers.Length != rhs.Modifiers.Length)
+            {
+                Console.WriteLine("Different modifier count");
+                return false;
+            }
+            for (int i = 0; i < lhs.Modifiers.Length; i++)
+            {
+                if (lhs.Modifiers[i].Value != rhs.Modifiers[i].Value)
+                {
+                    Console.WriteLine($"Modifier {i} value did not match. {lhs.Modifiers[i].Value} != {rhs.Modifiers[i].Value}");
+                    return false;
+                }
+                if (lhs.Modifiers[i].Description.Replace(" ", "").Replace("%", "").Trim()
+                    != rhs.Modifiers[i].Description.Replace(" ", "").Replace("%", "").Trim())
+                {
+                    Console.WriteLine($"Modifier {i} description did not match. {lhs.Modifiers[i].Description} != {rhs.Modifiers[i].Description}");
+                    return false;
+                }
+                if (lhs.Modifiers[i].Curse != rhs.Modifiers[i].Curse)
+                {
+                    Console.WriteLine($"Modifier {i} description did not match. {lhs.Modifiers[i].Curse} != {rhs.Modifiers[i].Curse}");
+                    return false;
+                }
+            }
+            if (lhs.Drain != rhs.Drain)
+            {
+                Console.WriteLine($"Drain did not match. {lhs.Drain} != {rhs.Drain}");
+                return false;
+            }
+            if (lhs.MasteryRank != rhs.MasteryRank)
+            {
+                Console.WriteLine($"MR did not match. {lhs.MasteryRank} != {rhs.MasteryRank}");
+                return false;
+            }
+            if (lhs.Polarity != rhs.Polarity)
+            {
+                Console.WriteLine($"Polarity did not match. {lhs.Polarity} != {rhs.Polarity}");
+                return false;
+            }
+            if (lhs.Rank != rhs.Rank)
+            {
+                Console.WriteLine($"Rank did not match. {lhs.Rank} != {rhs.Rank}");
+                return false;
+            }
+            if (lhs.Rolls != rhs.Rolls)
+            {
+                Console.WriteLine($"Rolls did not match. {lhs.Rolls} != {rhs.Rolls}");
+                return false;
+            }
+            return true;
+        }
+
+        private static void TestRivens()
+        {
+            var valid = new DateTime(2019, 11, 11, 19, 20, 0);
+            //string[] allRivens2 = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Riven images\2019_11_11")
+            //    .Where(f => (new FileInfo(f)).LastWriteTime > valid).ToArray();
+            var knownBads = Directory.GetFiles(@"C:\Users\david\source\repos\WFChatParser\src\Presentation\DebugCLI\bin\Debug\netcoreapp2.2\bad_rivens")
+                .Select(f => new FileInfo(f).Name);
+            string[] allRivens2 = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Riven images\2019_11_11")
+                .Where(f =>
+                {
+                    var fi = new FileInfo(f);
+                    return fi.LastWriteTime > valid
+                        && knownBads.Contains(fi.Name);
+                }).ToArray();
+            var queue = new ConcurrentQueue<string>(allRivens2);
+            var threads = new List<Thread>();
+            var totalSw = new Stopwatch();
+            totalSw.Start();
+            var url = File.ReadAllText("secret.txt").Trim();
+            var outputQueue = new ConcurrentQueue<string>();
+            var badRivens = new ConcurrentQueue<string>();
+            for (int j = 0; j < 1; j++)
+            {
+                Thread thread = new Thread(() =>
+                {
+                    var rc = new RivenCleaner();
+                    var rp = new RivenParser(ClientLanguage.English);
+                    var webC = new WebClient();
+                    while (queue.Count > 0)
+                    {
+                        string rawRiven = string.Empty;
+                        queue.TryDequeue(out rawRiven);
+                        if (rawRiven == null || rawRiven == string.Empty)
+                        {
+                            Thread.Sleep(500);
+                            continue;
+                        }
+
+                        var fi = new FileInfo(rawRiven);
+                        //if (fi.LastWriteTime > valid)
+                        //    continue;
+                        if (!rawRiven.EndsWith(".png"))
+                            continue;
+                        var rivenId = fi.Name.Replace(".png", "");
+                        Riven serverRiven = null;
+                        for (int j2 = 0; j2 < 10; j2++)
+                        {
+                            try
+                            {
+                                serverRiven = JsonConvert.DeserializeObject<Riven>(webC.DownloadString(url + rivenId));
+                                break;
+                            }
+                            catch
+                            {
+
+                            }
+                        }
+                        using (var rawRivenBitmap = new Bitmap(rawRiven))
+                        {
+                            using (var cleanRivenBitmap = rc.CleanRiven(rawRivenBitmap))
+                            {
+                                //cleanRivenBitmap.Save("debug_clean_riven.png");
+                                var riven = rp.ParseRivenTextFromImage(cleanRivenBitmap, null);
+                                riven.Polarity = rp.ParseRivenPolarityFromColorImage(rawRivenBitmap);
+                                riven.Rank = rp.ParseRivenRankFromColorImage(rawRivenBitmap);
+                                if (!AreRivensSame(serverRiven, riven))
+                                {
+                                    cleanRivenBitmap.Save("debug_riven_clean.png");
+                                    outputQueue.Enqueue($"Rivens are not same! {rawRiven}");
+                                    badRivens.Enqueue(rawRiven);
+                                }
+                                else
+                                    outputQueue.Enqueue("Riven " + rivenId + " same");
+                                //var lineRects = new List<Rectangle>();
+                                //for (int y = 0; y < cleanRivenBitmap.Height;)
+                                //{
+                                //    var lineRect = GetNextLineRect(y, cleanRivenBitmap);
+                                //    if (lineRect == Rectangle.Empty || lineRect.Top >= cleanRivenBitmap.Height)
+                                //        break;
+                                //    lineRects.Add(lineRect);
+                                //    Console.WriteLine($"Adding rect {lineRect.X},{lineRect.Y} : {lineRect.Width}x{lineRect.Height}");
+                                //    y = lineRect.Bottom;
+                                //}
+                            }
+                        }
+                    }
+                });
+                threads.Add(thread);
+                thread.Start();
+            }
+
+            if (!Directory.Exists("bad_rivens"))
+            {
+                Directory.CreateDirectory("bad_rivens");
+            }
+            var cleaner = new RivenCleaner();
+            while (queue.Count > 0)
+            {
+                string output = string.Empty;
+                while (outputQueue.Count > 0)
+                {
+                    outputQueue.TryDequeue(out output);
+                    if (output != null && output != string.Empty)
+                    {
+                        ClearCurrentConsoleLine();
+                        Console.WriteLine(output);
+                    }
+                }
+                output = string.Empty;
+                while (badRivens.Count > 0)
+                {
+                    badRivens.TryDequeue(out output);
+                    if (output != null && output != string.Empty)
+                    {
+                        using (var bitmap = new Bitmap(output))
+                        {
+                            using (var b = cleaner.CleanRiven(bitmap))
+                            {
+                                var fi = new FileInfo(output);
+                                b.Save(Path.Combine("bad_rivens", fi.Name));
+                                ClearCurrentConsoleLine();
+                                Console.WriteLine("See bad riven: " + fi.Name);
+                            }
+                        }
+                    }
+                }
+                var done = allRivens2.Length - queue.Count;
+                var left = allRivens2.Length - done;
+                ClearCurrentConsoleLine();
+                Console.Write($"\rChecked {done} of {allRivens2.Length} rivens in {totalSw.Elapsed.TotalSeconds} seconds. {left * (totalSw.Elapsed.TotalSeconds / done)} seconds left\r");
+                Thread.Sleep(500);
+            }
+        }
+
+        private static Rectangle GetNextLineRect(int lastY, Bitmap bitmap)
+        {
+            var startingY = -1;
+            var endingY = -1;
+            var startX = -1;
+            var endX = -1;
+            for (int y = lastY; y < bitmap.Height; y++)
+            {
+                var pixelFound = false;
+                for (int x = 0; x < bitmap.Width; x++)
+                {
+                    if (bitmap.GetPixel(x, y).R < 128)
+                    {
+                        pixelFound = true;
+                        if (x < startX || startX < 0)
+                            startX = x;
+                        if (x > endX)
+                            endX = x;
+
+                        if (startingY < 0 || y < startingY)
+                            startingY = y;
+                        if (endingY < y)
+                            endingY = y;
+                    }
+                }
+                if (!pixelFound && endingY > 0)
+                    break;
+            }
+            endX++;
+            endingY++;
+
+            if (startingY > 0 && endingY < 0)
+                endingY = bitmap.Height;
+
+            if (endingY - startingY > 65)
+                endingY = startingY + (endingY - startingY) / 2;
+
+            if (startingY > 0)
+                return new Rectangle(startX, startingY, endX - startX, endingY - startingY);
+            else
+                return Rectangle.Empty;
         }
 
         private class GlyphAuditItem
@@ -90,7 +333,7 @@ namespace DebugCLI
             //Find smallest known leftmost glyph that can overlap
             //Find the lowest connective tissue
             GlyphAuditItem smallestLeftmostGlyph = null;
-            foreach (var glyph in eGD.KnownGlyphs.Where(g => g.Name.Contains(",")))
+            foreach (var glyph in eGD.KnownGlyphs.Where(g => g.Name.Contains(", ")))
             {
                 var leftGlyphName = glyph.Name.Split(',').First();
                 var leftGlyph = eGD.KnownGlyphs.First(g => g.Name == leftGlyphName);
@@ -111,7 +354,7 @@ namespace DebugCLI
                 var lowestTotal = float.NaN;
                 if (glyph.Width <= smallestLeftmostGlyph.Value)
                     continue;
-                for (int x = (int)smallestLeftmostGlyph.Value; x < glyph.Width-2; x++)
+                for (int x = (int)smallestLeftmostGlyph.Value; x < glyph.Width - 2; x++)
                 {
                     var total = 0f;
                     for (int y = 0; y < glyph.Height; y++)
@@ -128,7 +371,7 @@ namespace DebugCLI
 
                 for (int i = 0; i < topLowest.Length; i++)
                 {
-                    if(topLowest[i] == null || topLowest[i].Value > lowestTotal)
+                    if (topLowest[i] == null || topLowest[i].Value > lowestTotal)
                     {
                         //Shift everyone right;
                         var oldValue = topLowest[i];
@@ -443,7 +686,7 @@ namespace DebugCLI
                 Directory.CreateDirectory(outputDir);
             var sw = new Stopwatch();
             var rc = new RivenCleaner();
-            foreach (var riven in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.Contains("0a218c17-f4db-4fe2-b640-16249df9dc05")))
+            foreach (var riven in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Riven images\Chinese rivens").Where(f => f.Contains("07d55aa5-98cc-4436-8220-6dfa9d41cc4f")))
             {
                 sw.Restart();
                 using (var b = new Bitmap(riven))
