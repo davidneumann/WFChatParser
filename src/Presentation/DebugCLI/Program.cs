@@ -40,6 +40,7 @@ using Application.Data;
 using WFImageParser.GlyphRecognition;
 using System.Net;
 using HtmlAgilityPack;
+using ImageOCRBad;
 
 namespace DebugCLI
 {
@@ -69,7 +70,7 @@ namespace DebugCLI
             //NewRivenShim();
             //NewChatParsingShim();
             //ChatMovingShim();
-            ParseRivenImage();
+            //ParseRivenImage();
             //ChatLineExtractorShim();
             //GenerateCharStrings();
             //TrainOnImages();
@@ -79,7 +80,16 @@ namespace DebugCLI
             //ModiDescrShim();
             //GlyphAudit();
             //TestRivens();
+            ComplexRivenShim();
+        }
 
+        private static void ComplexRivenShim()
+        {
+            var crp = new ComplexRivenParser(ClientLanguage.English);
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Riven images\2019_11_11\00aa819f-0c7c-4f87-b384-0bb611f1165d.png"))
+            {
+                crp.DebugGetLineDetails(b);
+            }
         }
 
         public static void ClearCurrentConsoleLine()

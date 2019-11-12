@@ -10,6 +10,19 @@ namespace Application.Utils
         public float Hue { get; set; }
         public float Saturation { get; set; }
         public float Value { get; set; }
+
+        public static Hsv Black { get; } = new Hsv() { Hue = 0f, Saturation = 0f, Value = 0f };
+
+        public static Hsv White { get; } = new Hsv() { Hue = 0f, Saturation = 0f, Value = 1f };
+
+        public static Hsv FromHsv(float h, float s, float v)
+        {
+            var result = new Hsv();
+            result.Hue = h;
+            result.Saturation = s;
+            result.Value = v;
+            return result;
+        }
     }
 
     public static class ColorExtensions
