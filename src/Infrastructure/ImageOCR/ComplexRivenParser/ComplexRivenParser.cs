@@ -15,7 +15,7 @@ namespace ImageOCR.ComplexRivenParser
         private CharacterParser _characterParser;
         const int _bodyBottomY = 548;
         Bitmap _tessBitmap;
-        private Graphics _tessGrpahics;
+        private Graphics _tessGraphics;
         private Brush _whiteBrush = new SolidBrush(Color.White);
 
         public ComplexRivenParser(ClientLanguage clientLanguage)
@@ -67,13 +67,14 @@ namespace ImageOCR.ComplexRivenParser
             {
                 _tessBitmap.Dispose();
                 _tessBitmap = null;
-                _tessGrpahics.Dispose();
+                _tessGraphics.Dispose();
             }
             if (_tessBitmap == null)
             {
                 _tessBitmap = new Bitmap(width + fullPadding, height + fullPadding);
-                _tessGrpahics = Graphics.FromImage(_tessBitmap);
-                _tessGrpahics.FillRectangle(_whiteBrush, 0, 0, _tessBitmap.Width, _tessBitmap.Height);
+                _tessGraphics = Graphics.FromImage(_tessBitmap);
+                _tessGraphics.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceCopy;
+                _tessGraphics.FillRectangle(_whiteBrush, 0, 0, _tessBitmap.Width, _tessBitmap.Height);
             }
 
             using (var charBitmap = rivenImage.BackingImage.Clone(characterDetail.CharacterRect, rivenImage.BackingImage.PixelFormat))
@@ -99,10 +100,12 @@ namespace ImageOCR.ComplexRivenParser
                     sizedBitmap.Save(System.IO.Path.Combine("debug_tess", "sizedBitmap.png"));
                 }
 
-                var g = Graphics.FromImage(_tessBitmap);
-                g.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceCopy;
-                g.DrawImage(sizedBitmap, new Point(sidePadding, sidePadding));
-                g.FillRectangle(_whiteBrush, sizedBitmap.Width + sidePadding, sidePadding, _tessBitmap.Width - sizedBitmap.Width - sidePadding, _tessBitmap.Height - fullPadding);
+                _tessGraphics.DrawImage(sizedBitmap, new Point(sidePadding, sidePadding));
+                _tessGraphics.FillRectangle(_whiteBrush, sizedBitmap.Width + sidePadding, sidePadding, _tessBitmap.Width - sizedBitmap.Width - sidePadding, _tessBitmap.Height - fullPadding);
+
+                if (sizedBitmap != charBitmap)
+                    sizedBitmap.Dispose();
+                charBitmap.Dispose();
             }
 
             _tessBitmap.Save(System.IO.Path.Combine("debug_tess", "debug_tess_" + _DEBUG++ + ".png"));
