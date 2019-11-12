@@ -41,6 +41,7 @@ using WFImageParser.GlyphRecognition;
 using System.Net;
 using HtmlAgilityPack;
 using Application.Utils;
+using ImageOCR.ComplexRivenParser;
 
 namespace DebugCLI
 {

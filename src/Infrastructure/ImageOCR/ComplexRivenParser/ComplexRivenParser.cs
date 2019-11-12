@@ -7,16 +7,18 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ImageOCR
+namespace ImageOCR.ComplexRivenParser
 {
-    public class ComplexRivenParser
+    public partial class ComplexRivenParser
     {
         private ClientLanguage _clientLanguage;
+        private CharacterParser _characterParser;
         const int _bodyBottomY = 548;
 
         public ComplexRivenParser(ClientLanguage clientLanguage)
         {
             _clientLanguage = clientLanguage;
+            _characterParser = new CharacterParser(clientLanguage);
         }
 
         public void DebugGetLineDetails(Bitmap b)
@@ -214,176 +216,6 @@ namespace ImageOCR
                         continue;
                     debugBitmap.SetPixel(x, y, color);
                 }
-            }
-        }
-
-        private class RivenImage
-        {
-            private Hsv[,] _hsvs;
-            private bool[,] _purples;
-            private bool[,] _purplesCache;
-            private bool[,] _hsvCache;
-            private Bitmap _image;
-            public RivenImage(Bitmap image)
-            {
-                _hsvs = new Hsv[image.Width, image.Height];
-                _hsvCache = new bool[image.Width, image.Height];
-                _purples = new bool[image.Width, image.Height];
-                _purplesCache = new bool[image.Width, image.Height];
-                _image = image;
-            }
-            private static Hsv _minPurple = Hsv.FromHsv(270f * 0.99f, 0.385f * 0.99f, 0.835f * 0.99f);
-            private static Hsv _maxPurple = Hsv.FromHsv(270f * 1.01f, 0.385f * 1.01f, 0.835f * 1.01f);
-
-            public static bool IsPurple(Hsv hsv)
-            {
-                return hsv.Hue >= _minPurple.Hue && hsv.Hue <= _maxPurple.Hue
-                    && hsv.Saturation >= _minPurple.Saturation && hsv.Saturation <= _maxPurple.Saturation
-                    && hsv.Value >= _minPurple.Value && hsv.Saturation <= _maxPurple.Value;
-                //return hsv.Hue >= _minPurple.Hue && hsv.Hue <= _maxPurple.Hue;
-            }
-            public bool IsPurple(int x, int y)
-            {
-                if (!_purplesCache[x, y])
-                    _purples[x, y] = IsPurple(this[x, y]);
-                return _purples[x, y];
-            }
-
-            public Hsv this[int x, int y]
-            {
-                get
-                {
-                    if (!_hsvCache[x, y])
-                    {
-                        _hsvs[x, y] = _image.GetPixel(x, y).ToHsv();
-                        _hsvCache[x, y] = true;
-                    }
-                    return _hsvs[x, y];
-                }
-                set
-                {
-                    _hsvCache[x, y] = true;
-                    _hsvs[x, y] = value;
-                }
-            }
-
-            public void CacheRect(Rectangle rect)
-            {
-                for (int x = rect.Left; x < rect.Right; x++)
-                {
-                    for (int y = rect.Top; y < rect.Height; y++)
-                    {
-                        if (_hsvCache[x, y] && _purplesCache[x,y])
-                            continue;
-                        else
-                        {
-                            _hsvCache[x, y] = true;
-                            _hsvs[x, y] = _image.GetPixel(x, y).ToHsv();
-                            _purples[x, y] = IsPurple(_hsvs[x, y]);
-                            _purplesCache[x, y] = true;
-                        }
-                    }
-                }
-            }
-
-            public bool HasNeighbor(int x, int y, int distance = 3)
-            {
-                for (int x2 = x - distance; x2 < x + distance; x2++)
-                {
-                    if (x2 < 0 || x2 >= Width)
-                        continue;
-                    for (int y2 = y - distance; y2 < y + distance; y2++)
-                    {
-                        if (y2 < 0 || y2 >= Height)
-                            continue;
-                        if (IsPurple(x2, y2))
-                            return true;
-                    }
-                }
-                return false;
-                //return highlights[x - 1, y - 1].Value < 0.5f //Top
-                //    || highlights[x + 1, y].Value < 0.5f //Right
-                //    || highlights[x, y + 1].Value < 0.5f //Bottom
-                //    || highlights[x - 1, y].Value < 0.5f; //Left
-            }
-
-            public int Width
-            {
-                get { return _image.Width; }
-            }
-            public int Height
-            {
-                get { return _image.Height; }
-            }
-        }
-        private class LineDetails
-        {
-            public Rectangle LineRect { get; set; }
-
-            private RivenImage _rivenImage;
-
-            private List<Rectangle> _charRects = new List<Rectangle>();
-            public List<Rectangle> CharacterRects
-            {
-                get
-                {
-                    if (_charRects.Count == 0)
-                        _charRects = UpdateCharacterRects();
-                    return _charRects;
-                }
-            }
-
-            public LineDetails(Rectangle lineRect, RivenImage rivenImage)
-            {
-                LineRect = lineRect;
-                _rivenImage = rivenImage;
-            }
-
-            public List<Rectangle> UpdateCharacterRects()
-            {
-                var results = new List<Rectangle>();
-                var onChar = false;
-                var startX = 0;
-                var startY = -1;
-                var endY = 0;
-                for (int x = LineRect.Left; x < LineRect.Right; x++)
-                {
-                    if (x < 0 || x >= _rivenImage.Width)
-                        continue;
-                    var purpleFound = false;
-                    for (int y = LineRect.Top; y < LineRect.Bottom; y++)
-                    {
-                        if (y < 0 || y >= _rivenImage.Height)
-                            continue;
-                        if(_rivenImage.IsPurple(x,y) || _rivenImage.HasNeighbor(x,y, 1))
-                        {
-                            purpleFound = true;
-                            if (startY == -1 || y < startY)
-                                startY = y;
-                            if (y > endY)
-                                endY = y + 1;
-                        }
-                    }
-                    if(!onChar && purpleFound) //Start of character
-                    {
-                        startX = x;
-                        onChar = true;
-                    }
-                    else if(onChar && !purpleFound) //Character ended
-                    {
-                        //Add 1 pixel of spacing around characters
-                        var safeXStart = Math.Max(0, startX - 1);
-                        var safeYStart = Math.Max(0, startY - 1);
-                        var safeWidth = Math.Min(_rivenImage.Width, x + 1 - safeXStart);
-                        var safeHeight = Math.Min(_rivenImage.Height, endY + 1 - safeYStart);
-                        results.Add(new Rectangle(safeXStart, safeYStart, safeWidth, safeHeight));
-                        startX = 0;
-                        startY = -1;
-                        endY = 0;
-                        onChar = false;
-                    }
-                }
-                return results;
             }
         }
     }
