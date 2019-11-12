@@ -183,7 +183,7 @@ namespace ImageOCRBad
                 {
                     for (int y = rect.Top; y < rect.Height; y++)
                     {
-                        if (_hsvCache[x, y])
+                        if (_hsvCache[x, y] && _purplesCache[x,y])
                             continue;
                         else
                         {
