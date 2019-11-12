@@ -65,7 +65,7 @@ namespace DebugCLI
             //VerifyNoErrors(2);
             //TestScreenHandler();
             //TestBot();
-            //ParseChatImage();
+            ParseChatImage();
             //TessShim();
             //NewRivenShim();
             //NewChatParsingShim();
@@ -80,16 +80,19 @@ namespace DebugCLI
             //ModiDescrShim();
             //GlyphAudit();
             //TestRivens();
-            ComplexRivenShim();
+            //ComplexRivenShim();
         }
 
         private static void ComplexRivenShim()
         {
+            var sw = new Stopwatch();
+            sw.Start();
             var crp = new ComplexRivenParser(ClientLanguage.English);
             using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Riven images\2019_11_11\00aa819f-0c7c-4f87-b384-0bb611f1165d.png"))
             {
                 crp.DebugGetLineDetails(b);
             }
+            Console.WriteLine($"Done in {sw.Elapsed.TotalSeconds} seconds");
         }
 
         public static void ClearCurrentConsoleLine()
@@ -734,11 +737,11 @@ namespace DebugCLI
             //                            .Select(f => new FileInfo(f))
             //                            .Where(f => f.Name.StartsWith("637") && !f.Name.Contains("_white") && f.Name.EndsWith(".png"))
             //                            .Select(f => f.FullName))
-            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("chinese_chat.png")))
+            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("637089844208907415.png")))
             {
                 using (var bitmap = new Bitmap(filePath))
                 {
-                    var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathChinese);
+                    var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish);
                     //ic.SaveSoftMask(filePath, "error_blurry1_white.png");
                     ImageCleaner.SaveSoftMask(filePath, filePath.Replace(".png", "_white.png"));
                     var sw = new Stopwatch();

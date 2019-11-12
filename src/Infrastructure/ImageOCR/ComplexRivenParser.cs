@@ -74,8 +74,8 @@ namespace ImageOCRBad
 
             //Add the two we know about
             var results = new List<LineDetails>();
-            results.Add(new LineDetails(drainRect));
-            results.Add(new LineDetails(MRRollRect));
+            results.Add(new LineDetails(drainRect, croppedRiven));
+            results.Add(new LineDetails(MRRollRect, croppedRiven));
 
             var pastBackground = false;
             var startY = 0;
@@ -126,12 +126,12 @@ namespace ImageOCRBad
                         {
                             //We expect a name to be about 1.35x as tall
                             height = height / 2;
-                            results.Add(new LineDetails(new Rectangle(bodyRect.Left, startY, bodyRect.Width, height)));
-                            results.Add(new LineDetails(new Rectangle(bodyRect.Left, startY + height, bodyRect.Width, height)));
+                            results.Add(new LineDetails(new Rectangle(bodyRect.Left, startY, bodyRect.Width, height), croppedRiven));
+                            results.Add(new LineDetails(new Rectangle(bodyRect.Left, startY + height, bodyRect.Width, height), croppedRiven));
                         }
                         else
                         {
-                            results.Add(new LineDetails(new Rectangle(bodyRect.Left, startY, bodyRect.Width, height)));
+                            results.Add(new LineDetails(new Rectangle(bodyRect.Left, startY, bodyRect.Width, height), croppedRiven));
                         }
 
                         startY = 0;
@@ -139,70 +139,82 @@ namespace ImageOCRBad
                 }
             }
 
-            //DEBUG
-            using (var debugBitmap = new Bitmap(croppedRiven.Width, croppedRiven.Height))
-            {
-                for (int x = 0; x < croppedRiven.Width; x++)
-                {
-                    for (int y = 0; y < croppedRiven.Height; y++)
-                    {
-                        if (croppedRiven.IsPurple(x, y) || croppedRiven.HasNeighbor(x, y))
-                        {
-                            //croppedRiven.Restore(x, y);
-                            var p = croppedRiven[x, y];
-                            var v = byte.MaxValue - (byte)(byte.MaxValue * Math.Min(1f, Math.Max(0f, p.Value - 0.153f) / (0.835f - 0.153f)));
-                            debugBitmap.SetPixel(x, y, Color.FromArgb(v, v, v));
-                        }
-                        else
-                            debugBitmap.SetPixel(x, y, Color.White);
-                    }
-                }
+            ////DEBUG
+            //using (var debugBitmap = new Bitmap(croppedRiven.Width, croppedRiven.Height))
+            //{
+            //    for (int x = 0; x < croppedRiven.Width; x++)
+            //    {
+            //        for (int y = 0; y < croppedRiven.Height; y++)
+            //        {
+            //            if (croppedRiven.IsPurple(x, y) || croppedRiven.HasNeighbor(x, y))
+            //            {
+            //                //croppedRiven.Restore(x, y);
+            //                var p = croppedRiven[x, y];
+            //                var v = byte.MaxValue - (byte)(byte.MaxValue * Math.Min(1f, Math.Max(0f, p.Value - 0.153f) / (0.835f - 0.153f)));
+            //                debugBitmap.SetPixel(x, y, Color.FromArgb(v, v, v));
+            //            }
+            //            else
+            //                debugBitmap.SetPixel(x, y, Color.White);
+            //        }
+            //    }
 
-                //Draw a box around each line
-                foreach (var rect in results.Select(ld => ld.LineRect))
-                {
-                    for (int x = rect.Left - 1; x < rect.Right + 1; x++)
-                    {
-                        if (x < 0 || x >= debugBitmap.Width)
-                            continue;
-                        //Top line
-                        for (int y = rect.Top - 1; y < rect.Top + 1; y++)
-                        {
-                            if (y < 0 || y >= debugBitmap.Height)
-                                continue;
-                            debugBitmap.SetPixel(x, y, Color.Red);
-                        }
-                        //Bottom line
-                        for (int y = rect.Bottom -1; y < rect.Bottom + 1; y++)
-                        {
-                            if (y < 0 || y >= debugBitmap.Height)
-                                continue;
-                            debugBitmap.SetPixel(x, y, Color.Red);
-                        }
-                    }
-                    for (int y = rect.Top - 1; y < rect.Bottom + 1; y++)
-                    {
-                        if (y < 0 || y >= debugBitmap.Height)
-                            continue;
-                        //Left line
-                        for (int x = rect.Left - 1; x < rect.Left + 1; x++)
-                        {
-                            if (x < 0 || x >= debugBitmap.Width)
-                                continue;
-                            debugBitmap.SetPixel(x, y, Color.Red);
-                        }
-                        for (int x = rect.Right - 1; x < rect.Right + 1; x++)
-                        {
-                            if (x < 0 || x >= debugBitmap.Width)
-                                continue;
-                            debugBitmap.SetPixel(x, y, Color.Red);
-                        }
-                    }
-                }
-                debugBitmap.Save("debug_complex_riven.png");
-            }
+            //    //Draw a box around each line
+            //    foreach (var line in results)
+            //    {
+            //        var lineRect = line.LineRect;
+            //        DrawRectBorders(debugBitmap, lineRect, 2, Color.Red);
+
+            //        //Draw boxes around characters
+            //        foreach (var charRect in line.CharacterRects)
+            //        {
+            //            DrawRectBorders(debugBitmap, charRect, 1, Color.PaleVioletRed);
+            //        }
+            //    }
+            //    debugBitmap.Save("debug_complex_riven.png");
+            //}
 
             return results;
+        }
+
+        private static void DrawRectBorders(Bitmap debugBitmap, Rectangle lineRect, int thickness, Color color)
+        {
+            for (int x = lineRect.Left - (thickness - 1); x < lineRect.Right + 1; x++)
+            {
+                if (x < 0 || x >= debugBitmap.Width)
+                    continue;
+                //Top line
+                for (int y = lineRect.Top - (thickness - 1); y < lineRect.Top + 1; y++)
+                {
+                    if (y < 0 || y >= debugBitmap.Height)
+                        continue;
+                    debugBitmap.SetPixel(x, y, color);
+                }
+                //Bottom line
+                for (int y = lineRect.Bottom - (thickness - 1); y < lineRect.Bottom + 1; y++)
+                {
+                    if (y < 0 || y >= debugBitmap.Height)
+                        continue;
+                    debugBitmap.SetPixel(x, y, color);
+                }
+            }
+            for (int y = lineRect.Top - (thickness - 1); y < lineRect.Bottom + 1; y++)
+            {
+                if (y < 0 || y >= debugBitmap.Height)
+                    continue;
+                //Left line
+                for (int x = lineRect.Left - (thickness - 1); x < lineRect.Left + 1; x++)
+                {
+                    if (x < 0 || x >= debugBitmap.Width)
+                        continue;
+                    debugBitmap.SetPixel(x, y, color);
+                }
+                for (int x = lineRect.Right - (thickness - 1); x < lineRect.Right + 1; x++)
+                {
+                    if (x < 0 || x >= debugBitmap.Width)
+                        continue;
+                    debugBitmap.SetPixel(x, y, color);
+                }
+            }
         }
 
         private class RivenImage
@@ -274,9 +286,8 @@ namespace ImageOCRBad
                 }
             }
 
-            public bool HasNeighbor(int x, int y)
+            public bool HasNeighbor(int x, int y, int distance = 3)
             {
-                const int distance = 3;
                 for (int x2 = x - distance; x2 < x + distance; x2++)
                 {
                     if (x2 < 0 || x2 >= Width)
@@ -311,14 +322,14 @@ namespace ImageOCRBad
 
             private RivenImage _rivenImage;
 
-            private List<Rectangle> _charaRects = new List<Rectangle>();
+            private List<Rectangle> _charRects = new List<Rectangle>();
             public List<Rectangle> CharacterRects
             {
                 get
                 {
-                    if (CharacterRects.Count == 0)
-                        UpdateCharacterRects();
-                    return CharacterRects;
+                    if (_charRects.Count == 0)
+                        _charRects = UpdateCharacterRects();
+                    return _charRects;
                 }
             }
 
@@ -328,19 +339,51 @@ namespace ImageOCRBad
                 _rivenImage = rivenImage;
             }
 
-            public void UpdateCharacterRects()
+            public List<Rectangle> UpdateCharacterRects()
             {
+                var results = new List<Rectangle>();
+                var onChar = false;
+                var startX = 0;
+                var startY = -1;
+                var endY = 0;
                 for (int x = LineRect.Left; x < LineRect.Right; x++)
                 {
                     if (x < 0 || x >= _rivenImage.Width)
                         continue;
+                    var purpleFound = false;
                     for (int y = LineRect.Top; y < LineRect.Bottom; y++)
                     {
                         if (y < 0 || y >= _rivenImage.Height)
                             continue;
-
+                        if(_rivenImage.IsPurple(x,y) || _rivenImage.HasNeighbor(x,y, 1))
+                        {
+                            purpleFound = true;
+                            if (startY == -1 || y < startY)
+                                startY = y;
+                            if (y > endY)
+                                endY = y + 1;
+                        }
+                    }
+                    if(!onChar && purpleFound) //Start of character
+                    {
+                        startX = x;
+                        onChar = true;
+                    }
+                    else if(onChar && !purpleFound) //Character ended
+                    {
+                        //Add 1 pixel of spacing around characters
+                        var safeXStart = Math.Max(0, startX - 1);
+                        var safeYStart = Math.Max(0, startY - 1);
+                        var safeWidth = Math.Min(_rivenImage.Width, x + 1 - safeXStart);
+                        var safeHeight = Math.Min(_rivenImage.Height, endY + 1 - safeYStart);
+                        results.Add(new Rectangle(safeXStart, safeYStart, safeWidth, safeHeight));
+                        startX = 0;
+                        startY = -1;
+                        endY = 0;
+                        onChar = false;
                     }
                 }
+                return results;
             }
         }
     }
