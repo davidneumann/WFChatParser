@@ -40,7 +40,7 @@ using Application.Data;
 using WFImageParser.GlyphRecognition;
 using System.Net;
 using HtmlAgilityPack;
-using ImageOCRBad;
+using Application.Utils;
 
 namespace DebugCLI
 {
@@ -65,7 +65,7 @@ namespace DebugCLI
             //VerifyNoErrors(2);
             //TestScreenHandler();
             //TestBot();
-            ParseChatImage();
+            //ParseChatImage();
             //TessShim();
             //NewRivenShim();
             //NewChatParsingShim();
@@ -80,11 +80,12 @@ namespace DebugCLI
             //ModiDescrShim();
             //GlyphAudit();
             //TestRivens();
-            //ComplexRivenShim();
+            ComplexRivenShim();
         }
 
         private static void ComplexRivenShim()
         {
+            Color.Black.ToHsv();
             var sw = new Stopwatch();
             sw.Start();
             var crp = new ComplexRivenParser(ClientLanguage.English);
@@ -92,7 +93,30 @@ namespace DebugCLI
             {
                 crp.DebugGetLineDetails(b);
             }
-            Console.WriteLine($"Done in {sw.Elapsed.TotalSeconds} seconds");
+            Console.WriteLine($"Ran GetLineDetails in {sw.Elapsed.TotalSeconds} seconds");
+
+            var rc = new RivenCleaner();
+            var rp = new RivenParser(ClientLanguage.English);
+            using (var cropped = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Riven images\2019_11_11\00aa819f-0c7c-4f87-b384-0bb611f1165d.png"))
+            {
+                using (var cleaned = rc.CleanRiven(cropped))
+                {
+                    var riven = rp.ParseRivenTextFromImage(cleaned, null);
+                    riven.Rank = rp.ParseRivenRankFromColorImage(cropped);
+                    riven.Polarity = rp.ParseRivenPolarityFromColorImage(cropped);
+                }
+            }
+            sw.Restart();
+            using (var cropped = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Riven images\2019_11_11\00aa819f-0c7c-4f87-b384-0bb611f1165d.png"))
+            {
+                using (var cleaned = rc.CleanRiven(cropped))
+                {
+                    var riven = rp.ParseRivenTextFromImage(cleaned, null);
+                    riven.Rank = rp.ParseRivenRankFromColorImage(cropped);
+                    riven.Polarity = rp.ParseRivenPolarityFromColorImage(cropped);
+                }
+            }
+            Console.WriteLine($"Fully parsed riven in {sw.Elapsed.TotalSeconds} seconds");
         }
 
         public static void ClearCurrentConsoleLine()

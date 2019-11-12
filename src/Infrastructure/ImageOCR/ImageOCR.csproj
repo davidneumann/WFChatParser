@@ -7,8 +7,8 @@
     <ProjectGuid>{6A9BCC5C-F268-457B-BD47-F5BE227238C3}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>ImageOCRBad</RootNamespace>
-    <AssemblyName>ImageOCRBad</AssemblyName>
+    <RootNamespace>ImageOCR</RootNamespace>
+    <AssemblyName>ImageOCR</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
@@ -50,6 +50,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CharacterParser.cs" />
     <Compile Include="ComplexRivenParser.cs" />
     <Compile Include="LineParser.cs" />
     <Compile Include="RivenParser.cs" />
