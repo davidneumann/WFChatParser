@@ -35,9 +35,10 @@ namespace ChatLoggerCLI
         {
             Console.CancelKeyPress += Console_CancelKeyPress;
 
-            var rivenParser = new RivenParser(ClientLanguage.English);
-            _disposables.Add(rivenParser);
-            Console.WriteLine("Starting up image parser");
+            const ClientLanguage language = ClientLanguage.English;
+            //var rivenParser = new RivenParser(language);
+            //_disposables.Add(rivenParser);
+            //Console.WriteLine("Starting up image parser");
 
             Console.WriteLine("Loading config for data sender");
             IConfiguration config = new ConfigurationBuilder()
@@ -133,7 +134,7 @@ namespace ChatLoggerCLI
                 var bot = new MultiChatRivenBot(warframeCredentials, new MouseHelper(),
                     new KeyboardHelper(),
                     new ScreenStateHandler(),
-                    new RivenParserFactory(ClientLanguage.Chinese),
+                    new RivenParserFactory(language),
                     new RivenCleaner(),
                     _dataSender,
                     gc,

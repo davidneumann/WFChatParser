@@ -27,7 +27,7 @@ namespace ChineseChatParser
             else
             {
                 _logger.Log("Creating chinese chat parser");
-                return new ChineseChatParser(_logger);
+                return new ChineseChatParser(_logger, clientLanguage);
             }
         }
     }

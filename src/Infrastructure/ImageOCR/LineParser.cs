@@ -1,4 +1,5 @@
 ﻿using Application.Data;
+using Application.Enums;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -12,11 +13,15 @@ namespace ImageOCR
     public class LineParser
     {
         private TesseractEngine _engine = null;
+        private ClientLanguage _language;
 
-        public LineParser()
+        public LineParser(ClientLanguage clientLanguage)
         {
+            _language = clientLanguage;
             string dataPath =  DataHelper.TessDataPath;
             string language = "chi_sim+eng";
+            if(_language == ClientLanguage.English)
+                language = language = "eng";
             _engine = new TesseractEngine(dataPath, language, EngineMode.Default, "bazaar");
             _engine.DefaultPageSegMode = PageSegMode.SingleLine;
         }

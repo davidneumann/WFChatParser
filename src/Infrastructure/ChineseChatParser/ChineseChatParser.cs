@@ -1,5 +1,6 @@
 ﻿using Application.ChatBoxParsing;
 using Application.Data;
+using Application.Enums;
 using Application.Interfaces;
 using Application.LineParseResult;
 using Application.Logger;
@@ -11,15 +12,17 @@ namespace ChineseChatParser
 {
     public class ChineseChatParser : IChatParser
     {
+        private ClientLanguage _language;
         private ILogger _logger;
         private ChatParser _backingCP;
         private TessChatLineParser _lp;
 
-        public ChineseChatParser(ILogger logger)
+        public ChineseChatParser(ILogger logger, ClientLanguage clientLanguage)
         {
+            _language = clientLanguage;
             _logger = logger;
             _backingCP = new ChatParser(logger, DataHelper.OcrDataPathChinese);
-            _lp = new TessChatLineParser();
+            _lp = new TessChatLineParser(_language);
         }
         public void InvalidateCache(string key)
         {

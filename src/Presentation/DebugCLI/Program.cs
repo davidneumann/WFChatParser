@@ -158,7 +158,7 @@ namespace DebugCLI
             var sw = new Stopwatch();
             sw.Start();
 
-            var lp = new TessChatLineParser();
+            var lp = new TessChatLineParser(ClientLanguage.Chinese);
             var cp = new CustomChatLineParser();
 
             if (path == null)
@@ -219,7 +219,7 @@ namespace DebugCLI
             var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathChinese);
             const string source = @"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\fake_chinese_wrap_altered.png";
             ImageCleaner.SaveSoftMask(source, "lines_white.png");
-            var lp = new TessChatLineParser();
+            var lp = new TessChatLineParser(ClientLanguage.Chinese);
             using (var b = new Bitmap(source))
             {
                 foreach (var line in Directory.GetFiles(Environment.CurrentDirectory).Where(f => f.StartsWith("line_") && f.EndsWith(".png")))

@@ -35,10 +35,12 @@ namespace ImageOCR
             _clientLanguage = clientLanguage;
             string dataPath = DataHelper.TessDataPath;
             string language = "chi_sim+eng";
+            if(_clientLanguage == ClientLanguage.English)
+                language = "eng";
             _engine = new TesseractEngine(dataPath, language, EngineMode.Default, "bazaar");
             _engine.DefaultPageSegMode = PageSegMode.SingleLine;
-            _lineParser = new LineParser();
-            _wordParser = new WordParser();
+            _lineParser = new LineParser(_clientLanguage);
+            _wordParser = new WordParser(_clientLanguage);
 
             //Polarity pixels
             for (int x = 537; x < 537 + 3; x++)

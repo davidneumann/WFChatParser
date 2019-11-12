@@ -1,4 +1,5 @@
 ﻿using Application.Data;
+using Application.Enums;
 using System.Drawing;
 using System.Text;
 using Tesseract;
@@ -8,11 +9,15 @@ namespace ImageOCR
     public class WordParser
     {
         private TesseractEngine _engine = null;
+        private ClientLanguage _language;
 
-        public WordParser()
+        public WordParser(ClientLanguage clientLanguage)
         {
+            _language = clientLanguage;
             string dataPath = DataHelper.TessDataPath;
             string language = "chi_sim+eng";
+            if(_language == ClientLanguage.English)
+                language = "eng";
             _engine = new TesseractEngine(dataPath, language, EngineMode.Default, "bazaar");
             _engine.DefaultPageSegMode = PageSegMode.SingleWord;
         }
