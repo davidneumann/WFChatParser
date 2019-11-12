@@ -6,14 +6,14 @@ namespace ImageOCR.ComplexRivenParser
 {
     public partial class ComplexRivenParser
     {
-        private class LineDetails
+        private class LineDetail
         {
             public Rectangle LineRect { get; set; }
 
             private RivenImage _rivenImage;
 
-            private List<Rectangle> _charRects = new List<Rectangle>();
-            public List<Rectangle> CharacterRects
+            private List<CharacterDetail> _charRects = new List<CharacterDetail>();
+            public List<CharacterDetail> Characters
             {
                 get
                 {
@@ -23,15 +23,15 @@ namespace ImageOCR.ComplexRivenParser
                 }
             }
 
-            public LineDetails(Rectangle lineRect, RivenImage rivenImage)
+            public LineDetail(Rectangle lineRect, RivenImage rivenImage)
             {
                 LineRect = lineRect;
                 _rivenImage = rivenImage;
             }
 
-            public List<Rectangle> UpdateCharacterRects()
+            public List<CharacterDetail> UpdateCharacterRects()
             {
-                var results = new List<Rectangle>();
+                var results = new List<CharacterDetail>();
                 var onChar = false;
                 var startX = 0;
                 var startY = -1;
@@ -66,7 +66,7 @@ namespace ImageOCR.ComplexRivenParser
                         var safeYStart = Math.Max(0, startY - 1);
                         var safeWidth = Math.Min(_rivenImage.Width, x + 1 - safeXStart);
                         var safeHeight = Math.Min(_rivenImage.Height, endY + 1 - safeYStart);
-                        results.Add(new Rectangle(safeXStart, safeYStart, safeWidth, safeHeight));
+                        results.Add(new CharacterDetail(new Rectangle(safeXStart, safeYStart, safeWidth, safeHeight)));
                         startX = 0;
                         startY = -1;
                         endY = 0;

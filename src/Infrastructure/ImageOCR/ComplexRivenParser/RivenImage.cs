@@ -11,14 +11,14 @@ namespace ImageOCR.ComplexRivenParser
             private bool[,] _purples;
             private bool[,] _purplesCache;
             private bool[,] _hsvCache;
-            private Bitmap _image;
+            public Bitmap BackingImage { get; private set; }
             public RivenImage(Bitmap image)
             {
                 _hsvs = new Hsv[image.Width, image.Height];
                 _hsvCache = new bool[image.Width, image.Height];
                 _purples = new bool[image.Width, image.Height];
                 _purplesCache = new bool[image.Width, image.Height];
-                _image = image;
+                BackingImage = image;
             }
             private static Hsv _minPurple = Hsv.FromHsv(270f * 0.99f, 0.385f * 0.99f, 0.835f * 0.99f);
             private static Hsv _maxPurple = Hsv.FromHsv(270f * 1.01f, 0.385f * 1.01f, 0.835f * 1.01f);
@@ -43,7 +43,7 @@ namespace ImageOCR.ComplexRivenParser
                 {
                     if (!_hsvCache[x, y])
                     {
-                        _hsvs[x, y] = _image.GetPixel(x, y).ToHsv();
+                        _hsvs[x, y] = BackingImage.GetPixel(x, y).ToHsv();
                         _hsvCache[x, y] = true;
                     }
                     return _hsvs[x, y];
@@ -66,7 +66,7 @@ namespace ImageOCR.ComplexRivenParser
                         else
                         {
                             _hsvCache[x, y] = true;
-                            _hsvs[x, y] = _image.GetPixel(x, y).ToHsv();
+                            _hsvs[x, y] = BackingImage.GetPixel(x, y).ToHsv();
                             _purples[x, y] = IsPurple(_hsvs[x, y]);
                             _purplesCache[x, y] = true;
                         }
@@ -97,11 +97,11 @@ namespace ImageOCR.ComplexRivenParser
 
             public int Width
             {
-                get { return _image.Width; }
+                get { return BackingImage.Width; }
             }
             public int Height
             {
-                get { return _image.Height; }
+                get { return BackingImage.Height; }
             }
         }
     }

@@ -14,6 +14,9 @@ namespace ImageOCR.ComplexRivenParser
         private ClientLanguage _clientLanguage;
         private CharacterParser _characterParser;
         const int _bodyBottomY = 548;
+        Bitmap _tessBitmap;
+        private Graphics _tessGrpahics;
+        private Brush _whiteBrush = new SolidBrush(Color.White);
 
         public ComplexRivenParser(ClientLanguage clientLanguage)
         {
@@ -23,14 +26,90 @@ namespace ImageOCR.ComplexRivenParser
 
         public void DebugGetLineDetails(Bitmap b)
         {
-            var lines = GetLineDetails(new RivenImage(b));
+            RivenImage rivenImage = new RivenImage(b);
+            var lines = GetLineDetails(rivenImage);
             foreach (var rect in lines.OrderByDescending(r => r.LineRect.Height).Select(ld => ld.LineRect))
             {
                 Console.WriteLine($"Line {rect.X},{rect.Y} {rect.Width}x{rect.Height}");
             }
+            if (!System.IO.Directory.Exists("debug_tess"))
+                System.IO.Directory.CreateDirectory("debug_tess");
+            else
+                System.IO.Directory.GetFiles("debug_tess").ToList().ForEach(f => System.IO.File.Delete(f));
+            var debugI = 0;
+            foreach (var line in lines)
+            {
+                using (var debug = rivenImage.BackingImage.Clone(line.LineRect, rivenImage.BackingImage.PixelFormat))
+                {
+                    debug.Save(System.IO.Path.Combine("debug_tess", "line_" + debugI++ + ".png"));
+                }
+                foreach (var character in line.Characters)
+                {
+                    ParseCharacter(rivenImage, character, line.LineRect.Height);
+                    Console.Write(character.ParsedValue);
+                }
+                Console.WriteLine();
+            }
         }
 
-        private List<LineDetails> GetLineDetails(RivenImage croppedRiven)
+        private static int _DEBUG = 0;
+        private void ParseCharacter(RivenImage rivenImage, CharacterDetail characterDetail, int lineHeight)
+        {
+            //if (_DEBUG == 21)
+            //    System.Diagnostics.Debugger.Break();
+            var scale = 48f / (float)lineHeight;
+            var height = 48;
+            var width = (int)Math.Round(characterDetail.CharacterRect.Width * scale);
+            //Note: 20 pixels of padding
+            const int sidePadding = 0;
+            const int fullPadding = sidePadding * 2;
+            if (_tessBitmap != null && _tessBitmap.Width < width + fullPadding)
+            {
+                _tessBitmap.Dispose();
+                _tessBitmap = null;
+                _tessGrpahics.Dispose();
+            }
+            if (_tessBitmap == null)
+            {
+                _tessBitmap = new Bitmap(width + fullPadding, height + fullPadding);
+                _tessGrpahics = Graphics.FromImage(_tessBitmap);
+                _tessGrpahics.FillRectangle(_whiteBrush, 0, 0, _tessBitmap.Width, _tessBitmap.Height);
+            }
+
+            using (var charBitmap = rivenImage.BackingImage.Clone(characterDetail.CharacterRect, rivenImage.BackingImage.PixelFormat))
+            {
+                var sizedBitmap = charBitmap;
+                for (int x = 0; x < charBitmap.Width; x++)
+                {
+                    for (int y = 0; y < charBitmap.Height; y++)
+                    {
+                        var p = rivenImage[characterDetail.CharacterRect.Left + x, characterDetail.CharacterRect.Top + y];
+                        var v = byte.MaxValue - (byte)(byte.MaxValue * Math.Min(1f, Math.Max(0f, p.Value - 0.153f) / (0.835f - 0.153f)));
+                        charBitmap.SetPixel(x, y, Color.FromArgb(v, v, v));
+                    }
+                }
+                if (width != characterDetail.CharacterRect.Width)
+                {
+                    sizedBitmap = new Bitmap(width, height);
+                    var resizeG = Graphics.FromImage(sizedBitmap);
+                    resizeG.FillRectangle(_whiteBrush, 0, 0, sizedBitmap.Width, sizedBitmap.Height);
+                    int scaledHeight = (int)Math.Round((charBitmap.Height * scale));
+                    resizeG.DrawImage(charBitmap, new Rectangle(0, sizedBitmap.Height - scaledHeight, width, scaledHeight));
+                    resizeG.Dispose();
+                    sizedBitmap.Save(System.IO.Path.Combine("debug_tess", "sizedBitmap.png"));
+                }
+
+                var g = Graphics.FromImage(_tessBitmap);
+                g.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceCopy;
+                g.DrawImage(sizedBitmap, new Point(sidePadding, sidePadding));
+                g.FillRectangle(_whiteBrush, sizedBitmap.Width + sidePadding, sidePadding, _tessBitmap.Width - sizedBitmap.Width - sidePadding, _tessBitmap.Height - fullPadding);
+            }
+
+            _tessBitmap.Save(System.IO.Path.Combine("debug_tess", "debug_tess_" + _DEBUG++ + ".png"));
+            characterDetail.ParsedValue = _characterParser.ParseCharacter(_tessBitmap);
+        }
+
+        private List<LineDetail> GetLineDetails(RivenImage croppedRiven)
         {
             if (croppedRiven.Width != 466)
                 throw new Exception("Riven not cropped");
@@ -75,9 +154,9 @@ namespace ImageOCR.ComplexRivenParser
             croppedRiven.CacheRect(rightBackgroundRect);
 
             //Add the two we know about
-            var results = new List<LineDetails>();
-            results.Add(new LineDetails(drainRect, croppedRiven));
-            results.Add(new LineDetails(MRRollRect, croppedRiven));
+            var results = new List<LineDetail>();
+            results.Add(new LineDetail(drainRect, croppedRiven));
+            results.Add(new LineDetail(MRRollRect, croppedRiven));
 
             var pastBackground = false;
             var startY = 0;
@@ -116,10 +195,10 @@ namespace ImageOCR.ComplexRivenParser
                     }
                     if (purpleFound && startY == 0) // Top of line
                         startY = y;
-                    else if(!purpleFound && startY > 0) //Bottom of line
+                    else if (!purpleFound && startY > 0) //Bottom of line
                     {
                         var height = y - startY;
-                        if(nameHeight == 0)
+                        if (nameHeight == 0)
                             nameHeight = height; //First line will always be a name line
 
                         //Two modifier lines can overlap given tall enough characters
@@ -128,12 +207,12 @@ namespace ImageOCR.ComplexRivenParser
                         {
                             //We expect a name to be about 1.35x as tall
                             height = height / 2;
-                            results.Add(new LineDetails(new Rectangle(bodyRect.Left, startY, bodyRect.Width, height), croppedRiven));
-                            results.Add(new LineDetails(new Rectangle(bodyRect.Left, startY + height, bodyRect.Width, height), croppedRiven));
+                            results.Add(new LineDetail(new Rectangle(bodyRect.Left, startY, bodyRect.Width, height), croppedRiven));
+                            results.Add(new LineDetail(new Rectangle(bodyRect.Left, startY + height, bodyRect.Width, height), croppedRiven));
                         }
                         else
                         {
-                            results.Add(new LineDetails(new Rectangle(bodyRect.Left, startY, bodyRect.Width, height), croppedRiven));
+                            results.Add(new LineDetail(new Rectangle(bodyRect.Left, startY, bodyRect.Width, height), croppedRiven));
                         }
 
                         startY = 0;
