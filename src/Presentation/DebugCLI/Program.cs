@@ -94,6 +94,14 @@ namespace DebugCLI
                 Directory.GetDirectories("debug_tess").ToList().ForEach(dir => Directory.Delete(dir, true));
             }
 
+            if (!System.IO.Directory.Exists("debug_width"))
+                System.IO.Directory.CreateDirectory("debug_width");
+            else
+            {
+                System.IO.Directory.GetFiles("debug_width").ToList().ForEach(f => System.IO.File.Delete(f));
+                Directory.GetDirectories("debug_width").ToList().ForEach(dir => Directory.Delete(dir, true));
+            }
+
             Color.Black.ToHsv();
             //var sw = new Stopwatch();
             //sw.Start();
@@ -112,7 +120,8 @@ namespace DebugCLI
 
                          using (var b = new Bitmap(file.FullName))
                          {
-                             crp.DebugGetLineDetails(b, file.Name);
+                             //crp.DebugIdentifyNumbers(b, file.Name);
+                             crp.DebugGetRightSideSize(b, file.Name);
                          }
                      }
                  });

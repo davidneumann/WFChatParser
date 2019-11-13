@@ -24,7 +24,7 @@ namespace ImageOCR.ComplexRivenParser
             _characterParser = new CharacterParser(clientLanguage);
         }
 
-        public void DebugGetLineDetails(Bitmap b, string debugName = "")
+        public void DebugIdentifyNumbers(Bitmap b, string debugName = "")
         {
 #if DEBUG
             _DEBUGName = debugName;
@@ -42,7 +42,7 @@ namespace ImageOCR.ComplexRivenParser
                 IEnumerable<CharacterDetail> numbers = null;
                 if (line.LineRect.Top < 5) //Drain Polarity
                     numbers = line.Characters.Take(line.Characters.Count - 1); //Skip polarity
-                else if(line.LineRect.Top > 548) //MR (lock) x    (rolls) x
+                else if (line.LineRect.Top > 548) //MR (lock) x    (rolls) x
                 {
                     //If we have any thing with an x beyond 321 then it's MR (lock) x     (reroll) x
                     var rerolls = line.Characters.Where(r => r.CharacterRect.Left > 321).OrderBy(r => r.CharacterRect.Left).Skip(1);
@@ -50,14 +50,14 @@ namespace ImageOCR.ComplexRivenParser
                     var mr = line.Characters.Where(r => r.CharacterRect.Left < 321).OrderBy(r => r.CharacterRect.Left).Skip(3);
                     numbers = rerolls.Concat(mr);
                 }
-                else if(line.LineRect.Height <= safeBodyHeight) //Modifier
+                else if (line.LineRect.Height <= safeBodyHeight) //Modifier
                 {
                     lineHeight = (int)(nameHeight * 0.7105263157894737f);
                     var gap = 0;
                     for (int i = 1; i < line.Characters.Count; i++)
                     {
                         gap = line.Characters[i].CharacterRect.Left - line.Characters[i - 1].CharacterRect.Right;
-                        if(gap >= 8) //space detected
+                        if (gap >= 8) //space detected
                         {
                             //Take all non-square rects
                             numbers = line.Characters.Take(i).Where(c => (float)c.CharacterRect.Width / (float)c.CharacterRect.Height < 0.86f);
@@ -170,18 +170,18 @@ namespace ImageOCR.ComplexRivenParser
                 //sizedBitmap.Save(System.IO.Path.Combine("debug_tess", "debug_tess_" + _DEBUG++ + ".png"));
                 var value = _characterParser.ParseCharacter(_tessBitmap);
                 var canParse = int.TryParse(value, out _);
-                if(value != null && value.Length > 0)
-                if (value == null || value.Length <= 0 || !canParse)
-                {
-                    //Console.Write($"{_DEBUGName} failure: {characterDetail.CharacterRect.X},{characterDetail.CharacterRect.Y} {characterDetail.CharacterRect.Width}x{characterDetail.CharacterRect.Height}");
-                    if (value != null && value.Length > 0)
+                if (value != null && value.Length > 0)
+                    if (value == null || value.Length <= 0 || !canParse)
                     {
-                        //Console.Write($" {value[0]}");
-                        System.IO.Directory.CreateDirectory(System.IO.Path.Combine("debug_tess", "error"));
-                        sizedBitmap.Save(System.IO.Path.Combine("debug_tess", "error", $"{Guid.NewGuid()}.png"));
+                        //Console.Write($"{_DEBUGName} failure: {characterDetail.CharacterRect.X},{characterDetail.CharacterRect.Y} {characterDetail.CharacterRect.Width}x{characterDetail.CharacterRect.Height}");
+                        if (value != null && value.Length > 0)
+                        {
+                            //Console.Write($" {value[0]}");
+                            System.IO.Directory.CreateDirectory(System.IO.Path.Combine("debug_tess", "error"));
+                            sizedBitmap.Save(System.IO.Path.Combine("debug_tess", "error", $"{Guid.NewGuid()}.png"));
+                        }
+                        //Console.WriteLine();
                     }
-                    //Console.WriteLine();
-                }
                 if (value != null && value.Length > 0 && canParse)
                 {
                     characterDetail.ParsedValue = value[0].ToString();
@@ -238,7 +238,7 @@ namespace ImageOCR.ComplexRivenParser
             //Warm up the cache
             Rectangle drainRect = new Rectangle(376, 5, 87, 32);
             croppedRiven.CacheRect(drainRect); //Drain/polairty
-            Rectangle MRRollRect = new Rectangle(51, 565, 362, 34);
+            Rectangle MRRollRect = new Rectangle(51, 566, 362, 32);
             croppedRiven.CacheRect(MRRollRect); //MR/rerolls
             var leftBackgroundRect = new Rectangle(croppedRiven.Width / 3 - 7, 46, 15, _bodyBottomY - 46); //Left scan line for background
             var rightBackgroundRect = new Rectangle((croppedRiven.Width / 3) * 2 - 7, 46, 15, _bodyBottomY - 46); //Right scan line for background
@@ -312,41 +312,82 @@ namespace ImageOCR.ComplexRivenParser
                 }
             }
 
-            //DEBUG
-            using (var debugBitmap = new Bitmap(croppedRiven.Width, croppedRiven.Height))
-            {
-                for (int x = 0; x < croppedRiven.Width; x++)
-                {
-                    for (int y = 0; y < croppedRiven.Height; y++)
-                    {
-                        if (croppedRiven.IsPurple(x, y) || croppedRiven.HasNeighbor(x, y))
-                        {
-                            //croppedRiven.Restore(x, y);
-                            var p = croppedRiven[x, y];
-                            var v = byte.MaxValue - (byte)(byte.MaxValue * Math.Min(1f, Math.Max(0f, p.Value - 0.153f) / (0.835f - 0.153f)));
-                            debugBitmap.SetPixel(x, y, Color.FromArgb(v, v, v));
-                        }
-                        else
-                            debugBitmap.SetPixel(x, y, Color.White);
-                    }
-                }
+            ////DEBUG
+            //using (var debugBitmap = new Bitmap(croppedRiven.Width, croppedRiven.Height))
+            //{
+            //    for (int x = 0; x < croppedRiven.Width; x++)
+            //    {
+            //        for (int y = 0; y < croppedRiven.Height; y++)
+            //        {
+            //            if (croppedRiven.IsPurple(x, y) || croppedRiven.HasNeighbor(x, y))
+            //            {
+            //                //croppedRiven.Restore(x, y);
+            //                var p = croppedRiven[x, y];
+            //                var v = byte.MaxValue - (byte)(byte.MaxValue * Math.Min(1f, Math.Max(0f, p.Value - 0.153f) / (0.835f - 0.153f)));
+            //                debugBitmap.SetPixel(x, y, Color.FromArgb(v, v, v));
+            //            }
+            //            else
+            //                debugBitmap.SetPixel(x, y, Color.White);
+            //        }
+            //    }
 
-                //Draw a box around each line
-                foreach (var line in results)
-                {
-                    var lineRect = line.LineRect;
-                    DrawRectBorders(debugBitmap, lineRect, 2, Color.Red);
+            //    //Draw a box around each line
+            //    foreach (var line in results)
+            //    {
+            //        var lineRect = line.LineRect;
+            //        DrawRectBorders(debugBitmap, lineRect, 2, Color.Red);
 
-                    //Draw boxes around characters
-                    foreach (var charRect in line.Characters.Select(c => c.CharacterRect))
-                    {
-                        DrawRectBorders(debugBitmap, charRect, 1, Color.PaleVioletRed);
-                    }
-                }
-                //debugBitmap.Save("debug_complex_riven.png");
-            }
+            //        //Draw boxes around characters
+            //        foreach (var charRect in line.Characters.Select(c => c.CharacterRect))
+            //        {
+            //            DrawRectBorders(debugBitmap, charRect, 1, Color.PaleVioletRed);
+            //        }
+            //    }
+            //    debugBitmap.Save("debug_complex_riven.png");
+            //}
 
             return results;
+        }
+
+        public void DebugGetRightSideSize(Bitmap b, string debugName = "")
+        {
+            var lines = GetLineDetails(new RivenImage(b));
+
+            int nameHeight = lines.Max(line => line.LineRect.Height);
+            var safeBodyHeight = nameHeight * 0.935f;
+            foreach (var line in lines.Where(l => l.LineRect.Height <= safeBodyHeight && l.LineRect.Height > 32))
+            {
+                var gap = 0;
+                var splitFound = false;
+                for (int i = 1; i < line.Characters.Count; i++)
+                {
+                    gap = line.Characters[i].CharacterRect.Left - line.Characters[i - 1].CharacterRect.Right;
+                    if (gap >= 12) //space detected
+                    {
+                        //Get everything to the right
+                        var rect = new Rectangle(line.Characters[i].CharacterRect.Left, line.LineRect.Top,
+                            line.Characters[line.Characters.Count - 1].CharacterRect.Right - line.Characters[i].CharacterRect.Left,
+                            line.LineRect.Height);
+
+                        using (var descriptionBitmap = new Bitmap(rect.Width, rect.Height))
+                        {
+                            using (var g = Graphics.FromImage(descriptionBitmap))
+                            {
+                                g.DrawImage(b, new Rectangle(0, 0, rect.Width, rect.Height), rect, GraphicsUnit.Pixel);
+                                System.IO.Directory.CreateDirectory(System.IO.Path.Combine("debug_width", rect.Width.ToString()));
+                                descriptionBitmap.Save(System.IO.Path.Combine("debug_width", rect.Width.ToString(), debugName + "_" + (Guid.NewGuid()) + ".png"));
+                                splitFound = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if(!splitFound)
+                {
+                    System.IO.Directory.CreateDirectory(System.IO.Path.Combine("debug_width", "error"));
+                    b.Save(System.IO.Path.Combine("debug_width", "error", debugName));
+                }
+            }
         }
 
         private static void DrawRectBorders(Bitmap debugBitmap, Rectangle lineRect, int thickness, Color color)
