@@ -95,43 +95,41 @@ namespace DebugCLI
             }
 
             Color.Black.ToHsv();
-            var sw = new Stopwatch();
-            sw.Start();
-            var crp = new ComplexRivenParser(ClientLanguage.English);
-            var files = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Riven images\2019_11_11\").Where(f => f.EndsWith(".png")).Select(f => new FileInfo(f)).ToArray();
+            //var sw = new Stopwatch();
+            //sw.Start();
+            var files = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Riven images\2019_11_11").Where(f => f.EndsWith(".png")).Select(f => new FileInfo(f)).ToArray();
+            var fileQueue = new ConcurrentQueue<FileInfo>(files);
+            for (int _ = 0; _ < Environment.ProcessorCount; _++)
+            {
+                var t = new Thread(() =>
+                 {
+                     while (fileQueue.Count > 0)
+                     {
+                         var crp = new ComplexRivenParser(ClientLanguage.English);
+                         FileInfo file = null;
+                         if (!fileQueue.TryDequeue(out file))
+                             continue;
+
+                         using (var b = new Bitmap(file.FullName))
+                         {
+                             crp.DebugGetLineDetails(b, file.Name);
+                         }
+                     }
+                 });
+                t.Start();
+            }
+
+            while(fileQueue.Count > 0)
+            {
+                Console.Write($"\rFiles completed: {files.Length - fileQueue.Count}");
+                Thread.Sleep(100);
+            }
+            
             for (int i = 0; i < files.Length; i++)
             {
                 var file = files[i];
                 Console.WriteLine($"Working on file {i + 1} of {files.Length}");
-                using (var b = new Bitmap(file.FullName))
-                {
-                    crp.DebugGetLineDetails(b, file.Name);
-                }
             }
-            Console.WriteLine($"Ran GetLineDetails in {sw.Elapsed.TotalSeconds} seconds");
-
-            var rc = new RivenCleaner();
-            var rp = new RivenParser(ClientLanguage.English);
-            using (var cropped = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Riven images\2019_11_11\00aa819f-0c7c-4f87-b384-0bb611f1165d.png"))
-            {
-                using (var cleaned = rc.CleanRiven(cropped))
-                {
-                    var riven = rp.ParseRivenTextFromImage(cleaned, null);
-                    riven.Rank = rp.ParseRivenRankFromColorImage(cropped);
-                    riven.Polarity = rp.ParseRivenPolarityFromColorImage(cropped);
-                }
-            }
-            sw.Restart();
-            using (var cropped = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Riven images\2019_11_11\00aa819f-0c7c-4f87-b384-0bb611f1165d.png"))
-            {
-                using (var cleaned = rc.CleanRiven(cropped))
-                {
-                    var riven = rp.ParseRivenTextFromImage(cleaned, null);
-                    riven.Rank = rp.ParseRivenRankFromColorImage(cropped);
-                    riven.Polarity = rp.ParseRivenPolarityFromColorImage(cropped);
-                }
-            }
-            Console.WriteLine($"Fully parsed riven in {sw.Elapsed.TotalSeconds} seconds");
         }
 
         public static void ClearCurrentConsoleLine()

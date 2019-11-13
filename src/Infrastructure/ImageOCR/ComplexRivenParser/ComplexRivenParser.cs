@@ -90,7 +90,7 @@ namespace ImageOCR.ComplexRivenParser
             //if (_DEBUG == 21)
             //    System.Diagnostics.Debugger.Break();
             var height = 48; //Internet says 48 pixels is right
-            var scale = 48f / (float)characterDetail.CharacterRect.Height;
+            var scale = 38f / (float)characterDetail.CharacterRect.Height;
             var width = (int)Math.Round(characterDetail.CharacterRect.Width * scale);
             //Note: 20 pixels of padding
             const int sidePadding = 10;
@@ -173,14 +173,14 @@ namespace ImageOCR.ComplexRivenParser
                 if(value != null && value.Length > 0)
                 if (value == null || value.Length <= 0 || !canParse)
                 {
-                    Console.Write($"{_DEBUGName} failure: {characterDetail.CharacterRect.X},{characterDetail.CharacterRect.Y} {characterDetail.CharacterRect.Width}x{characterDetail.CharacterRect.Height}");
+                    //Console.Write($"{_DEBUGName} failure: {characterDetail.CharacterRect.X},{characterDetail.CharacterRect.Y} {characterDetail.CharacterRect.Width}x{characterDetail.CharacterRect.Height}");
                     if (value != null && value.Length > 0)
                     {
-                        Console.Write($" {value[0]}");
+                        //Console.Write($" {value[0]}");
                         System.IO.Directory.CreateDirectory(System.IO.Path.Combine("debug_tess", "error"));
                         sizedBitmap.Save(System.IO.Path.Combine("debug_tess", "error", $"{Guid.NewGuid()}.png"));
                     }
-                    Console.WriteLine();
+                    //Console.WriteLine();
                 }
                 if (value != null && value.Length > 0 && canParse)
                 {
@@ -343,7 +343,7 @@ namespace ImageOCR.ComplexRivenParser
                         DrawRectBorders(debugBitmap, charRect, 1, Color.PaleVioletRed);
                     }
                 }
-                debugBitmap.Save("debug_complex_riven.png");
+                //debugBitmap.Save("debug_complex_riven.png");
             }
 
             return results;
