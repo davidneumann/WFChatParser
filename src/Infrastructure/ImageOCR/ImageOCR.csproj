@@ -54,6 +54,7 @@
     <Compile Include="ComplexRivenParser\CharacterParser.cs" />
     <Compile Include="ComplexRivenParser\ComplexRivenParser.cs" />
     <Compile Include="ComplexRivenParser\LineDetails.cs" />
+    <Compile Include="ComplexRivenParser\Sobel.cs" />
     <Compile Include="LineParser.cs" />
     <Compile Include="ComplexRivenParser\RivenImage.cs" />
     <Compile Include="RivenParser.cs" />

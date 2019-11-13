@@ -64,8 +64,8 @@ namespace ImageOCR.ComplexRivenParser
                         //Add 1 pixel of spacing around characters
                         var safeXStart = Math.Max(0, startX - 1);
                         var safeYStart = Math.Max(0, startY - 1);
-                        var safeWidth = Math.Min(_rivenImage.Width, x + 1 - safeXStart);
-                        var safeHeight = Math.Min(_rivenImage.Height, endY + 1 - safeYStart);
+                        var safeWidth = Math.Min(_rivenImage.Width, x - safeXStart);
+                        var safeHeight = Math.Min(_rivenImage.Height, endY - safeYStart);
                         results.Add(new CharacterDetail(new Rectangle(safeXStart, safeYStart, safeWidth, safeHeight)));
                         startX = 0;
                         startY = -1;

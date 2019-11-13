@@ -20,8 +20,15 @@ namespace ImageOCR.ComplexRivenParser
                 _purplesCache = new bool[image.Width, image.Height];
                 BackingImage = image;
             }
-            private static Hsv _minPurple = Hsv.FromHsv(270f * 0.99f, 0.385f * 0.99f, 0.835f * 0.99f);
-            private static Hsv _maxPurple = Hsv.FromHsv(270f * 1.01f, 0.385f * 1.01f, 0.835f * 1.01f);
+            private static readonly Hsv _minPurple;
+            private static readonly Hsv _maxPurple;
+            static RivenImage()
+            {
+                var range = 0.03f;
+                var purple = Hsv.FromHsv(270f, 0.385f, 0.835f);
+                _minPurple = Hsv.FromHsv(purple.Hue - (360f * range), purple.Saturation - (1f * range), purple.Value - (1f * (range * 2f)));
+                _maxPurple = Hsv.FromHsv(purple.Hue + (360f * range), purple.Saturation + (1f * range), purple.Value + (1f * (range * 2f)));
+            }
 
             public static bool IsPurple(Hsv hsv)
             {
@@ -61,7 +68,7 @@ namespace ImageOCR.ComplexRivenParser
                 {
                     for (int y = rect.Top; y < rect.Height; y++)
                     {
-                        if (_hsvCache[x, y] && _purplesCache[x,y])
+                        if (_hsvCache[x, y] && _purplesCache[x, y])
                             continue;
                         else
                         {

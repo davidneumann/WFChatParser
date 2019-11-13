@@ -86,13 +86,27 @@ namespace DebugCLI
 
         private static void ComplexRivenShim()
         {
+            if (!System.IO.Directory.Exists("debug_tess"))
+                System.IO.Directory.CreateDirectory("debug_tess");
+            else
+            {
+                System.IO.Directory.GetFiles("debug_tess").ToList().ForEach(f => System.IO.File.Delete(f));
+                Directory.GetDirectories("debug_tess").ToList().ForEach(dir => Directory.Delete(dir, true));
+            }
+
             Color.Black.ToHsv();
             var sw = new Stopwatch();
             sw.Start();
             var crp = new ComplexRivenParser(ClientLanguage.English);
-            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Riven images\2019_11_11\00aa819f-0c7c-4f87-b384-0bb611f1165d.png"))
+            var files = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Riven images\2019_11_11\").Where(f => f.EndsWith(".png")).Select(f => new FileInfo(f)).ToArray();
+            for (int i = 0; i < files.Length; i++)
             {
-                crp.DebugGetLineDetails(b);
+                var file = files[i];
+                Console.WriteLine($"Working on file {i + 1} of {files.Length}");
+                using (var b = new Bitmap(file.FullName))
+                {
+                    crp.DebugGetLineDetails(b, file.Name);
+                }
             }
             Console.WriteLine($"Ran GetLineDetails in {sw.Elapsed.TotalSeconds} seconds");
 
