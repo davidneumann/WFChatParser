@@ -201,9 +201,9 @@ namespace ImageOCR.ComplexRivenParser
             //characterDetail.ParsedValue = _characterParser.ParseCharacter(_tessBitmap);
         }
 
-        private List<LineDetail> GetLineDetails(RivenImage croppedRiven)
+        private List<LineDetail> GetLineDetails(RivenImage rivenImage)
         {
-            if (croppedRiven.Width != 466)
+            if (rivenImage.Width != 466)
                 throw new Exception("Riven not cropped");
 
             //Wipe out the little winglets above the MR line
@@ -218,7 +218,7 @@ namespace ImageOCR.ComplexRivenParser
                     offset = 24;
                 for (int x = offset; x < 32; x++)
                 {
-                    croppedRiven[x, y] = Hsv.Black;
+                    rivenImage[x, y] = Hsv.Black;
                 }
             }
             //Right winglet
@@ -229,26 +229,26 @@ namespace ImageOCR.ComplexRivenParser
                     offset = 12;
                 else if (y >= 523)
                     offset = 17;
-                for (int x = croppedRiven.Width - 1 - offset; x >= croppedRiven.Width - 24; x--)
+                for (int x = rivenImage.Width - 1 - offset; x >= rivenImage.Width - 24; x--)
                 {
-                    croppedRiven[x, y] = Hsv.Black;
+                    rivenImage[x, y] = Hsv.Black;
                 }
             }
 
             //Warm up the cache
             Rectangle drainRect = new Rectangle(376, 5, 87, 32);
-            croppedRiven.CacheRect(drainRect); //Drain/polairty
+            rivenImage.CacheRect(drainRect); //Drain/polairty
             Rectangle MRRollRect = new Rectangle(51, 566, 362, 32);
-            croppedRiven.CacheRect(MRRollRect); //MR/rerolls
-            var leftBackgroundRect = new Rectangle(croppedRiven.Width / 3 - 7, 46, 15, _bodyBottomY - 46); //Left scan line for background
-            var rightBackgroundRect = new Rectangle((croppedRiven.Width / 3) * 2 - 7, 46, 15, _bodyBottomY - 46); //Right scan line for background
-            croppedRiven.CacheRect(leftBackgroundRect);
-            croppedRiven.CacheRect(rightBackgroundRect);
+            rivenImage.CacheRect(MRRollRect); //MR/rerolls
+            var leftBackgroundRect = new Rectangle(rivenImage.Width / 3 - 7, 46, 15, _bodyBottomY - 46); //Left scan line for background
+            var rightBackgroundRect = new Rectangle((rivenImage.Width / 3) * 2 - 7, 46, 15, _bodyBottomY - 46); //Right scan line for background
+            rivenImage.CacheRect(leftBackgroundRect);
+            rivenImage.CacheRect(rightBackgroundRect);
 
             //Add the two we know about
             var results = new List<LineDetail>();
-            results.Add(new LineDetail(drainRect, croppedRiven));
-            results.Add(new LineDetail(MRRollRect, croppedRiven));
+            results.Add(new LineDetail(drainRect, rivenImage));
+            results.Add(new LineDetail(MRRollRect, rivenImage));
 
             var pastBackground = false;
             var startY = 0;
@@ -262,8 +262,8 @@ namespace ImageOCR.ComplexRivenParser
                     var Vs = new float[30];
                     for (int x = 0; x < 15; x++)
                     {
-                        Vs[x] = croppedRiven[x + leftBackgroundRect.Left, y].Value;
-                        Vs[x + 15] = croppedRiven[x + rightBackgroundRect.Left, y].Value;
+                        Vs[x] = rivenImage[x + leftBackgroundRect.Left, y].Value;
+                        Vs[x + 15] = rivenImage[x + rightBackgroundRect.Left, y].Value;
                     }
                     if (Vs.Average() >= 0.165)
                         continue;
@@ -271,7 +271,7 @@ namespace ImageOCR.ComplexRivenParser
                     {
                         pastBackground = true;
                         bodyRect = new Rectangle(8, y, 450, _bodyBottomY - y);
-                        croppedRiven.CacheRect(bodyRect);//Rest of the text
+                        rivenImage.CacheRect(bodyRect);//Rest of the text
                     }
                 }
                 if (pastBackground)//Not else as we need the first occurance
@@ -279,7 +279,7 @@ namespace ImageOCR.ComplexRivenParser
                     var purpleFound = false;
                     for (int x = bodyRect.Left; x < bodyRect.Right; x++)
                     {
-                        if (croppedRiven.IsPurple(x, y)) //|| croppedRiven.HasNeighbor(x, y))
+                        if (rivenImage.IsPurple(x, y)) //|| croppedRiven.HasNeighbor(x, y))
                         {
                             purpleFound = true;
                             break;
@@ -299,12 +299,12 @@ namespace ImageOCR.ComplexRivenParser
                         {
                             //We expect a name to be about 1.35x as tall
                             height = height / 2;
-                            results.Add(new LineDetail(new Rectangle(bodyRect.Left, startY, bodyRect.Width, height), croppedRiven));
-                            results.Add(new LineDetail(new Rectangle(bodyRect.Left, startY + height, bodyRect.Width, height), croppedRiven));
+                            results.Add(new LineDetail(new Rectangle(bodyRect.Left, startY, bodyRect.Width, height), rivenImage));
+                            results.Add(new LineDetail(new Rectangle(bodyRect.Left, startY + height, bodyRect.Width, height), rivenImage));
                         }
                         else
                         {
-                            results.Add(new LineDetail(new Rectangle(bodyRect.Left, startY, bodyRect.Width, height), croppedRiven));
+                            results.Add(new LineDetail(new Rectangle(bodyRect.Left, startY, bodyRect.Width, height), rivenImage));
                         }
 
                         startY = 0;
@@ -349,6 +349,88 @@ namespace ImageOCR.ComplexRivenParser
             return results;
         }
 
+        public void DebugGetFirstCharacterRemove(Bitmap b, string debugName = "")
+        {
+            RivenImage rivenImage = new RivenImage(b);
+            var lines = GetLineDetails(rivenImage);
+            int nameHeight = lines.Max(line => line.LineRect.Height);
+            var safeBodyHeight = nameHeight * 0.935f;
+            foreach (var line in lines.Where(l => l.LineRect.Height <= safeBodyHeight && l.LineRect.Height > 32))
+            {
+                var first = line.Characters[0];
+                //-
+                Rectangle rect = first.CharacterRect;
+                //if (rivenImage.IsPurple(rect.Left + 3, rect.Top + rect.Height /2)
+                //    && rivenImage.IsPurple(rect.Left + rect.Width / 2, rect.Top + rect.Height / 2)
+                //    && rivenImage.IsPurple(rect.Right - 3, rect.Top + rect.Height / 2)
+                //    && !rivenImage.IsPurple(rect.Left + rect.Width / 2, rect.Top + 3)
+                //    && !rivenImage.IsPurple(rect.Left + rect.Width / 2, rect.Bottom - 3))
+                if ((float)rect.Width / (float)rect.Height > 2f)
+                {
+                    System.IO.Directory.CreateDirectory(System.IO.Path.Combine("debug_first", "dash"));
+                    using (var firstBitmap = b.Clone(rect, b.PixelFormat))
+                    {
+                        firstBitmap.Save(System.IO.Path.Combine("debug_first", "dash", debugName + "_" + (Guid.NewGuid()).ToString() + ".png"));
+                    }
+                }
+                //+
+                else if (!rivenImage.IsPurple(rect.X + 1, rect.Y + 1)
+                    && !rivenImage.IsPurple(rect.X + 2, rect.Y + 2)
+                    && !rivenImage.IsPurple(rect.X + 1, rect.Bottom - 2)
+                    && !rivenImage.IsPurple(rect.X + 2, rect.Bottom - 3)
+                    && !rivenImage.IsPurple(rect.Right - 2, rect.Top + 1)
+                    && !rivenImage.IsPurple(rect.Right - 3, rect.Top + 2)
+                    && !rivenImage.IsPurple(rect.Right - 2, rect.Bottom - 2)
+                    && !rivenImage.IsPurple(rect.Right - 3, rect.Bottom - 3)
+                    && rivenImage.IsPurple(rect.X + rect.Width / 2, rect.Y + rect.Height / 2))
+                {
+                    var valid = true;
+                    for (int y = rect.Top; y < rect.Bottom; y++)
+                    {
+                        var onPurple = false;
+                        var columns = 0;
+                        for (int x = rect.Left; x < rect.Right; x++)
+                        {
+                            if (!onPurple && rivenImage.IsPurple(x, y))
+                                onPurple = true;
+                            else if (onPurple && !rivenImage.IsPurple(x, y))
+                            {
+                                onPurple = false;
+                                columns++;
+                                if (columns > 1)
+                                {
+                                    valid = false;
+                                    break;
+                                }
+                            }
+                        }
+                        if (columns > 1)
+                        {
+                            valid = false;
+                            break;
+                        }
+                    }
+                    if (valid)
+                    {
+                        System.IO.Directory.CreateDirectory(System.IO.Path.Combine("debug_first", "plus"));
+                        using (var firstBitmap = b.Clone(rect, b.PixelFormat))
+                        {
+                            firstBitmap.Save(System.IO.Path.Combine("debug_first", "plus", debugName + "_" + (Guid.NewGuid()).ToString() + ".png"));
+                        }
+                    }
+                }
+                else
+                {
+                    System.IO.Directory.CreateDirectory(System.IO.Path.Combine("debug_first", "unknown"));
+                    using (var firstBitmap = b.Clone(rect, b.PixelFormat))
+                    {
+                        firstBitmap.Save(System.IO.Path.Combine("debug_first", "unknown", debugName + "_" + (Guid.NewGuid()).ToString() + ".png"));
+                    }
+                }
+
+            }
+        }
+
         public void DebugGetRightSideSize(Bitmap b, string debugName = "")
         {
             var lines = GetLineDetails(new RivenImage(b));
@@ -382,7 +464,7 @@ namespace ImageOCR.ComplexRivenParser
                         }
                     }
                 }
-                if(!splitFound)
+                if (!splitFound)
                 {
                     System.IO.Directory.CreateDirectory(System.IO.Path.Combine("debug_width", "error"));
                     b.Save(System.IO.Path.Combine("debug_width", "error", debugName));

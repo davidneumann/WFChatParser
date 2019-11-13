@@ -82,6 +82,25 @@ namespace DebugCLI
             //GlyphAudit();
             //TestRivens();
             ComplexRivenShim();
+            //GroupShim();
+        }
+
+        private static void GroupShim()
+        {
+            var dirs = Directory.GetDirectories(@"C:\Users\david\source\repos\WFChatParser\src\Presentation\DebugCLI\bin\Debug\netcoreapp2.2\debug_first").Select(d => new DirectoryInfo(d));
+            //var values = dirs.Select(dir => float.Parse(dir.Name));
+            var groups = dirs.GroupBy(v => Math.Round(float.Parse(v.Name), 1));
+            foreach (var group in groups)
+            {
+                Directory.CreateDirectory(Path.Combine("debug_grouped", group.Key.ToString()));
+                foreach (var dir in group)
+                {
+                    foreach (var file in Directory.GetFiles(dir.FullName).Select(f => new FileInfo(f)))
+                    {
+                        File.Copy(file.FullName, Path.Combine("debug_grouped", group.Key.ToString(), file.Name + "_" + (Guid.NewGuid()).ToString() + ".png"));
+                    }
+                }
+            }
         }
 
         private static void ComplexRivenShim()
@@ -102,10 +121,18 @@ namespace DebugCLI
                 Directory.GetDirectories("debug_width").ToList().ForEach(dir => Directory.Delete(dir, true));
             }
 
+            if (!System.IO.Directory.Exists("debug_first"))
+                System.IO.Directory.CreateDirectory("debug_first");
+            else
+            {
+                System.IO.Directory.GetFiles("debug_first").ToList().ForEach(f => System.IO.File.Delete(f));
+                Directory.GetDirectories("debug_first").ToList().ForEach(dir => Directory.Delete(dir, true));
+            }
+
             Color.Black.ToHsv();
             //var sw = new Stopwatch();
             //sw.Start();
-            var files = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Riven images\2019_11_11").Where(f => f.EndsWith(".png")).Select(f => new FileInfo(f)).ToArray();
+            var files = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Riven images\Chinese rivens").Where(f => f.EndsWith(".png")).Select(f => new FileInfo(f)).ToArray();
             var fileQueue = new ConcurrentQueue<FileInfo>(files);
             for (int _ = 0; _ < Environment.ProcessorCount; _++)
             {
@@ -121,7 +148,7 @@ namespace DebugCLI
                          using (var b = new Bitmap(file.FullName))
                          {
                              //crp.DebugIdentifyNumbers(b, file.Name);
-                             crp.DebugGetRightSideSize(b, file.Name);
+                             crp.DebugGetFirstCharacterRemove(b, file.Name);
                          }
                      }
                  });
