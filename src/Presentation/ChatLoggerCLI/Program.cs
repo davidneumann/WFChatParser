@@ -230,9 +230,10 @@ namespace ChatLoggerCLI
         {
             try
             {
-                const string Path = "error.old.txt";
-                if (File.Exists(Path))
+                const string oldPath = "error.old.txt";
+                if (File.Exists(oldPath))
                 {
+                    var lastWrite = File.GetLastWriteTime("error.old.txt");
                     using (var fs = new FileStream("error.old.txt", FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                     {
                         using (var sr = new StreamReader(fs, Encoding.Default))
@@ -245,11 +246,30 @@ namespace ChatLoggerCLI
                                     error.AppendLine(line);
                             }
 
-                            if(error.Length > 3)
+                            var errorImages = Directory.GetFiles(Environment.CurrentDirectory)
+                                .Where(f => f.EndsWith(".png")).ToArray();
+                            if (errorImages.Length > 0)
+                            {
+                                error.AppendLine("\n=Debug images=");
+                                var debugDir = Path.Combine("debug", "errors_" + lastWrite.Ticks);
+                                Directory.CreateDirectory(debugDir);
+                                foreach (var file in errorImages
+                                    .Select(f => new FileInfo(f)))
+                                {
+                                    try
+                                    {
+                                        var newPath = Path.Combine(debugDir, file.Name);
+                                        File.Copy(file.FullName, newPath);
+                                        error.AppendLine(newPath);
+                                    }
+                                    catch { }
+                                }
+                            }
+                            if (error.Length > 3)
                                 _dataSender.AsyncSendDebugMessage("Past client failed catastrophically.\n " + error.ToString()).Wait();
                         }
                     }
-                    File.Delete(Path);
+                    File.Delete(oldPath);
                 }
             }
             catch { }
