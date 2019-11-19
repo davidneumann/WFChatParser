@@ -376,7 +376,8 @@ namespace Application.Actionables.ChatBots
                 Author = cachedModel.Author,
                 EnhancedMessage = cachedModel.EnhancedMessage,
                 Raw = line.RawMessage,
-                Rivens = cachedModel.Rivens
+                Rivens = cachedModel.Rivens,
+                Region = _warframeCredentials.Region
             };
             return duplicateModel;
         }
@@ -569,7 +570,8 @@ namespace Application.Actionables.ChatBots
                 Raw = m,
                 Author = username,
                 Timestamp = timestamp,
-                SystemTimestamp = DateTimeOffset.UtcNow
+                SystemTimestamp = DateTimeOffset.UtcNow,
+                Region = _warframeCredentials.Region
             };
             if (debugReason != null)
             {
