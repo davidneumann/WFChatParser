@@ -15,6 +15,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Security.Permissions;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,8 +32,12 @@ namespace ChatLoggerCLI
         private static DataSender _dataSender;
         private static bool _cleanExitRequested = false;
 
+        [SecurityPermission(SecurityAction.Demand, Flags = SecurityPermissionFlag.ControlAppDomain)]
         public static void Main(string[] args)
         {
+            AppDomain currentDomain = AppDomain.CurrentDomain;
+            currentDomain.UnhandledException += CurrentDomain_UnhandledException;
+
             Console.CancelKeyPress += Console_CancelKeyPress;
 
             const ClientLanguage language = ClientLanguage.English;
@@ -226,6 +231,24 @@ namespace ChatLoggerCLI
             }
         }
 
+        private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            string fatalMessage = "Fatal exception: " + e.ToString() + "\n\r" + e.ExceptionObject.ToString();
+            try
+            {
+                _dataSender.AsyncSendDebugMessage(fatalMessage).Wait();
+            }
+            catch
+            { }
+
+            try
+            {
+                File.WriteAllText("Fatal_error.txt", fatalMessage);
+                Console.WriteLine(fatalMessage);
+            }
+            catch { }
+        }
+
         private static void SendOldErrorLog()
         {
             try
@@ -233,23 +256,28 @@ namespace ChatLoggerCLI
                 const string oldPath = "error.old.txt";
                 if (File.Exists(oldPath))
                 {
+                    Console.WriteLine("Found old error");
                     var lastWrite = File.GetLastWriteTime("error.old.txt");
                     using (var fs = new FileStream("error.old.txt", FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                     {
                         using (var sr = new StreamReader(fs, Encoding.Default))
                         {
+                            var raw = new StringBuilder();
                             var error = new StringBuilder();
                             while (!sr.EndOfStream)
                             {
                                 var line = sr.ReadLine();
+                                raw.AppendLine(line);
                                 if (!line.Contains("WARNING! LEAK!"))
                                     error.AppendLine(line);
                             }
+
 
                             var errorImages = Directory.GetFiles(Environment.CurrentDirectory)
                                 .Where(f => f.EndsWith(".png")).ToArray();
                             if (errorImages.Length > 0)
                             {
+                                raw.AppendLine("\n=Debug images=");
                                 error.AppendLine("\n=Debug images=");
                                 var debugDir = Path.Combine("debug", "errors_" + lastWrite.Ticks);
                                 Directory.CreateDirectory(debugDir);
@@ -261,15 +289,19 @@ namespace ChatLoggerCLI
                                         var newPath = Path.Combine(debugDir, file.Name);
                                         File.Copy(file.FullName, newPath);
                                         error.AppendLine(newPath);
+                                        raw.AppendLine(newPath);
                                     }
                                     catch { }
                                 }
                             }
                             if (error.Length > 3)
                                 _dataSender.AsyncSendDebugMessage("Past client failed catastrophically.\n " + error.ToString()).Wait();
+
+                            Console.WriteLine(raw.ToString());
+                            File.WriteAllText("error_last_rebuild.txt", raw.ToString());
                         }
                     }
-                    File.Delete(oldPath);
+                    //File.Delete(oldPath);
                 }
             }
             catch { }
