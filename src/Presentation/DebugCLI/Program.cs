@@ -70,9 +70,9 @@ namespace DebugCLI
             //TessShim();
             //NewRivenShim();
             //NewChatParsingShim();
-            ChatParsingShim();
+            //ChatParsingShim();
             //ChatMovingShim();
-            //ParseRivenImage();
+            ParseRivenImage();
             //ChatLineExtractorShim();
             //GenerateCharStrings();
             //TrainOnImages();
@@ -778,7 +778,7 @@ namespace DebugCLI
                 Directory.CreateDirectory(outputDir);
             var sw = new Stopwatch();
             var rc = new RivenCleaner();
-            foreach (var riven in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.Contains("49a5f719-bb06-4b89-b526-fb4f54cf2750")))
+            foreach (var riven in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.Contains("497cab20-ac01-4a31-96ef-d68a4dd82638")))
             {
                 sw.Restart();
                 using (var b = new Bitmap(riven))

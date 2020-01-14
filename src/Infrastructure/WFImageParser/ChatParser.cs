@@ -30,24 +30,28 @@ namespace WFImageParser
         private GlyphDatabase _glyphDatabase;
 
         //private static readonly string[] _suffixes = new string[] { "ada]", "ata]", "bin]", "bo]", "cak]", "can]", "con]", "cron]", "cta]", "des]", "dex]", "do]", "dra]", "lis]", "mag]", "nak]", "nem]", "nent]", "nok]", "pha]", "sus]", "tak]", "tia]", "tin]", "tio]", "tis]", "ton]", "tor]", "tox]", "tron]" };
-        private static readonly List<string> _suffixes = new List<string>();
+        private static HashSet<string> _suffixes = null;
         private static readonly List<Regex> _blacklistedRegex = new List<Regex>();
         public ChatParser(ILogger logger, string dataDirectory)
         {
             _logger = logger;
 
             //Load suffixes
-            string affixFile = Path.Combine(Application.Data.DataHelper.RivenDataPath, "affixcombos.txt");
-            if (Directory.Exists(Application.Data.DataHelper.RivenDataPath) &&
-                File.Exists(affixFile))
+            if (_suffixes == null)
             {
-                foreach (var line in File.ReadAllLines(affixFile))
+                string affixFile = Path.Combine(Application.Data.DataHelper.RivenDataPath, "affixcombos.txt");
+                if (Directory.Exists(Application.Data.DataHelper.RivenDataPath) &&
+                    File.Exists(affixFile))
                 {
-                    _suffixes.Add(line.Trim() + ']');
+                    _suffixes = new HashSet<string>();
+                    foreach (var line in File.ReadAllLines(affixFile))
+                    {
+                        _suffixes.Add(line.Trim() + ']');
+                    }
                 }
-            }
 
-            GetSuffixFromSemlar();
+                GetSuffixFromSemlar();
+            }
 
             //Load blacklists
             if (File.Exists(Path.Combine(DataHelper.OcrDataPathEnglish, @"MessageBlacklists.txt")))
@@ -65,15 +69,22 @@ namespace WFImageParser
 
         private void GetSuffixFromSemlar()
         {
-            using (WebClient rc = new WebClient())
+            try
             {
-                var json = rc.DownloadString(@"https://10o.io/affixcombos.json");
-                var content = JsonConvert.DeserializeObject<IEnumerable<string>>(json);
-                foreach (var item in content)
+                using (WebClient rc = new WebClient())
                 {
-                    _suffixes.Add(item);
+                    var json = rc.DownloadString(@"https://10o.io/affixcombos.json");
+                    var content = JsonConvert.DeserializeObject<IEnumerable<string>>(json)
+                        .Select(str => str.Trim() + "]");
+                    //_suffixes.Add(line.Trim() + ']');
+                    foreach (var item in content)
+                    {
+                        if (!_suffixes.Any(str => str == item))
+                            _suffixes.Add(item);
+                    }
                 }
             }
+            catch { }
         }
 
         //private int[] _lineOffsets = new int[] { 5, 55, 105, 154, 204, 253, 303, 352, 402, 452, 501, 551, 600, 650, 700, 749, 799, 848, 898, 948, 997, 1047, 1096, 1146, 1195, 1245, 1295 };
@@ -223,7 +234,7 @@ namespace WFImageParser
                                 safeName = safeName.Split(',').First();
                             if (
                                 (
-                                    lastColor == ChatColor.ChatTimestampName 
+                                    lastColor == ChatColor.ChatTimestampName
                                     && image.GetColor(firstPixel.X, firstPixel.Y) != ChatColor.ChatTimestampName
                                     && bestFit.Item2.Name != "colon"
                                 )
