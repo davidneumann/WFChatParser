@@ -51,6 +51,7 @@ namespace WFImageParser
                 }
 
                 GetSuffixFromSemlar();
+                _suffixes.Sort();
             }
 
             //Load blacklists

@@ -70,9 +70,9 @@ namespace DebugCLI
             //TessShim();
             //NewRivenShim();
             //NewChatParsingShim();
-            //ChatParsingShim();
+            ChatParsingShim();
             //ChatMovingShim();
-            ParseRivenImage();
+            //ParseRivenImage();
             //ChatLineExtractorShim();
             //GenerateCharStrings();
             //TrainOnImages();
@@ -88,7 +88,11 @@ namespace DebugCLI
 
         private static void ChatParsingShim()
         {
-            var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathChinese);
+            var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish);
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\noclick_screen_chat.png"))
+            {
+                var lines = cp.ParseChatImage(b);
+            }
         }
 
         private static void GroupShim()
