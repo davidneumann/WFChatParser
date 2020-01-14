@@ -73,7 +73,7 @@ namespace WFImageParser
             {
                 using (WebClient rc = new WebClient())
                 {
-                    var json = rc.DownloadString(@"https://10o.io/affixcombos.json");
+                    var json = rc.DownloadString(@"https://10o.io/rivens/affixes.json");
                     var content = JsonConvert.DeserializeObject<IEnumerable<string>>(json)
                         .Select(str => str.Trim() + "]");
                     //_suffixes.Add(line.Trim() + ']');
