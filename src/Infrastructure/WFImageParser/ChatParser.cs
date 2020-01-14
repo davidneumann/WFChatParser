@@ -30,7 +30,7 @@ namespace WFImageParser
         private GlyphDatabase _glyphDatabase;
 
         //private static readonly string[] _suffixes = new string[] { "ada]", "ata]", "bin]", "bo]", "cak]", "can]", "con]", "cron]", "cta]", "des]", "dex]", "do]", "dra]", "lis]", "mag]", "nak]", "nem]", "nent]", "nok]", "pha]", "sus]", "tak]", "tia]", "tin]", "tio]", "tis]", "ton]", "tor]", "tox]", "tron]" };
-        private static HashSet<string> _suffixes = null;
+        private static List<string> _suffixes = null;
         private static readonly List<Regex> _blacklistedRegex = new List<Regex>();
         public ChatParser(ILogger logger, string dataDirectory)
         {
@@ -43,7 +43,7 @@ namespace WFImageParser
                 if (Directory.Exists(Application.Data.DataHelper.RivenDataPath) &&
                     File.Exists(affixFile))
                 {
-                    _suffixes = new HashSet<string>();
+                    _suffixes = new List<string>();
                     foreach (var line in File.ReadAllLines(affixFile))
                     {
                         _suffixes.Add(line.Trim() + ']');
