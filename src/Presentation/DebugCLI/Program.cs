@@ -81,8 +81,13 @@ namespace DebugCLI
             //ModiDescrShim();
             //GlyphAudit();
             //TestRivens();
-            ComplexRivenShim();
+            //ComplexRivenShim();
             //GroupShim();
+        }
+
+        private static void ChatParsingShim()
+        {
+            var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathChinese);
         }
 
         private static void GroupShim()
@@ -766,13 +771,13 @@ namespace DebugCLI
 
         private static void ParseRivenImage()
         {
-            var rp = new RivenParser(ClientLanguage.Chinese);
+            var rp = new RivenParser(ClientLanguage.English);
             var outputDir = "debug_rivens";
             if (!Directory.Exists(outputDir))
                 Directory.CreateDirectory(outputDir);
             var sw = new Stopwatch();
             var rc = new RivenCleaner();
-            foreach (var riven in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Riven images\Chinese rivens").Where(f => f.Contains("07d55aa5-98cc-4436-8220-6dfa9d41cc4f")))
+            foreach (var riven in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.Contains("49a5f719-bb06-4b89-b526-fb4f54cf2750")))
             {
                 sw.Restart();
                 using (var b = new Bitmap(riven))
@@ -781,6 +786,7 @@ namespace DebugCLI
                     if (b.Width == 4096)
                         rivenImage = rp.CropToRiven(b);
                     var b2 = rc.CleanRiven(rivenImage);
+                    b2.Save("debug_riven.png");
                     var text = rp.ParseRivenTextFromImage(b2, null);
                     foreach (var modi in text.Modifiers)
                     {

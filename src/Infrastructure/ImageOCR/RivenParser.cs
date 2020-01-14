@@ -35,7 +35,7 @@ namespace ImageOCR
             _clientLanguage = clientLanguage;
             string dataPath = DataHelper.TessDataPath;
             string language = "chi_sim+eng";
-            if(_clientLanguage == ClientLanguage.English)
+            if (_clientLanguage == ClientLanguage.English)
                 language = "eng";
             _engine = new TesseractEngine(dataPath, language, EngineMode.Default, "bazaar");
             _engine.DefaultPageSegMode = PageSegMode.SingleLine;
@@ -113,7 +113,11 @@ namespace ImageOCR
             {
                 if (line.Length > 0 && !(newModiRegex.Match(line).Success && line.Contains(' ')) && currentStep == Step.ReadingName)
                     name = (name + " " + line).Trim();
-                else if (line.Length > 0 && (newModiRegex.Match(line).Success && line.Contains(' ')) && (currentStep == Step.ReadingName || currentStep == Step.ReadingModifiers))
+                else if (line.Length > 0 
+                    && ((newModiRegex.Match(line).Success && line.Contains(' ')) 
+                          || (Char.IsDigit(line[0]) && line.Length > 6 && line.Contains(' ')) //Handle missing + or -
+                       )
+                    && (currentStep == Step.ReadingName || currentStep == Step.ReadingModifiers))
                 {
                     result.Name = name;
                     if (parsedName != null && _clientLanguage == ClientLanguage.English)
@@ -164,23 +168,24 @@ namespace ImageOCR
                         }
                     }
                 }
-
-                name = name.Replace("—", "-");
-                if (modis.Count > 0)
-                {
-                    var modiObjects = modis.Select(m => Modifier.ParseString(m, _clientLanguage)).ToArray();
-                    //Handle curses
-                    if (name.Contains("-") && modiObjects.Length == 4)
-                    {
-                        modiObjects[3].Curse = true;
-                    }
-                    else if (!name.Contains("-") && modiObjects.Length == 3)
-                    {
-                        modiObjects[2].Curse = true;
-                    }
-                    result.Modifiers = modiObjects;
-                }
             }
+
+            name = name.Replace("—", "-");
+            if (modis.Count > 0)
+            {
+                var modiObjects = modis.Select(m => Modifier.ParseString(m, _clientLanguage)).ToArray();
+                //Handle curses
+                if (name.Contains("-") && modiObjects.Length == 4)
+                {
+                    modiObjects[3].Curse = true;
+                }
+                else if (!name.Contains("-") && modiObjects.Length == 3)
+                {
+                    modiObjects[2].Curse = true;
+                }
+                result.Modifiers = modiObjects;
+            }
+
 #if DEBUG && false
             Console.WriteLine(debug.ToString());
 #endif
@@ -201,7 +206,7 @@ namespace ImageOCR
                 y = lineRect.Bottom;
             }
 
-#if DEBUG && false
+#if DEBUG
             foreach (var file in Directory.GetFiles(Environment.CurrentDirectory).Select(f => new FileInfo(f)).Where(f => f.Name.StartsWith("debug_")))
             {
                 try
@@ -284,7 +289,7 @@ namespace ImageOCR
                                 }
                             }
 
-#if DEBUG && false
+#if DEBUG
                             try
                             {
                                 padding.Save("debug_ " + allLines.Count + ".png");
@@ -315,7 +320,7 @@ namespace ImageOCR
                     }
                 }
             }
-#if DEBUG && false
+#if DEBUG
             try
             {
                 var debugs = Directory.GetFiles(Environment.CurrentDirectory).Where(f => f.Substring(f.LastIndexOf("\\") + 1).StartsWith("debug_")).OrderBy(f => f).Select(f => new Bitmap(f)).ToArray();
@@ -371,7 +376,7 @@ namespace ImageOCR
                             endingY = y;
                     }
                 }
-                if (!pixelFound && endingY > 0)
+                if (!pixelFound && endingY > 0 && endingY - startingY > 12)
                     break;
             }
             endX++;
