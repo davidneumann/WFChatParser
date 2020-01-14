@@ -70,6 +70,7 @@ namespace DebugCLI
             //TessShim();
             //NewRivenShim();
             //NewChatParsingShim();
+            ChatParsingShim();
             //ChatMovingShim();
             //ParseRivenImage();
             //ChatLineExtractorShim();

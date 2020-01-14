@@ -15,6 +15,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Numerics;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -46,6 +47,8 @@ namespace WFImageParser
                 }
             }
 
+            GetSuffixFromSemlar();
+
             //Load blacklists
             if (File.Exists(Path.Combine(DataHelper.OcrDataPathEnglish, @"MessageBlacklists.txt")))
             {
@@ -58,6 +61,19 @@ namespace WFImageParser
             if (!Directory.Exists(dataDirectory))
                 throw new FileNotFoundException("Missing data directory", dataDirectory);
             _glyphDatabase = new GlyphDatabase(dataDirectory);
+        }
+
+        private void GetSuffixFromSemlar()
+        {
+            using (WebClient rc = new WebClient())
+            {
+                var json = rc.DownloadString(@"https://10o.io/affixcombos.json");
+                var content = JsonConvert.DeserializeObject<IEnumerable<string>>(json);
+                foreach (var item in content)
+                {
+                    _suffixes.Add(item);
+                }
+            }
         }
 
         //private int[] _lineOffsets = new int[] { 5, 55, 105, 154, 204, 253, 303, 352, 402, 452, 501, 551, 600, 650, 700, 749, 799, 848, 898, 948, 997, 1047, 1096, 1146, 1195, 1245, 1295 };
