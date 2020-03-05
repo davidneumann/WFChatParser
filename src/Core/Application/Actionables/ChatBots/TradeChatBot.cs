@@ -47,6 +47,7 @@ namespace Application.Actionables.ChatBots
 
         private ConcurrentQueue<string> _messageCache = new ConcurrentQueue<string>();
         private ConcurrentDictionary<string, ChatMessageModel> _messageCacheDetails = new ConcurrentDictionary<string, ChatMessageModel>();
+        private int _failedPostLoginScreens;
 
         public TradeChatBot(ConcurrentQueue<RivenParseTaskWorkItem> workQueue,
             IRivenParser rivenCropper,
@@ -359,7 +360,7 @@ namespace Application.Actionables.ChatBots
                 catch { }
                 if (chatMessage.DEBUGIMAGE == null)
                     chatMessage.DEBUGIMAGE = "Failed to save";
-                await _dataSender.AsyncSendDebugMessage("Model incorrect: " + chatMessage.DEBUGREASON +". See: " + chatMessage.DEBUGIMAGE);
+                await _dataSender.AsyncSendDebugMessage("Model incorrect: " + chatMessage.DEBUGREASON + ". See: " + chatMessage.DEBUGIMAGE);
                 return null;
             }
             return chatMessage;
@@ -600,9 +601,14 @@ namespace Application.Actionables.ChatBots
                 if (state == Enums.ScreenState.LoadingScreen || state == Enums.ScreenState.LoginScreen || state == Enums.ScreenState.DailyRewardScreenItem || state == Enums.ScreenState.DailyRewardScreenPlat)
                 {
                     _logger.Log("On a login related screen. Restarting");
+                    await _dataSender.AsyncSendDebugMessage("Failed to move past login screen");
                     _currentState = BotStates.CloseWarframe;
                     _requestingControl = true;
                     return;
+                }
+                else
+                {
+                    _failedPostLoginScreens = 0;
                 }
 
                 //Check if we have some weird OK prompt (hotfixes, etc)
@@ -746,6 +752,8 @@ namespace Application.Actionables.ChatBots
                 var state = _screenStateHandler.GetScreenState(screen);
                 if (state == Enums.ScreenState.MainMenu)
                 {
+                    _failedPostLoginScreens = 0;
+
                     //Click profile
                     if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
                     {
@@ -995,6 +1003,37 @@ namespace Application.Actionables.ChatBots
                     _logger.Log("Claiming daily reward.");
                     await ClaimDailyReward();
                     _requestingControl = false;
+                }
+                else if (_failedPostLoginScreens < 3)
+                {
+                    _failedPostLoginScreens++;
+                }
+                else if (_failedPostLoginScreens == 3)
+                {
+                    //We are stuck on some unkown reward screen or new feature screen.
+                    //Time to click wildly
+
+                    //Click blidnly at a continue button
+                    _logger.Log("Attempting to click continue button");
+                    _mouse.Click((int)(screen.Width - screen.Width * 0.06298828125),
+                        (int)(screen.Height - screen.Height * 0.0685185185185185));
+
+                    //Wait and then check to see if that worked
+                    await Task.Delay(1000);
+                    
+                    //If we are still not controlling the warframe then more blind clicking.
+                    //NEVER EVER MOVE THE MOUSE WHILE CONTROLLING THE WARFRAME!
+                    using (var newScreen = _gameCapture.GetFullImage())
+                    {
+                        ScreenState newState = _screenStateHandler.GetScreenState(screen);
+                        if (newState != ScreenState.ControllingWarframe)
+                        {
+                            //Click blindly on a possible reward location
+                            _mouse.Click((int)(screen.Width - screen.Width * 0.28173828125),
+                                (int)(screen.Height - screen.Height * 0.2555555555555556));
+                            await Task.Delay(1000);
+                        }
+                    }
                 }
 
 
