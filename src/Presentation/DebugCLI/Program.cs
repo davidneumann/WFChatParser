@@ -64,13 +64,13 @@ namespace DebugCLI
             //FindErrorAgain();
             //TestRivenParsing();
             //VerifyNoErrors(2);
-            //TestScreenHandler();
+            TestScreenHandler();
             //TestBot();
             //ParseChatImage();
             //TessShim();
             //NewRivenShim();
             //NewChatParsingShim();
-            ChatParsingShim();
+            //ChatParsingShim();
             //ChatMovingShim();
             //ParseRivenImage();
             //ChatLineExtractorShim();
@@ -1819,6 +1819,12 @@ namespace DebugCLI
             {
                 var isDailyItemReward = ss.GetScreenState(b) == ScreenState.DailyRewardScreenItem;
                 Console.WriteLine("Is daily item reward2: " + isDailyItemReward + " should be true");
+            }
+
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\login_reward_item.png"))
+            {
+                var isDailyItemReward = ss.GetScreenState(b) == ScreenState.DailyRewardScreenItem;
+                Console.WriteLine("Is daily item reward3: " + isDailyItemReward + " should be true");
             }
         }
 

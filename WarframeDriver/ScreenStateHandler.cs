@@ -115,10 +115,39 @@ namespace WarframeDriver
 
         private bool IsDailyRewardScreenItem(Bitmap bitmap)
         {
-            var lightPixels = new Point[] { /*new Point(2706, 1875), new Point(2743, 1897), new Point(2776, 1897), new Point(2830, 1873), new Point(2956, 1885),*/
-                new Point(2570, 346), new Point(2646, 390), new Point(2694, 363), new Point(2747, 393), new Point(2807, 368), new Point(2987, 335), new Point(3165, 355)};
-            var darkPixels = new Point[] { new Point(2560, 364), new Point(2717, 363), new Point(2783, 369), new Point(2915, 406),
-                new Point(3050, 1928), new Point(2766, 1894), new Point(2868, 1875), new Point(2963, 1879), new Point(3038, 1889), new Point(3162, 1885) };
+            ////Terrible shim that is reliable but slow.
+            //var sw = new System.Diagnostics.Stopwatch();
+            //sw.Start();
+            //var UIHue = 45.7;
+            //var textRect = new Rectangle(2274, 1836, 1350, 324);
+            //var hueues = new float[textRect.Width * textRect.Height];
+            //var i = 0;
+            //for (int x = textRect.Left; x < textRect.Right; x++)
+            //{
+            //    for (int y = textRect.Top; y < textRect.Bottom; y++)
+            //    {
+            //        var hsv = bitmap.GetPixel(x, y).ToHsv();
+            //        if (hsv.Value >= 0.66f)
+            //            hueues[i] = hsv.Hue;
+            //        i++;
+            //    }
+            //}
+            //var totalHue = 0f;
+            //var hueuesCount = 0;
+            //for (int j = 0; j < hueues.Length; j++)
+            //{
+            //    if (hueues[j] > 0f)
+            //    {
+            //        totalHue += hueues[j];
+            //        hueuesCount++;
+            //    }
+            //}
+            //var averageHue = totalHue / hueuesCount;
+            //Console.WriteLine("Checked login item thing in: " + sw.ElapsedMilliseconds + "ms.");
+            //return averageHue >= 40 && averageHue <= 50;
+
+            var lightPixels = new Point[] { new Point(2681, 1884), new Point(2798, 1893), new Point(2896, 1874), new Point(3079, 1896), new Point(3174, 1878) };
+            var darkPixels = new Point[] { new Point(2691, 1885), new Point(2809, 1889), new Point(2917, 1878), new Point(3106, 1891), new Point(3201, 1884) };
             return lightPixels.Select(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value).Average() > 0.65f
                     && darkPixels.Select(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value).Average() < 0.4f;
         }
