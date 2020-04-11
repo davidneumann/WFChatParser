@@ -41,7 +41,7 @@ namespace Application.Actionables.ChatBots
         private bool firstParse = true;
         private IDataSender _dataSender;
         private IChatParser _chatParser;
-        private DateTime _lastMessage = DateTime.Now.AddMinutes(10);
+        private DateTime _lastMessage = DateTime.UtcNow.AddMinutes(10);
 
         public DateTime LastMessage { get { return _lastMessage; } }
 
@@ -216,7 +216,7 @@ namespace Application.Actionables.ChatBots
                             continue;
                         }
                         _logger.Log("Processing message: " + line.RawMessage);
-                        _lastMessage = DateTime.Now;
+                        _lastMessage = DateTime.UtcNow;
                         if (line is ChatMessageLineResult clr)
                         {
                             bool success = true;
@@ -887,7 +887,7 @@ namespace Application.Actionables.ChatBots
             }
 
             //Give 15 minutes on a fresh login to allow slow chats to fill up before killing them.
-            _lastMessage = DateTime.Now.AddMinutes(15);
+            _lastMessage = DateTime.UtcNow.AddMinutes(15);
             _currentState = BotStates.WaitForLoadScreen;
             _requestingControl = true;
         }

@@ -223,7 +223,7 @@ namespace Application.Actionables
                 var possibleBadState = true;
                 foreach (var bot in _bots)
                 {
-                    if(bot != null && bot.LastMessage != null && DateTime.Now.Subtract(bot.LastMessage).TotalMinutes < 15)
+                    if(bot != null && bot.LastMessage != null && DateTime.UtcNow.Subtract(bot.LastMessage).TotalMinutes < 15)
                     {
                         possibleBadState = false;
                         break;
