@@ -14,6 +14,8 @@ To increase the accuracy of the text parsing the bot must be run on a 4096 ×�
 # Configuration
 The Presentation/ChatLoggerCLI project will read from [appsettings.json](src/Presentation/ChatLoggerCLI/appsettings.json), appsettings.development.json, and appsettings.production.json, in that order, when loading its configuration.
 
+There is a [helper app](src/Presentation/ConfigHelper) that can generate a large chunk of the config file and **save your warframe credentials** to the credential manager for you.
+
 ## DataSender
 The bot itself does not store any data and will send its data over a websocket.
 ### DataSender:ConnectionMessages
