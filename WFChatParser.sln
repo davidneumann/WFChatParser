@@ -33,6 +33,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PerfTest", "src\Presentatio
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WarframeDriver", "src\Infrastructure\WarframeDriver\WarframeDriver.csproj", "{BB1CEBA7-936F-4CD3-8332-A7CDD361DF74}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConfigHelper", "src\Presentation\ConfigHelper\ConfigHelper.csproj", "{51830611-08EE-407F-8FDE-3819DA9F3362}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -187,6 +189,18 @@ Global
 		{BB1CEBA7-936F-4CD3-8332-A7CDD361DF74}.Release|x64.Build.0 = Release|Any CPU
 		{BB1CEBA7-936F-4CD3-8332-A7CDD361DF74}.Release|x86.ActiveCfg = Release|Any CPU
 		{BB1CEBA7-936F-4CD3-8332-A7CDD361DF74}.Release|x86.Build.0 = Release|Any CPU
+		{51830611-08EE-407F-8FDE-3819DA9F3362}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{51830611-08EE-407F-8FDE-3819DA9F3362}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{51830611-08EE-407F-8FDE-3819DA9F3362}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{51830611-08EE-407F-8FDE-3819DA9F3362}.Debug|x64.Build.0 = Debug|Any CPU
+		{51830611-08EE-407F-8FDE-3819DA9F3362}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{51830611-08EE-407F-8FDE-3819DA9F3362}.Debug|x86.Build.0 = Debug|Any CPU
+		{51830611-08EE-407F-8FDE-3819DA9F3362}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{51830611-08EE-407F-8FDE-3819DA9F3362}.Release|Any CPU.Build.0 = Release|Any CPU
+		{51830611-08EE-407F-8FDE-3819DA9F3362}.Release|x64.ActiveCfg = Release|Any CPU
+		{51830611-08EE-407F-8FDE-3819DA9F3362}.Release|x64.Build.0 = Release|Any CPU
+		{51830611-08EE-407F-8FDE-3819DA9F3362}.Release|x86.ActiveCfg = Release|Any CPU
+		{51830611-08EE-407F-8FDE-3819DA9F3362}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -203,6 +217,7 @@ Global
 		{22DC087D-AE9C-44F0-A26E-91FC04EF41A7} = {DD1985B9-7A0F-4B8A-AC9C-2C0675DF083E}
 		{2DE6DB10-CAE6-43F6-9AD4-20473460601F} = {908B3390-0AB4-4FFF-A227-F8CD22A58484}
 		{BB1CEBA7-936F-4CD3-8332-A7CDD361DF74} = {DD1985B9-7A0F-4B8A-AC9C-2C0675DF083E}
+		{51830611-08EE-407F-8FDE-3819DA9F3362} = {908B3390-0AB4-4FFF-A227-F8CD22A58484}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A72EE6CA-91B9-4DBD-A082-55E80822506F}
