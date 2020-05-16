@@ -6,7 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\Infrastructure\WFImageParser\WFImageParser.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\WarframeDriver\WarframeDriver.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\WFImageParser\WFImageParser.csproj" />
   </ItemGroup>
 
   <ItemGroup>
