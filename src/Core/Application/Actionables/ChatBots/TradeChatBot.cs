@@ -143,6 +143,11 @@ namespace Application.Actionables.ChatBots
             //Try doing a parse
             using (var screen = _gameCapture.GetFullImage())
             {
+                try
+                {
+                    screen.Save("screen_parsechat.png");
+                }
+                catch { }
                 _mouse.MoveTo(0, 0);
                 await Task.Delay(17);
                 //screen.Save("screen.png");
