@@ -255,31 +255,17 @@ namespace DataStream
 
         public Task AsyncSendRivenImage(Guid imageId, Bitmap bitmap)
         {
-            _ = Task.Run(() =>
+            try
             {
-                var image = new Bitmap(bitmap);
-                var memImage = new MemoryStream();
-                image.Save(memImage, System.Drawing.Imaging.ImageFormat.Jpeg);
-                try
-                {
-                    image.Save("riven.jpg");
-                }
-                catch { }
-                //memImage.Seek(0, SeekOrigin.Begin);
-                //using (var webP = new MagickImage(memImage))
-                //{
-                //    memImage.Seek(0, SeekOrigin.Begin);
-                //    memImage.SetLength(0);
-                //    webP.Write(memImage, MagickFormat.WebP);
-                //    memImage.Seek(0, SeekOrigin.Begin);
-                //}
-                var rivenBase64 = Convert.ToBase64String(memImage.ToArray());
-
-                AsyncSendRivenImage(imageId, rivenBase64);
-                memImage.Dispose();
-                image.Dispose();
-            });
-            return Task.CompletedTask;
+                bitmap.Save("riven.jpg");
+            }
+            catch { }
+            var memImage = new MemoryStream();
+            bitmap.Save(memImage, System.Drawing.Imaging.ImageFormat.Jpeg);
+            var rivenBase64 = Convert.ToBase64String(memImage.ToArray());
+            memImage.Dispose();
+            bitmap.Dispose();
+            return AsyncSendRivenImage(imageId, rivenBase64);
         }
 
         public Task AsyncSendRivenImage(Guid imageId, string rivenBase64)

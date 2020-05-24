@@ -106,7 +106,7 @@ namespace DebugCLI
                 config["DataSender:LogLineMessagePrefix"]);
             _ = Task.Run(dataSender.ConnectAsync);
 
-            var duck = new Bitmap("duck.jpg");
+            var duck = new Bitmap("17662706-ad79-41a4-8da9-acd4c891a1e4.png");
             var guid = Guid.NewGuid();//Guid.Parse("36001368-7cb1-40f4-81f5-92033dd28928");
             Console.WriteLine(guid);
             dataSender.AsyncSendRivenImage(guid, duck);
