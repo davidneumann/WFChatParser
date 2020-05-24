@@ -64,7 +64,7 @@ namespace DebugCLI
             //FindErrorAgain();
             //TestRivenParsing();
             //VerifyNoErrors(2);
-            TestScreenHandler();
+            //TestScreenHandler();
             //TestBot();
             //ParseChatImage();
             //TessShim();
@@ -84,6 +84,36 @@ namespace DebugCLI
             //TestRivens();
             //ComplexRivenShim();
             //GroupShim();
+            NewDataSenderShim();
+        }
+
+        private static void NewDataSenderShim()
+        {
+            IConfiguration config = new ConfigurationBuilder()
+                 .AddJsonFile("appsettings.json", true, true)
+                 .AddJsonFile("appsettings.development.json", true, true)
+                 .AddJsonFile("appsettings.production.json", true, true)
+                 .Build();
+            var dataSender = new ClientWebsocketDataSender(new Uri(config["DataSender:HostName"]),
+                config.GetSection("DataSender:ConnectionMessages").GetChildren().Select(i => i.Value),
+                config["DataSender:MessagePrefix"],
+                config["DataSender:DebugMessagePrefix"],
+                true,
+                config["DataSender:RawMessagePrefix"],
+                config["DataSender:RedtextMessagePrefix"],
+                config["DataSender:RivenImageMessagePrefix"],
+                config["DataSender:LogMessagePrefix"],
+                config["DataSender:LogLineMessagePrefix"]);
+            _ = Task.Run(dataSender.ConnectAsync);
+
+            var duck = new Bitmap("duck.jpg");
+            var guid = Guid.NewGuid();//Guid.Parse("36001368-7cb1-40f4-81f5-92033dd28928");
+            Console.WriteLine(guid);
+            dataSender.AsyncSendRivenImage(guid, duck);
+            for (int i = 0; i < 1000; i++)
+            {
+                Thread.Sleep(1000);
+            }
         }
 
         private static void ChatParsingShim()
@@ -1154,7 +1184,7 @@ namespace DebugCLI
                  .AddJsonFile("appsettings.production.json", true, true)
                  .Build();
 
-            var dataSender = new DataSender(new Uri(config["DataSender:HostName"]),
+            var dataSender = new ClientWebsocketDataSender(new Uri(config["DataSender:HostName"]),
                 config.GetSection("DataSender:ConnectionMessages").GetChildren().Select(i => i.Value),
                 config["DataSender:MessagePrefix"],
                 config["DataSender:DebugMessagePrefix"],

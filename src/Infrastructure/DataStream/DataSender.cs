@@ -1,280 +1,263 @@
-﻿using Application.ChatMessages.Model;
+﻿using System;
+using System.Buffers;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Net.WebSockets;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using Application.ChatMessages.Model;
 using Application.Interfaces;
 using Application.LogParser;
 using ImageMagick;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Drawing;
-using System.IO;
-using System.Text;
-using System.Threading.Tasks;
-using WebSocketSharp;
 
 namespace DataStream
 {
-    public class DataSender : IDisposable, IDataSender
+    public class ClientWebsocketDataSender : IDisposable, IDataSender
     {
-        private readonly Uri _websocketHostname;
+        private ClientWebSocket _websocket;
+        private readonly Uri _uri;
+        private readonly StringBuilder _stringBuilder = new StringBuilder();
+        private readonly ConcurrentQueue<string> _sendQueue = new ConcurrentQueue<string>();
+        private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        private readonly ICollection<string> _connectMessages;
+        private bool _doneConnecting;
+
+        private readonly JsonSerializerSettings _jsonSettings;
         private readonly string _messagePrefix;
         private readonly string _debugMessagePrefix;
-        private readonly IEnumerable<string> _connectionStrings;
-        private readonly object _redtextMessagePrefix;
-        private WebSocket _webSocket;
-        private string _rivenImageMessagePrefix;
-        private string _logMessagePrefix;
-        private string _logLineMessagePrefix;
+        private readonly bool _shouldReconnect;
+        private readonly string _rawMessagePrefix;
+        private readonly string _redtextMessagePrefix;
+        private readonly string _rivenImageMessagePrefix;
+        private readonly string _logMessagePrefix;
+        private readonly string _logLineMessagePrefix;
+
+        public event Action OnConnected;
+        public event Action<string> OnReceive;
 
         public event EventHandler RequestToKill;
         public event EventHandler<SaveEventArgs> RequestSaveAll;
 
-        private bool _shouldReconnect;
-
-        private List<string> _DEBUGErrorMessages = new List<string>();
-
-        private DateTimeOffset _lastReconnectTime = DateTimeOffset.MinValue;
-        public DataSender(Uri websocketHostname, IEnumerable<string> connectionMessages, 
-            string messagePrefix, 
-            string debugMessagePrefix, 
-            bool shouldReconnect, 
+        public ClientWebsocketDataSender(Uri uri, IEnumerable<string> connectMessages,
+            string messagePrefix,
+            string debugMessagePrefix,
+            bool shouldReconnect,
             string rawMessagePrefix,
             string redtextMessagePrefix,
             string rivenImageMessagePrefix,
             string logMessagePrefix,
             string logLineMessagePrefix)
         {
-            _websocketHostname = websocketHostname;
+            _uri = uri;
+            _connectMessages = connectMessages.ToList();
+
             _messagePrefix = messagePrefix;
             _debugMessagePrefix = debugMessagePrefix;
             _shouldReconnect = shouldReconnect;
-            _connectionStrings = connectionMessages;
             _rawMessagePrefix = rawMessagePrefix;
             _redtextMessagePrefix = redtextMessagePrefix;
             _rivenImageMessagePrefix = rivenImageMessagePrefix;
             _logMessagePrefix = logMessagePrefix;
             _logLineMessagePrefix = logLineMessagePrefix;
 
-            _jsonSettings.Converters.Add(new StringEnumConverter() { AllowIntegerValues = false, NamingStrategy = new CamelCaseNamingStrategy() });
+            _jsonSettings = new JsonSerializerSettings
+            {
+                NullValueHandling = NullValueHandling.Ignore,
+                ContractResolver = new CompactDataSenderResolver(),
+                Converters =
+                {
+                    new StringEnumConverter { AllowIntegerValues = false, NamingStrategy = new CamelCaseNamingStrategy() }
+                }
+            };
 
-            InitWebsocket();
-
-            //ConnectWebsocket();
+            OnReceive += Receive;
         }
 
-        private void InitWebsocket()
+        public async Task ConnectAsync()
         {
-            if (DateTimeOffset.Now.Subtract(_lastReconnectTime).TotalSeconds < 5)
-                return;
-            _lastReconnectTime = DateTimeOffset.Now;
-            if (_webSocket != null)
+            // TODO Use cancellation tokens?
+            await ActualConnect();
+            _ = Task.Run(ReceiveData);
+            _ = Task.Run(SendQueue);
+        }
+
+        public void Send(string message)
+        {
+            _sendQueue.Enqueue(message);
+        }
+
+        public Task CloseAsync()
+        {
+            _cancellationTokenSource.Cancel();
+            return _websocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None);
+        }
+
+        private async Task SendAsync(string message)
+        {
+            var bytes = ArrayPool<byte>.Shared.Rent(Encoding.UTF8.GetByteCount(message));
+            var length = Encoding.UTF8.GetBytes(message, 0, message.Length, bytes, 0);
+
+            try
             {
-                if (_webSocket.ReadyState != WebSocketState.Closed)
+                var sent = 0;
+                while (sent < length)
                 {
-                    _webSocket.Close();
-                    ((IDisposable)_webSocket).Dispose();
+                    var toSend = Math.Min(1024, length - sent);
+                    await _websocket.SendAsync(new ArraySegment<byte>(bytes, sent, toSend), WebSocketMessageType.Text, toSend < 1024, _cancellationTokenSource.Token);
+                    sent += toSend;
                 }
             }
-            _webSocket = new WebSocket(_websocketHostname.AbsoluteUri);
-            _webSocket.Log.Output = (data, dataString) => { try { this.AsyncSendLogMessage(data.Message + "\n " + dataString).Wait(); } catch { } };
-            _webSocket.OnMessage += _webSocket_OnMessage;
-            _webSocket.OnOpen += _webSocket_OnOpen;
-            _webSocket.OnError += _webSocket_OnError;
-            if (_shouldReconnect)
-                _webSocket.OnClose += _webSocket_OnClose;
-            _webSocket.Connect();
-        }
-
-        private void _webSocket_OnError(object sender, WebSocketSharp.ErrorEventArgs e)
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine("Message: " + e.Message);
-            sb.AppendLine("Exception: " + e.Exception.Message);
-            sb.AppendLine("Json: " + JsonConvert.SerializeObject(e));
-            _DEBUGErrorMessages.Add(sb.ToString());
-        }
-
-        private void _webSocket_OnOpen(object sender, EventArgs e)
-        {
-            foreach (var message in _connectionStrings)
+            finally
             {
-                _webSocket.Send(message);
+                ArrayPool<byte>.Shared.Return(bytes);
             }
-            if (_DEBUGErrorMessages.Count > 0)
+        }
+
+        private async Task SendQueue()
+        {
+            var token = _cancellationTokenSource.Token;
+            while (!token.IsCancellationRequested)
             {
-                var wasError = false;
-                foreach (var message in _DEBUGErrorMessages.ToArray())
+                if (_sendQueue.TryDequeue(out var message))
                 {
+                    // Wait for websocket to become available
+                    while (!_doneConnecting || _websocket.State != WebSocketState.Open)
+                    {
+                        if (token.IsCancellationRequested)
+                            return;
+                        await Task.Delay(25, token);
+                    }
+
                     try
                     {
-                        AsyncSendDebugMessage("Connection lost: " + message).Wait();
-                        _DEBUGErrorMessages.Remove(message);
+                        await SendAsync(message);
                     }
-                    catch { wasError = true; }
+                    catch (Exception e)
+                    {
+                        // TODO Handle this
+                    }
                 }
-
-                if (!wasError)
-                    _DEBUGErrorMessages.Clear();
+                else
+                {
+                    await Task.Delay(25, token);
+                }
             }
         }
 
-        //private void ConnectWebsocket()
-        //{
-        //    if (DateTimeOffset.Now.Subtract(_lastReconnectTime).TotalSeconds < 5 || _webSocket.ReadyState == WebSocketState.Open)
-        //        return;
-        //    if(_webSocket.ReadyState != WebSocketState.Open && DateTimeOffset.Now.Subtract(_lastReconnectTime).TotalSeconds >= 5)
-        //    { 
-        //        InitWebsocket();
-        //    }
-        //    _lastReconnectTime = DateTimeOffset.Now;
-
-        //    _webSocket.Connect();
-        //}
-
-        private BackgroundWorker _reconnectWorker = new BackgroundWorker();
-        private string _rawMessagePrefix;
-        private JsonSerializerSettings _jsonSettings = new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore, ContractResolver = new CompactDataSenderResolver() };
-
-        private void Reconnect()
+        private async Task ActualConnect()
         {
-            if(!_reconnectWorker.IsBusy && (_webSocket == null || _webSocket.ReadyState == WebSocketState.Closed || _webSocket.ReadyState == WebSocketState.Closing))
-            {
-                _reconnectWorker.Dispose();
-                _reconnectWorker = new BackgroundWorker();
-                _reconnectWorker.DoWork += (o, e2) => {
-                    if (DateTimeOffset.Now.Subtract(_lastReconnectTime).TotalSeconds < 5)
-                        System.Threading.Thread.Sleep((int)(5 - DateTimeOffset.Now.Subtract(_lastReconnectTime).TotalSeconds) * 1000);
-                    if (_webSocket == null || (_webSocket.ReadyState != WebSocketState.Connecting && _webSocket.ReadyState != WebSocketState.Open))
-                        InitWebsocket();
-                };
-                _reconnectWorker.RunWorkerAsync();
-            }
-        }
+            _doneConnecting = false;
 
-        private void _webSocket_OnClose(object sender, CloseEventArgs e)
-        {
-            if (_shouldReconnect)
+            do
             {
-                _DEBUGErrorMessages.Add($"Code: {e.Code} Reason: {e.Reason} Was clean: {e.WasClean}");
-                Reconnect();
-            }
-        }
+                _websocket?.Dispose();
+                _websocket = new ClientWebSocket();
+                _websocket.Options.KeepAliveInterval = TimeSpan.FromSeconds(20);
 
-        private void _webSocket_OnMessage(object sender, MessageEventArgs e)
-        {
-            if (e.Data.Substring(e.Data.LastIndexOf(":") + 1).Trim() == "KILL")
-            {
-                try { AsyncSendDebugMessage("Kill acknowledged. Requesting a stop.").Wait(); }
-                catch { }
-                RequestToKill?.Invoke(this, EventArgs.Empty);
-            }
-            else if(e.Data.Substring(e.Data.LastIndexOf(":") + 1).Trim() == "RESTART")
-            {
+                // This method continuously attempts to connect if a connection could not be established.
                 try
                 {
-                    AsyncSendDebugMessage("Attempting to restart computer").Wait();
-                    var shutdown = new System.Diagnostics.Process()
+                    await _websocket.ConnectAsync(_uri, _cancellationTokenSource.Token);
+
+                    // Send connection messages
+                    foreach (var message in _connectMessages)
                     {
-                        StartInfo = new ProcessStartInfo("shutdown.exe", "/r /f /t 0")
-                    };
-                    shutdown.Start();
+                        await SendAsync(message);
+                    }
                 }
-                catch
+                catch (Exception e)
                 {
-                    AsyncSendDebugMessage("FAILED TO RESTART COMPUTER!").Wait();
+                    // TODO What to do here?
                 }
-            }
-            else if(e.Data.Substring(e.Data.LastIndexOf(":") + 1).Trim().StartsWith("SAVE"))
+
+                if (_websocket.State != WebSocketState.Open)
+                    await Task.Delay(1000);
+            } while (_websocket.State != WebSocketState.Open && !_cancellationTokenSource.Token.IsCancellationRequested);
+
+            _doneConnecting = true;
+            OnConnected?.Invoke();
+        }
+
+        private async Task ReceiveData()
+        {
+            var token = _cancellationTokenSource.Token;
+            var buffer = new byte[1024];
+
+            while (!token.IsCancellationRequested)
             {
-                var name = e.Data.Substring(e.Data.IndexOf(":SAVE") + 5).Trim();
-                RequestSaveAll?.Invoke(this, new SaveEventArgs(name));
+                // Check if a reconnect is needed
+                if (_websocket.State != WebSocketState.Open)
+                {
+                    if (!_shouldReconnect)
+                        return;
+                    // Begin reconnect
+                    await Task.Delay(5000, token);
+                    await ActualConnect();
+                }
+
+                _stringBuilder.Clear();
+                try
+                {
+                    WebSocketReceiveResult result;
+                    do
+                    {
+                        result = await _websocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                        _stringBuilder.Append(Encoding.ASCII.GetString(buffer, 0, result.Count));
+                    } while (!result.EndOfMessage);
+
+                    OnReceive?.Invoke(_stringBuilder.ToString());
+                }
+                catch (Exception)
+                {
+                    // TODO
+                }
             }
         }
 
         public void Dispose()
         {
-            _shouldReconnect = false;
-            _webSocket.Close();
-            ((IDisposable)_webSocket).Dispose();
+            _websocket?.Dispose();
+            _cancellationTokenSource?.Dispose();
         }
 
-        //public void SendChatMessage(string message)
-        //{
-        //    if (_webSocket.ReadyState == WebSocketState.Open)
-        //    {
-        //        if (_messagePrefix != null && _messagePrefix.Length > 0)
-        //            _webSocket.Send(_messagePrefix + message);
-        //        else
-        //            _webSocket.Send(message);
-        //    }
-        //    else if (_shouldReconnect)
-        //        Reconnect();
-        //}
-
-        //public void SendTimers(double imageTime, double parseTime, double transmitTime, int newMessageCount)
-        //{
-        //    if (_debugMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
-        //        _webSocket.Send(_debugMessagePrefix + $"Image capture: {imageTime:00.00} Parse time: {parseTime:00.00} TransmitTime: {transmitTime:0.000} New messages {newMessageCount} {newMessageCount / parseTime}/s");
-        //    else if (_shouldReconnect)
-        //        Reconnect();
-        //}
-
-        //public void SendDebugMessage(string message)
-        //{
-        //    if (_debugMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
-        //        _webSocket.Send(_debugMessagePrefix + message);
-        //    else if (_shouldReconnect)
-        //        Reconnect();
-        //}
-
-        public async Task AsyncSendChatMessage(ChatMessageModel message)
+        public Task AsyncSendChatMessage(ChatMessageModel message)
         {
-            if (_webSocket.ReadyState == WebSocketState.Open)
+            if (!string.IsNullOrEmpty(_messagePrefix))
+                Send(_messagePrefix + JsonConvert.SerializeObject(message, Formatting.None, _jsonSettings));
+            else
+                Send(JsonConvert.SerializeObject(message, Formatting.None, _jsonSettings));
+            if (!string.IsNullOrEmpty(_rawMessagePrefix))
+                Send(_rawMessagePrefix + message.Raw);
+
+            return Task.CompletedTask;
+        }
+
+        public Task AsyncSendDebugMessage(string message)
+        {
+            if (_debugMessagePrefix != null)
+                Send(_debugMessagePrefix + message);
+            return Task.CompletedTask;
+        }
+
+        public Task AsyncSendRedtext(RedTextMessage message)
+        {
+            if (_redtextMessagePrefix != null)
+                Send(_redtextMessagePrefix + JsonConvert.SerializeObject(message, _jsonSettings));
+            return Task.CompletedTask;
+        }
+
+        public Task AsyncSendRivenImage(Guid imageId, Bitmap bitmap)
+        {
+            _ = Task.Run(() =>
             {
-                if (_messagePrefix != null && _messagePrefix.Length > 0)
-                    _webSocket.Send(_messagePrefix + JsonConvert.SerializeObject(message, Formatting.None, _jsonSettings));
-                else
-                    _webSocket.Send(JsonConvert.SerializeObject(message, Formatting.None, _jsonSettings));
-                if (_rawMessagePrefix != null && _rawMessagePrefix.Length > 0)
-                    _webSocket.Send(_rawMessagePrefix + message.Raw);
-            }
-            else if (_shouldReconnect)
-                Reconnect();
-        }
-
-        public async Task AsyncSendDebugMessage(string message)
-        {
-            if (_debugMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
-                _webSocket.Send(_debugMessagePrefix + message);
-            else if (_shouldReconnect)
-                Reconnect();
-        }
-
-        //public async Task AsyncSendRedtext(string redtext)
-        //{
-        //    if (_redtextMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
-        //        _webSocket.Send(_redtextMessagePrefix + redtext);
-        //    else if (_shouldReconnect)
-        //        Reconnect();
-        //}
-
-        public async Task AsyncSendRivenImage(Guid imageId, string rivenBase64)
-        {
-            if (_rivenImageMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
-                _webSocket.Send(_rivenImageMessagePrefix + JsonConvert.SerializeObject(new { ImageId = imageId, Image = rivenBase64 }, _jsonSettings));
-            else if (_shouldReconnect)
-                Reconnect();
-        }
-
-        public async Task AsyncSendRivenImage(Guid imageID, Bitmap bitmap)
-        {
-            var b = new BackgroundWorker();
-            var image = new Bitmap(bitmap, new Size(300,428));
-            b.DoWork += (sender, e) =>
-            {
+                var image = new Bitmap(bitmap);
                 var memImage = new MemoryStream();
                 image.Save(memImage, System.Drawing.Imaging.ImageFormat.Jpeg);
                 try
@@ -282,7 +265,7 @@ namespace DataStream
                     image.Save("riven.jpg");
                 }
                 catch { }
-                memImage.Seek(0, SeekOrigin.Begin);
+                //memImage.Seek(0, SeekOrigin.Begin);
                 //using (var webP = new MagickImage(memImage))
                 //{
                 //    memImage.Seek(0, SeekOrigin.Begin);
@@ -291,42 +274,52 @@ namespace DataStream
                 //    memImage.Seek(0, SeekOrigin.Begin);
                 //}
                 var rivenBase64 = Convert.ToBase64String(memImage.ToArray());
-                AsyncSendRivenImage(imageID, rivenBase64).Wait();
+
+                AsyncSendRivenImage(imageId, rivenBase64);
                 memImage.Dispose();
                 image.Dispose();
-            };
-            b.RunWorkerAsync();
+            });
+            return Task.CompletedTask;
         }
 
-        public async Task AsyncSendRedtext(RedTextMessage message)
+        public Task AsyncSendRivenImage(Guid imageId, string rivenBase64)
         {
-            if (_redtextMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
-                _webSocket.Send(_redtextMessagePrefix + JsonConvert.SerializeObject(message, _jsonSettings));
-            else if (_shouldReconnect)
-                Reconnect();
-        }
-
-        public async Task AsyncSendLogMessage(string message)
-        {
-            if (_logMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
-                _webSocket.Send($"{_logMessagePrefix} {message}");
-            else if (_shouldReconnect)
-                Reconnect();
-        }
-
-        public async Task AsyncSendLogLine(LogMessage message)
-        {
-            try
+            if (_rivenImageMessagePrefix != null)
             {
-                if (_logLineMessagePrefix != null && _webSocket.ReadyState == WebSocketState.Open)
-                    _webSocket.Send($"{_logLineMessagePrefix} {JsonConvert.SerializeObject(message, _jsonSettings)}");
-                else if (_shouldReconnect)
-                    Reconnect();
+                Send(_rivenImageMessagePrefix + JsonConvert.SerializeObject(new { ImageId = imageId, Image = rivenBase64 }, _jsonSettings));
             }
-            catch { }
+            return Task.CompletedTask;
+        }
+
+        public Task AsyncSendLogMessage(string message)
+        {
+            if (_logMessagePrefix != null)
+                Send($"{_logMessagePrefix} [{DateTime.Now:HH:mm:ss.f}] {message}");
+            return Task.CompletedTask;
+        }
+
+        private void Receive(string message)
+        {
+            if (message.Substring(message.LastIndexOf(":") + 1).Trim() == "KILL")
+            {
+                try { AsyncSendDebugMessage("Kill acknowledged. Requesting a stop.").Wait(); }
+                catch { }
+                RequestToKill?.Invoke(this, EventArgs.Empty);
+            }
+            else if (message.Substring(message.LastIndexOf(":") + 1).Trim().StartsWith("SAVE"))
+            {
+                var name = message.Substring(message.IndexOf(":SAVE") + 5).Trim();
+                RequestSaveAll?.Invoke(this, new SaveEventArgs(name));
+            }
+        }
+
+        public Task AsyncSendLogLine(LogMessage message)
+        {
+            if (_logLineMessagePrefix != null)
+                Send(_logLineMessagePrefix + JsonConvert.SerializeObject(message, _jsonSettings));
+            return Task.CompletedTask;
         }
     }
-
     public class SaveEventArgs : EventArgs
     {
         public string Name { get; internal set; }

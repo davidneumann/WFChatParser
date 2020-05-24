@@ -29,7 +29,7 @@ namespace ChatLoggerCLI
     {
         private static List<IDisposable> _disposables = new List<IDisposable>();
         private static CancellationTokenSource _cancellationSource = new CancellationTokenSource();
-        private static DataSender _dataSender;
+        private static ClientWebsocketDataSender _dataSender;
         private static bool _cleanExitRequested = false;
 
         [SecurityPermission(SecurityAction.Demand, Flags = SecurityPermissionFlag.ControlAppDomain)]
@@ -52,7 +52,7 @@ namespace ChatLoggerCLI
               .AddJsonFile("appsettings.production.json", true, true)
               .Build();
 
-            _dataSender = new DataSender(new Uri(config["DataSender:HostName"]),
+            _dataSender = new ClientWebsocketDataSender(new Uri(config["DataSender:HostName"]),
                 config.GetSection("DataSender:ConnectionMessages").GetChildren().Select(i => i.Value),
                 config["DataSender:MessagePrefix"],
                 config["DataSender:DebugMessagePrefix"],
@@ -62,6 +62,7 @@ namespace ChatLoggerCLI
                 config["DataSender:RivenImageMessagePrefix"],
                 config["DataSender:LogMessagePrefix"],
                 config["DataSender:LogLineMessagePrefix"]);
+            _ = Task.Run(_dataSender.ConnectAsync);
 
             var logger = new Application.Logger.Logger(_dataSender, _cancellationSource.Token);
 
