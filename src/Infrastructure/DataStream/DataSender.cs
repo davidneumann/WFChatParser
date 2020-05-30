@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -291,6 +292,22 @@ namespace DataStream
                 try { AsyncSendDebugMessage("Kill acknowledged. Requesting a stop.").Wait(); }
                 catch { }
                 RequestToKill?.Invoke(this, EventArgs.Empty);
+            }
+            else if (message.Substring(message.LastIndexOf(":") + 1).Trim() == "RESTART")
+            {
+                try
+                {
+                    AsyncSendDebugMessage("Attempting to restart computer").Wait();
+                    var shutdown = new System.Diagnostics.Process()
+                    {
+                        StartInfo = new ProcessStartInfo("shutdown.exe", "/r /f /t 0")
+                    };
+                    shutdown.Start();
+                }
+                catch
+                {
+                    AsyncSendDebugMessage("FAILED TO RESTART COMPUTER!").Wait();
+                }
             }
             else if (message.Substring(message.LastIndexOf(":") + 1).Trim().StartsWith("SAVE"))
             {
