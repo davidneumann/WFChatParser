@@ -42,6 +42,8 @@ using System.Net;
 using HtmlAgilityPack;
 using Application.Utils;
 using ImageOCR.ComplexRivenParser;
+using Application.ChatLineExtractor;
+using CornerChatParser;
 
 namespace DebugCLI
 {
@@ -84,7 +86,121 @@ namespace DebugCLI
             //TestRivens();
             //ComplexRivenShim();
             //GroupShim();
-            NewDataSenderShim();
+            //NewDataSenderShim();
+            //SaveSoftMask();
+            //FindOverlappingLines();
+            //SaveAllPixelGroups();
+            //NewTrainingVerifier();
+            CornerGlyphShim();
+        }
+
+        private static void CornerGlyphShim()
+        {
+            var input = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Spaces\space_slice_0.png";
+            var b = new Bitmap(input);
+            var image = new ImageCache(b);
+            var sw = new Stopwatch();
+            sw.Start();
+            var glyphs = new ExtractedGlyph[][] {
+                LineScanner.ExtractGlyphsFromLine(image, 0),
+                LineScanner.ExtractGlyphsFromLine(image, 1),
+                LineScanner.ExtractGlyphsFromLine(image, 2),
+                LineScanner.ExtractGlyphsFromLine(image, 3),
+                LineScanner.ExtractGlyphsFromLine(image, 4) }.SelectMany(g => g).ToArray();
+            sw.Stop();
+            Console.WriteLine($"Extracted {glyphs.Length} glyphs in {sw.ElapsedMilliseconds}ms.");
+            LineScanner.SaveExtractedGlyphs(image, "glyphs", glyphs);
+            b.Dispose();
+        }
+
+        private static void NewTrainingVerifier()
+        {
+            var inputPaths = new string[] { @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Orig\Overlaps",
+                @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Orig\Spaces"};
+            var inputs = new List<string>();
+            foreach (var inputPath in inputPaths)
+            {
+                var allFiles = Directory.GetFiles(inputPath);
+                foreach (var file in allFiles.Select(f => f.Replace(".png", "").Replace(".txt", "")).Distinct())
+                {
+                    if (allFiles.Contains(file + ".png") && allFiles.Contains(file + ".txt"))
+                    {
+                        inputs.Add(file);
+                    }
+                }
+            }
+
+            var cp = new ChatParser(new DummyLogger(), DataHelper.OcrDataPathEnglish);
+            foreach (var input in inputs)
+            {
+                Console.WriteLine($"={input}=");
+                var b = new System.Drawing.Bitmap(input + ".png");
+                var lines = cp.ParseChatImage(b).Select(o => o.RawMessage).ToArray();
+
+                lines = lines.Select(l => Regex.Replace(l, @"^\[.....\]\s*[^\s]+\s+", "").Trim())
+                    .Where(l => l.ToLower() != "clear").ToArray();
+                //lines = lines.Select(l => l.Remove(0, l.IndexOf(':')+1).Trim()).ToArray();
+                var expectedLines = File.ReadAllLines(input + ".txt").Select(line => line.Trim()).ToArray();
+                if (lines.Length != expectedLines.Length)
+                    Console.WriteLine("Parsed lines and expected lines don't match!");
+                else
+                {
+                    for (int i = 0; i < lines.Length; i++)
+                    {
+                        var match = true;
+                        if (lines[i].Length != expectedLines[i].Length)
+                        {
+                            Console.WriteLine($"Line index {i} does not have expected number of characters");
+                            match = false;
+                        }
+                        else
+                        {
+                            for (int j = 0; j < lines[i].Length; j++)
+                            {
+                                if (!match)
+                                    break;
+                                if(lines[i][j] != expectedLines[i][j])
+                                {
+                                    match = false;
+                                }
+                            }
+                        }
+                        if (!match)
+                        {
+                            Console.WriteLine($"Lines index {i} does not match\n{lines[i]}\n{expectedLines[i]}\n");
+                        }
+                    }
+                }
+                b.Dispose();
+            }
+        }
+
+        private static void SaveAllPixelGroups()
+        {
+            var overlapCSV = @"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\overlaps.csv";
+            OverlapDetector.ExtractPixelGroupsOnImages(overlapCSV,
+                @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps",
+                "overlaps");
+        }
+
+        private static void SaveSoftMask()
+        {
+            //ImageCleaner.SaveSoftMask("LZ.png",
+            //    "softmask.png");
+
+            //ImageCleaner.SaveSoftMask(@"C:\Users\david\Downloads\637276927768266587.png", "softmask.png");
+
+            var inputPaths = new string[] { @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Orig\Spaces",
+                @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Orig\Overlaps"};
+            foreach (var image in inputPaths
+                .Select(path => Directory.GetFiles(path).Where(f => f.EndsWith(".png")))
+                .SelectMany(f => f))
+            {
+                Console.WriteLine(image);
+                if (!Directory.Exists("softmasks"))
+                    Directory.CreateDirectory("softmasks");
+                ImageCleaner.SaveSoftMask(image, @"softmasks\" + (new FileInfo(image)).Name);
+            }
         }
 
         private static void NewDataSenderShim()
@@ -195,12 +311,12 @@ namespace DebugCLI
                 t.Start();
             }
 
-            while(fileQueue.Count > 0)
+            while (fileQueue.Count > 0)
             {
                 Console.Write($"\rFiles completed: {files.Length - fileQueue.Count}");
                 Thread.Sleep(100);
             }
-            
+
             for (int i = 0; i < files.Length; i++)
             {
                 var file = files[i];
@@ -851,7 +967,7 @@ namespace DebugCLI
             //                            .Select(f => new FileInfo(f))
             //                            .Where(f => f.Name.StartsWith("637") && !f.Name.Contains("_white") && f.Name.EndsWith(".png"))
             //                            .Select(f => f.FullName))
-            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai").Where(f => f.EndsWith("637089844208907415.png")))
+            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps").Where(f => f.EndsWith("_3.png")))
             {
                 using (var bitmap = new Bitmap(filePath))
                 {
@@ -2092,8 +2208,8 @@ namespace DebugCLI
 
         private static void TrainOnImages()
         {
-            var sourceDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\Chinese\Spaces";
-            var outputDir = "newChineseData";
+            var sourceDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Spaces";
+            var outputDir = "newEnglishData3";
             var trainer = new OCRTrainer();
             trainer.TrainOnImages(sourceDir, outputDir);
 
@@ -2103,14 +2219,14 @@ namespace DebugCLI
 
         private static void FindOverlappingLines()
         {
-            const string sourceDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\Chinese\Overlaps";
+            const string sourceDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps";
             //if (!Directory.Exists("overlaps"))
             //    Directory.CreateDirectory("overlaps");
             //foreach (var image in Directory.GetFiles(sourceDir).Where(f => f.EndsWith(".png")))
             //{
             //    ImageCleaner.SaveSoftMask(image, Path.Combine("overlaps", (new FileInfo(image)).Name));
             //}
-            OverlapDetector.DetectOverlaps(sourceDir, DataHelper.OcrDataPathChinese);
+            OverlapDetector.DetectOverlaps(sourceDir, DataHelper.OcrDataPathEnglish);
         }
 
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
@@ -2127,10 +2243,10 @@ namespace DebugCLI
         private static int VerifyNoErrors(int verboseLevel = 0, bool fastFail = false, int xOffset = 4)
         {
             var trainingImages = new List<string>();
-            Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Validation Inputs").Where(f => f.EndsWith(".png")).ToList().ForEach(f => trainingImages.Add(f));
+            Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps").Where(f => f.EndsWith(".png")).ToList().ForEach(f => trainingImages.Add(f));
             //Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith(".png")).ToList().ForEach(f => trainingImages.Add(f));
             var trainingText = new List<string>();
-            Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Validation Inputs").Where(f => f.EndsWith(".txt")).ToList().ForEach(f => trainingText.Add(f));
+            Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps").Where(f => f.EndsWith(".txt")).ToList().ForEach(f => trainingText.Add(f));
             //Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith(".txt")).ToList().ForEach(f => trainingText.Add(f));
             //var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".png")).ToArray();
             //var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".txt")).ToArray();
@@ -2403,7 +2519,7 @@ namespace DebugCLI
     {
         public void Log(string message)
         {
-            Console.WriteLine(message);
+            //Console.WriteLine(message);
         }
     }
 
