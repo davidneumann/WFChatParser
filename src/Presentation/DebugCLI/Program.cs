@@ -44,6 +44,7 @@ using Application.Utils;
 using ImageOCR.ComplexRivenParser;
 using Application.ChatLineExtractor;
 using CornerChatParser;
+using System.Numerics;
 
 namespace DebugCLI
 {
@@ -125,9 +126,9 @@ namespace DebugCLI
                 var inputShort = input;
                 if (inputShort.Contains("\\"))
                     inputShort = input.Substring(input.LastIndexOf("\\") + 1);
-                
+
                 Console.WriteLine($"Extracing glyphs from {inputShort}.");
-                
+
                 var bitmap = new Bitmap(input + ".png");
                 var ic = new ImageCache(bitmap);
                 var textLines = File.ReadAllLines(input + ".txt").Where(l => l.ToLower() != "clear").ToArray();
@@ -157,6 +158,90 @@ namespace DebugCLI
             }
 
             Console.WriteLine($"Extracted {glyphDict.Values.SelectMany(g => g).Count()} named glyphs without error.");
+
+            var uberGlyphs = glyphDict.Select(kvp => new KeyValuePair<char, ExtractedGlyph>(kvp.Key, new ExtractedGlyph()
+            {
+                AspectRatio = glyphDict[kvp.Key].Average(glyph => glyph.AspectRatio),
+                NormalizedCorners = glyphDict[kvp.Key].SelectMany(glyph => glyph.NormalizedCorners).ToArray(),
+                GlobalGlpyhRect = new Rectangle(0, 0, glyphDict[kvp.Key].Select(g => g.GlobalGlpyhRect.Width).Max(),
+                                                      glyphDict[kvp.Key].Select(g => g.GlobalGlpyhRect.Height).Max()),
+                LineOffset = glyphDict[kvp.Key].Select(g => g.GlobalGlpyhRect.Top - g.LineOffset).Min()
+            }));
+            var finalUberGlyphs = new Dictionary<char, Glyph>();
+            var distances = new List<float>();
+            var gCount = 0;
+            foreach (var kvp in uberGlyphs)
+            {
+                var total = glyphDict[kvp.Key].Count;
+                var mask = new bool[kvp.Value.GlobalGlpyhRect.Width, kvp.Value.GlobalGlpyhRect.Height];
+                for (int x = 0; x < mask.GetLength(0); x++)
+                {
+                    for (int y = 0; y < mask.GetLength(1); y++)
+                    {
+                        var count = glyphDict[kvp.Key].Where(g =>
+                        {
+                            if (x < g.LocalDetectedCorners.GetLength(0) && y < g.LocalDetectedCorners.GetLength(1))
+                                return g.LocalDetectedCorners[x, y];
+                            else return false;
+                        }).Count();
+                        if (count > total / 2)
+                            mask[x, y] = true;
+                    }
+                }
+
+                var possibleGuys = new List<Vector2>();
+                var avgCornerCount =(int)Math.Round(glyphDict[kvp.Key].Average(g => g.NormalizedCorners.Length));
+                int[,] frequency = null;
+                if (kvp.Value.AspectRatio <= 1f)
+                    frequency = new int[avgCornerCount, (int)Math.Round(avgCornerCount / kvp.Value.AspectRatio)];
+                else
+                    frequency = new int[(int)Math.Round(avgCornerCount * kvp.Value.AspectRatio), avgCornerCount];
+                var flatFreq = new Dictionary<Point, int>();
+                foreach (var vec in kvp.Value.NormalizedCorners)
+                {
+                    var x = (int)(vec.X * (frequency.GetLength(0)-1));
+                    var y = (int)(vec.Y * (frequency.GetLength(1)-1));
+                    frequency[x, y]++;
+                    var p = new Point(x, y);
+                    if (flatFreq.ContainsKey(p))
+                        flatFreq[p]++;
+                    else
+                        flatFreq[p] = 1;
+                }
+                var topCorners = flatFreq.OrderByDescending(pair => pair.Value).Take(avgCornerCount).Select(pair => pair.Key).ToArray();
+                
+                finalUberGlyphs[kvp.Key] = new Glyph()
+                {
+                    AspectRatio = kvp.Value.AspectRatio,
+                    ReferenceWidth = kvp.Value.GlobalGlpyhRect.Width,
+                    ReferenceHeight = kvp.Value.GlobalGlpyhRect.Height,
+                    ReferenceGapFromLineTop = kvp.Value.LineOffset,
+                    Character = kvp.Key,
+                    //ReferenceCorners = mask,
+                    Corners = topCorners.Select(p => new Vector2((float)p.X / (frequency.GetLength(0) -1),
+                                                                           (float)p.Y / (frequency.GetLength(1)- 1))).ToArray()
+                };
+
+                var debug = new Bitmap(kvp.Value.GlobalGlpyhRect.Width, kvp.Value.GlobalGlpyhRect.Height);
+                for (int x = 0; x < debug.Width; x++)
+                {
+                    for (int y = 0; y < debug.Height; y++)
+                    {
+                        debug.SetPixel(x, y, Color.White);
+                    }
+                }
+                foreach (var corner in finalUberGlyphs[kvp.Key].Corners)
+                {
+                    var x = (int)Math.Round(corner.X * (debug.Width - 1));
+                    var y = (int)Math.Round(corner.Y * (debug.Height - 1));
+                    debug.SetPixel(x, y, Color.Black);
+                }
+                var fout = $"g{gCount++}.png";
+                Console.WriteLine($"Saving debug {fout}");
+                debug.Save(fout);
+                debug.Dispose();
+            }
+            File.WriteAllText("cornerDB.json", JsonConvert.SerializeObject(finalUberGlyphs.Values.ToArray()));
         }
 
         private static void CornerGlyphShim()
