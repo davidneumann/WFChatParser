@@ -91,7 +91,72 @@ namespace DebugCLI
             //FindOverlappingLines();
             //SaveAllPixelGroups();
             //NewTrainingVerifier();
-            CornerGlyphShim();
+            //CornerGlyphShim();
+            newCornerParseTrainer();
+        }
+
+        private static void newCornerParseTrainer()
+        {
+            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Spaces";
+            var allFiles = Directory.GetFiles(inputDir);
+            var inputs = allFiles.Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct();
+            var error = false;
+            foreach (var input in inputs)
+            {
+                var pic = input + ".png";
+                var txt = input + ".txt";
+                if (!allFiles.Contains(pic))
+                {
+                    Console.WriteLine($"Missing picture for {input}");
+                    error = true;
+                }
+                if (!allFiles.Contains(txt))
+                {
+                    Console.WriteLine($"Missing text for {input}");
+                    error = true;
+                }
+            }
+            if (error)
+                return;
+
+            var glyphDict = new Dictionary<char, List<ExtractedGlyph>>();
+            foreach (var input in inputs)
+            {
+                var inputShort = input;
+                if (inputShort.Contains("\\"))
+                    inputShort = input.Substring(input.LastIndexOf("\\") + 1);
+                
+                Console.WriteLine($"Extracing glyphs from {inputShort}.");
+                
+                var bitmap = new Bitmap(input + ".png");
+                var ic = new ImageCache(bitmap);
+                var textLines = File.ReadAllLines(input + ".txt").Where(l => l.ToLower() != "clear").ToArray();
+                var glyphLines = textLines.Select((u, i) => LineScanner.ExtractGlyphsFromLine(ic, i)).ToArray();
+                for (int i = 0; i < textLines.Length; i++)
+                {
+                    var cleanText = textLines[i].Replace(" ", "").Trim();
+                    if (cleanText.Length != glyphLines[i].Length)
+                    {
+                        Console.WriteLine($"Fatal error in {inputShort}! Glyph text count mistmatch on line index {i}\n{textLines[i]}");
+                        Console.WriteLine("Dumping glyphs to training_errors\\");
+                        LineScanner.SaveExtractedGlyphs(ic, "training_errors", glyphLines[i]);
+                        throw new Exception("Input mismatch");
+                    }
+
+                    for (int j = 0; j < cleanText.Length; j++)
+                    {
+                        char c = cleanText[j];
+                        if (!glyphDict.ContainsKey(c))
+                        {
+                            glyphDict[c] = new List<ExtractedGlyph>();
+                        }
+                        glyphDict[c].Add(glyphLines[i][j]);
+                    }
+                }
+                bitmap.Dispose();
+            }
+
+            Console.WriteLine($"Extracted {glyphDict.Values.SelectMany(g => g).Count()} named glyphs without error.");
         }
 
         private static void CornerGlyphShim()
@@ -102,11 +167,12 @@ namespace DebugCLI
             var sw = new Stopwatch();
             sw.Start();
             var glyphs = new ExtractedGlyph[][] {
-                LineScanner.ExtractGlyphsFromLine(image, 0),
-                LineScanner.ExtractGlyphsFromLine(image, 1),
-                LineScanner.ExtractGlyphsFromLine(image, 2),
-                LineScanner.ExtractGlyphsFromLine(image, 3),
-                LineScanner.ExtractGlyphsFromLine(image, 4) }.SelectMany(g => g).ToArray();
+                LineScanner.ExtractGlyphsFromLine(image, 13),
+                //LineScanner.ExtractGlyphsFromLine(image, 1),
+                //LineScanner.ExtractGlyphsFromLine(image, 2),
+                //LineScanner.ExtractGlyphsFromLine(image, 3),
+                //LineScanner.ExtractGlyphsFromLine(image, 4) 
+            }.SelectMany(g => g).ToArray();
             sw.Stop();
             Console.WriteLine($"Extracted {glyphs.Length} glyphs in {sw.ElapsedMilliseconds}ms.");
             LineScanner.SaveExtractedGlyphs(image, "glyphs", glyphs);
@@ -159,7 +225,7 @@ namespace DebugCLI
                             {
                                 if (!match)
                                     break;
-                                if(lines[i][j] != expectedLines[i][j])
+                                if (lines[i][j] != expectedLines[i][j])
                                 {
                                     match = false;
                                 }
@@ -190,8 +256,8 @@ namespace DebugCLI
 
             //ImageCleaner.SaveSoftMask(@"C:\Users\david\Downloads\637276927768266587.png", "softmask.png");
 
-            var inputPaths = new string[] { @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Orig\Spaces",
-                @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Orig\Overlaps"};
+            var inputPaths = new string[] { @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Spaces",
+                @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps"};
             foreach (var image in inputPaths
                 .Select(path => Directory.GetFiles(path).Where(f => f.EndsWith(".png")))
                 .SelectMany(f => f))

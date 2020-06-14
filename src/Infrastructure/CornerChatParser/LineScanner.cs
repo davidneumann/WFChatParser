@@ -31,9 +31,9 @@ namespace CornerChatParser
                 {
                     validPixels.AddRange(newValidPixels);
                     BlacklistPixels(localBlacklist, newValidPixels, lineRect);
-                    var leftmostX = newValidPixels.Min(p => p.X);
-                    var rightmostX = newValidPixels.Max(p => p.X);
-                    var bototmMost = newValidPixels.Where(p => p.X == leftmostX).Max(p => p.Y);
+                    var leftmostX = validPixels.Min(p => p.X);
+                    var rightmostX = validPixels.Max(p => p.X);
+                    var bototmMost = validPixels.Where(p => p.X == leftmostX).Max(p => p.Y);
                     nextPoint = FindNextPoint(image, lineRect, localBlacklist, leftmostX);
                     if (nextPoint.X > rightmostX)
                         break;
@@ -67,6 +67,11 @@ namespace CornerChatParser
         public static void SaveExtractedGlyphs(ImageCache image, string outputDir, ExtractedGlyph[] glyphs)
         {
             var glyphsSaved = 0;
+
+            if (Directory.Exists(outputDir))
+                Directory.Delete(outputDir, true);
+            Directory.CreateDirectory(outputDir);
+
             foreach (var glyph in glyphs)
             {
                 var bitmap = new Bitmap(glyph.GlobalGlpyhRect.Width, glyph.GlobalGlpyhRect.Height);
@@ -79,9 +84,6 @@ namespace CornerChatParser
                         bitmap.SetPixel(x, y, c);
                     }
                 }
-
-                if (!Directory.Exists(outputDir))
-                    Directory.CreateDirectory(outputDir);
 
                 var output = System.IO.Path.Combine(outputDir, $"glyph_{glyphsSaved++}.png");
                 bitmap.Save(output);
