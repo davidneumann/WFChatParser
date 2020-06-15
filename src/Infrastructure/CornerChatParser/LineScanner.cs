@@ -41,7 +41,6 @@ namespace CornerChatParser
                 }
 
                 var newGlyph = GlyphExtractor.ExtractGlyphFromPixels(validPixels, lineRect);
-                newGlyph.CenterLines = GlyphIdentifier.GetVerticalLines(image, newGlyph, newGlyph.GlobalGlpyhRect.Left + newGlyph.GlobalGlpyhRect.Width / 2 + 1);
                 results.Add(newGlyph);
 
                 globalX = lastGlobalX = newGlyph.GlobalGlpyhRect.Left;

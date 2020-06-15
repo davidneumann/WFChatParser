@@ -18,6 +18,5 @@ namespace CornerChatParser
         public int PixelsFromTopOfLine;
         //public Point GlobalTopLeft;
         public float AspectRatio;
-        public int CenterLines;
     }
 }

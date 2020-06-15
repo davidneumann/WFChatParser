@@ -17,7 +17,6 @@ namespace CornerChatParser
         public float ReferenceGapFromLineTop;
         public float VerticalWeight;
         public float HorizontalWeight;
-        internal int CenterLines;
 
         public Glyph()
         {

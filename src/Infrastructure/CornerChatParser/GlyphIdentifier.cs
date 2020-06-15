@@ -157,11 +157,6 @@ namespace CornerChatParser
 
         private static float ScoreGlyph(ExtractedGlyph extracted, Glyph refGlyph, ImageCache image)
         {
-            if (refGlyph.Character == 'G')
-            {
-                if (CheckG(extracted, image))
-                    return float.MinValue;
-            }
             var distanceSum = 0f;
             foreach (var refCorner in refGlyph.Corners)
             {
@@ -188,63 +183,6 @@ namespace CornerChatParser
                 distanceSum += minDistance;
             }
             return distanceSum;
-        }
-
-        private static bool CheckG(ExtractedGlyph extracted, ImageCache image)
-        {
-            var g = GlyphDatabase.AllGLyphs.First(glyph => glyph.Character == 'G');
-            if ((extracted.GlobalGlpyhRect.Width >= g.ReferenceWidth - 1
-                && extracted.GlobalGlpyhRect.Width <= g.ReferenceWidth))
-                return false;
-
-            // Line down slightly off center should hit 3 and rightmost side shoudl have a gap
-            var rightSideLinesCount = GetVerticalLines(image, extracted, extracted.GlobalGlpyhRect.Right - 3);
-
-            var bottomRightPresent = false;
-            for (int x = extracted.GlobalGlpyhRect.Left + extracted.GlobalGlpyhRect.Width / 2; x < extracted.GlobalGlpyhRect.Right; x++)
-            {
-                if (bottomRightPresent)
-                    break;
-                for (int y = extracted.GlobalGlpyhRect.Top - 1 + extracted.GlobalGlpyhRect.Height / 2
-                       ; y <= extracted.GlobalGlpyhRect.Bottom - extracted.GlobalGlpyhRect.Height / 2 + 1; y++)
-                {
-                    if (image[x, y] > 0)
-                    {
-                        bottomRightPresent = true;
-                        break;
-                    }
-                }
-            }
-
-            // Line down the left should have no gaps
-            var leftHasGap = false;
-            for (int y = extracted.GlobalGlpyhRect.Top + 7; y < extracted.GlobalGlpyhRect.Top + 17; y++)
-            {
-                if(image[extracted.GlobalGlpyhRect.Left, y] <= 0)
-                {
-                    leftHasGap = true;
-                    break;
-                }
-            }
-
-            var horizLinesHit = 0;
-            var onLine = false;
-            for (int y = extracted.GlobalGlpyhRect.Top; y < extracted.GlobalGlpyhRect.Bottom; y++)
-            {
-                var pixelPreset = image[extracted.GlobalGlpyhRect.Left + 2 + extracted.GlobalGlpyhRect.Width / 2, y] > 0;
-                if (pixelPreset && !onLine)
-                {
-                    onLine = true;
-                    horizLinesHit++;
-                }
-                else if (!pixelPreset && onLine)
-                    onLine = false;
-            }
-
-            if (rightSideLinesCount == 2 && horizLinesHit == 3 && !leftHasGap && bottomRightPresent)
-                return true;
-
-            return false;
         }
 
         public static int GetVerticalLines(ImageCache image, ExtractedGlyph extracted, int xOffset)
@@ -670,7 +608,7 @@ namespace CornerChatParser
             return smalls.Where(g => g.ReferenceGapFromLineTop - 1 >= extracted.PixelsFromTopOfLine);
         }
 
-        private static bool NormalValidityCheck(Glyph g, ExtractedGlyph extracted, ImageCache image)
+        private static bool NormalValidityCheck(Glyph g, ExtractedGlyph extracted)
         {
             var t = Math.Min(1f, (Math.Min(extracted.GlobalGlpyhRect.Width, extracted.GlobalGlpyhRect.Height) - 2f) / 25f);
             var aspectAdjust = Vector2.Lerp(new Vector2(0.4f, 0f), new Vector2(0.15f, 0f), t).X;
@@ -680,8 +618,7 @@ namespace CornerChatParser
                    extracted.GlobalGlpyhRect.Height >= g.ReferenceHeight - 1 &&
                    extracted.GlobalGlpyhRect.Height <= g.ReferenceHeight + 1 &&
                    extracted.GlobalGlpyhRect.Top - extracted.LineOffset >= g.ReferenceGapFromLineTop - 1 &&
-                   extracted.GlobalGlpyhRect.Top - extracted.LineOffset <= g.ReferenceGapFromLineTop + 1 &&
-                   GetVerticalLines(image, extracted, extracted.GlobalGlpyhRect.Width / 2 + 1 + extracted.GlobalGlpyhRect.Left) == g.CenterLines;
+                   extracted.GlobalGlpyhRect.Top - extracted.LineOffset <= g.ReferenceGapFromLineTop + 1;
         }
 
         private static float Lerp(float min, float max, float t)

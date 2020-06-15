@@ -219,8 +219,7 @@ namespace DebugCLI
                 GlobalGlpyhRect = new Rectangle(0, 0, glyphDict[kvp.Key].Select(g => g.GlobalGlpyhRect.Width).Max(),
                                                       glyphDict[kvp.Key].Select(g => g.GlobalGlpyhRect.Height).Max()),
                 LineOffset = glyphDict[kvp.Key].Select(g => g.GlobalGlpyhRect.Top - g.LineOffset).Min(),
-                PixelsFromTopOfLine = (int)Math.Round(glyphDict[kvp.Key].Select(g => g.GlobalGlpyhRect.Top - g.LineOffset).Average()),
-                CenterLines = glyphDict[kvp.Key].Max(g => g.CenterLines)
+                PixelsFromTopOfLine = (int)Math.Round(glyphDict[kvp.Key].Select(g => g.GlobalGlpyhRect.Top - g.LineOffset).Average())
             }));
             var finalUberGlyphs = new Dictionary<char, Glyph>();
             var distances = new List<float>();
