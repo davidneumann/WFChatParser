@@ -15,7 +15,9 @@ namespace CornerChatParser
         //public int Height;
         //public int InterLineOffset;
         public int LineOffset;
+        public int PixelsFromTopOfLine;
         //public Point GlobalTopLeft;
         public float AspectRatio;
+        public int CenterLines;
     }
 }

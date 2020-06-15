@@ -13,6 +13,7 @@ using SixLabors.ImageSharp.Processing;
 using SixLabors.Primitives;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -151,22 +152,22 @@ namespace WFImageParser
                     }
 
                     var color = image.GetColor(maxPoint.X, maxPoint.Y);
-                    if (color == ImageCache.ChatColor.Ignored)
+                    if (color == ChatColor.Ignored)
                     {
                         _logger.Log("Ignored color detected while parsing chat line");
                         return null;
                     }
-                    //if (color == ImageCache.ChatColor.Redtext)
+                    //if (color == ChatColor.Redtext)
                     //{
                     //    result = new RedtextLineResult();
                     //    currentLineType = LineType.RedText;
                     //}
-                    if (color == ImageCache.ChatColor.Text || color == ImageCache.ChatColor.ItemLink)
+                    if (color == ChatColor.Text || color == ChatColor.ItemLink)
                     {
                         result = new ChatMessageLineResult();
                         currentLineType = LineType.Continuation;
                     }
-                    else if (color == ImageCache.ChatColor.ChatTimestampName)
+                    else if (color.IsTimestamp())
                     {
                         result = new ChatMessageLineResult();
                         currentLineType = LineType.NewMessage;
@@ -235,8 +236,8 @@ namespace WFImageParser
                                 safeName = safeName.Split(',').First();
                             if (
                                 (
-                                    lastColor == ChatColor.ChatTimestampName
-                                    && image.GetColor(firstPixel.X, firstPixel.Y) != ChatColor.ChatTimestampName
+                                    lastColor.IsTimestamp()
+                                    && !image.GetColor(firstPixel.X, firstPixel.Y).IsTimestamp()
                                     && bestFit.Item2.Name != "colon"
                                 )
                                 ||
@@ -794,7 +795,7 @@ namespace WFImageParser
                         for (int x = wordStartX + _glyphDatabase.MinCharWidth; x < wordStartX + _glyphDatabase.MaxCharWidth && x < image.Width; x++)
                         {
                             var hsvPixel = image.GetHsv(x, y);
-                            if (image.GetColor(x, y) == ImageCache.ChatColor.ItemLink)
+                            if (image.GetColor(x, y) == ChatColor.ItemLink)
                             {
                                 foundRiven = true;
                                 point = new Point(x, y);
@@ -819,7 +820,7 @@ namespace WFImageParser
         {
             var targetWidth = targetMask.Width + 2;
 
-            var cannidates = _glyphDatabase.KnownGlyphs;
+            var cannidates = _glyphDatabase.KnownGlyphs.Where(g => g.Width <= targetMask.Width + 2);
             //Try to only look at similiar sized characters when we are looking at a medium width character.
             //if (targetWidth <= _glyphDatabase.MaxCharWidth / 2 && targetWidth > Math.Ceiling(_glyphDatabase.MaxCharWidth * 0.15))
             //    cannidates = _glyphDatabase.KnownGlyphs.Where(c => c.Width >= targetWidth * 0.8f && c.Width <= targetWidth * 1.2f).ToList();
@@ -1068,21 +1069,21 @@ namespace WFImageParser
                     }
 
                     var color = image.GetColor(maxPoint.X, maxPoint.Y);
-                    if (color == ImageCache.ChatColor.Ignored)
+                    if (color == ChatColor.Ignored)
                     {
                         _logger.Log("Ignored color detected while parsing chat line");
                         return null;
                     }
-                    //if (color == ImageCache.ChatColor.Redtext)
+                    //if (color == ChatColor.Redtext)
                     //{
                     //    result = new RedtextLineResult();
                     //    currentLineType = LineType.RedText;
                     //}
-                    if (color == ImageCache.ChatColor.Text || color == ImageCache.ChatColor.ItemLink)
+                    if (color == ChatColor.Text || color == ChatColor.ItemLink)
                     {
                         return null;
                     }
-                    else if (color == ImageCache.ChatColor.ChatTimestampName)
+                    else if (color.IsTimestamp())
                     {
                         currentLineType = LineType.NewMessage;
                     }

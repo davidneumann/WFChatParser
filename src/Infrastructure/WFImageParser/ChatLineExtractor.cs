@@ -35,7 +35,7 @@ namespace WFImageParser
                         int cacheX = messageRectangle.Left + x;
                         int cacheY = lineOffsets[i] + y;
                         var cacheColor = cache.GetColor(cacheX, cacheY);
-                        if (cacheColor == ImageCache.ChatColor.ChatTimestampName)
+                        if (cacheColor.IsTimestamp())
                             results[i].SetPixel(x, y, Color.White);
                         else
                         {

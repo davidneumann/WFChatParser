@@ -93,7 +93,60 @@ namespace DebugCLI
             //SaveAllPixelGroups();
             //NewTrainingVerifier();
             //CornerGlyphShim();
-            newCornerParseTrainer();
+            //newCornerParseTrainer();
+            CornerParsingShim();
+        }
+
+        private static void CornerParsingShim()
+        {
+            var parser = new CornerChatParser.CornerChatParser();
+            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Spaces";
+            var allFiles = Directory.GetFiles(inputDir);
+            var sw = new Stopwatch();
+            sw.Start();
+            var filesDone = 0;
+            foreach (var input in allFiles.Select(f => f.Substring(0, f.LastIndexOf("."))).Where(f => f.EndsWith("_12")).Distinct())
+            {
+                filesDone++;
+                Console.WriteLine($"={input.Substring(input.LastIndexOf('\\') + 1)}=");
+                var inputTxt = input + ".txt";
+                var inputImg = input + ".png";
+                var b = new Bitmap(inputImg);
+                var chatLines = parser.ParseChatImage(b, false, false, 27).Select(line => line.RawMessage).ToArray();
+                var expectedLines = File.ReadAllLines(inputTxt).Select(line => line.Replace(" ", "").Trim()).ToArray();
+                if (chatLines.Length != expectedLines.Length)
+                {
+                    Console.WriteLine("Expected lines and parsed lines do not line up!");
+                }
+                for (int i = 0; i < expectedLines.Length; i++)
+                {
+                    var isError = false;
+                    if (expectedLines[i].Length != chatLines[i].Length)
+                    {
+                        isError = true;
+                        Console.WriteLine($"Expected {expectedLines[i].Length} characters but got {chatLines[i].Length}.");
+                    }
+                    if (!isError)
+                    {
+                        for (int j = 0; j < expectedLines[i].Length; j++)
+                        {
+                            if (expectedLines[i][j] != chatLines[i][j])
+                            {
+                                Console.WriteLine("Lines do not line up!");
+                                isError = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (isError)
+                    {
+                        Console.WriteLine($"{chatLines[i]}\n{expectedLines[i]}\n");
+                    }
+                }
+                b.Dispose();
+            }
+            sw.Stop();
+            Console.WriteLine($"Parsed {filesDone} files in {sw.Elapsed.TotalSeconds}s.");
         }
 
         private static void newCornerParseTrainer()
@@ -165,7 +218,9 @@ namespace DebugCLI
                 NormalizedCorners = glyphDict[kvp.Key].SelectMany(glyph => glyph.NormalizedCorners).ToArray(),
                 GlobalGlpyhRect = new Rectangle(0, 0, glyphDict[kvp.Key].Select(g => g.GlobalGlpyhRect.Width).Max(),
                                                       glyphDict[kvp.Key].Select(g => g.GlobalGlpyhRect.Height).Max()),
-                LineOffset = glyphDict[kvp.Key].Select(g => g.GlobalGlpyhRect.Top - g.LineOffset).Min()
+                LineOffset = glyphDict[kvp.Key].Select(g => g.GlobalGlpyhRect.Top - g.LineOffset).Min(),
+                PixelsFromTopOfLine = (int)Math.Round(glyphDict[kvp.Key].Select(g => g.GlobalGlpyhRect.Top - g.LineOffset).Average()),
+                CenterLines = glyphDict[kvp.Key].Max(g => g.CenterLines)
             }));
             var finalUberGlyphs = new Dictionary<char, Glyph>();
             var distances = new List<float>();
@@ -190,17 +245,21 @@ namespace DebugCLI
                 }
 
                 var possibleGuys = new List<Vector2>();
-                var avgCornerCount =(int)Math.Round(glyphDict[kvp.Key].Average(g => g.NormalizedCorners.Length));
+                var rect = kvp.Value.GlobalGlpyhRect;
+                //var cornerCount = (int)Math.Round(glyphDict[kvp.Key].Average(g => g.NormalizedCorners.Length) / 2);
+                //Math.Max(4, (int)(Math.Round(Math.Log(Math.Pow(rect.Width, 2) * Math.Pow(rect.Height, 2)))));  
+                //Math.Max(4, (int)Math.Round(Math.Sqrt(kvp.Value.GlobalGlpyhRect.Width * kvp.Value.GlobalGlpyhRect.Height)));
+                var cornerCount = glyphDict[kvp.Key].Max(g => g.NormalizedCorners.Length);
                 int[,] frequency = null;
                 if (kvp.Value.AspectRatio <= 1f)
-                    frequency = new int[avgCornerCount, (int)Math.Round(avgCornerCount / kvp.Value.AspectRatio)];
+                    frequency = new int[cornerCount, (int)Math.Round(cornerCount / kvp.Value.AspectRatio)];
                 else
-                    frequency = new int[(int)Math.Round(avgCornerCount * kvp.Value.AspectRatio), avgCornerCount];
+                    frequency = new int[(int)Math.Round(cornerCount * kvp.Value.AspectRatio), cornerCount];
                 var flatFreq = new Dictionary<Point, int>();
                 foreach (var vec in kvp.Value.NormalizedCorners)
                 {
-                    var x = (int)(vec.X * (frequency.GetLength(0)-1));
-                    var y = (int)(vec.Y * (frequency.GetLength(1)-1));
+                    var x = (int)(vec.X * (frequency.GetLength(0) - 1));
+                    var y = (int)(vec.Y * (frequency.GetLength(1) - 1));
                     frequency[x, y]++;
                     var p = new Point(x, y);
                     if (flatFreq.ContainsKey(p))
@@ -208,40 +267,29 @@ namespace DebugCLI
                     else
                         flatFreq[p] = 1;
                 }
-                var topCorners = flatFreq.OrderByDescending(pair => pair.Value).Take(avgCornerCount).Select(pair => pair.Key).ToArray();
-                
+                var mid = new Vector2(0.5f, 0.5f);
+                var closetToMid = flatFreq.Where(pair => pair.Value > 0).OrderBy(pair => Vector2.Distance(mid, PointToV2(pair.Key, frequency.GetLength(0), frequency.GetLength(1)))).First();
+                var topCorners = flatFreq.OrderByDescending(pair => pair.Value).Take(cornerCount).Select(pair => pair.Key).ToArray();
+
                 finalUberGlyphs[kvp.Key] = new Glyph()
                 {
                     AspectRatio = kvp.Value.AspectRatio,
                     ReferenceWidth = kvp.Value.GlobalGlpyhRect.Width,
                     ReferenceHeight = kvp.Value.GlobalGlpyhRect.Height,
-                    ReferenceGapFromLineTop = kvp.Value.LineOffset,
+                    ReferenceGapFromLineTop = kvp.Value.PixelsFromTopOfLine,
                     Character = kvp.Key,
                     //ReferenceCorners = mask,
-                    Corners = topCorners.Select(p => new Vector2((float)p.X / (frequency.GetLength(0) -1),
-                                                                           (float)p.Y / (frequency.GetLength(1)- 1))).ToArray()
+                    Corners = topCorners.Select(p => new Vector2((float)p.X / (frequency.GetLength(0) - 1),
+                                                                 (float)p.Y / (frequency.GetLength(1) - 1)))
+                        .Append(PointToV2(closetToMid.Key, frequency.GetLength(0), frequency.GetLength(1))).ToArray()
                 };
-
-                var debug = new Bitmap(kvp.Value.GlobalGlpyhRect.Width, kvp.Value.GlobalGlpyhRect.Height);
-                for (int x = 0; x < debug.Width; x++)
-                {
-                    for (int y = 0; y < debug.Height; y++)
-                    {
-                        debug.SetPixel(x, y, Color.White);
-                    }
-                }
-                foreach (var corner in finalUberGlyphs[kvp.Key].Corners)
-                {
-                    var x = (int)Math.Round(corner.X * (debug.Width - 1));
-                    var y = (int)Math.Round(corner.Y * (debug.Height - 1));
-                    debug.SetPixel(x, y, Color.Black);
-                }
-                var fout = $"g{gCount++}.png";
-                Console.WriteLine($"Saving debug {fout}");
-                debug.Save(fout);
-                debug.Dispose();
             }
             File.WriteAllText("cornerDB.json", JsonConvert.SerializeObject(finalUberGlyphs.Values.ToArray()));
+        }
+
+        private static Vector2 PointToV2(Point p, int width, int height)
+        {
+            return new Vector2((float)p.X / (width - 1), (float)p.Y / (height - 1));
         }
 
         private static void CornerGlyphShim()
@@ -721,7 +769,7 @@ namespace DebugCLI
         }
         private static void GlyphAudit()
         {
-            var eGD = new GlyphDatabase(DataHelper.OcrDataPathEnglish);
+            var eGD = new WFImageParser.GlyphRecognition.GlyphDatabase(DataHelper.OcrDataPathEnglish);
 
             //Find smallest known leftmost glyph that can overlap
             //Find the lowest connective tissue

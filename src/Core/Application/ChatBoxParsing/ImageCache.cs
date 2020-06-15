@@ -12,7 +12,7 @@ using System.Text;
 
 namespace Application.ChatLineExtractor
 {
-    public class ImageCache
+    public partial class ImageCache
     {
         private Image<Rgba32> _image;
         private float[,] _valueMap;
@@ -48,30 +48,38 @@ namespace Application.ChatLineExtractor
                 {
                     var hsvPixel = _converter.ToHsv(_image[x, y]);
                     var v = hsvPixel.V;
-                    //A pure white pixel behind the chat box will have a v of 0.251
-                    //We need to remove this from everything
-                    const float backgroundNoiseValue = 0.251f;
-                    v -= backgroundNoiseValue;
 
                     var color = GetColor(x, y);
-                    if (color == ChatColor.Unknown || color == ChatColor.Redtext)
-                        v = 0;
-                    else if (color == ChatColor.ChatTimestampName)
+                    if (color == ChatColor.ChatTimestampName)
                     {
-                        //Timestamps and username max out at 0.8 before being drained by background
-                        v = Math.Min(1f, (v / (0.8f - backgroundNoiseValue)));
+                        //Timestamps and username max out at 0.8
+                        v = Math.Min(1f, (v / 0.808f));
+                        //if (v < 0.31)
+                        //    v = 0;
                     }
                     else if (color == ChatColor.Text)
-                        v = Math.Min(1f, (v / (0.937f - backgroundNoiseValue)));
+                    {
+                        v = Math.Min(1f, (v / 0.937f));
+                        //if (v < 0.267)
+                    }
+                    else if (color == ChatColor.ClanTimeStampName)
+                    {
+                        v = Math.Min(1f, v / 0.7f);
+                        //if (v < 0.358)
+                        //    v = 0;
+                    }
                     else if (color == ChatColor.ItemLink)
-                        v = Math.Min(1f, (v / (1f - backgroundNoiseValue)));
-                    //else if (color == ChatColor.Redtext)
-                    //    v += 0.3f;
+                    {
+                        //if (v < 0.251)
+                        //    v = 0;
+                    }
+                    else
+                        v = 0;
 
-                    //Drop all now normalized Vs below our min treshhold.
-                    //const float minTreshold = 0.4f;
-                    //v = Math.Max(0, (v - minTreshold)) / (1f - minTreshold);
-                    _valueMap[x, y] = v;
+                    if (v < 0.85f)
+                        v = 0;
+
+                    _valueMap[x, y] = Math.Max(0f, Math.Min(v, 1f));
                     _valueMapMask[x, y] = true;
                 }
                 return _valueMap[x, y];
@@ -91,27 +99,19 @@ namespace Application.ChatLineExtractor
             var hsvPixel = GetHsv(x, y);
 
 
-            if ((hsvPixel.H >= 175 && hsvPixel.H <= 190)
-                && hsvPixel.S > 0.1) //green
+            if ((hsvPixel.H >= 177 && hsvPixel.H <= 187)
+                && hsvPixel.S >= 0.31 && hsvPixel.S <= 0.40) //green
                 return ChatColor.ChatTimestampName;
-            if (hsvPixel.S < 0.3) //white
+            if (hsvPixel.S < 0.1 && hsvPixel.V >= 0.22) //white
                 return ChatColor.Text;
-            if (hsvPixel.H >= 190 && hsvPixel.H <= 210 && hsvPixel.V >= 0.25) // blue
+            if (hsvPixel.H >= 190 && hsvPixel.H <= 200 && hsvPixel.S >= 0.74) // blue
                 return ChatColor.ItemLink;
             if ((hsvPixel.H <= 1 || hsvPixel.H >= 359) && hsvPixel.S >= 0.7f && hsvPixel.S <= 0.8f) //redtext
                 return ChatColor.Ignored;
+            if (hsvPixel.H >= 160 && hsvPixel.H <= 170 && hsvPixel.S >= 0.7 && hsvPixel.S <= 0.80)
+                return ChatColor.ClanTimeStampName;
 
             return ChatColor.Unknown;
-        }
-
-        public enum ChatColor
-        {
-            Unknown,
-            ChatTimestampName,
-            Redtext,
-            Text,
-            ItemLink,
-            Ignored
         }
 
         //internal Hsv GetHsv(int x, int y)

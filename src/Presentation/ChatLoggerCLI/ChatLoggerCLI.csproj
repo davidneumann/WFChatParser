@@ -42,4 +42,8 @@
     </None>
   </ItemGroup>
 
+  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+    <Exec Command="xcopy /y /e /h &quot;$(ProjectDir)..\..\Core\Application\data\databases\*&quot; &quot;$(OutDir)data\&quot;" />
+  </Target>
+
 </Project>
