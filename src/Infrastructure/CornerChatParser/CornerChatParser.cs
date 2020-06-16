@@ -2,6 +2,7 @@
 using Application.Interfaces;
 using Application.LineParseResult;
 using CornerChatParser.Extraction;
+using CornerChatParser.Recognition;
 using System;
 using System.Collections.Generic;
 using System.Drawing;

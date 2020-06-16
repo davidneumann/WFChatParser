@@ -8,7 +8,7 @@ using System.Numerics;
 using System.Text;
 using WebSocketSharp;
 
-namespace CornerChatParser.Extraction
+namespace CornerChatParser.Recognition
 {
     public static class GlyphIdentifier
     {
