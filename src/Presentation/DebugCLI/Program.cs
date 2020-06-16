@@ -176,42 +176,7 @@ namespace DebugCLI
             if (error)
                 return;
 
-            var glyphDict = new Dictionary<char, List<ExtractedGlyph>>();
-            foreach (var input in inputs)
-            {
-                var inputShort = input;
-                if (inputShort.Contains("\\"))
-                    inputShort = input.Substring(input.LastIndexOf("\\") + 1);
-
-                Console.WriteLine($"Extracing glyphs from {inputShort}.");
-
-                var bitmap = new Bitmap(input + ".png");
-                var ic = new ImageCache(bitmap);
-                var textLines = File.ReadAllLines(input + ".txt").Where(l => l.ToLower() != "clear").ToArray();
-                var glyphLines = textLines.Select((u, i) => LineScanner.ExtractGlyphsFromLine(ic, i)).ToArray();
-                for (int i = 0; i < textLines.Length; i++)
-                {
-                    var cleanText = textLines[i].Replace(" ", "").Trim();
-                    if (cleanText.Length != glyphLines[i].Length)
-                    {
-                        Console.WriteLine($"Fatal error in {inputShort}! Glyph text count mistmatch on line index {i}\n{textLines[i]}");
-                        Console.WriteLine("Dumping glyphs to training_errors\\");
-                        LineScanner.SaveExtractedGlyphs(ic, "training_errors", glyphLines[i]);
-                        throw new Exception("Input mismatch");
-                    }
-
-                    for (int j = 0; j < cleanText.Length; j++)
-                    {
-                        char c = cleanText[j];
-                        if (!glyphDict.ContainsKey(c))
-                        {
-                            glyphDict[c] = new List<ExtractedGlyph>();
-                        }
-                        glyphDict[c].Add(glyphLines[i][j]);
-                    }
-                }
-                bitmap.Dispose();
-            }
+            var glyphDict = TrainingDataExtractor.ExtractGlyphs(inputs.Select(input => new TrainingInput(input + ".png", input + ".txt")));
 
             Console.WriteLine($"Extracted {glyphDict.Values.SelectMany(g => g).Count()} named glyphs without error.");
 
