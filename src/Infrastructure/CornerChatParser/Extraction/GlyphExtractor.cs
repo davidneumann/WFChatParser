@@ -58,13 +58,13 @@ namespace CornerChatParser.Extraction
                 cache[pixel.X - lineRect.Left, pixel.Y - lineRect.Top] = true;
                 currentCacheMaxX = Math.Max(currentCacheMaxX, pixel.X);
 
-                for (int globalX = Math.Max(lineRect.Left, pixel.X - 2); globalX <= Math.Min(lineRect.Right-1, pixel.X + 2); globalX++)
+                for (int globalX = Math.Max(lineRect.Left, pixel.X - 2); globalX <= Math.Min(lineRect.Right - 1, pixel.X + 2); globalX++)
                 {
-                    for (int globalY = Math.Max(lineRect.Top, pixel.Y - 2); globalY <= Math.Min(lineRect.Bottom-1, pixel.Y + 2); globalY++)
+                    for (int globalY = Math.Max(lineRect.Top, pixel.Y - 2); globalY <= Math.Min(lineRect.Bottom - 1, pixel.Y + 2); globalY++)
                     {
-                        if(!cache[globalX-lineRect.Left, globalY - lineRect.Top] && 
+                        if (!cache[globalX - lineRect.Left, globalY - lineRect.Top] &&
                             !localBlacklist[globalX - lineRect.Left, globalY - lineRect.Top] &&
-                            image[globalX,globalY] > 0f && 
+                            image[globalX, globalY] > 0f &&
                             PointsInRange(pixel, globalX, globalY))
                         {
                             cache[globalX - lineRect.Left, globalY - lineRect.Top] = true;
@@ -97,7 +97,78 @@ namespace CornerChatParser.Extraction
                 minGlobalY = Math.Min(p.Y, minGlobalY);
                 maxGlobalY = Math.Max(p.Y, maxGlobalY);
             }
+            List<Point> corners = GetCorners(lineRect, minGlobalX, maxGlobalX, minGlobalY, maxGlobalY);
+            List<Point> emptyPixels = GetEmpties(lineRect, minGlobalX, maxGlobalX, minGlobalY, maxGlobalY);
 
+            var extractedGlobalMinX = maxGlobalX;
+            var extractedGlobalMaxX = minGlobalX;
+            var extractedGlobalMinY = maxGlobalY;
+            var extractedGlobalMaxY = minGlobalY;
+            foreach (var p in corners)
+            {
+                extractedGlobalMinX = Math.Min(p.X, extractedGlobalMinX);
+                extractedGlobalMaxX = Math.Max(p.X, extractedGlobalMaxX);
+                extractedGlobalMinY = Math.Min(p.Y, extractedGlobalMinY);
+                extractedGlobalMaxY = Math.Max(p.Y, extractedGlobalMaxY);
+            }
+            var width = extractedGlobalMaxX - extractedGlobalMinX + 1;
+            var height = extractedGlobalMaxY - extractedGlobalMinY + 1;
+
+            var normalizedCorners = corners.Select(p => new Vector2((p.X - extractedGlobalMinX) / (float)(width - 1),
+                                                                    (p.Y - extractedGlobalMinY) / (float)(height - 1)));
+            var normalizedPixels = validPixels.Select(p => new Vector2((p.X - extractedGlobalMinX) / (float)(width - 1),
+                                                                    (p.Y - extractedGlobalMinY) / (float)(height - 1)));
+            var normalizedEmpties = emptyPixels.Select(p => new Vector2((p.X - extractedGlobalMinX) / (float)(width - 1),
+                                                                    (p.Y - extractedGlobalMinY) / (float)(height - 1)));
+
+            var localCorners = new bool[width, height];
+            foreach (var p in corners)
+            {
+                localCorners[p.X - extractedGlobalMinX, p.Y - extractedGlobalMinY] = true;
+            }
+
+            var glyphRect = new Rectangle(extractedGlobalMinX, extractedGlobalMinY, width, height);
+            var result = new ExtractedGlyph()
+            {
+                LocalDetectedCorners = localCorners,
+                NormalizedCorners = normalizedCorners.ToArray(),
+                NormalizedEmptyLocations = normalizedEmpties.ToArray(),
+                NormalizedPixelLocations = normalizedPixels.ToArray(),
+                PixelsFromTopOfLine = minGlobalY - lineRect.Top,
+                Left = glyphRect.Left,
+                Bottom = glyphRect.Bottom,
+                Height = glyphRect.Height,
+                Right = glyphRect.Right,
+                Top = glyphRect.Top,
+                Width = glyphRect.Width,
+                LineOffset = lineRect.Top,
+                AspectRatio = (float)width / height
+            };
+
+            ClearCacheSubregion(lineRect);
+
+            return result;
+        }
+
+        private static List<Point> GetEmpties(Rectangle lineRect, int minGlobalX, int maxGlobalX, int minGlobalY, int maxGlobalY)
+        {
+            var empties = new List<Point>();
+            for (int globalX = minGlobalX; globalX <= maxGlobalX; globalX++)
+            {
+                for (int globalY = minGlobalY; globalY <= maxGlobalY; globalY++)
+                {
+                    if (!cache[globalX - lineRect.Left, globalY - lineRect.Top])
+                    {
+                        empties.Add(new Point(globalX, globalY));
+                    }
+                }
+            }
+
+            return empties;
+        }
+
+        private static List<Point> GetCorners(Rectangle lineRect, int minGlobalX, int maxGlobalX, int minGlobalY, int maxGlobalY)
+        {
             var corners = new List<Point>();
             for (int globalX = minGlobalX; globalX <= maxGlobalX; globalX++)
             {
@@ -122,47 +193,7 @@ namespace CornerChatParser.Extraction
                 }
             }
 
-            var extractedGlobalMinX = maxGlobalX;
-            var extractedGlobalMaxX = minGlobalX;
-            var extractedGlobalMinY = maxGlobalY;
-            var extractedGlobalMaxY = minGlobalY;
-            foreach (var p in corners)
-            {
-                extractedGlobalMinX = Math.Min(p.X, extractedGlobalMinX);
-                extractedGlobalMaxX = Math.Max(p.X, extractedGlobalMaxX);
-                extractedGlobalMinY = Math.Min(p.Y, extractedGlobalMinY);
-                extractedGlobalMaxY = Math.Max(p.Y, extractedGlobalMaxY);
-            }
-            var width = extractedGlobalMaxX - extractedGlobalMinX + 1;
-            var height = extractedGlobalMaxY - extractedGlobalMinY + 1;
-
-            var normalizedCorners = corners.Select(p => new Vector2((p.X - extractedGlobalMinX) / (float)(width - 1),
-                                                                    (p.Y - extractedGlobalMinY) / (float)(height - 1)));
-
-            var localCorners = new bool[width, height];
-            foreach (var p in corners)
-            {
-                localCorners[p.X - extractedGlobalMinX, p.Y - extractedGlobalMinY] = true;
-            }
-
-            var glyphRect = new Rectangle(extractedGlobalMinX, extractedGlobalMinY, width, height);
-            var result = new ExtractedGlyph()
-            {
-                LocalDetectedCorners = localCorners,
-                NormalizedCorners = normalizedCorners.ToArray(),
-                Left = glyphRect.Left,
-                Bottom = glyphRect.Bottom,
-                Height = glyphRect.Height,
-                Right = glyphRect.Right,
-                Top = glyphRect.Top,
-                Width = glyphRect.Width,
-                LineOffset = lineRect.Top,
-                AspectRatio = (float)width / height
-            };
-
-            ClearCacheSubregion(lineRect);
-
-            return result;
+            return corners;
         }
 
         private static bool PointsInRange(Point point, int x2, int y2)
