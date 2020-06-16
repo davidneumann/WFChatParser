@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using CornerChatParser.Models;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -6,7 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace CornerChatParser
+namespace CornerChatParser.Database
 {
     public static class GlyphDatabase
     {

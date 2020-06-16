@@ -1,4 +1,5 @@
 ﻿using Application.ChatLineExtractor;
+using CornerChatParser.Models;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
@@ -8,7 +9,7 @@ using System.Numerics;
 using System.Text;
 using Tesseract;
 
-namespace CornerChatParser
+namespace CornerChatParser.Extraction
 {
     public static class GlyphExtractor
     {
@@ -149,7 +150,12 @@ namespace CornerChatParser
             {
                 LocalDetectedCorners = localCorners,
                 NormalizedCorners = normalizedCorners.ToArray(),
-                GlobalGlpyhRect = glyphRect,
+                Left = glyphRect.Left,
+                Bottom = glyphRect.Bottom,
+                Height = glyphRect.Height,
+                Right = glyphRect.Right,
+                Top = glyphRect.Top,
+                Width = glyphRect.Width,
                 LineOffset = lineRect.Top,
                 AspectRatio = (float)width / height
             };

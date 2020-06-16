@@ -1,4 +1,6 @@
 ﻿using Application.ChatLineExtractor;
+using CornerChatParser.Database;
+using CornerChatParser.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,7 +8,7 @@ using System.Numerics;
 using System.Text;
 using WebSocketSharp;
 
-namespace CornerChatParser
+namespace CornerChatParser.Extraction
 {
     public static class GlyphIdentifier
     {
@@ -46,7 +48,7 @@ namespace CornerChatParser
         //{
         //    GlyphMatch currentBest = null;
 
-        //    //if (extracted.GlobalGlpyhRect.Left >= 1049 && extracted.GlobalGlpyhRect.Top >= 806)
+        //    //if (extracted.Left >= 1049 && extracted.Top >= 806)
         //    //    System.Diagnostics.Debugger.Break();
 
         //    foreach (var refGlyph in PossibleReferenceGlyphs(extracted))
@@ -56,7 +58,7 @@ namespace CornerChatParser
         //        {
         //            var minDistance = float.MaxValue;
         //            var distancePenality = 1f;
-        //            if (extracted.GlobalGlpyhRect.Height > 6)
+        //            if (extracted.Height > 6)
         //            {
         //                if (!IsHighMidEntropy(refGlyph.Corners))
         //                    distancePenality = 1 + Vector2.Distance(new Vector2(refCorner.X, refCorner.Y), new Vector2(refCorner.X, 0.5f)) * 2f;
@@ -74,7 +76,7 @@ namespace CornerChatParser
         //        {
         //            var minDistance = float.MaxValue;
         //            var distancePenality = 1f;
-        //            if (extracted.GlobalGlpyhRect.Height > 6)
+        //            if (extracted.Height > 6)
         //            {
         //                if (!IsHighMidEntropy(refGlyph.Corners))
         //                    distancePenality = 1 + Vector2.Distance(new Vector2(extractedCorner.X, extractedCorner.Y), new Vector2(extractedCorner.X, 0.5f)) * 2f;
@@ -104,7 +106,7 @@ namespace CornerChatParser
         {
             GlyphMatch currentBest = null;
 
-            //if (extracted.GlobalGlpyhRect.Left >= 343 && extracted.GlobalGlpyhRect.Top >= 863)
+            //if (extracted.Left >= 1220 && extracted.Top >= 1008)
             //    System.Diagnostics.Debugger.Break();
 
             foreach (var refGlyph in PossibleReferenceGlyphs(extracted))
@@ -131,8 +133,9 @@ namespace CornerChatParser
                                     || currentBest.BestMatch.Character == 'C'
                                     || currentBest.BestMatch.Character == '6'
                                     || currentBest.BestMatch.Character == '8'
-                                    || currentBest.BestMatch.Character == '3'))
-                return DoubleCheck0OQC638(image, extracted, currentBest);
+                                    || currentBest.BestMatch.Character == '3'
+                                    || currentBest.BestMatch.Character == 'G'))
+                return DoubleCheck0OQC638G(image, extracted, currentBest);
             else if (currentBest != null && (currentBest.BestMatch.Character == '['
                                          || currentBest.BestMatch.Character == ']'))
                 return DoubleCheckSquareBrackets(image, extracted, currentBest);
@@ -153,6 +156,21 @@ namespace CornerChatParser
                                          || currentBest.BestMatch.Character == 'H'))
                 return DoubleCheckEh(image, extracted, currentBest);
             return currentBest.BestMatch;
+        }
+
+        private static bool PixelInCenter(ImageCache image, ExtractedGlyph extracted, int radius)
+        {
+            for (int x = extracted.Left + extracted.Width / 2 - radius;
+                     x <= extracted.Left + extracted.Width / 2 + radius; x++)
+            {
+                for (int y = extracted.Top + extracted.Height / 2 - radius;
+                         y <= extracted.Top + extracted.Height / 2 + radius; y++)
+                {
+                    if (image[x, y] > 0)
+                        return true;
+                }
+            }
+            return false;
         }
 
         private static float ScoreGlyph(ExtractedGlyph extracted, Glyph refGlyph, ImageCache image)
@@ -189,7 +207,7 @@ namespace CornerChatParser
         {
             var horizLinesHit = 0;
             var onLine = false;
-            for (int y = extracted.GlobalGlpyhRect.Top; y < extracted.GlobalGlpyhRect.Bottom; y++)
+            for (int y = extracted.Top; y < extracted.Bottom; y++)
             {
                 var pixelPreset = image[xOffset, y] > 0;
                 if (pixelPreset && !onLine)
@@ -208,9 +226,9 @@ namespace CornerChatParser
         {
             // c has n opening. o does not
             var rightPixelsPresent = false;
-            for (int x = extracted.GlobalGlpyhRect.Left + extracted.GlobalGlpyhRect.Width / 2; x < extracted.GlobalGlpyhRect.Right; x++)
+            for (int x = extracted.Left + extracted.Width / 2; x < extracted.Right; x++)
             {
-                if (image[x, extracted.GlobalGlpyhRect.Top + extracted.GlobalGlpyhRect.Height / 2] > 0)
+                if (image[x, extracted.Top + extracted.Height / 2] > 0)
                 {
                     rightPixelsPresent = true;
                     break;
@@ -227,9 +245,9 @@ namespace CornerChatParser
         {
             var lineCount = 0;
             var currentlyOnLine = false;
-            for (int y = extracted.GlobalGlpyhRect.Top; y < extracted.GlobalGlpyhRect.Bottom; y++)
+            for (int y = extracted.Top; y < extracted.Bottom; y++)
             {
-                var pixelPresent = image[extracted.GlobalGlpyhRect.Left + extracted.GlobalGlpyhRect.Width / 2, y] > 0;
+                var pixelPresent = image[extracted.Left + extracted.Width / 2, y] > 0;
                 if (pixelPresent && !currentlyOnLine)
                 {
                     currentlyOnLine = true;
@@ -252,10 +270,10 @@ namespace CornerChatParser
         {
             //Check for a solid left line for the a
             var leftRayCastVertHits = 0;
-            for (int y = extracted.GlobalGlpyhRect.Bottom - extracted.GlobalGlpyhRect.Height / 3 - 1
-                   ; y < extracted.GlobalGlpyhRect.Bottom - extracted.GlobalGlpyhRect.Height / 3 + 1; y++)
+            for (int y = extracted.Bottom - extracted.Height / 3 - 1
+                   ; y < extracted.Bottom - extracted.Height / 3 + 1; y++)
             {
-                for (int x = extracted.GlobalGlpyhRect.Left; x < extracted.GlobalGlpyhRect.Left + extracted.GlobalGlpyhRect.Width / 2; x++)
+                for (int x = extracted.Left; x < extracted.Left + extracted.Width / 2; x++)
                 {
                     if (image[x, y] > 0)
                     {
@@ -267,10 +285,10 @@ namespace CornerChatParser
 
             //Check for a solid left line for the e
             var rightRayCastVertHit = false;
-            for (int x = extracted.GlobalGlpyhRect.Left + extracted.GlobalGlpyhRect.Width / 2;
-                     x < extracted.GlobalGlpyhRect.Right; x++)
+            for (int x = extracted.Left + extracted.Width / 2;
+                     x < extracted.Right; x++)
             {
-                if (image[x, extracted.GlobalGlpyhRect.Bottom - extracted.GlobalGlpyhRect.Height / 3] > 0)
+                if (image[x, extracted.Bottom - extracted.Height / 3] > 0)
                 {
                     rightRayCastVertHit = true;
                     break;
@@ -283,9 +301,9 @@ namespace CornerChatParser
 
             // c has n opening. o does not
             var rightPixelsPresent = false;
-            for (int x = extracted.GlobalGlpyhRect.Left + extracted.GlobalGlpyhRect.Width / 2; x < extracted.GlobalGlpyhRect.Right; x++)
+            for (int x = extracted.Left + extracted.Width / 2; x < extracted.Right; x++)
             {
-                if (image[x, extracted.GlobalGlpyhRect.Top + extracted.GlobalGlpyhRect.Height / 2] > 0)
+                if (image[x, extracted.Top + extracted.Height / 2] > 0)
                 {
                     rightPixelsPresent = true;
                     break;
@@ -328,9 +346,9 @@ namespace CornerChatParser
         {
             var onLine = false;
             var straightLineDownMidTopBotmHits = 0;
-            for (int y = extracted.GlobalGlpyhRect.Top; y < extracted.GlobalGlpyhRect.Bottom; y++)
+            for (int y = extracted.Top; y < extracted.Bottom; y++)
             {
-                var pixelPresnt = image[extracted.GlobalGlpyhRect.Left + extracted.GlobalGlpyhRect.Width / 2, y] > 0;
+                var pixelPresnt = image[extracted.Left + extracted.Width / 2 + 1, y] > 0;
                 if (pixelPresnt && !onLine)
                 {
                     onLine = true;
@@ -347,9 +365,9 @@ namespace CornerChatParser
         {
             //A 6 has a break 1/3rd of the way down
             var hitSomething = false;
-            for (int x = extracted.GlobalGlpyhRect.Right - 1; x > extracted.GlobalGlpyhRect.Left + extracted.GlobalGlpyhRect.Width / 2; x--)
+            for (int x = extracted.Right - 1; x > extracted.Left + extracted.Width / 2; x--)
             {
-                if (image[x, extracted.GlobalGlpyhRect.Top + extracted.GlobalGlpyhRect.Height / 3] > 0)
+                if (image[x, extracted.Top + extracted.Height / 3] > 0)
                 {
                     hitSomething = true;
                     break;
@@ -361,12 +379,12 @@ namespace CornerChatParser
             // A 3 has a break 1/3rd down and 1/3rd up
             var topHit = false;
             var botHit = false;
-            for (int x = extracted.GlobalGlpyhRect.Left; x < extracted.GlobalGlpyhRect.Left + extracted.GlobalGlpyhRect.Width / 2; x++)
+            for (int x = extracted.Left; x < extracted.Left + extracted.Width / 2; x++)
             {
-                if (image[x, extracted.GlobalGlpyhRect.Top + extracted.GlobalGlpyhRect.Height / 3 + 1] > 0)
+                if (image[x, extracted.Top + extracted.Height / 3 + 1] > 0)
                     topHit = true;
 
-                if (image[x, extracted.GlobalGlpyhRect.Bottom - extracted.GlobalGlpyhRect.Height / 3] > 0)
+                if (image[x, extracted.Bottom - extracted.Height / 3] > 0)
                     botHit = true;
             }
             if (!topHit && !botHit)
@@ -379,9 +397,9 @@ namespace CornerChatParser
         {
             // { is point
             var leftColCount = 0;
-            for (int y = extracted.GlobalGlpyhRect.Top; y < extracted.GlobalGlpyhRect.Bottom; y++)
+            for (int y = extracted.Top; y < extracted.Bottom; y++)
             {
-                if (image[extracted.GlobalGlpyhRect.Left + 1, y] > 0)
+                if (image[extracted.Left + 1, y] > 0)
                     leftColCount++;
             }
             if (leftColCount <= 8)
@@ -394,9 +412,9 @@ namespace CornerChatParser
         {
             // } is pointy
             var rightColCount = 0;
-            for (int y = extracted.GlobalGlpyhRect.Top; y < extracted.GlobalGlpyhRect.Bottom; y++)
+            for (int y = extracted.Top; y < extracted.Bottom; y++)
             {
-                if (image[extracted.GlobalGlpyhRect.Right - 2, y] > 0)
+                if (image[extracted.Right - 2, y] > 0)
                     rightColCount++;
             }
             if (rightColCount <= 8)
@@ -410,10 +428,10 @@ namespace CornerChatParser
             var open = GlyphDatabase.AllGLyphs.First(g => g.Character == '[');
             var close = GlyphDatabase.AllGLyphs.First(g => g.Character == ']');
             // Open has a gap on the right
-            for (int y = extracted.GlobalGlpyhRect.Top + 3; y < extracted.GlobalGlpyhRect.Bottom - 3; y++)
+            for (int y = extracted.Top + 3; y < extracted.Bottom - 3; y++)
             {
                 var emptyX = true;
-                for (int x = extracted.GlobalGlpyhRect.Right - 2; x < extracted.GlobalGlpyhRect.Right; x++)
+                for (int x = extracted.Right - 2; x < extracted.Right; x++)
                 {
                     if (image[x, y] > 0)
                     {
@@ -426,10 +444,10 @@ namespace CornerChatParser
             }
 
             // Close has a gap on the left
-            for (int y = extracted.GlobalGlpyhRect.Top + 3; y < extracted.GlobalGlpyhRect.Bottom - 3; y++)
+            for (int y = extracted.Top + 3; y < extracted.Bottom - 3; y++)
             {
                 var emptyX = true;
-                for (int x = extracted.GlobalGlpyhRect.Left + 1; x < extracted.GlobalGlpyhRect.Left + 2; x++)
+                for (int x = extracted.Left + 1; x < extracted.Left + 2; x++)
                 {
                     if (image[x, y] > 0)
                     {
@@ -444,62 +462,141 @@ namespace CornerChatParser
             return currentBest.BestMatch;
         }
 
-        private static Glyph DoubleCheck0OQC638(ImageCache image, ExtractedGlyph extracted, GlyphMatch currentBest)
+        private static Glyph DoubleCheck0OQC638G(ImageCache image, ExtractedGlyph extracted, GlyphMatch currentBest)
         {
 
-            //0OQC638
+            //0OQC638G
 
-            //A 6 has a break 1/3rd of the way down as does C
-            var hitSomething = false;
-            for (int x = extracted.GlobalGlpyhRect.Left + extracted.GlobalGlpyhRect.Width / 2;
-                x < extracted.GlobalGlpyhRect.Right; x++)
+            //A 6 has a break 1/3rd of the way down as does C and G
+            var sixHitSomething = false;
+            for (int x = extracted.Left + extracted.Width / 2;
+                x < extracted.Right; x++)
             {
-                if (image[x, extracted.GlobalGlpyhRect.Top + extracted.GlobalGlpyhRect.Height / 3] > 0)
+                if (image[x, extracted.Top + 6] > 0)
                 {
-                    hitSomething = true;
+                    sixHitSomething = true;
                     break;
                 }
             }
-            if (!hitSomething)
+            if (!sixHitSomething)
             {
-                // 6 or C
-                // C is wide
-                if (extracted.GlobalGlpyhRect.Width >= 17)
+                var six = GlyphDatabase.AllGLyphs.First(g => g.Character == '6');
+                // 6 or C or G
+                // 6 & G have center thing
+                if (PixelInCenter(image, extracted, 2))
+                {
+                    if (extracted.Width <= six.ReferenceWidth)
+                        return six;
+                }
+            }
+
+            /*
+             * 
+                else if (extracted.Width >= 17)
+                {
+                    // C is wide
                     return GlyphDatabase.AllGLyphs.First(g => g.Character == 'C');
-                else
-                    return GlyphDatabase.AllGLyphs.First(g => g.Character == '6');
+                }
+            */
+            // C
+            var cHitSomething = false;
+            for (int x = extracted.Left + extracted.Width / 2;
+                x < extracted.Right; x++)
+            {
+                if (image[x, extracted.Top + 12] > 0)
+                {
+                    cHitSomething = true;
+                    break;
+                }
+            }
+            if (!cHitSomething)
+            {
+                var cGlyph = GlyphDatabase.AllGLyphs.First(g => g.Character == 'C');
+                // 6 or C or G
+                // 6 & G have center thing
+                if (!PixelInCenter(image, extracted, 2))
+                {
+                    if (extracted.Width <= cGlyph.ReferenceWidth)
+                        return cGlyph;
+                }
+            }
+
+            var gHitSomething = false;
+            for (int x = extracted.Left + extracted.Width / 2;
+                x < extracted.Right; x++)
+            {
+                if (image[x, extracted.Top + 8] > 0)
+                {
+                    gHitSomething = true;
+                    break;
+                }
+            }
+
+            var sHitSomething = false;
+            for (int x = extracted.Left + extracted.Width / 2;
+                x < extracted.Right; x++)
+            {
+                if (image[x, extracted.Bottom - 9] > 0)
+                {
+                    sHitSomething = true;
+                    break;
+                }
+            }
+            if (!gHitSomething && !sHitSomething)
+            {
+                var sGlyph = GlyphDatabase.AllGLyphs.First(g => g.Character == 'S');
+                if (PixelInCenter(image, extracted, 2))
+                {
+                    if (extracted.Width <= sGlyph.ReferenceWidth)
+                        return sGlyph;
+                }
+            }
+            if (!gHitSomething)
+            {
+                var gGlyph = GlyphDatabase.AllGLyphs.First(g => g.Character == 'G');
+                if (PixelInCenter(image, extracted, 2))
+                {
+                    if (extracted.Width <= gGlyph.ReferenceWidth)
+                        return gGlyph;
+                }
             }
 
             // A 3 has a break 1/3rd down and 1/3rd up on left
             var topHit = false;
             var botHit = false;
-            for (int x = extracted.GlobalGlpyhRect.Left; x < extracted.GlobalGlpyhRect.Left + extracted.GlobalGlpyhRect.Width / 2; x++)
+            for (int x = extracted.Left; x < extracted.Left + extracted.Width / 2; x++)
             {
-                if (image[x, extracted.GlobalGlpyhRect.Top + extracted.GlobalGlpyhRect.Height / 3 + 1] > 0)
+                if (image[x, extracted.Top + extracted.Height / 3 + 1] > 0)
                     topHit = true;
 
-                if (image[x, extracted.GlobalGlpyhRect.Bottom - extracted.GlobalGlpyhRect.Height / 3] > 0)
+                if (image[x, extracted.Bottom - extracted.Height / 3] > 0)
                     botHit = true;
             }
             if (!topHit && !botHit)
                 return GlyphDatabase.AllGLyphs.First(g => g.Character == '3');
 
-            //Only 8 has 3 hits down mid
+            //Only 8 and g has 3 hits down mid
             var midHits = GetVertDownMidHits(image, extracted);
             if (midHits == 3)
-                return GlyphDatabase.AllGLyphs.First(g => g.Character == '8');
+            {
+                var eight = GlyphDatabase.AllGLyphs.First(g => g.Character == '8');
+                if (extracted.Width <= eight.ReferenceWidth)
+                    return eight;
+                else
+                    return GlyphDatabase.AllGLyphs.First(g => g.Character == 'G');
+            }
 
             var zero = GlyphDatabase.AllGLyphs.First(g => g.Character == '0');
             var oh = GlyphDatabase.AllGLyphs.First(g => g.Character == 'O');
             var que = GlyphDatabase.AllGLyphs.First(g => g.Character == 'Q');
             var cee = GlyphDatabase.AllGLyphs.First(g => g.Character == 'C');
-            if (extracted.GlobalGlpyhRect.Width <= zero.ReferenceWidth)
+            if (extracted.Width <= zero.ReferenceWidth)
                 return zero;
-            if (extracted.GlobalGlpyhRect.Width <= cee.ReferenceWidth)
+            if (extracted.Width <= cee.ReferenceWidth)
                 return cee;
-            else if (extracted.GlobalGlpyhRect.Width >= cee.ReferenceWidth && extracted.GlobalGlpyhRect.Height <= oh.ReferenceHeight)
+            else if (extracted.Width >= cee.ReferenceWidth && extracted.Height <= oh.ReferenceHeight)
                 return oh;
-            else if (extracted.GlobalGlpyhRect.Width >= cee.ReferenceWidth && extracted.GlobalGlpyhRect.Height == que.ReferenceHeight)
+            else if (extracted.Width >= cee.ReferenceWidth && extracted.Height <= que.ReferenceHeight)
                 return que;
 
             return currentBest.BestMatch;
@@ -508,10 +605,10 @@ namespace CornerChatParser
         private static Glyph DoubleCheckLIExclaim(ImageCache image, ExtractedGlyph extracted, GlyphMatch best)
         {
             //It's a ! if it has a gap near the bottom
-            for (int y = extracted.GlobalGlpyhRect.Bottom - 1; y > extracted.GlobalGlpyhRect.Top + extracted.GlobalGlpyhRect.Height / 2; y--)
+            for (int y = extracted.Bottom - 1; y > extracted.Top + extracted.Height / 2; y--)
             {
                 var fullClearRow = true;
-                for (int x = extracted.GlobalGlpyhRect.Left; x < extracted.GlobalGlpyhRect.Right; x++)
+                for (int x = extracted.Left; x < extracted.Right; x++)
                 {
                     if (image[x, y] > 0)
                     {
@@ -525,10 +622,10 @@ namespace CornerChatParser
             }
 
             //It's a i if it has a gap near the top
-            for (int y = extracted.GlobalGlpyhRect.Top + 1; y < extracted.GlobalGlpyhRect.Bottom - extracted.GlobalGlpyhRect.Height / 2; y++)
+            for (int y = extracted.Top + 1; y < extracted.Bottom - extracted.Height / 2; y++)
             {
                 var fullClearRow = true;
-                for (int x = extracted.GlobalGlpyhRect.Left; x < extracted.GlobalGlpyhRect.Right; x++)
+                for (int x = extracted.Left; x < extracted.Right; x++)
                 {
                     if (image[x, y] > 0)
                     {
@@ -545,12 +642,12 @@ namespace CornerChatParser
             var pipe = GlyphDatabase.AllGLyphs.First(g => g.Character == '|');
             var el = GlyphDatabase.AllGLyphs.First(g => g.Character == 'l');
             var EYE = GlyphDatabase.AllGLyphs.First(g => g.Character == 'I');
-            if (extracted.GlobalGlpyhRect.Height >= pipe.ReferenceHeight)
+            if (extracted.Height >= pipe.ReferenceHeight)
                 return pipe;
-            else if (extracted.GlobalGlpyhRect.Height < pipe.ReferenceHeight
-                  && extracted.GlobalGlpyhRect.Height > EYE.ReferenceHeight)
+            else if (extracted.Height < pipe.ReferenceHeight
+                  && extracted.Height > EYE.ReferenceHeight)
                 return el;
-            else if (extracted.GlobalGlpyhRect.Height <= EYE.ReferenceHeight)
+            else if (extracted.Height <= EYE.ReferenceHeight)
                 return EYE;
 
             // idk lol
@@ -594,7 +691,7 @@ namespace CornerChatParser
         {
             // with a width of 2 expand aspect ratio by 0.4 and shrink down to 0.2 at 25
 
-            if (extracted.GlobalGlpyhRect.Width > 4 || extracted.GlobalGlpyhRect.Height > 4)
+            if (extracted.Width > 4 || extracted.Height > 4)
                 return GlyphDatabase.AllGLyphs.Where(g => NormalValidityCheck(g, extracted));
             else
                 return SmallItemCheck(extracted);
@@ -603,22 +700,22 @@ namespace CornerChatParser
         private static IEnumerable<Glyph> SmallItemCheck(ExtractedGlyph extracted)
         {
             //The top is going to be important
-            var smalls = GlyphDatabase.AllGLyphs.Where(g => extracted.GlobalGlpyhRect.Width >= g.ReferenceWidth - 2
-                                                         && extracted.GlobalGlpyhRect.Height >= g.ReferenceHeight - 2);
+            var smalls = GlyphDatabase.AllGLyphs.Where(g => extracted.Width >= g.ReferenceWidth - 2
+                                                         && extracted.Height >= g.ReferenceHeight - 2);
             return smalls.Where(g => g.ReferenceGapFromLineTop - 1 >= extracted.PixelsFromTopOfLine);
         }
 
         private static bool NormalValidityCheck(Glyph g, ExtractedGlyph extracted)
         {
-            var t = Math.Min(1f, (Math.Min(extracted.GlobalGlpyhRect.Width, extracted.GlobalGlpyhRect.Height) - 2f) / 25f);
+            var t = Math.Min(1f, (Math.Min(extracted.Width, extracted.Height) - 2f) / 25f);
             var aspectAdjust = Vector2.Lerp(new Vector2(0.4f, 0f), new Vector2(0.15f, 0f), t).X;
 
             return extracted.AspectRatio >= g.AspectRatio * (1 - aspectAdjust) &&
                    extracted.AspectRatio <= g.AspectRatio * (1 + aspectAdjust) &&
-                   extracted.GlobalGlpyhRect.Height >= g.ReferenceHeight - 1 &&
-                   extracted.GlobalGlpyhRect.Height <= g.ReferenceHeight + 1 &&
-                   extracted.GlobalGlpyhRect.Top - extracted.LineOffset >= g.ReferenceGapFromLineTop - 1 &&
-                   extracted.GlobalGlpyhRect.Top - extracted.LineOffset <= g.ReferenceGapFromLineTop + 1;
+                   extracted.Height >= g.ReferenceHeight - 1 &&
+                   extracted.Height <= g.ReferenceHeight + 1 &&
+                   extracted.Top - extracted.LineOffset >= g.ReferenceGapFromLineTop - 1 &&
+                   extracted.Top - extracted.LineOffset <= g.ReferenceGapFromLineTop + 1;
         }
 
         private static float Lerp(float min, float max, float t)

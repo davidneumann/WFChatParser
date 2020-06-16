@@ -3,7 +3,7 @@ using System;
 using System.Drawing;
 using System.Numerics;
 
-namespace CornerChatParser
+namespace CornerChatParser.Models
 {
     public class Glyph
     {

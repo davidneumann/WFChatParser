@@ -1,6 +1,7 @@
 ﻿using Application.ChatLineExtractor;
 using Application.Interfaces;
 using Application.LineParseResult;
+using CornerChatParser.Extraction;
 using System;
 using System.Collections.Generic;
 using System.Drawing;

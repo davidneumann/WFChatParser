@@ -4,15 +4,19 @@ using System.Drawing;
 using System.Numerics;
 using System.Text;
 
-namespace CornerChatParser
+namespace CornerChatParser.Models
 {
     public class ExtractedGlyph
     {
         public bool[,] LocalDetectedCorners;
         public Vector2[] NormalizedCorners;
-        public Rectangle GlobalGlpyhRect;
-        //public int Width;
-        //public int Height;
+        //public Rectangle GlobalGlpyhRect;
+        public int Left;
+        public int Right;
+        public int Top;
+        public int Bottom;
+        public int Width;
+        public int Height;
         //public int InterLineOffset;
         public int LineOffset;
         public int PixelsFromTopOfLine;
