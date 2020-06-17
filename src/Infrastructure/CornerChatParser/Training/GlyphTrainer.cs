@@ -14,6 +14,29 @@ namespace CornerChatParser.Training
         {
             var glyphRect = new Rectangle(0, 0, glyphs.Select(g => g.Width).Max(),
                                                       glyphs.Select(g => g.Height).Max());
+            var pixelCounts = new Dictionary<Point, int>();
+            var emptyCounts = new Dictionary<Point, int>();
+            foreach (var glyph in glyphs)
+            {
+                foreach (var pixel in glyph.RelativePixelLocations)
+                {
+                    if (!pixelCounts.ContainsKey(pixel))
+                        pixelCounts[pixel] = 0;
+                    pixelCounts[pixel]++;
+                }
+                foreach (var pixel in glyph.RelativeEmptyLocations)
+                {
+                    if (!emptyCounts.ContainsKey(pixel))
+                        emptyCounts[pixel] = 0;
+                    emptyCounts[pixel]++;
+                }
+            }
+
+            var pixelCountsAverage = pixelCounts.Values.Average();
+            var finalRelPixels = pixelCounts.Where(kvp => kvp.Value > pixelCountsAverage).Select(kvp => kvp.Key);
+            var emptyCountsAverage = emptyCounts.Values.Average();
+            var finalRelEmpties = emptyCounts.Where(kvp => kvp.Value > emptyCountsAverage).Select(kvp => kvp.Key);
+
             var masterEGlyph =
                 new ExtractedGlyph()
                 {
@@ -26,7 +49,9 @@ namespace CornerChatParser.Training
                     Top = glyphRect.Top,
                     Width = glyphRect.Width,
                     LineOffset = glyphs.Select(g => g.Top - g.LineOffset).Min(),
-                    PixelsFromTopOfLine = (int)Math.Round(glyphs.Select(g => g.Top - g.LineOffset).Average())
+                    PixelsFromTopOfLine = (int)Math.Round(glyphs.Select(g => g.Top - g.LineOffset).Average()),
+                    RelativeEmptyLocations = finalRelEmpties.ToArray(),
+                    RelativePixelLocations = finalRelPixels.ToArray()
                 };
 
             var total = glyphs.Count();
@@ -77,7 +102,9 @@ namespace CornerChatParser.Training
                 Character = character,
                 Corners = topCorners.Select(p => new Vector2((float)p.X / (frequency.GetLength(0) - 1),
                                                              (float)p.Y / (frequency.GetLength(1) - 1)))
-                    .Append(PointToV2(closetToMid.Key, frequency.GetLength(0), frequency.GetLength(1))).ToArray()
+                    .Append(PointToV2(closetToMid.Key, frequency.GetLength(0), frequency.GetLength(1))).ToArray(),
+                RelativePixelLocations = masterEGlyph.RelativePixelLocations,
+                RelativeEmptyLocations = masterEGlyph.RelativeEmptyLocations
             };
         }
 
