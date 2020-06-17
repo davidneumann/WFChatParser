@@ -104,7 +104,7 @@ namespace DebugCLI
         private static void CornerParsingShim()
         {
             var parser = new CornerChatParser.RelativePixelParser();
-            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Spaces";
+            var inputDir = @"inputs_spaces";
             var allFiles = Directory.GetFiles(inputDir);
             var sw = new Stopwatch();
             sw.Start();
