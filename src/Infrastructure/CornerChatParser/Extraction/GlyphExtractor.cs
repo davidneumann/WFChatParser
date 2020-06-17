@@ -120,6 +120,8 @@ namespace CornerChatParser.Extraction
                                                                     (p.Y - extractedGlobalMinY) / (float)(height - 1)));
             var normalizedEmpties = emptyPixels.Select(p => new Vector2((p.X - extractedGlobalMinX) / (float)(width - 1),
                                                                     (p.Y - extractedGlobalMinY) / (float)(height - 1)));
+            var relativePixels = validPixels.Select(p => new Point(p.X - extractedGlobalMinX, p.Y - extractedGlobalMinY));
+            var relativeEmpties = emptyPixels.Select(p => new Point(p.X - extractedGlobalMinX, p.Y - extractedGlobalMinY));
 
             var localCorners = new bool[width, height];
             foreach (var p in corners)
@@ -142,7 +144,9 @@ namespace CornerChatParser.Extraction
                 Top = glyphRect.Top,
                 Width = glyphRect.Width,
                 LineOffset = lineRect.Top,
-                AspectRatio = (float)width / height
+                AspectRatio = (float)width / height,
+                RelativeEmptyLocations = relativeEmpties.ToArray(),
+                RelativePixelLocations = relativePixels.ToArray()
             };
 
             ClearCacheSubregion(lineRect);

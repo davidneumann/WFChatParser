@@ -9,6 +9,8 @@ namespace CornerChatParser.Models
     {
         public char Character;
         public Vector2[] Corners;
+        public Point[] RelativePixelLocations;
+        public Point[] RelativeEmptyLocations;
         [JsonIgnore]
         public bool[,] ReferenceCorners;
         public float AspectRatio;

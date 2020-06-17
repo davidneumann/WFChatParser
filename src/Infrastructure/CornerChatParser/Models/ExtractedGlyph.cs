@@ -11,6 +11,8 @@ namespace CornerChatParser.Models
         public bool[,] LocalDetectedCorners;
         public Vector2[] NormalizedCorners;
         public Vector2[] NormalizedPixelLocations;
+        public Point[] RelativePixelLocations;
+        public Point[] RelativeEmptyLocations;
         public Vector2[] NormalizedEmptyLocations;
         //public Rectangle GlobalGlpyhRect;
         public int Left;
