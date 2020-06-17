@@ -27,12 +27,36 @@ namespace CornerChatParser.Recognition
                 //For ever valid pixel find the min distance to a refrence pixel
                 foreach (var valid in extracted.RelativePixelLocations)
                 {
-                    distances += candidate.RelativePixelLocations.Min(p => p.Distance(valid));
+                    double minDistance = double.MaxValue;
+                    foreach (var p in candidate.RelativePixelLocations)
+                    {
+                        var d = p.Distance(valid);
+                        if (d < minDistance)
+                            minDistance = d;
+                        if (d == 0)
+                            break;
+                    }
+                    if (minDistance < double.MaxValue)
+                        distances += minDistance;
+
+                    //distances += candidate.RelativePixelLocations.Min(p => p.Distance(valid));
                 }
                 //Do the same but with empties
                 foreach (var empty in extracted.RelativeEmptyLocations)
                 {
-                    distances += candidate.RelativeEmptyLocations.Min(p => p.Distance(empty));
+                    double minDistance = double.MaxValue;
+                    foreach (var p in candidate.RelativeEmptyLocations)
+                    {
+                        var d = p.Distance(empty);
+                        if (d < minDistance)
+                            minDistance = d;
+                        if (d == 0)
+                            break;
+                    }
+                    if (minDistance < double.MaxValue)
+                        distances += minDistance;
+
+                    //distances += candidate.RelativeEmptyLocations.Min(p => p.Distance(empty));
                 }
 
                 if (current == null || current.distanceSum > distances)

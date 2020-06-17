@@ -150,6 +150,7 @@ namespace DebugCLI
                     }
                 }
                 b.Dispose();
+                break;
             }
             sw.Stop();
             Console.WriteLine($"Parsed {filesDone} files in {sw.Elapsed.TotalSeconds}s.");
