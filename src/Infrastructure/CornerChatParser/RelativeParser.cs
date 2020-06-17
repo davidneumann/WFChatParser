@@ -11,7 +11,7 @@ using System.Text;
 
 namespace CornerChatParser
 {
-    public class CornerChatParser : IChatParser
+    public class RelativePixelParser : IChatParser
     {
         public void InvalidateCache(string key)
         {
@@ -36,9 +36,10 @@ namespace CornerChatParser
             for (int i = 0; i < lineParseCount; i++)
             {
                 var glyphs = LineScanner.ExtractGlyphsFromLine(imageCache, i);
+                Console.Write("\r");
                 result[i] = new ChatMessageLineResult()
                 {
-                    RawMessage = new String(glyphs.Select(g => CornerGlyphIdentifier.IdentifyGlyph(imageCache, g).Character).ToArray())
+                    RawMessage = new String(glyphs.Select(g => RelativePIxelIdentifier.IdentifyGlyph(g).Character).ToArray())
                 };
             }
 

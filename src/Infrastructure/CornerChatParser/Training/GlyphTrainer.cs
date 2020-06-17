@@ -96,15 +96,17 @@ namespace CornerChatParser.Training
             return new Glyph()
             {
                 AspectRatio = masterEGlyph.AspectRatio,
-                ReferenceWidth = masterEGlyph.Width,
-                ReferenceHeight = masterEGlyph.Height,
+                ReferenceMaxWidth = masterEGlyph.Width,
+                ReferenceMaxHeight = masterEGlyph.Height,
                 ReferenceGapFromLineTop = masterEGlyph.PixelsFromTopOfLine,
                 Character = character,
                 Corners = topCorners.Select(p => new Vector2((float)p.X / (frequency.GetLength(0) - 1),
                                                              (float)p.Y / (frequency.GetLength(1) - 1)))
                     .Append(PointToV2(closetToMid.Key, frequency.GetLength(0), frequency.GetLength(1))).ToArray(),
                 RelativePixelLocations = masterEGlyph.RelativePixelLocations,
-                RelativeEmptyLocations = masterEGlyph.RelativeEmptyLocations
+                RelativeEmptyLocations = masterEGlyph.RelativeEmptyLocations,
+                ReferenceMinWidth = glyphs.Min(g => g.Width),
+                ReferenceMinHeight = glyphs.Min(g => g.Height)
             };
         }
 

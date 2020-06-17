@@ -14,8 +14,10 @@ namespace CornerChatParser.Models
         [JsonIgnore]
         public bool[,] ReferenceCorners;
         public float AspectRatio;
-        public int ReferenceWidth;
-        public int ReferenceHeight;
+        public int ReferenceMaxWidth;
+        public int ReferenceMaxHeight;
+        public int ReferenceMinWidth;
+        public int ReferenceMinHeight;
         public float ReferenceGapFromLineTop;
         public float VerticalWeight;
         public float HorizontalWeight;

@@ -48,6 +48,7 @@ using System.Numerics;
 using CornerChatParser.Models;
 using CornerChatParser.Extraction;
 using CornerChatParser.Training;
+using System.Reflection;
 
 namespace DebugCLI
 {
@@ -102,7 +103,7 @@ namespace DebugCLI
 
         private static void CornerParsingShim()
         {
-            var parser = new CornerChatParser.CornerChatParser();
+            var parser = new CornerChatParser.RelativePixelParser();
             var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Spaces";
             var allFiles = Directory.GetFiles(inputDir);
             var sw = new Stopwatch();
@@ -116,6 +117,8 @@ namespace DebugCLI
                 var inputImg = input + ".png";
                 var b = new Bitmap(inputImg);
                 var chatLines = parser.ParseChatImage(b, false, false, 27).Select(line => line.RawMessage).ToArray();
+                Console.WriteLine();
+
                 var expectedLines = File.ReadAllLines(inputTxt).Select(line => line.Replace(" ", "").Trim()).ToArray();
                 if (chatLines.Length != expectedLines.Length)
                 {
@@ -182,6 +185,33 @@ namespace DebugCLI
 
             var finalGlyphs = glyphDict.Select((kvp) => GlyphTrainer.CombineExtractedGlyphs(kvp.Key, kvp.Value));
             File.WriteAllText("cornerDB.json", JsonConvert.SerializeObject(finalGlyphs.ToArray()));
+
+            Console.WriteLine("Attempt to save finalGlyphs to debug images");
+            var glyphVisualizerDir = @"glyphs";
+            if (Directory.Exists(glyphVisualizerDir))
+                Directory.Delete(glyphVisualizerDir, true);
+            Directory.CreateDirectory(glyphVisualizerDir);
+            foreach (var glyph in finalGlyphs)
+            {
+                var b = new Bitmap(glyph.ReferenceMaxWidth, glyph.ReferenceMaxHeight);
+                var pixelColor = Color.White;
+                var emptyColor = Color.Black;
+                var missingColor = Color.Magenta;
+                for (int x = 0; x < b.Width; x++)
+                {
+                    for (int y = 0; y < b.Height; y++)
+                    {
+                        if (glyph.RelativePixelLocations.Any(p => p.X == x && p.Y == y))
+                            b.SetPixel(x, y, pixelColor);
+                        else if (glyph.RelativeEmptyLocations.Any(p => p.X == x && p.Y == y))
+                            b.SetPixel(x, y, emptyColor);
+                        else
+                            b.SetPixel(x, y, missingColor);
+                    }
+                }
+
+                b.Save(Path.Combine(glyphVisualizerDir, (int)glyph.Character + ".png"));
+            }
         }
 
         private static Vector2 PointToV2(Point p, int width, int height)

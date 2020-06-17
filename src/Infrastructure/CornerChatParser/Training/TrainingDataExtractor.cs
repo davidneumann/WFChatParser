@@ -25,7 +25,7 @@ namespace CornerChatParser.Training
 
                 var bitmap = new Bitmap(input.ImageFilePath);
                 var ic = new ImageCache(bitmap);
-                var textLines = File.ReadAllLines(input + ".txt").Where(l => l.ToLower() != "clear").ToArray();
+                var textLines = File.ReadAllLines(input.CorrectTextPath).Where(l => l.ToLower() != "clear").ToArray();
                 var glyphLines = textLines.Select((u, i) => LineScanner.ExtractGlyphsFromLine(ic, i)).ToArray();
                 for (int i = 0; i < textLines.Length; i++)
                 {

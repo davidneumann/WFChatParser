@@ -10,7 +10,7 @@ using WebSocketSharp;
 
 namespace CornerChatParser.Recognition
 {
-    public static class GlyphIdentifier
+    public static class CornerGlyphIdentifier
     {
         //public static Glyph IdentifyGlyph(ExtractedGlyph extracted)
         //{
@@ -485,7 +485,7 @@ namespace CornerChatParser.Recognition
                 // 6 & G have center thing
                 if (PixelInCenter(image, extracted, 2))
                 {
-                    if (extracted.Width <= six.ReferenceWidth)
+                    if (extracted.Width <= six.ReferenceMaxWidth)
                         return six;
                 }
             }
@@ -516,7 +516,7 @@ namespace CornerChatParser.Recognition
                 // 6 & G have center thing
                 if (!PixelInCenter(image, extracted, 2))
                 {
-                    if (extracted.Width <= cGlyph.ReferenceWidth)
+                    if (extracted.Width <= cGlyph.ReferenceMaxWidth)
                         return cGlyph;
                 }
             }
@@ -547,7 +547,7 @@ namespace CornerChatParser.Recognition
                 var sGlyph = GlyphDatabase.AllGLyphs.First(g => g.Character == 'S');
                 if (PixelInCenter(image, extracted, 2))
                 {
-                    if (extracted.Width <= sGlyph.ReferenceWidth)
+                    if (extracted.Width <= sGlyph.ReferenceMaxWidth)
                         return sGlyph;
                 }
             }
@@ -556,7 +556,7 @@ namespace CornerChatParser.Recognition
                 var gGlyph = GlyphDatabase.AllGLyphs.First(g => g.Character == 'G');
                 if (PixelInCenter(image, extracted, 2))
                 {
-                    if (extracted.Width <= gGlyph.ReferenceWidth)
+                    if (extracted.Width <= gGlyph.ReferenceMaxWidth)
                         return gGlyph;
                 }
             }
@@ -580,7 +580,7 @@ namespace CornerChatParser.Recognition
             if (midHits == 3)
             {
                 var eight = GlyphDatabase.AllGLyphs.First(g => g.Character == '8');
-                if (extracted.Width <= eight.ReferenceWidth)
+                if (extracted.Width <= eight.ReferenceMaxWidth)
                     return eight;
                 else
                     return GlyphDatabase.AllGLyphs.First(g => g.Character == 'G');
@@ -590,13 +590,13 @@ namespace CornerChatParser.Recognition
             var oh = GlyphDatabase.AllGLyphs.First(g => g.Character == 'O');
             var que = GlyphDatabase.AllGLyphs.First(g => g.Character == 'Q');
             var cee = GlyphDatabase.AllGLyphs.First(g => g.Character == 'C');
-            if (extracted.Width <= zero.ReferenceWidth)
+            if (extracted.Width <= zero.ReferenceMaxWidth)
                 return zero;
-            if (extracted.Width <= cee.ReferenceWidth)
+            if (extracted.Width <= cee.ReferenceMaxWidth)
                 return cee;
-            else if (extracted.Width >= cee.ReferenceWidth && extracted.Height <= oh.ReferenceHeight)
+            else if (extracted.Width >= cee.ReferenceMaxWidth && extracted.Height <= oh.ReferenceMaxHeight)
                 return oh;
-            else if (extracted.Width >= cee.ReferenceWidth && extracted.Height <= que.ReferenceHeight)
+            else if (extracted.Width >= cee.ReferenceMaxWidth && extracted.Height <= que.ReferenceMaxHeight)
                 return que;
 
             return currentBest.BestMatch;
@@ -642,12 +642,12 @@ namespace CornerChatParser.Recognition
             var pipe = GlyphDatabase.AllGLyphs.First(g => g.Character == '|');
             var el = GlyphDatabase.AllGLyphs.First(g => g.Character == 'l');
             var EYE = GlyphDatabase.AllGLyphs.First(g => g.Character == 'I');
-            if (extracted.Height >= pipe.ReferenceHeight)
+            if (extracted.Height >= pipe.ReferenceMaxHeight)
                 return pipe;
-            else if (extracted.Height < pipe.ReferenceHeight
-                  && extracted.Height > EYE.ReferenceHeight)
+            else if (extracted.Height < pipe.ReferenceMaxHeight
+                  && extracted.Height > EYE.ReferenceMaxHeight)
                 return el;
-            else if (extracted.Height <= EYE.ReferenceHeight)
+            else if (extracted.Height <= EYE.ReferenceMaxHeight)
                 return EYE;
 
             // idk lol
@@ -700,8 +700,8 @@ namespace CornerChatParser.Recognition
         private static IEnumerable<Glyph> SmallItemCheck(ExtractedGlyph extracted)
         {
             //The top is going to be important
-            var smalls = GlyphDatabase.AllGLyphs.Where(g => extracted.Width >= g.ReferenceWidth - 2
-                                                         && extracted.Height >= g.ReferenceHeight - 2);
+            var smalls = GlyphDatabase.AllGLyphs.Where(g => extracted.Width >= g.ReferenceMaxWidth - 2
+                                                         && extracted.Height >= g.ReferenceMaxHeight - 2);
             return smalls.Where(g => g.ReferenceGapFromLineTop - 1 >= extracted.PixelsFromTopOfLine);
         }
 
@@ -712,8 +712,8 @@ namespace CornerChatParser.Recognition
 
             return extracted.AspectRatio >= g.AspectRatio * (1 - aspectAdjust) &&
                    extracted.AspectRatio <= g.AspectRatio * (1 + aspectAdjust) &&
-                   extracted.Height >= g.ReferenceHeight - 1 &&
-                   extracted.Height <= g.ReferenceHeight + 1 &&
+                   extracted.Height >= g.ReferenceMaxHeight - 1 &&
+                   extracted.Height <= g.ReferenceMaxHeight + 1 &&
                    extracted.Top - extracted.LineOffset >= g.ReferenceGapFromLineTop - 1 &&
                    extracted.Top - extracted.LineOffset <= g.ReferenceGapFromLineTop + 1;
         }
