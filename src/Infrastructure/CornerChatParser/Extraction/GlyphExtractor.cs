@@ -7,13 +7,14 @@ using System.Drawing;
 using System.Linq;
 using System.Numerics;
 using System.Text;
+using System.Threading;
 using Tesseract;
 
 namespace CornerChatParser.Extraction
 {
     public static class GlyphExtractor
     {
-        private static bool[,] cache;
+        private static ThreadLocal<bool[,]> _localCache = new ThreadLocal<bool[,]>();
         private static int currentCacheMinX = -1;
         private static int currentCacheMaxX = 0;
         private static int distanceThresholdSquared = 2 * 2;
@@ -21,6 +22,8 @@ namespace CornerChatParser.Extraction
 
         private static void ClearCacheSubregion(Rectangle lineRect)
         {
+            var cache = _localCache.Value;
+
             for (int localX = currentCacheMinX; localX <= currentCacheMaxX; localX++)
             {
                 for (int localY = 0; localY < lineRect.Height; localY++)
@@ -33,9 +36,11 @@ namespace CornerChatParser.Extraction
 
         public static List<Point> GetValidPixels(ImageCache image, bool[,] localBlacklist, Point firstPixel, Rectangle lineRect)
         {
+            var cache = _localCache.Value;
+
             if (cache == null || cache.GetLength(0) != lineRect.Width || cache.GetLength(1) != lineRect.Height || lineRect.Top != lastLineTop)
             {
-                cache = new bool[lineRect.Width, lineRect.Height];
+                _localCache.Value = cache = new bool[lineRect.Width, lineRect.Height];
                 lastLineTop = lineRect.Top;
                 currentCacheMinX = firstPixel.X;
                 currentCacheMaxX = firstPixel.X;
@@ -80,6 +85,7 @@ namespace CornerChatParser.Extraction
         public static ExtractedGlyph ExtractGlyphFromPixels(List<Point> validPixels, Rectangle lineRect)
         {
             ClearCacheSubregion(lineRect);
+            var cache = _localCache.Value;
 
             foreach (var p in validPixels)
             {
@@ -156,6 +162,7 @@ namespace CornerChatParser.Extraction
 
         private static List<Point> GetEmpties(Rectangle lineRect, int minGlobalX, int maxGlobalX, int minGlobalY, int maxGlobalY)
         {
+            var cache = _localCache.Value;
             var empties = new List<Point>();
             for (int globalX = minGlobalX; globalX <= maxGlobalX; globalX++)
             {
@@ -173,6 +180,7 @@ namespace CornerChatParser.Extraction
 
         private static List<Point> GetCorners(Rectangle lineRect, int minGlobalX, int maxGlobalX, int minGlobalY, int maxGlobalY)
         {
+            var cache = _localCache.Value;
             var corners = new List<Point>();
             for (int globalX = minGlobalX; globalX <= maxGlobalX; globalX++)
             {
