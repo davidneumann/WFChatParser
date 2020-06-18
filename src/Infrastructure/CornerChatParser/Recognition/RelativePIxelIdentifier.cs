@@ -88,7 +88,9 @@ namespace CornerChatParser.Recognition
     {
         internal static double Distance(this Point p1, Point p2)
         {
-            return Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
+            var a = p2.X - p1.X;
+            var b = p2.Y - p1.Y;
+            return Math.Sqrt(a*a + b*b);
         }
     }
 }
