@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace CornerChatParser
 {
@@ -33,15 +34,15 @@ namespace CornerChatParser
             var imageCache = new ImageCache(image);
 
             var result = new ChatMessageLineResult[lineParseCount];
-            for (int i = 0; i < lineParseCount; i++)
+            Parallel.For(0, lineParseCount, i =>
             {
                 var glyphs = LineScanner.ExtractGlyphsFromLine(imageCache, i);
-                Console.Write("\r");
+                //Console.Write("\r");
                 result[i] = new ChatMessageLineResult()
                 {
-                    RawMessage = new String(glyphs.Select(g => RelativePIxelIdentifier.IdentifyGlyph(g).Character).ToArray())
+                    RawMessage = new string(glyphs.Select(g => RelativePIxelIdentifier.IdentifyGlyph(g).Character).ToArray())
                 };
-            }
+            });
 
             return result;
         }
