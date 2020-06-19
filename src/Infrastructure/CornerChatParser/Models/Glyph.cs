@@ -1,10 +1,12 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Numerics;
 
 namespace CornerChatParser.Models
 {
+    [DebuggerDisplay("{Character}")]
     public class Glyph
     {
         public char Character;

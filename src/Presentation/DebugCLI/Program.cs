@@ -104,12 +104,12 @@ namespace DebugCLI
         private static void CornerParsingShim()
         {
             var parser = new CornerChatParser.RelativePixelParser();
-            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps";
+            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Spaces";
             var allFiles = Directory.GetFiles(inputDir);
             var sw = new Stopwatch();
             sw.Start();
             var filesDone = 0;
-            foreach (var input in allFiles.Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct())
+            foreach (var input in allFiles.Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct().Where(i => i.Contains("errors")))
             {
                 filesDone++;
                 Console.WriteLine($"={input.Substring(input.LastIndexOf('\\') + 1)}=");
