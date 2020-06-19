@@ -35,13 +35,19 @@ namespace CornerChatParser
 
             var result = new ChatMessageLineResult[lineParseCount];
             Parallel.For(0, lineParseCount, i =>
+            //for (int i = 0; i < lineParseCount; i++)
             {
                 var glyphs = LineScanner.ExtractGlyphsFromLine(imageCache, i);
                 //Console.Write("\r");
                 result[i] = new ChatMessageLineResult()
                 {
-                    RawMessage = new string(glyphs.Select(g => RelativePIxelIdentifier.IdentifyGlyph(g).Character).ToArray())
+                    RawMessage = new string(glyphs.Select(g =>
+                    {
+                        var glyph = RelativePixelGlyphIdentifier.IdentifyGlyph(g);
+                        return glyph != null ? glyph.Character : ' ';
+                    }).ToArray())
                 };
+            //}
             });
 
             return result;

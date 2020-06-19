@@ -46,7 +46,7 @@ namespace CornerChatParser.Extraction
 
                 globalX = lastGlobalX = newGlyph.Left;
 
-                BlacklistGlyph(localBlacklist, newGlyph, lineRect);
+                //BlacklistGlyph(localBlacklist, newGlyph, lineRect);
             }
 
             return results.ToArray();
