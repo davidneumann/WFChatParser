@@ -94,16 +94,10 @@ namespace CornerChatParser.Extraction
 
         private static void BlacklistGlyph(bool[,] localBlacklist, ExtractedGlyph extractedGlyph, Rectangle lineRect)
         {
-            for (int glyphX = 0; glyphX < extractedGlyph.Width; glyphX++)
+            foreach (var p in extractedGlyph.RelativePixelLocations)
             {
-                for (int glyphY = 0; glyphY < extractedGlyph.Height; glyphY++)
-                {
-                    if (extractedGlyph.LocalDetectedCorners[glyphX, glyphY])
-                    {
-                        localBlacklist[extractedGlyph.Left - lineRect.Left,
-                                       extractedGlyph.Top - lineRect.Top] = true;
-                    }
-                }
+                localBlacklist[p.X + extractedGlyph.Left - lineRect.Left,
+                               p.Y + extractedGlyph.Top - lineRect.Top] = true;
             }
         }
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Numerics;
 using System.Text;
 
@@ -8,12 +9,8 @@ namespace CornerChatParser.Models
 {
     public class ExtractedGlyph
     {
-        public bool[,] LocalDetectedCorners;
-        public Vector2[] NormalizedCorners;
-        public Vector2[] NormalizedPixelLocations;
         public Point[] RelativePixelLocations;
         public Point[] RelativeEmptyLocations;
-        public Vector2[] NormalizedEmptyLocations;
         //public Rectangle GlobalGlpyhRect;
         public int Left;
         public int Right;
