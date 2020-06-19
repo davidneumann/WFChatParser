@@ -26,30 +26,32 @@ namespace CornerChatParser.Models
 
         public ExtractedGlyph Subtract(Glyph glyph)
         {
+            if (this.Width <= glyph.ReferenceMaxWidth)
+                return null;
             // The new system allows for small gaps between characters. We need to scan for the
             // true new left
-            var trueXMin = this.RelativePixelLocations.Where(p => p.X >= glyph.ReferenceMaxWidth)
-                                                      .Min(p => p.X);
+            var localXMin = this.RelativePixelLocations.Where(p => p.X >= glyph.ReferenceMaxWidth)
+                                                       .Min(p => p.X);
 
             // Only keep points beyond the new true min x
-            var survivingPixels = this.RelativePixelLocations.Where(p => p.X >= trueXMin).ToArray();
+            var survivingPixels = this.RelativePixelLocations.Where(p => p.X >= localXMin).ToArray();
 
             // With an overlap like &_ the new top will be way lower
             // and with other overlaps the bottom may be higher
-            var survivingTop = survivingPixels.Select(p => p.Y).Min();
+            var survivingLocalTop = survivingPixels.Select(p => p.Y).Min();
 
             //Use the width of the glyph and the new top to get the real pixels and emties
-            var relPixels = survivingPixels.Select(p => new Point(p.X - trueXMin,
-                                                                  p.Y - survivingTop)).ToArray();
+            var relPixels = survivingPixels.Select(p => new Point(p.X - localXMin,
+                                                                  p.Y - survivingLocalTop)).ToArray();
 
-            var left = survivingPixels.Min(p => p.X);
-            var top = survivingTop;
-            var right = survivingPixels.Max(p => p.X) + 1;
-            var bottom = survivingPixels.Max(p => p.Y) + 1;
+            var left = survivingPixels.Min(p => p.X) + this.Left;
+            var top = survivingLocalTop + this.LineOffset + this.PixelsFromTopOfLine;
+            var right = survivingPixels.Max(p => p.X) + 1 + this.Left;
+            var bottom = survivingPixels.Max(p => p.Y) + 1 + this.LineOffset + this.PixelsFromTopOfLine;
             var width = right - left;
             var height = bottom - top;
 
-            var relEmpties = this.RelativeEmptyLocations.Where(p => p.X >= left && p.Y >= top && p.X < right && p.Y < bottom)
+            var relEmpties = this.RelativeEmptyLocations.Where(p => p.X >= left && p.Y >= survivingLocalTop && p.X < right && p.Y < bottom)
                                                         .Select(p => new Point(p.X - left, p.Y - top)).ToArray();
 
 

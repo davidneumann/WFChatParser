@@ -104,7 +104,7 @@ namespace DebugCLI
         private static void CornerParsingShim()
         {
             var parser = new CornerChatParser.RelativePixelParser();
-            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Spaces";
+            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps";
             var allFiles = Directory.GetFiles(inputDir);
             var sw = new Stopwatch();
             sw.Start();
@@ -115,7 +115,7 @@ namespace DebugCLI
                 Console.WriteLine($"={input.Substring(input.LastIndexOf('\\') + 1)}=");
                 var inputTxt = input + ".txt";
                 var inputImg = input + ".png";
-                //ImageCleaner.SaveSoftMask(inputImg, "current.png");
+                ImageCleaner.SaveSoftMask(inputImg, "current.png");
                 var b = new Bitmap(inputImg);
                 var chatLines = parser.ParseChatImage(b, false, false, 27).Select(line => line.RawMessage).ToArray();
                 //Console.WriteLine();

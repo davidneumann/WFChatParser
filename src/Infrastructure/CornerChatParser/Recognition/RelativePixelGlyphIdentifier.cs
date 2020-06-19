@@ -117,6 +117,14 @@ namespace CornerChatParser.Recognition
             var bests = new List<BestMatch>();
             foreach (var glyph in GlyphDatabase.GlyphsBySizeDescending())
             {
+                // Can't be bigger
+                if (glyph.ReferenceMinWidth > extracted.Width)
+                    continue;
+
+                // Can't be higher up than the extracted glyph
+                if (glyph.ReferenceGapFromLineTop < extracted.PixelsFromTopOfLine - 1)
+                    continue;
+
                 double distances = 0;
                 distances += GetMinDistanceSum(glyph.RelativePixelLocations, extracted.RelativePixelLocations);
                 distances += GetMinDistanceSum(glyph.RelativeEmptyLocations, extracted.RelativeEmptyLocations);
@@ -131,8 +139,12 @@ namespace CornerChatParser.Recognition
             Console.WriteLine("Guess\tScore\tWidth");
             foreach (var guess in bests)
             {
-                //var removed = extracted.Remove(guess);
+                var remainder = extracted.Subtract(guess.match);
                 Console.WriteLine(guess.match.Character + "\t" + (Math.Round(guess.distanceSum, 2)) + "\t" + guess.match.ReferenceMaxWidth);
+                if (guess.match.Character == '&')
+                {
+                    Console.WriteLine($"Remainder {remainder.Left},{remainder.Top}. {remainder.Width}x{remainder.Height}.");
+                }
             }
 
             return current != null ? current.match : null;
