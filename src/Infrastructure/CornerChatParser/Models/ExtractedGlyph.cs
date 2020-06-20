@@ -1,9 +1,12 @@
-﻿using System;
+﻿using Application.ChatLineExtractor;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Text;
+using System.Threading;
 
 namespace CornerChatParser.Models
 {

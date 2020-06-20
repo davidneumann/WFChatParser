@@ -58,10 +58,10 @@ namespace CornerChatParser.Recognition
 
         private static Func<Glyph, bool> IsValidCandidate(ExtractedGlyph extracted)
         {
-                return g => extracted.Width >= g.ReferenceMinWidth &&
-                            extracted.Width <= g.ReferenceMaxWidth &&
-                            extracted.Height >= g.ReferenceMinHeight &&
-                            extracted.Height <= g.ReferenceMaxHeight;
+            return g => extracted.Width >= g.ReferenceMinWidth &&
+                        extracted.Width <= g.ReferenceMaxWidth &&
+                        extracted.Height >= g.ReferenceMinHeight &&
+                        extracted.Height <= g.ReferenceMaxHeight;
         }
 
         private static double GetMinDistanceSum(Point[] source, Point[] target)
@@ -210,10 +210,30 @@ namespace CornerChatParser.Recognition
                 if (glyph.ReferenceGapFromLineTop < extracted.PixelsFromTopOfLine - 2)
                     continue;
 
+
                 double distances = 0;
 
-                //TODO: Try matching reference to extracted again. Include the distance max thing
                 var relPixelSubregion = extracted.RelativePixelLocations.Where(p => p.X < glyph.ReferenceMaxWidth).ToArray();
+
+
+                var relYMax = 0;
+                var relYMin = int.MaxValue;
+                foreach (var p in relPixelSubregion)
+                {
+                    if (p.Y > relYMax)
+                        relYMax = p.Y;
+                    if (p.Y < relYMin)
+                        relYMin = p.Y;
+                }
+                var relTop = extracted.PixelsFromTopOfLine + relYMin;
+                var relHeight = relYMax - relYMin + 1;
+
+                //Skip any glyph that once filtered down is the wrong height or in the wrong Y of the line
+                if (relHeight < glyph.ReferenceMinHeight - 1 || relHeight > glyph.ReferenceMaxHeight + 1
+                    || relTop < glyph.ReferenceGapFromLineTop - 1 || relTop > glyph.ReferenceGapFromLineTop + 1)
+                    continue;
+
+
                 var relEmptySubregion = extracted.RelativeEmptyLocations.Where(p => p.X < glyph.ReferenceMaxWidth).ToArray();
                 //distances += GetMinDistanceSum(glyph.RelativePixelLocations, extracted.RelativePixelLocations);
                 //distances += GetMinDistanceSum(glyph.RelativeEmptyLocations, extracted.RelativeEmptyLocations);
@@ -228,10 +248,10 @@ namespace CornerChatParser.Recognition
             }
 
             // Possible exit if bests is 0 items
-            if(bests.Count == 0)
+            if (bests.Count == 0)
             {
                 //return node;
-                if(extracted.Width > 0)
+                if (extracted.Width > 0)
                     node.BestMatch.distanceSum = 100000;
                 return node;
             }
