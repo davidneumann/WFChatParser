@@ -109,7 +109,7 @@ namespace DebugCLI
             var sw = new Stopwatch();
             sw.Start();
             var filesDone = 0;
-            foreach (var input in allFiles.Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct().Where(i => i.Contains("errors")))
+            foreach (var input in allFiles.Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct())
             {
                 filesDone++;
                 Console.WriteLine($"={input.Substring(input.LastIndexOf('\\') + 1)}=");
@@ -153,7 +153,7 @@ namespace DebugCLI
                 b.Dispose();
             }
             sw.Stop();
-            Console.WriteLine($"Parsed {filesDone} files in {sw.Elapsed.TotalSeconds}s.");
+            Console.WriteLine($"Parsed {filesDone} files in {sw.Elapsed.TotalSeconds}s. {sw.Elapsed.TotalSeconds / filesDone} seconds/file.");
         }
 
         private static void newCornerParseTrainer()

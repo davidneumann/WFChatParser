@@ -8,17 +8,18 @@ using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Text;
+using WebSocketSharp;
 
 namespace CornerChatParser.Recognition
 {
     public static class RelativePixelGlyphIdentifier
     {
-        public static Glyph IdentifyGlyph(ExtractedGlyph extracted)
+        public static Glyph[] IdentifyGlyph(ExtractedGlyph extracted)
         {
             var candidates = GlyphDatabase.AllGlyphs.Where(IsValidCandidate(extracted));
             //Also remove anything that doesn't look to be aligned correctly
-            candidates = candidates.Where(g => extracted.PixelsFromTopOfLine >= g.ReferenceGapFromLineTop - 1
-                                            && extracted.PixelsFromTopOfLine <= g.ReferenceGapFromLineTop + 1);
+            candidates = candidates.Where(g => extracted.PixelsFromTopOfLine >= g.ReferenceGapFromLineTop - 2
+                                            && extracted.PixelsFromTopOfLine <= g.ReferenceGapFromLineTop + 2);
 
             BestMatch current = null;
             foreach (var candidate in candidates)
@@ -29,25 +30,30 @@ namespace CornerChatParser.Recognition
                     current = new BestMatch(distances, candidate);
             }
 
+            List<Glyph> overlaps = new List<Glyph>();
             if (current == null)
             {
                 //System.Diagnostics.Debugger.Break();
-                Console.WriteLine($"Probably an overlap at {extracted.Left}, {extracted.Top}.");
+                //Console.WriteLine($"Probably an overlap at {extracted.Left}, {extracted.Top}.");
                 var tree = TreeMaker(extracted, new BestMatchNode(new BestMatch(0, null)));
-                Console.WriteLine("Guess\tBranchScore");
-                foreach (var child in tree.Children)
-                {
-                    Console.WriteLine($"{child.BestMatch.match.Character}\t{child.BestMatch.distanceSum}");
-                }
+                //Console.WriteLine("Guess\tBranchScore");
+                //foreach (var child in tree.Children)
+                //{
+                //    Console.WriteLine($"{child.BestMatch.match.Character}\t{child.BestMatch.distanceSum}");
+                //}
                 var (branch, score, bestTree) = GetBestBranch(tree, new Glyph[0]);
                 var flat = new string(branch.Select(n => n.Character).ToArray());
-                Console.WriteLine(flat);
+                foreach (var g in branch)
+                {
+                    overlaps.Add(g);
+                }
+                //Console.WriteLine(flat);
                 //ParseOverlappingGlyph(extracted);
             }
             //else
             //    Console.Write(current.match.Character);
 
-            return current != null ? current.match : null;
+            return current != null ? new[] { current.match } : overlaps.ToArray();
         }
 
         private static Func<Glyph, bool> IsValidCandidate(ExtractedGlyph extracted)
@@ -150,16 +156,16 @@ namespace CornerChatParser.Recognition
                 }
             }
 
-            Console.WriteLine("Guess\tScore\tWidth");
+            //Console.WriteLine("Guess\tScore\tWidth");
             foreach (var guess in bests)
             {
                 var remainder = extracted.Subtract(guess.match);
                 var nextBest = ParseOverlappingGlyphStep2(remainder);
-                Console.WriteLine(guess.match.Character + "\t" + (Math.Round(guess.distanceSum, 2)) + "\t" + guess.match.ReferenceMaxWidth);
-                if (guess.match.Character == '&')
-                {
-                    Console.WriteLine($"Remainder {remainder.Left},{remainder.Top}. {remainder.Width}x{remainder.Height}.");
-                }
+                //Console.WriteLine(guess.match.Character + "\t" + (Math.Round(guess.distanceSum, 2)) + "\t" + guess.match.ReferenceMaxWidth);
+                //if (guess.match.Character == '&')
+                //{
+                //    Console.WriteLine($"Remainder {remainder.Left},{remainder.Top}. {remainder.Width}x{remainder.Height}.");
+                //}
             }
 
             // & _
@@ -201,10 +207,12 @@ namespace CornerChatParser.Recognition
                     continue;
 
                 // Can't be higher up than the extracted glyph
-                if (glyph.ReferenceGapFromLineTop < extracted.PixelsFromTopOfLine - 1)
+                if (glyph.ReferenceGapFromLineTop < extracted.PixelsFromTopOfLine - 2)
                     continue;
 
                 double distances = 0;
+
+                //TODO: Try matching reference to extracted again. Include the distance max thing
                 var relPixelSubregion = extracted.RelativePixelLocations.Where(p => p.X < glyph.ReferenceMaxWidth).ToArray();
                 var relEmptySubregion = extracted.RelativeEmptyLocations.Where(p => p.X < glyph.ReferenceMaxWidth).ToArray();
                 //distances += GetMinDistanceSum(glyph.RelativePixelLocations, extracted.RelativePixelLocations);
@@ -212,7 +220,7 @@ namespace CornerChatParser.Recognition
                 distances += GetMinDistanceSum(relPixelSubregion, glyph.RelativePixelLocations);
                 distances += GetMinDistanceSum(relEmptySubregion, glyph.RelativeEmptyLocations);
 
-                if (current == null || current.distanceSum > distances)
+                if ((current == null || current.distanceSum > distances) && distances <= 300)
                 {
                     current = new BestMatch(distances, glyph);
                     bests.Add(current);
