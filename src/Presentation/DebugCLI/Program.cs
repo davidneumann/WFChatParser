@@ -103,12 +103,15 @@ namespace DebugCLI
 
         private static void CornerParsingShim()
         {
+            ImageCleaner.SaveSoftMask(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Orig\Overlaps\overlap_slice_1.png", "shrunk.png");
+            ImageCleaner.SaveSoftMask(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Orig\Spaces\space_slice_5.png", "space5.png");
             var parser = new CornerChatParser.RelativePixelParser();
-            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Spaces";
+            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps";
             var allFiles = Directory.GetFiles(inputDir);
             var sw = new Stopwatch();
             sw.Start();
             var filesDone = 0;
+            var cCount = 0;
             foreach (var input in allFiles.Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct())
             {
                 filesDone++;
@@ -137,6 +140,9 @@ namespace DebugCLI
                     {
                         for (int j = 0; j < expectedLines[i].Length; j++)
                         {
+                            if (expectedLines[i][j] == 'c')
+                                cCount++;
+
                             if (expectedLines[i][j] != chatLines[i][j])
                             {
                                 Console.WriteLine("Lines do not line up!");
@@ -190,7 +196,10 @@ namespace DebugCLI
             Console.WriteLine("Attempt to save finalGlyphs to debug images");
             var glyphVisualizerDir = @"glyphs";
             if (Directory.Exists(glyphVisualizerDir))
+            {
                 Directory.Delete(glyphVisualizerDir, true);
+                Thread.Sleep(1000);
+            }
             Directory.CreateDirectory(glyphVisualizerDir);
             foreach (var glyph in finalGlyphs)
             {
@@ -198,14 +207,19 @@ namespace DebugCLI
                 var pixelColor = Color.White;
                 var emptyColor = Color.Black;
                 var missingColor = Color.Magenta;
+                var bothColor = Color.CornflowerBlue;
                 for (int x = 0; x < b.Width; x++)
                 {
                     for (int y = 0; y < b.Height; y++)
                     {
-                        if (glyph.RelativePixelLocations.Any(p => p.X == x && p.Y == y))
+                        bool isPixel = glyph.RelativePixelLocations.Any(p => p.X == x && p.Y == y);
+                        bool isEmpty = glyph.RelativeEmptyLocations.Any(p => p.X == x && p.Y == y);
+                        if (isPixel && !isEmpty)
                             b.SetPixel(x, y, pixelColor);
-                        else if (glyph.RelativeEmptyLocations.Any(p => p.X == x && p.Y == y))
+                        else if (isEmpty && !isPixel)
                             b.SetPixel(x, y, emptyColor);
+                        else if (isEmpty && isPixel)
+                            b.SetPixel(x, y, bothColor);
                         else
                             b.SetPixel(x, y, missingColor);
                     }

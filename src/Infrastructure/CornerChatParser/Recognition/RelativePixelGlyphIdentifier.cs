@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using WebSocketSharp;
@@ -14,7 +15,9 @@ namespace CornerChatParser.Recognition
 {
     public static class RelativePixelGlyphIdentifier
     {
-        public static Glyph[] IdentifyGlyph(ExtractedGlyph extracted)
+        private static int _debugOverlapCount;
+
+        public static Glyph[] IdentifyGlyph(ExtractedGlyph extracted, Bitmap b)
         {
             var candidates = GlyphDatabase.AllGlyphs.Where(IsValidCandidate(extracted));
             //Also remove anything that doesn't look to be aligned correctly
@@ -33,6 +36,7 @@ namespace CornerChatParser.Recognition
             List<Glyph> overlaps = new List<Glyph>();
             if (current == null)
             {
+                extracted.Save(Path.Combine("overlaps", (_debugOverlapCount++) + ".png"), b);
                 //System.Diagnostics.Debugger.Break();
                 //Console.WriteLine($"Probably an overlap at {extracted.Left}, {extracted.Top}.");
                 var tree = TreeMaker(extracted, new BestMatchNode(new BestMatch(0, null)));
@@ -48,7 +52,6 @@ namespace CornerChatParser.Recognition
                     overlaps.Add(g);
                 }
                 //Console.WriteLine(flat);
-                //ParseOverlappingGlyph(extracted);
             }
             //else
             //    Console.Write(current.match.Character);
@@ -127,52 +130,6 @@ namespace CornerChatParser.Recognition
             }
 
             return distances;
-        }
-
-        private static Glyph ParseOverlappingGlyph(ExtractedGlyph extracted)
-        {
-            ImageCache ic = null;
-            //In theory the best match is what ever chains the most
-            BestMatch current = null;
-            var bests = new List<BestMatch>();
-            foreach (var glyph in GlyphDatabase.GlyphsBySizeDescending())
-            {
-                // Can't be bigger
-                if (glyph.ReferenceMinWidth > extracted.Width)
-                    continue;
-
-                // Can't be higher up than the extracted glyph
-                if (glyph.ReferenceGapFromLineTop < extracted.PixelsFromTopOfLine - 1)
-                    continue;
-
-                double distances = 0;
-                distances += GetMinDistanceSum(glyph.RelativePixelLocations, extracted.RelativePixelLocations);
-                distances += GetMinDistanceSum(glyph.RelativeEmptyLocations, extracted.RelativeEmptyLocations);
-
-                if (current == null || current.distanceSum > distances)
-                {
-                    current = new BestMatch(distances, glyph);
-                    bests.Add(current);
-                }
-            }
-
-            //Console.WriteLine("Guess\tScore\tWidth");
-            foreach (var guess in bests)
-            {
-                var remainder = extracted.Subtract(guess.match);
-                var nextBest = ParseOverlappingGlyphStep2(remainder);
-                //Console.WriteLine(guess.match.Character + "\t" + (Math.Round(guess.distanceSum, 2)) + "\t" + guess.match.ReferenceMaxWidth);
-                //if (guess.match.Character == '&')
-                //{
-                //    Console.WriteLine($"Remainder {remainder.Left},{remainder.Top}. {remainder.Width}x{remainder.Height}.");
-                //}
-            }
-
-            // & _
-            // [& _]
-            // 
-
-            return current != null ? current.match : null;
         }
 
         private static (Glyph[], double, BestMatchNode) GetBestBranch(BestMatchNode tree, Glyph[] branch)
@@ -271,59 +228,6 @@ namespace CornerChatParser.Recognition
 
             return node;
         }
-
-
-
-
-
-
-        private static BestMatch ParseOverlappingGlyphStep2(ExtractedGlyph remainder)
-        {
-            BestMatch current = null;
-            var bests = new List<BestMatch>();
-            foreach (var glyph in GlyphDatabase.GlyphsBySizeDescending())
-            {
-                // Can't be bigger
-                if (glyph.ReferenceMinWidth > remainder.Width)
-                    continue;
-
-                // Can't be higher up than the extracted glyph
-                if (glyph.ReferenceGapFromLineTop < remainder.PixelsFromTopOfLine - 1)
-                    continue;
-
-                double distances = 0;
-                distances += GetMinDistanceSum(glyph.RelativePixelLocations, remainder.RelativePixelLocations);
-                distances += GetMinDistanceSum(glyph.RelativeEmptyLocations, remainder.RelativeEmptyLocations);
-
-                if (current == null || current.distanceSum > distances)
-                {
-                    current = new BestMatch(distances, glyph);
-                    bests.Add(current);
-                }
-            }
-
-            return bests.DefaultIfEmpty()?.Last();
-        }
-
-        //private static BestMatch[] GetBestMatchChain(ExtractedGlyph extracted)
-        //{
-        //    var bests = new List<BestMatch>();
-        //    foreach (var glyph in GlyphDatabase.GlyphsBySizeDescending())
-        //    {
-        //        double distances = 0;
-        //        distances += GetMinDistanceSum(glyph.RelativePixelLocations, extracted.RelativePixelLocations);
-        //        distances += GetMinDistanceSum(glyph.RelativeEmptyLocations, extracted.RelativeEmptyLocations);
-
-        //        if (current == null || current.distanceSum > distances)
-        //        {
-        //            current = new BestMatch(distances, glyph);
-        //            bests.Add(current);
-        //        }
-        //    }
-
-        //    var temp = bests.First();
-        //    var next = GetBestMatchChain(extracted.Remove(temp));
-        //}
 
         [System.Diagnostics.DebuggerDisplay("{BestMatch}")]
         private class BestMatchNode

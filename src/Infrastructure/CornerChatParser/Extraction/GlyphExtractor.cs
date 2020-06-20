@@ -14,10 +14,10 @@ namespace CornerChatParser.Extraction
 {
     public static class GlyphExtractor
     {
+        private const int distanceThreshold = 2;
         private static ThreadLocal<bool[,]> _localCache = new ThreadLocal<bool[,]>();
         private static int currentCacheMinX = -1;
         private static int currentCacheMaxX = 0;
-        private static int distanceThresholdSquared = 2 * 2;
         private static int lastLineTop = 0;
 
         private static void ClearCacheSubregion(Rectangle lineRect)
@@ -63,9 +63,9 @@ namespace CornerChatParser.Extraction
                 cache[pixel.X - lineRect.Left, pixel.Y - lineRect.Top] = true;
                 currentCacheMaxX = Math.Max(currentCacheMaxX, pixel.X);
 
-                for (int globalX = Math.Max(lineRect.Left, pixel.X - 2); globalX <= Math.Min(lineRect.Right - 1, pixel.X + 2); globalX++)
+                for (int globalX = Math.Max(lineRect.Left, pixel.X - distanceThreshold); globalX <= Math.Min(lineRect.Right - 1, pixel.X + distanceThreshold); globalX++)
                 {
-                    for (int globalY = Math.Max(lineRect.Top, pixel.Y - 2); globalY <= Math.Min(lineRect.Bottom - 1, pixel.Y + 2); globalY++)
+                    for (int globalY = Math.Max(lineRect.Top, pixel.Y - distanceThreshold); globalY <= Math.Min(lineRect.Bottom - 1, pixel.Y + distanceThreshold); globalY++)
                     {
                         if (!cache[globalX - lineRect.Left, globalY - lineRect.Top] &&
                             !localBlacklist[globalX - lineRect.Left, globalY - lineRect.Top] &&
@@ -197,7 +197,7 @@ namespace CornerChatParser.Extraction
         {
             var xDistance = Math.Abs(point.X - x2);
             var yDistance = Math.Abs(point.Y - y2);
-            return xDistance <= 2 && yDistance <= 2;
+            return xDistance <= distanceThreshold && yDistance <= distanceThreshold;
             //var x = (x2 - point.X);
             //var y = (y2 - point.Y);
             //var d = (x * x) + (y * y);

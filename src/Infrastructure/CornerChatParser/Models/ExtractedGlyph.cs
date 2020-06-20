@@ -75,5 +75,31 @@ namespace CornerChatParser.Models
 
             return result;
         }
+
+        internal void Save(string v, Bitmap b)
+        {
+            var fileInfo = new FileInfo(v);
+            if(!Directory.Exists(fileInfo.Directory.FullName))
+            {
+                Directory.CreateDirectory(fileInfo.Directory.FullName);
+                Thread.Sleep(1000);
+            }
+            while (true)
+            {
+                try
+                {
+                    using (var clone = b.Clone(new Rectangle(Left, Top, Width, Height), b.PixelFormat))
+                    {
+                        clone.Save(v);
+                    }
+                    break;
+                }
+                catch
+                {
+                    var random = new Random();
+                    Thread.Sleep(random.Next(100, 1000));
+                }
+            }
+        }
     }
 }
