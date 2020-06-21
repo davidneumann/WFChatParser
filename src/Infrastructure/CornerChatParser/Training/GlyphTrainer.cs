@@ -32,9 +32,9 @@ namespace CornerChatParser.Training
                 }
             }
 
-            var pixelCountsAverage = pixelCounts.Values.Average();
+            var pixelCountsAverage = pixelCounts.Values.Count > 0 ? pixelCounts.Values.Average() : 0;
             var finalRelPixels = pixelCounts.Where(kvp => kvp.Value >= pixelCountsAverage).Select(kvp => kvp.Key);
-            var emptyCountsAverage = emptyCounts.Values.Average();
+            var emptyCountsAverage = emptyCounts.Values.Count > 0 ? emptyCounts.Values.Average() : 0;
             var finalRelEmpties = emptyCounts.Where(kvp => kvp.Value >= emptyCountsAverage).Select(kvp => kvp.Key);
 
             var masterEGlyph =
