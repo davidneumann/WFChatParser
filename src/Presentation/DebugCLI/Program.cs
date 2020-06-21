@@ -99,12 +99,127 @@ namespace DebugCLI
             //CornerGlyphShim();
             //newCornerParseTrainer();
             CornerParsingShim();
+            //ParseImageTest();
+            //LineExtractorTest();
+        }
+
+        private static void LineExtractorTest(Dictionary<int, int> knownCounts = null)
+        {
+            //4515
+            {
+                var final = new Bitmap(LineScanner.ChatWidth, 4515);
+                var top = 0;
+                foreach (var file in Directory.GetFiles("debug_lines"))
+                {
+                    using (var input = new Bitmap(file))
+                    {
+                        for (int x = 0; x < final.Width; x++)
+                        {
+                            for (int y = 0; y < input.Height; y++)
+                            {
+                                final.SetPixel(x, y + top, input.GetPixel(x, y));
+                            }
+                        }
+                        top += input.Height;
+                    }
+                }
+                final.Save("combined_line_misses.png");
+            }
+            Console.WriteLine("Known counts null: " + (knownCounts == null));
+            var lineCounts = new Dictionary<int, int>();
+            var count = 0;
+            var heightTotal = 0;
+            foreach (var file in Directory.GetFiles("tests"))
+            {
+                Bitmap b = new Bitmap(file);
+                var ic = new ImageCache(b);
+                foreach (var offset in LineScanner.LineOffsets)
+                {
+                    var firstY = 0;
+                    for (int y = offset - 5; y < offset + 36 + 5 + 2; y++)
+                    {
+                        if (firstY > 0)
+                            break;
+                        for (int x = LineScanner.ChatLeftX; x < LineScanner.ChatWidth; x++)
+                        {
+                            if (ic[x, y] > 0)
+                            {
+                                firstY = y;
+                                break;
+                            }
+                        }
+                    }
+                    if (!lineCounts.ContainsKey(firstY))
+                        lineCounts[firstY] = 0;
+                    lineCounts[firstY]++;
+                    if (knownCounts != null && knownCounts[firstY] < 50)
+                    {
+                        var rect = new Rectangle(4, firstY, 3236, (36 + 5 + 2));
+                        using (var clone = b.Clone(rect, b.PixelFormat))
+                        {
+                            clone.Save(Path.Combine("debug_lines", (count++) + ".png"));
+                        }
+                        heightTotal += rect.Height;
+                    }
+                }
+                b.Dispose();
+            }
+
+            if (knownCounts == null)
+            {
+                LineExtractorTest(lineCounts);
+                return;
+            }
+            else
+                Console.WriteLine("\r\nHeight: " + heightTotal);
+
+            var lineCountsStrings = lineCounts.OrderBy(o => o.Key).Select(o => $"{o.Key, 4} :{o.Value, 3}|").ToArray();
+            var cTop = Console.CursorTop;
+            for (int i = 0; i < lineCountsStrings.Length; i++)
+            {
+                var top = i % 8 + cTop;
+                var left = i / 8 * 11;
+                Console.SetCursorPosition(left, top);
+                Console.Write(lineCountsStrings[i]);
+            }
+        }
+
+        private static void ParseImageTest()
+        {
+            //var inputs = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\names");
+            //var i = 0;
+            //foreach (var input in inputs)
+            //{
+            //    Console.WriteLine(input);
+            //    Bitmap b = new Bitmap(input);
+            //    var ic = new ImageCache(b);
+            //    var output = new Bitmap(ic.Width, ic.Height);
+            //    for (int x = 0; x < ic.Width; x++)
+            //    {
+            //        for (int y = 0; y < ic.Height; y++)
+            //        {
+            //            if (ic.GetColor(x, y) == ChatColor.ChatTimestampName)
+            //                output.SetPixel(x, y, b.GetPixel(x, y));
+            //            else
+            //                output.SetPixel(x, y, Color.Black);
+            //        }
+            //    }
+            //    output.Save("names_" + (i++) + ".png");
+            //    b.Dispose();
+            //}
+
+            var input = @"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\garbage.png";
+            ImageCleaner.SaveSoftMask(input, "current.png");
+            var cp = new RelativePixelParser();
+            var lines = cp.ParseChatImage(new Bitmap(input), false, false, 27);
+            foreach (var line in lines)
+            {
+                Console.WriteLine(line.RawMessage);
+            }
         }
 
         private static void CornerParsingShim()
         {
-            ImageCleaner.SaveSoftMask(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Orig\Overlaps\overlap_slice_1.png", "shrunk.png");
-            ImageCleaner.SaveSoftMask(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Orig\Spaces\space_slice_5.png", "space5.png");
             var parser = new CornerChatParser.RelativePixelParser();
             var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps";
             var allFiles = Directory.GetFiles(inputDir);
@@ -214,12 +329,23 @@ namespace DebugCLI
                     {
                         bool isPixel = glyph.RelativePixelLocations.Any(p => p.X == x && p.Y == y);
                         bool isEmpty = glyph.RelativeEmptyLocations.Any(p => p.X == x && p.Y == y);
-                        if (isPixel && !isEmpty)
-                            b.SetPixel(x, y, pixelColor);
+                        if(isPixel)
+                        {
+                            var pixel = glyph.RelativePixelLocations.First(p => p.X == x && p.Y == y);
+                            var v = (int)(pixel.Z * byte.MaxValue);
+                            if (isPixel && !isEmpty)
+                            {
+                                var c = Color.FromArgb(v, v, v);
+                                b.SetPixel(x, y, c);
+                            }
+                            else if (isEmpty && isPixel)
+                            {
+                                var c = Color.FromArgb(0, 0, v);
+                                b.SetPixel(x, y, c);
+                            }
+                        }
                         else if (isEmpty && !isPixel)
                             b.SetPixel(x, y, emptyColor);
-                        else if (isEmpty && isPixel)
-                            b.SetPixel(x, y, bothColor);
                         else
                             b.SetPixel(x, y, missingColor);
                     }

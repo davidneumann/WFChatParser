@@ -12,8 +12,10 @@ namespace CornerChatParser.Extraction
 {
     public static class LineScanner
     {
-        private static int[] _lineOffsets = new int[] { 768, 818, 868, 917, 967, 1016, 1066, 1115, 1165, 1215, 1264, 1314, 1363, 1413, 1463, 1512, 1562, 1611, 1661, 1711, 1760, 1810, 1859, 1909, 1958, 2008, 2058 };
-
+        public static readonly int[] LineOffsets = new int[] { 767, 816, 866, 915, 965, 1015, 1064, 1114, 1163, 1213, 1262, 1312, 1362, 1411, 1461, 1510, 1560, 1610, 1659, 1709, 1758, 1808, 1858, 1907, 1957, 2006, 2056 };
+        public static readonly int ChatLeftX = 4;
+        public static readonly int ChatWidth = 3236;
+        public static readonly int Lineheight = 35;
         public static ExtractedGlyph[] ExtractGlyphsFromLine(ImageCache image, Rectangle lineRect)
         {
             var results = new List<ExtractedGlyph>();
@@ -26,8 +28,10 @@ namespace CornerChatParser.Extraction
                     break;
 
                 var validPixels = new List<Point>();
+
                 var newValidPixels = GlyphExtractor.GetValidPixels(image, localBlacklist, nextPoint, lineRect);
                 //Gotta keep scanning down for things like the dot in ! or the bits of a %
+
                 while(newValidPixels != null && newValidPixels.Count > 0)
                 {
                     validPixels.AddRange(newValidPixels);
@@ -36,12 +40,12 @@ namespace CornerChatParser.Extraction
                     var rightmostX = validPixels.Max(p => p.X);
                     var bototmMost = validPixels.Where(p => p.X == leftmostX).Max(p => p.Y);
                     nextPoint = FindNextPoint(image, lineRect, localBlacklist, leftmostX);
-                    if (nextPoint.X > rightmostX)
+                    if (nextPoint.X > rightmostX || nextPoint == Point.Empty)
                         break;
                     newValidPixels = GlyphExtractor.GetValidPixels(image, localBlacklist, nextPoint, lineRect);
                 }
 
-                var newGlyph = GlyphExtractor.ExtractGlyphFromPixels(validPixels, lineRect);
+                var newGlyph = GlyphExtractor.ExtractGlyphFromPixels(validPixels, lineRect, image);
                 results.Add(newGlyph);
 
                 globalX = lastGlobalX = newGlyph.Left;
@@ -62,7 +66,7 @@ namespace CornerChatParser.Extraction
 
         public static ExtractedGlyph[] ExtractGlyphsFromLine(ImageCache image, int lineIndex)
         {
-            return ExtractGlyphsFromLine(image, new Rectangle(4, _lineOffsets[lineIndex], 3236, 34));
+            return ExtractGlyphsFromLine(image, new Rectangle(ChatLeftX, LineOffsets[lineIndex], ChatWidth, Lineheight));
         }
 
         public static void SaveExtractedGlyphs(ImageCache image, string outputDir, ExtractedGlyph[] glyphs)
@@ -89,6 +93,21 @@ namespace CornerChatParser.Extraction
                 var output = System.IO.Path.Combine(outputDir, $"glyph_{glyphsSaved++}.png");
                 bitmap.Save(output);
                 bitmap.Dispose();
+            }
+        }
+
+        public static void SaveLines(Bitmap b, string outputDir)
+        {
+            if (!Directory.Exists(outputDir))
+                Directory.CreateDirectory(outputDir);
+            var count = 0;
+            foreach (var lineOffset in LineOffsets)
+            {
+                var rect = new Rectangle(ChatLeftX, lineOffset, ChatWidth, Lineheight);
+                using (var clone = b.Clone(rect, b.PixelFormat))
+                {
+                    clone.Save(Path.Combine(outputDir, (count++) + ".png"));
+                }
             }
         }
 

@@ -57,7 +57,7 @@ namespace CornerChatParser
                     RawMessage = new string(glyphs.Select(g =>g.Character).ToArray())
                 };
             });
-            //}
+        //}
 
             return result.Where(r => r.RawMessage.Length > 0).ToArray();
         }

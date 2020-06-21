@@ -14,7 +14,7 @@ namespace CornerChatParser.Extraction
 {
     public static class GlyphExtractor
     {
-        private const int distanceThreshold = 2;
+        private const int distanceThreshold = 1;
         private static ThreadLocal<bool[,]> _localCache = new ThreadLocal<bool[,]>();
         private static int currentCacheMinX = -1;
         private static int currentCacheMaxX = 0;
@@ -82,7 +82,7 @@ namespace CornerChatParser.Extraction
             return validPixels;
         }
 
-        public static ExtractedGlyph ExtractGlyphFromPixels(List<Point> validPixels, Rectangle lineRect)
+        public static ExtractedGlyph ExtractGlyphFromPixels(List<Point> validPixels, Rectangle lineRect, ImageCache image)
         {
             ClearCacheSubregion(lineRect);
             var cache = _localCache.Value;
@@ -121,10 +121,16 @@ namespace CornerChatParser.Extraction
             var height = extractedGlobalMaxY - extractedGlobalMinY + 1;
 
             
-            var relativePixels = validPixels.Select(p => new Point(p.X - extractedGlobalMinX, p.Y - extractedGlobalMinY));
+            var relativePixels = validPixels.Select(p =>
+            {
+                int x = p.X - extractedGlobalMinX;
+                int y = p.Y - extractedGlobalMinY;
+                return new Point3(x, y, image[p.X, p.Y]);
+            });
             var relativeEmpties = emptyPixels.Select(p => new Point(p.X - extractedGlobalMinX, p.Y - extractedGlobalMinY));
 
             var glyphRect = new Rectangle(extractedGlobalMinX, extractedGlobalMinY, width, height);
+
             var result = new ExtractedGlyph()
             {
                 PixelsFromTopOfLine = minGlobalY - lineRect.Top,
@@ -137,7 +143,8 @@ namespace CornerChatParser.Extraction
                 LineOffset = lineRect.Top,
                 AspectRatio = (float)width / height,
                 RelativeEmptyLocations = relativeEmpties.ToArray(),
-                RelativePixelLocations = relativePixels.ToArray()
+                RelativePixelLocations = relativePixels.ToArray(),
+                FromFile = image.DebugFilename
             };
 
             ClearCacheSubregion(lineRect);

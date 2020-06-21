@@ -47,37 +47,39 @@ namespace Application.ChatLineExtractor
                 if (!_valueMapMask[x, y])
                 {
                     var hsvPixel = _converter.ToHsv(_image[x, y]);
+                    var minV = 0.35f;
                     var v = hsvPixel.V;
 
                     var color = GetColor(x, y);
                     if (color == ChatColor.ChatTimestampName)
                     {
                         //Timestamps and username max out at 0.8
-                        v = Math.Min(1f, (v / 0.808f));
+                        v = Math.Min(1f, (v - minV) / (0.808f - minV)); //0.808
                         //if (v < 0.31)
                         //    v = 0;
                     }
                     else if (color == ChatColor.Text)
                     {
-                        v = Math.Min(1f, (v / 0.937f));
+                        v = Math.Min(1f, ((v - minV) / (0.937f - minV)));
                         //if (v < 0.267)
                     }
                     else if (color == ChatColor.ClanTimeStampName)
                     {
-                        v = Math.Min(1f, v / 0.7f);
+                        v = Math.Min(1f, (v - minV) / (0.7f - minV));
                         //if (v < 0.358)
                         //    v = 0;
                     }
                     else if (color == ChatColor.ItemLink)
                     {
+                        v = Math.Min(1f, (v - minV) / (1f - minV));
                         //if (v < 0.251)
                         //    v = 0;
                     }
                     else
                         v = 0;
 
-                    if (v < 0.85f)
-                        v = 0;
+                    //if (v < 0.85f)
+                    //    v = 0;
 
                     _valueMap[x, y] = Math.Max(0f, Math.Min(v, 1f));
                     _valueMapMask[x, y] = true;
@@ -88,6 +90,8 @@ namespace Application.ChatLineExtractor
 
         public int Width { get { return _image.Width; } }
         public int Height { get { return _image.Height; } }
+
+        public string DebugFilename { get; set; } = "";
 
         public SixLabors.ImageSharp.ColorSpaces.Hsv GetHsv(int x, int y)
         {

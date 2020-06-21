@@ -10,7 +10,7 @@ namespace CornerChatParser.Models
     public class Glyph
     {
         public char Character;
-        public Point[] RelativePixelLocations;
+        public Point3[] RelativePixelLocations;
         public Point[] RelativeEmptyLocations;
         public float AspectRatio;
         public int ReferenceMaxWidth;

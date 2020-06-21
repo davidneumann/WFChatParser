@@ -91,6 +91,30 @@ namespace CornerChatParser.Recognition
             return result;
         }
 
+        private static double GetMinDistanceSum(Point3[] source, Point3[] target)
+        {
+            double result = 0;
+            //For ever valid pixel find the min distance to a refrence pixel
+            foreach (var valid in source)
+            {
+                double minDistance = double.MaxValue;
+                foreach (var p in target)
+                {
+                    var d = p.Distance(valid);
+                    if (d < minDistance)
+                        minDistance = d;
+                    if (d == 0)
+                        break;
+                }
+                if (minDistance < double.MaxValue)
+                    result += minDistance;
+
+                //distances += candidate.RelativePixelLocations.Min(p => p.Distance(valid));
+            }
+
+            return result;
+        }
+
         private static double ScoreGlyph(ExtractedGlyph extracted, Glyph candidate)
         {
             double distances = 0;
@@ -266,6 +290,14 @@ namespace CornerChatParser.Recognition
             var a = p2.X - p1.X;
             var b = p2.Y - p1.Y;
             return Math.Sqrt(a * a + b * b);
+        }
+
+        internal static double Distance(this Point3 p1, Point3 p2)
+        {
+            var a = p2.X - p1.X;
+            var b = p2.Y - p1.Y;
+            var c = p2.Z - p1.Z;
+            return Math.Sqrt(a * a + b * b + c * c);
         }
     }
 }

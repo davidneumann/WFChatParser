@@ -12,7 +12,7 @@ namespace CornerChatParser.Models
 {
     public class ExtractedGlyph
     {
-        public Point[] RelativePixelLocations;
+        public Point3[] RelativePixelLocations;
         public Point[] RelativeEmptyLocations;
         //public Rectangle GlobalGlpyhRect;
         public int Left;
@@ -26,6 +26,7 @@ namespace CornerChatParser.Models
         public int PixelsFromTopOfLine;
         //public Point GlobalTopLeft;
         public float AspectRatio;
+        public string FromFile;
 
         public ExtractedGlyph Subtract(Glyph glyph)
         {
@@ -44,8 +45,9 @@ namespace CornerChatParser.Models
             var survivingLocalTop = survivingPixels.Select(p => p.Y).Min();
 
             //Use the width of the glyph and the new top to get the real pixels and emties
-            var relPixels = survivingPixels.Select(p => new Point(p.X - localXMin,
-                                                                  p.Y - survivingLocalTop)).ToArray();
+            var relPixels = survivingPixels.Select(p => new Point3(p.X - localXMin,
+                                                                   p.Y - survivingLocalTop,
+                                                                   p.Z)).ToArray();
 
             var left = survivingPixels.Min(p => p.X) + this.Left;
             var top = survivingLocalTop + this.LineOffset + this.PixelsFromTopOfLine;
@@ -76,10 +78,33 @@ namespace CornerChatParser.Models
             return result;
         }
 
+        internal void Save(string filename)
+        {
+            using (var b = new Bitmap(Width, Height))
+            {
+                for (int x = 0; x < b.Width; x++)
+                {
+                    for (int y = 0; y < b.Height; y++)
+                    {
+                        var pixel = RelativePixelLocations.FirstOrDefault(p => p.X == x && p.Y == y);
+                        if (pixel != null)
+                        {
+                            var v = (int)(pixel.Z * byte.MaxValue);
+                            var c = Color.FromArgb(v, v, v);
+                            b.SetPixel(x, y, c);
+                        }
+                        else
+                            b.SetPixel(x, y, Color.Black);
+                    }
+                }
+                b.Save(filename);
+            }
+        }
+
         internal void Save(string v, Bitmap b)
         {
             var fileInfo = new FileInfo(v);
-            if(!Directory.Exists(fileInfo.Directory.FullName))
+            if (!Directory.Exists(fileInfo.Directory.FullName))
             {
                 Directory.CreateDirectory(fileInfo.Directory.FullName);
                 Thread.Sleep(1000);
