@@ -54,7 +54,7 @@ namespace CornerChatParser
                 //Console.Write("\r");
                 result[i] = new ChatMessageLineResult()
                 {
-                    RawMessage = new string(glyphs.Select(g =>g.Character).ToArray())
+                    RawMessage = glyphs.Aggregate("", (acc, glyph) => acc + glyph.Character)
                 };
             });
         //}

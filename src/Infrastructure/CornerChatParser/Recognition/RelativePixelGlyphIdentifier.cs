@@ -45,7 +45,7 @@ namespace CornerChatParser.Recognition
                 //    Console.WriteLine($"{child.BestMatch.match.Character}\t{child.BestMatch.distanceSum}");
                 //}
                 var (branch, score, bestTree) = GetBestBranch(tree, new Glyph[0]);
-                var flat = new string(branch.Select(n => n.Character).ToArray());
+                var flat = branch.Aggregate("", (acc, glyph) => acc + glyph.Character);
                 foreach (var g in branch)
                 {
                     overlaps.Add(g);
@@ -177,7 +177,7 @@ namespace CornerChatParser.Recognition
 
         private static BestMatchNode TreeMaker(ExtractedGlyph extracted, BestMatchNode node)
         {
-            Console.WriteLine("Tree maker has started");
+            //Console.WriteLine("Tree maker has started");
             //In theory the best match is what ever chains the most
             BestMatch current = null;
             var bests = new List<BestMatch>();

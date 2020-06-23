@@ -18,7 +18,7 @@ namespace CornerChatParser.Database
             AllGlyphs = JsonConvert.DeserializeObject<List<Glyph>>(File.ReadAllText("CornerDB.json"));
         }
 
-        private static int _cachedDescSize;
+        private static int _cachedDescSize = 0;
         private static Glyph[] _cachedDesdSizeItems;
         public static Glyph[] GlyphsBySizeDescending()
         {

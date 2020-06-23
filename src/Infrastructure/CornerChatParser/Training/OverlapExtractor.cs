@@ -23,28 +23,37 @@ namespace CornerChatParser.Training
             {
                 var ic = new ImageCache(b);
                 ic.DebugFilename = imagePath;
-                var expectedLines = File.ReadAllLines(textPath);
+                var expectedLines = File.ReadAllLines(textPath).Select(line => line.Replace(" ","").Trim()).ToArray();
                 var result = new ChatMessageLineResult[expectedLines.Length];
-                Parallel.For(0, expectedLines.Length, i =>
-                //for (int i = 0; i < lineParseCount; i++)
+                Overlap lastOverlap = null;
+                //Parallel.For(0, expectedLines.Length, i =>
+                for (int i = 20; i < expectedLines.Length; i++)
                 {
+                    var charI = 0;
                     var glyphs = LineScanner.ExtractGlyphsFromLine(ic, i);
-                    Parallel.ForEach(glyphs, g =>
+                    //Parallel.ForEach(glyphs, g =>
+                    foreach (var g in glyphs)
                     {
                         var e = RelativePixelGlyphIdentifier.IdentifyGlyph(g, b);
-                        if (e.Length > 1)
+                        if (e.Length != 1)
                         {
                             var overlap = new Overlap()
                             {
                                 Bitmap = b,
                                 Extracted = g,
-                                IdentifiedGlyphs = e
+                                IdentifiedGlyphs = e,
+                                ExpectedCharacters = $"{expectedLines[i][charI]}{expectedLines[i][charI + 1]}"
                             };
                             overlaps.Add(overlap);
+                            lastOverlap = overlap;
+                            charI += 2;
                         }
-                    });
-                });
-                //}
+                        else
+                            charI++;
+                        //});
+                    }
+                    //});
+                }
             }
             return overlaps.ToArray();
         }
@@ -55,5 +64,6 @@ namespace CornerChatParser.Training
         public Bitmap Bitmap { get; set; }
         public ExtractedGlyph Extracted { get; set; }
         public Glyph[] IdentifiedGlyphs { get; set; }
+        public string ExpectedCharacters { get; set; }
     }
 }

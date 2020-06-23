@@ -49,6 +49,8 @@ using CornerChatParser.Models;
 using CornerChatParser.Extraction;
 using CornerChatParser.Training;
 using System.Reflection;
+using WebSocketSharp;
+using CornerChatParser.Database;
 
 namespace DebugCLI
 {
@@ -98,15 +100,16 @@ namespace DebugCLI
             //NewTrainingVerifier();
             //CornerGlyphShim();
             //newCornerParseTrainer();
-            //CornerParsingShim();
+            CornerParsingShim();
             //ParseImageTest();
             //LineExtractorTest();
             //GetCrednetials();
-            OverlapExtractingShim();
+            //OverlapExtractingShim();
         }
 
         private static void OverlapExtractingShim()
         {
+            var ignored = CornerChatParser.Database.GlyphDatabase.AllGlyphs;
             const string overlapDir = "overlaps";
             if (Directory.Exists(overlapDir))
             {
@@ -116,6 +119,7 @@ namespace DebugCLI
             Directory.CreateDirectory(overlapDir);
 
             var overlapCount = 0;
+            var overlappingGlyphs = new List<Glyph>();
             foreach (var item in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps").Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct())
             {
                 var text = new FileInfo(item + ".txt");
@@ -127,14 +131,16 @@ namespace DebugCLI
                 }
 
                 var overlaps = OverlapExtractor.GetOverlapingGlyphs(text.FullName, image.FullName);
+                var expectedLines = File.ReadAllLines(text.FullName);
+                var charI = 0;
                 using (var b = new Bitmap(image.FullName))
                 {
                     foreach (var overlap in overlaps)
                     {
-                        var str = new string(overlap.IdentifiedGlyphs.Select(g => g.Character).ToArray());
+                        var str = overlap.IdentifiedGlyphs.Aggregate("", (acc, glyph) => acc + glyph.Character);
                         ExtractedGlyph extracted = overlap.Extracted;
-                        Console.WriteLine($"Saving overlap {str} from {extracted.Left},{extracted.Top} {extracted.Width}x{extracted.Height}.");
-                        using (var output = new Bitmap(extracted.Width, extracted.Height))
+                        Console.WriteLine($"Saving overlap {str}/{overlap.ExpectedCharacters} from {extracted.Left},{extracted.Top} {extracted.Width}x{extracted.Height}.");
+                        using (var output = new Bitmap(extracted.Width, Math.Max(LineScanner.Lineheight, extracted.Height)))
                         {
                             for (int x = 0; x < output.Width; x++)
                             {
@@ -166,10 +172,47 @@ namespace DebugCLI
                                 }
                             }
                             output.Save(Path.Combine(overlapDir, (overlapCount++) + ".png"));
+                            //output.Save(Path.Combine(overlapDir, "current.png"));
+                            //Console.WriteLine("Just saved what is hopefully " + overlap.ExpectedCharacters);
+                        }
+
+                        //Console.Write($"Consult {overlapCount - 1}.png. Is this {overlap.ExpectedCharacters}? [y/n]: ");
+                        //var input = Console.ReadLine().Trim();
+                        //if(input == "y" || input.Length == 0)
+                        //    input = overlap.ExpectedCharacters;
+                        //else
+                        //{
+                        //    Console.Write("Enter correct input: ");
+                        //    input = Console.ReadLine().Trim();
+                        //}
+                        var input = overlap.ExpectedCharacters;
+                        if (input.Length > 0)
+                        {
+                            var glyph = new Glyph()
+                            {
+                                AspectRatio = extracted.AspectRatio,
+                                Character = input,
+                                IsOverlap = true,
+                                ReferenceGapFromLineTop = extracted.PixelsFromTopOfLine,
+                                ReferenceMaxHeight = extracted.Height + 1,
+                                ReferenceMinHeight = extracted.Height - 1,
+                                ReferenceMaxWidth = extracted.Width + 1,
+                                ReferenceMinWidth = extracted.Width - 1,
+                                RelativeEmptyLocations = extracted.RelativeEmptyLocations,
+                                RelativePixelLocations = extracted.RelativePixelLocations
+                            };
+                            overlappingGlyphs.Add(glyph);
                         }
                     }
                 }
             }
+
+            //Combine glyphs
+            var allGlyphs = new List<Glyph>();
+            allGlyphs.AddRange(CornerChatParser.Database.GlyphDatabase.AllGlyphs);
+            allGlyphs.AddRange(overlappingGlyphs);
+            var json = JsonConvert.SerializeObject(allGlyphs);
+            File.WriteAllText("glyphDataWithOverlaps.json", json);
         }
 
         private static void LineExtractorTest(Dictionary<int, int> knownCounts = null)
@@ -310,7 +353,7 @@ namespace DebugCLI
         private static void CornerParsingShim()
         {
             var parser = new CornerChatParser.RelativePixelParser();
-            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Spaces";
+            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps";
             var allFiles = Directory.GetFiles(inputDir);
             var sw = new Stopwatch();
             sw.Start();
@@ -442,7 +485,7 @@ namespace DebugCLI
                     }
                 }
 
-                b.Save(Path.Combine(glyphVisualizerDir, (int)glyph.Character + ".png"));
+                b.Save(Path.Combine(glyphVisualizerDir, (int)glyph.Character[0] + ".png"));
             }
         }
 
@@ -1734,7 +1777,7 @@ namespace DebugCLI
 
             var password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"]);
             CancellationToken token = new System.Threading.CancellationToken();
-            var gc = new GameCapture(new Logger(dataSender, token));
+            var gc = new GameCapture(new Application.Logger.Logger(dataSender, token));
             var obs = GetObsSettings(config["Credentials:Key"], config["Credentials:Salt"]);
             var logParser = new WarframeLogParser();
             var textParser = new AllTextParser(dataSender, logParser);

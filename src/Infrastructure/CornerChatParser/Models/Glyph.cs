@@ -9,7 +9,7 @@ namespace CornerChatParser.Models
     [DebuggerDisplay("{Character}")]
     public class Glyph
     {
-        public char Character;
+        public string Character;
         public Point3[] RelativePixelLocations;
         public Point[] RelativeEmptyLocations;
         public float AspectRatio;
@@ -18,6 +18,7 @@ namespace CornerChatParser.Models
         public int ReferenceMinWidth;
         public int ReferenceMinHeight;
         public float ReferenceGapFromLineTop;
+        public bool IsOverlap = false;
 
         public Glyph()
         {

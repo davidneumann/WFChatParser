@@ -87,7 +87,7 @@ namespace CornerChatParser.Training
                 ReferenceMaxWidth = masterEGlyph.Width,
                 ReferenceMaxHeight = masterEGlyph.Height,
                 ReferenceGapFromLineTop = masterEGlyph.PixelsFromTopOfLine,
-                Character = character,
+                Character = character.ToString(),
                 RelativePixelLocations = masterEGlyph.RelativePixelLocations,
                 RelativeEmptyLocations = masterEGlyph.RelativeEmptyLocations,
                 ReferenceMinWidth = glyphs.Min(g => g.Width),
