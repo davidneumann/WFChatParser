@@ -28,7 +28,7 @@ namespace CornerChatParser.Models
         public float AspectRatio;
         public string FromFile;
 
-        public ExtractedGlyph Subtract(Glyph glyph)
+        public ExtractedGlyph Subtract(FuzzyGlyph glyph)
         {
             if (this.Width <= glyph.ReferenceMaxWidth)
                 return null;

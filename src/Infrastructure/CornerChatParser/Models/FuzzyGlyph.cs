@@ -8,7 +8,7 @@ using System.Numerics;
 namespace CornerChatParser.Models
 {
     [DebuggerDisplay("{Character}")]
-    public class Glyph
+    public class FuzzyGlyph
     {
         public string Character;
         public Point3[] RelativePixelLocations;
@@ -21,8 +21,19 @@ namespace CornerChatParser.Models
         public float ReferenceGapFromLineTop;
         public bool IsOverlap = false;
 
-        public Glyph()
+        public FuzzyGlyph()
         {
         }
+    }
+    
+    public class Glyph
+    {
+        public string Character { get; set; }
+        public Dictionary<(int, int), float> Pixels = new Dictionary<(int, int), float>();
+        public HashSet<(int, int)> Empties = new HashSet<(int, int)>();
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public int GapFromTopOfLine { get; set; }
+        public bool IsOverlap { get; set; }
     }
 }

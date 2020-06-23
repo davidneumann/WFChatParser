@@ -25,9 +25,8 @@ namespace CornerChatParser.Training
                 ic.DebugFilename = imagePath;
                 var expectedLines = File.ReadAllLines(textPath).Select(line => line.Replace(" ","").Trim()).ToArray();
                 var result = new ChatMessageLineResult[expectedLines.Length];
-                Overlap lastOverlap = null;
-                //Parallel.For(0, expectedLines.Length, i =>
-                for (int i = 20; i < expectedLines.Length; i++)
+                Parallel.For(0, expectedLines.Length, i =>
+                //for (int i = 0; i < expectedLines.Length; i++)
                 {
                     var charI = 0;
                     var glyphs = LineScanner.ExtractGlyphsFromLine(ic, i);
@@ -45,15 +44,14 @@ namespace CornerChatParser.Training
                                 ExpectedCharacters = $"{expectedLines[i][charI]}{expectedLines[i][charI + 1]}"
                             };
                             overlaps.Add(overlap);
-                            lastOverlap = overlap;
                             charI += 2;
                         }
                         else
                             charI++;
                         //});
                     }
-                    //});
-                }
+                });
+            //}
             }
             return overlaps.ToArray();
         }
@@ -63,7 +61,7 @@ namespace CornerChatParser.Training
     {
         public Bitmap Bitmap { get; set; }
         public ExtractedGlyph Extracted { get; set; }
-        public Glyph[] IdentifiedGlyphs { get; set; }
+        public FuzzyGlyph[] IdentifiedGlyphs { get; set; }
         public string ExpectedCharacters { get; set; }
     }
 }

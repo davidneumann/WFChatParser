@@ -17,7 +17,7 @@ namespace CornerChatParser.Recognition
     {
         private static int _debugOverlapCount;
 
-        public static Glyph[] IdentifyGlyph(ExtractedGlyph extracted, Bitmap b)
+        public static FuzzyGlyph[] IdentifyGlyph(ExtractedGlyph extracted, Bitmap b)
         {
             //var candidates = GlyphDatabase.AllGlyphs.Where(IsValidCandidate(extracted));
             var candidates = GlyphDatabase.GetGlyphByTargetSize(extracted.Width, extracted.Height);
@@ -34,9 +34,11 @@ namespace CornerChatParser.Recognition
                     current = new BestMatch(distances, candidate);
             }
 
-            List<Glyph> overlaps = new List<Glyph>();
+            List<FuzzyGlyph> overlaps = new List<FuzzyGlyph>();
             if (current == null)
             {
+                //todo: fix tree code not handling way bigger DB
+                return overlaps.ToArray();
                 //System.Diagnostics.Debugger.Break();
                 //Console.WriteLine($"Probably an overlap at {extracted.Left}, {extracted.Top}.");
                 var tree = TreeMaker(extracted, new BestMatchNode(new BestMatch(0, null)));
@@ -45,7 +47,7 @@ namespace CornerChatParser.Recognition
                 //{
                 //    Console.WriteLine($"{child.BestMatch.match.Character}\t{child.BestMatch.distanceSum}");
                 //}
-                var (branch, score, bestTree) = GetBestBranch(tree, new Glyph[0]);
+                var (branch, score, bestTree) = GetBestBranch(tree, new FuzzyGlyph[0]);
                 var flat = branch.Aggregate("", (acc, glyph) => acc + glyph.Character);
                 foreach (var g in branch)
                 {
@@ -59,7 +61,7 @@ namespace CornerChatParser.Recognition
             return current != null ? new[] { current.match } : overlaps.ToArray();
         }
 
-        private static Func<Glyph, bool> IsValidCandidate(ExtractedGlyph extracted)
+        private static Func<FuzzyGlyph, bool> IsValidCandidate(ExtractedGlyph extracted)
         {
             return g => extracted.Width >= g.ReferenceMinWidth - 1 &&
                         extracted.Width <= g.ReferenceMaxWidth + 1 &&
@@ -115,7 +117,7 @@ namespace CornerChatParser.Recognition
             return result;
         }
 
-        private static double ScoreGlyph(ExtractedGlyph extracted, Glyph candidate)
+        private static double ScoreGlyph(ExtractedGlyph extracted, FuzzyGlyph candidate)
         {
             double distances = 0;
             //For ever valid pixel find the min distance to a refrence pixel
@@ -156,11 +158,11 @@ namespace CornerChatParser.Recognition
             return distances;
         }
 
-        private static (Glyph[], double, BestMatchNode) GetBestBranch(BestMatchNode tree, Glyph[] branch)
+        private static (FuzzyGlyph[], double, BestMatchNode) GetBestBranch(BestMatchNode tree, FuzzyGlyph[] branch)
         {
             if (tree.Children.Count > 0)
             {
-                var results = new Dictionary<BestMatchNode, (Glyph[], double)>();
+                var results = new Dictionary<BestMatchNode, (FuzzyGlyph[], double)>();
                 foreach (var child in tree.Children)
                 {
                     var (g, score, _) = GetBestBranch(child, branch);
@@ -172,7 +174,7 @@ namespace CornerChatParser.Recognition
                     bestChild.Value.Item2, bestChild.Key);
             }
             else
-                return (new Glyph[0], 0, tree);
+                return (new FuzzyGlyph[0], 0, tree);
         }
 
 
@@ -269,9 +271,9 @@ namespace CornerChatParser.Recognition
         private class BestMatch
         {
             public double distanceSum;
-            public Glyph match;
+            public FuzzyGlyph match;
 
-            public BestMatch(double distance, Glyph candidate)
+            public BestMatch(double distance, FuzzyGlyph candidate)
             {
                 distanceSum = distance;
                 match = candidate;

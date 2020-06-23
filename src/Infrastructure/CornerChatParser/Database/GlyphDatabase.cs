@@ -12,12 +12,12 @@ namespace CornerChatParser.Database
 {
     public static class GlyphDatabase
     {
-        public static List<Glyph> AllGlyphs = new List<Glyph>();
+        public static List<FuzzyGlyph> AllGlyphs = new List<FuzzyGlyph>();
 
-        private static ConcurrentDictionary<(int, int), Glyph[]> _targetSizeCache = new ConcurrentDictionary<(int, int), Glyph[]>();
+        private static ConcurrentDictionary<(int, int), FuzzyGlyph[]> _targetSizeCache = new ConcurrentDictionary<(int, int), FuzzyGlyph[]>();
         static GlyphDatabase()
         {
-            AllGlyphs = JsonConvert.DeserializeObject<List<Glyph>>(File.ReadAllText("CornerDB.json"));
+            AllGlyphs = JsonConvert.DeserializeObject<List<FuzzyGlyph>>(File.ReadAllText("CornerDB.json"));
             _cachedDescSize = AllGlyphs.Count;
             _cachedDesdSizeItems = AllGlyphs.OrderByDescending(g => g.ReferenceMaxWidth).ToArray();
 
@@ -48,20 +48,20 @@ namespace CornerChatParser.Database
         }
 
         private static int _cachedDescSize = 0;
-        private static Glyph[] _cachedDesdSizeItems;
-        public static Glyph[] GlyphsBySizeDescending()
+        private static FuzzyGlyph[] _cachedDesdSizeItems;
+        public static FuzzyGlyph[] GlyphsBySizeDescending()
         {
             return _cachedDesdSizeItems;
         }
 
-        private static Dictionary<int, Glyph[]> _byWidth = new Dictionary<int, Glyph[]>();
-        private static Dictionary<int, Glyph[]> _byHeight = new Dictionary<int, Glyph[]>();
-        public static Glyph[] GetGlyphByTargetSize(int width, int height)
+        private static Dictionary<int, FuzzyGlyph[]> _byWidth = new Dictionary<int, FuzzyGlyph[]>();
+        private static Dictionary<int, FuzzyGlyph[]> _byHeight = new Dictionary<int, FuzzyGlyph[]>();
+        public static FuzzyGlyph[] GetGlyphByTargetSize(int width, int height)
         {
             if (_targetSizeCache.ContainsKey((width, height)))
                 return _targetSizeCache[(width, height)];
 
-            List<Glyph> results = new List<Glyph>();
+            List<FuzzyGlyph> results = new List<FuzzyGlyph>();
             if (_byWidth.ContainsKey(width - 1))
                 results.AddRange(_byWidth[width - 1]);
             if (_byWidth.ContainsKey(width))
