@@ -25,12 +25,12 @@ namespace CornerChatParser.Models
         {
         }
     }
-    
+
     public class Glyph
     {
         public string Character { get; set; }
-        public Dictionary<(int, int), float> Pixels = new Dictionary<(int, int), float>();
-        public HashSet<(int, int)> Empties = new HashSet<(int, int)>();
+        public Dictionary<Point, float> Pixels = new Dictionary<Point, float>();
+        public HashSet<Point> Empties = new HashSet<Point>();
         public int Width { get; set; }
         public int Height { get; set; }
         public int GapFromTopOfLine { get; set; }

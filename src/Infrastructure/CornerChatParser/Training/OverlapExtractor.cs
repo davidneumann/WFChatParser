@@ -61,7 +61,7 @@ namespace CornerChatParser.Training
     {
         public Bitmap Bitmap { get; set; }
         public ExtractedGlyph Extracted { get; set; }
-        public FuzzyGlyph[] IdentifiedGlyphs { get; set; }
+        public Glyph[] IdentifiedGlyphs { get; set; }
         public string ExpectedCharacters { get; set; }
     }
 }

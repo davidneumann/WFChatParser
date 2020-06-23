@@ -28,13 +28,13 @@ namespace CornerChatParser.Models
         public float AspectRatio;
         public string FromFile;
 
-        public ExtractedGlyph Subtract(FuzzyGlyph glyph)
+        public ExtractedGlyph Subtract(Glyph glyph)
         {
-            if (this.Width <= glyph.ReferenceMaxWidth)
+            if (this.Width <= glyph.Width)
                 return null;
             // The new system allows for small gaps between characters. We need to scan for the
             // true new left
-            var localXMin = this.RelativePixelLocations.Where(p => p.X >= glyph.ReferenceMaxWidth)
+            var localXMin = this.RelativePixelLocations.Where(p => p.X >= glyph.Width)
                                                        .Min(p => p.X);
 
             // Only keep points beyond the new true min x

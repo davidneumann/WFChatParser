@@ -206,16 +206,16 @@ namespace CornerChatParser.Training
                 remainingEmpties.AddRange(adjustedEmpties);
             }
 
-            var resultingEmpties = new HashSet<(int, int)>();
+            var resultingEmpties = new HashSet<Point>();
             foreach (var empty in remainingEmpties)
             {
-                resultingEmpties.Add((empty.X, empty.Y));
+                resultingEmpties.Add( new Point(empty.X, empty.Y));
             }
 
-            var resultingPixels = new Dictionary<(int, int), float>();
+            var resultingPixels = new Dictionary<Point, float>();
             foreach (var pixel in remainingPixels)
             {
-                resultingPixels[(pixel.X, pixel.Y)] = pixel.Z;
+                resultingPixels[new Point(pixel.X, pixel.Y)] = pixel.Z;
             }
 
             var result = new Glyph()

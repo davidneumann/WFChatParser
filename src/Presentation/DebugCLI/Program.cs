@@ -99,8 +99,8 @@ namespace DebugCLI
             //SaveAllPixelGroups();
             //NewTrainingVerifier();
             //CornerGlyphShim();
-            newCornerParseTrainer();
-            //CornerParsingShim();
+            //newCornerParseTrainer();
+            CornerParsingShim();
             //ParseImageTest();
             //LineExtractorTest();
             //GetCrednetials();
@@ -119,7 +119,7 @@ namespace DebugCLI
             Directory.CreateDirectory(overlapDir);
 
             var overlapCount = 0;
-            var overlappingGlyphs = new List<FuzzyGlyph>();
+            var overlappingGlyphs = new List<Glyph>();
             foreach (var item in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps").Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct())
             {
                 var text = new FileInfo(item + ".txt");
@@ -188,18 +188,32 @@ namespace DebugCLI
                         var input = overlap.ExpectedCharacters;
                         if (input.Length > 0)
                         {
-                            var glyph = new FuzzyGlyph()
+                            var pixels = new Dictionary<Point, float>();
+                            foreach (var p in extracted.RelativePixelLocations)
                             {
-                                AspectRatio = extracted.AspectRatio,
+                                pixels[new Point(p.X, p.Y)] = p.Z;
+                            }
+                            var empties = new HashSet<Point>();
+                            foreach (var e in extracted.RelativeEmptyLocations)
+                            {
+                                empties.Add(new Point(e.X, e.Y));
+                            }
+                            var glyph = new Glyph()
+                            {
+                                //AspectRatio = extracted.AspectRatio,
                                 Character = input,
                                 IsOverlap = true,
-                                ReferenceGapFromLineTop = extracted.PixelsFromTopOfLine,
-                                ReferenceMaxHeight = extracted.Height + 1,
-                                ReferenceMinHeight = extracted.Height - 1,
-                                ReferenceMaxWidth = extracted.Width + 1,
-                                ReferenceMinWidth = extracted.Width - 1,
-                                RelativeEmptyLocations = extracted.RelativeEmptyLocations,
-                                RelativePixelLocations = extracted.RelativePixelLocations
+                                GapFromTopOfLine = extracted.PixelsFromTopOfLine,
+                                Height = extracted.Height,
+                                Width = extracted.Width,
+                                Pixels = pixels,
+                                Empties = empties
+                                //ReferenceMaxHeight = extracted.Height + 1,
+                                //ReferenceMinHeight = extracted.Height - 1,
+                                //ReferenceMaxWidth = extracted.Width + 1,
+                                //ReferenceMinWidth = extracted.Width - 1,
+                                //RelativeEmptyLocations = extracted.RelativeEmptyLocations,
+                                //RelativePixelLocations = extracted.RelativePixelLocations
                             };
                             overlappingGlyphs.Add(glyph);
                         }
@@ -208,7 +222,7 @@ namespace DebugCLI
             }
 
             //Combine glyphs
-            var allGlyphs = new List<FuzzyGlyph>();
+            var allGlyphs = new List<Glyph>();
             allGlyphs.AddRange(CornerChatParser.Database.GlyphDatabase.AllGlyphs);
             allGlyphs.AddRange(overlappingGlyphs);
             var json = JsonConvert.SerializeObject(allGlyphs);
@@ -354,7 +368,7 @@ namespace DebugCLI
         {
             CornerChatParser.Database.GlyphDatabase.Init();
             var parser = new CornerChatParser.RelativePixelParser();
-            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps";
+            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Spaces";
             var allFiles = Directory.GetFiles(inputDir);
             var sw = new Stopwatch();
             sw.Start();
@@ -501,11 +515,11 @@ namespace DebugCLI
                 {
                     for (int y = 0; y < b.Height; y++)
                     {
-                        bool isPixel = glyph.Pixels.Any(p => p.Key.Item1 == x && p.Key.Item2 == y);
-                        bool isEmpty = glyph.Empties.Any(p => p.Item1 == x && p.Item2 == y);
+                        bool isPixel = glyph.Pixels.Any(p => p.Key.X == x && p.Key.Y == y);
+                        bool isEmpty = glyph.Empties.Any(p => p.X == x && p.Y == y);
                         if (isPixel)
                         {
-                            var pixel = glyph.Pixels.First(p => p.Key.Item1 == x && p.Key.Item2 == y);
+                            var pixel = glyph.Pixels.First(p => p.Key.X == x && p.Key.Y == y);
                             var v = (int)(pixel.Value * byte.MaxValue);
                             if (isPixel && !isEmpty)
                             {

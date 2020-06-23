@@ -12,33 +12,34 @@ namespace CornerChatParser.Database
 {
     public static class GlyphDatabase
     {
-        public static List<FuzzyGlyph> AllGlyphs = new List<FuzzyGlyph>();
+        public static List<Glyph> AllGlyphs = new List<Glyph>();
 
-        private static ConcurrentDictionary<(int, int), FuzzyGlyph[]> _targetSizeCache = new ConcurrentDictionary<(int, int), FuzzyGlyph[]>();
+        private static ConcurrentDictionary<(int, int), Glyph[]> _targetSizeCache = new ConcurrentDictionary<(int, int), Glyph[]>();
         static GlyphDatabase()
         {
-            AllGlyphs = JsonConvert.DeserializeObject<List<FuzzyGlyph>>(File.ReadAllText("CornerDB.json"));
+            AllGlyphs = JsonConvert.DeserializeObject<List<Glyph>>(File.ReadAllText("CornerDB.json"));
             _cachedDescSize = AllGlyphs.Count;
-            _cachedDesdSizeItems = AllGlyphs.OrderByDescending(g => g.ReferenceMaxWidth).ToArray();
+            _cachedDesdSizeItems = AllGlyphs.OrderByDescending(g => g.Width).ToArray();
 
-            foreach (var group in AllGlyphs.GroupBy(g => g.ReferenceMinWidth))
+            foreach (var group in AllGlyphs.GroupBy(g => g.Width))
             {
                 _byWidth[group.Key] = group.ToArray();
             }
-            foreach (var group in AllGlyphs.GroupBy(g => g.ReferenceMinHeight))
+            foreach (var group in AllGlyphs.GroupBy(g => g.Height))
             {
                 _byHeight[group.Key] = group.ToArray();
             }
 
             foreach (var glyph in AllGlyphs)
             {
-                for (int width = Math.Max(1, glyph.ReferenceMinWidth - 1); width <= glyph.ReferenceMinWidth + 1; width++)
-                {
-                    for (int height = Math.Max(1, glyph.ReferenceMinHeight); height <= glyph.ReferenceMinHeight + 1; height++)
-                    {
-                        GetGlyphByTargetSize(width, height);
-                    }
-                }
+                //for (int width = Math.Max(1, glyph.Width - 1); width <= glyph.Width + 1; width++)
+                //{
+                //    for (int height = Math.Max(1, glyph.Height); height <= glyph.Height + 1; height++)
+                //    {
+                //        GetGlyphByTargetSize(width, height);
+                //    }
+                //}
+                GetGlyphByTargetSize(glyph.Width, glyph.Height);
             }
         }
 
@@ -48,30 +49,31 @@ namespace CornerChatParser.Database
         }
 
         private static int _cachedDescSize = 0;
-        private static FuzzyGlyph[] _cachedDesdSizeItems;
-        public static FuzzyGlyph[] GlyphsBySizeDescending()
+        private static Glyph[] _cachedDesdSizeItems;
+        public static Glyph[] GlyphsBySizeDescending()
         {
             return _cachedDesdSizeItems;
         }
 
-        private static Dictionary<int, FuzzyGlyph[]> _byWidth = new Dictionary<int, FuzzyGlyph[]>();
-        private static Dictionary<int, FuzzyGlyph[]> _byHeight = new Dictionary<int, FuzzyGlyph[]>();
-        public static FuzzyGlyph[] GetGlyphByTargetSize(int width, int height)
+        private static Dictionary<int, Glyph[]> _byWidth = new Dictionary<int, Glyph[]>();
+        private static Dictionary<int, Glyph[]> _byHeight = new Dictionary<int, Glyph[]>();
+        public static Glyph[] GetGlyphByTargetSize(int width, int height)
         {
             if (_targetSizeCache.ContainsKey((width, height)))
                 return _targetSizeCache[(width, height)];
 
-            List<FuzzyGlyph> results = new List<FuzzyGlyph>();
-            if (_byWidth.ContainsKey(width - 1))
-                results.AddRange(_byWidth[width - 1]);
+            List<Glyph> results = new List<Glyph>();
+            //if (_byWidth.ContainsKey(width - 1))
+            //    results.AddRange(_byWidth[width - 1]);
             if (_byWidth.ContainsKey(width))
                 results.AddRange(_byWidth[width]);
-            if (_byWidth.ContainsKey(width + 1))
-                results.AddRange(_byWidth[width + 1]);
+            //if (_byWidth.ContainsKey(width + 1))
+            //    results.AddRange(_byWidth[width + 1]);
 
-            _targetSizeCache[(width, height)] = results.Where(g => height >= g.ReferenceMinHeight - 1 && height <= g.ReferenceMinHeight + 1).ToArray();
+            //_targetSizeCache[(width, height)] = results.Where(g => height >= g.Height - 1 && height <= g.Height + 1).ToArray();
 
             //_targetSizeCache[(width, height)] = AllGlyphs.Where(g => g.ReferenceMinWidth == width && g.ReferenceMinHeight == height).ToArray();
+            _targetSizeCache[(width, height)] = _byWidth[width].Where(g => g.Height == height).ToArray();
             return _targetSizeCache[(width, height)];
         }
     }
