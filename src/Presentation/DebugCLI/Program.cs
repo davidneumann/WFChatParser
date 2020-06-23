@@ -101,46 +101,30 @@ namespace DebugCLI
             CornerParsingShim();
             //ParseImageTest();
             //LineExtractorTest();
+            //GetCrednetials();
         }
 
         private static void LineExtractorTest(Dictionary<int, int> knownCounts = null)
         {
-            //4515
-            {
-                var final = new Bitmap(LineScanner.ChatWidth, 4515);
-                var top = 0;
-                foreach (var file in Directory.GetFiles("debug_lines"))
-                {
-                    using (var input = new Bitmap(file))
-                    {
-                        for (int x = 0; x < final.Width; x++)
-                        {
-                            for (int y = 0; y < input.Height; y++)
-                            {
-                                final.SetPixel(x, y + top, input.GetPixel(x, y));
-                            }
-                        }
-                        top += input.Height;
-                    }
-                }
-                final.Save("combined_line_misses.png");
-            }
             Console.WriteLine("Known counts null: " + (knownCounts == null));
             var lineCounts = new Dictionary<int, int>();
             var count = 0;
             var heightTotal = 0;
             foreach (var file in Directory.GetFiles("tests"))
             {
+                Console.WriteLine("Looking at " + file);
                 Bitmap b = new Bitmap(file);
                 var ic = new ImageCache(b);
-                foreach (var offset in LineScanner.LineOffsets)
+                //foreach (var offset in LineScanner.LineOffsets)
+                var offset = 708;
+                while (offset < 2120)
                 {
                     var firstY = 0;
-                    for (int y = offset - 5; y < offset + 36 + 5 + 2; y++)
+                    for (int y = offset; y < offset + 15; y++)
                     {
-                        if (firstY > 0)
+                        if (firstY > offset)
                             break;
-                        for (int x = LineScanner.ChatLeftX; x < LineScanner.ChatWidth; x++)
+                        for (int x = LineScanner.ChatLeftX; x < 1700; x++)
                         {
                             if (ic[x, y] > 0)
                             {
@@ -149,12 +133,14 @@ namespace DebugCLI
                             }
                         }
                     }
+                    Console.WriteLine("First y: " + firstY);
+                    offset = firstY + 14;
                     if (!lineCounts.ContainsKey(firstY))
                         lineCounts[firstY] = 0;
                     lineCounts[firstY]++;
                     if (knownCounts != null && knownCounts[firstY] < 50)
                     {
-                        var rect = new Rectangle(4, firstY, 3236, (36 + 5 + 2));
+                        var rect = new Rectangle(4, firstY, 1723, 14);
                         using (var clone = b.Clone(rect, b.PixelFormat))
                         {
                             clone.Save(Path.Combine("debug_lines", (count++) + ".png"));
@@ -177,10 +163,45 @@ namespace DebugCLI
             var cTop = Console.CursorTop;
             for (int i = 0; i < lineCountsStrings.Length; i++)
             {
-                var top = i % 8 + cTop;
-                var left = i / 8 * 11;
-                Console.SetCursorPosition(left, top);
+                //var top = i % 8 + cTop;
+                //var left = i / 8 * 11;
+                //Console.SetCursorPosition(left, top);
+                //Console.Write(lineCountsStrings[i]);
+                if (Console.CursorLeft + lineCountsStrings[i].Length >= Console.BufferWidth)
+                    Console.WriteLine();
                 Console.Write(lineCountsStrings[i]);
+            }
+
+            if (heightTotal > 0)
+            {
+                //4515
+                {
+                    var files = Directory.GetFiles("debug_lines");
+                    var final = new Bitmap(LineScanner.ChatWidth, heightTotal + files.Length * 2);
+                    var top = 0;
+                    var colors = new[] { Color.Green, Color.Blue };
+                    //var i = 0;
+                    foreach (var file in files)
+                    {
+                        using (var input = new Bitmap(file))
+                        {
+                            for (int x = 0; x < final.Width; x++)
+                            {
+                                final.SetPixel(x, top, Color.Red);
+                            }
+                            top++;
+                            for (int x = 0; x < final.Width && x < input.Width; x++)
+                            {
+                                for (int y = 0; y < input.Height; y++)
+                                {
+                                    final.SetPixel(x, y + top, input.GetPixel(x, y));
+                                }
+                            }
+                            top += input.Height;
+                        }
+                    }
+                    final.Save("combined_line_misses.png");
+                }
             }
         }
 
@@ -221,7 +242,7 @@ namespace DebugCLI
         private static void CornerParsingShim()
         {
             var parser = new CornerChatParser.RelativePixelParser();
-            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps";
+            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New New English\Spaces";
             var allFiles = Directory.GetFiles(inputDir);
             var sw = new Stopwatch();
             sw.Start();
@@ -250,25 +271,27 @@ namespace DebugCLI
                     {
                         isError = true;
                         Console.WriteLine($"Expected {expectedLines[i].Length} characters but got {chatLines[i].Length}.");
+                        Console.WriteLine($"{chatLines[i]}\n{expectedLines[i]}\n");
                     }
                     if (!isError)
                     {
+                        var errorLine = "";
                         for (int j = 0; j < expectedLines[i].Length; j++)
                         {
-                            if (expectedLines[i][j] == 'c')
-                                cCount++;
-
                             if (expectedLines[i][j] != chatLines[i][j])
                             {
-                                Console.WriteLine("Lines do not line up!");
                                 isError = true;
-                                break;
+                                errorLine += "^";
                             }
+                            else
+                                errorLine += " ";
                         }
-                    }
-                    if (isError)
-                    {
-                        Console.WriteLine($"{chatLines[i]}\n{expectedLines[i]}\n");
+
+                        if(isError)
+                        {
+                            Console.WriteLine("Lines do not line up!");
+                            Console.WriteLine($"{chatLines[i]}\n{expectedLines[i]}\n{errorLine}");
+                        }    
                     }
                 }
                 b.Dispose();
@@ -279,7 +302,7 @@ namespace DebugCLI
 
         private static void newCornerParseTrainer()
         {
-            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Spaces";
+            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New New English\Spaces";
             var allFiles = Directory.GetFiles(inputDir);
             var inputs = allFiles.Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct();
             var error = false;
@@ -1424,6 +1447,66 @@ namespace DebugCLI
             }
 
             CredentialManager.SaveCredentials(target, new System.Net.NetworkCredential(encryptedUsername, encryptedPassword));
+        }
+
+        private static void GetCrednetials()
+        {
+            IConfiguration config = new ConfigurationBuilder()
+                 .AddJsonFile("appsettings.json", true, true)
+                 .AddJsonFile("appsettings.development.json", true, true)
+                 .AddJsonFile("appsettings.production.json", true, true)
+                 .Build();
+
+            var key = config["Credentials:Key"];
+            var salt = config["Credentials:Salt"];
+
+            foreach (var i in config.GetSection("Launchers").GetChildren().AsEnumerable())
+            {
+                var section = config.GetSection(i.Path);
+
+                var Password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"], section.GetSection("WarframeCredentialsTarget").Value);
+                var Username = GetUsername(config["Credentials:Key"], config["Credentials:Salt"], section.GetSection("WarframeCredentialsTarget").Value);
+                Console.WriteLine($"{Username} : {Password}");
+            }
+        }
+
+        private static string GetPassword(string key, string salt, string target)
+        {
+            var r = CredentialManager.GetCredentials(target, CredentialManager.CredentialType.Generic);
+            using (MemoryStream ms = new MemoryStream())
+            {
+                PasswordDeriveBytes pdb = new PasswordDeriveBytes(key, Encoding.UTF8.GetBytes(salt));
+                Aes aes = new AesManaged();
+                aes.Key = pdb.GetBytes(aes.KeySize / 8);
+                aes.IV = pdb.GetBytes(aes.BlockSize / 8);
+                using (CryptoStream cs = new CryptoStream(ms,
+                  aes.CreateDecryptor(), CryptoStreamMode.Write))
+                {
+                    var input = Convert.FromBase64String(r.Password);
+                    cs.Write(input, 0, input.Length);
+                    cs.Close();
+                    return Encoding.UTF8.GetString(ms.ToArray());
+                }
+            }
+        }
+        private static string GetUsername(string key, string salt, string target)
+        {
+            var r = CredentialManager.GetCredentials(target, CredentialManager.CredentialType.Generic);
+            using (MemoryStream ms = new MemoryStream())
+            {
+                PasswordDeriveBytes pdb = new PasswordDeriveBytes(key, Encoding.UTF8.GetBytes(salt));
+                Aes aes = new AesManaged();
+                aes.Key = pdb.GetBytes(aes.KeySize / 8);
+                aes.IV = pdb.GetBytes(aes.BlockSize / 8);
+                using (CryptoStream cs = new CryptoStream(ms,
+                  aes.CreateDecryptor(), CryptoStreamMode.Write))
+                {
+                    var input = Convert.FromBase64String(r.UserName);
+                    cs.Write(input, 0, input.Length);
+                    cs.Close();
+                    return Encoding.UTF8.GetString(ms.ToArray());
+                }
+            }
         }
 
         private static void PasswordShim(string key, string salt, string password)

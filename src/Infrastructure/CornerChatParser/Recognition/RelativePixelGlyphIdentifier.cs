@@ -178,6 +178,7 @@ namespace CornerChatParser.Recognition
 
         private static BestMatchNode TreeMaker(ExtractedGlyph extracted, BestMatchNode node)
         {
+            Console.WriteLine("Tree maker has started");
             //In theory the best match is what ever chains the most
             BestMatch current = null;
             var bests = new List<BestMatch>();
