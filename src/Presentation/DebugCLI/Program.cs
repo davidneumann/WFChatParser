@@ -98,10 +98,78 @@ namespace DebugCLI
             //NewTrainingVerifier();
             //CornerGlyphShim();
             //newCornerParseTrainer();
-            CornerParsingShim();
+            //CornerParsingShim();
             //ParseImageTest();
             //LineExtractorTest();
             //GetCrednetials();
+            OverlapExtractingShim();
+        }
+
+        private static void OverlapExtractingShim()
+        {
+            const string overlapDir = "overlaps";
+            if (Directory.Exists(overlapDir))
+            {
+                Directory.Delete(overlapDir, true);
+                Thread.Sleep(1000);
+            }
+            Directory.CreateDirectory(overlapDir);
+
+            var overlapCount = 0;
+            foreach (var item in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps").Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct())
+            {
+                var text = new FileInfo(item + ".txt");
+                var image = new FileInfo(item + ".png");
+                if(!text.Exists || !image.Exists)
+                {
+                    Console.WriteLine($"Missing text {text.Exists}. Missing image {image.Exists}.");
+                    throw new Exception("File missing");
+                }
+
+                var overlaps = OverlapExtractor.GetOverlapingGlyphs(text.FullName, image.FullName);
+                using (var b = new Bitmap(image.FullName))
+                {
+                    foreach (var overlap in overlaps)
+                    {
+                        var str = new string(overlap.IdentifiedGlyphs.Select(g => g.Character).ToArray());
+                        ExtractedGlyph extracted = overlap.Extracted;
+                        Console.WriteLine($"Saving overlap {str} from {extracted.Left},{extracted.Top} {extracted.Width}x{extracted.Height}.");
+                        using (var output = new Bitmap(extracted.Width, extracted.Height))
+                        {
+                            for (int x = 0; x < output.Width; x++)
+                            {
+                                for (int y = 0; y < output.Height; y++)
+                                {
+                                    var pixel = extracted.RelativePixelLocations.FirstOrDefault(p => p.X == x && p.Y == y);
+                                    bool emptyValid = extracted.RelativeEmptyLocations.Any(p => p.X == x && p.Y == y);
+
+                                    if (pixel != null)
+                                    {
+                                        var v = (int)(pixel.Z * byte.MaxValue);
+                                        if (emptyValid)
+                                        {
+                                            var c = Color.FromArgb(0, 0, v);
+                                            output.SetPixel(x, y, c);
+                                        }
+                                        else
+                                        {
+                                            var c = Color.FromArgb(v, v, v);
+                                            output.SetPixel(x, y, c);
+                                        }
+                                    }
+                                    else if (emptyValid)
+                                    {
+                                        output.SetPixel(x, y, Color.Black);
+                                    }
+                                    else
+                                        output.SetPixel(x, y, Color.Magenta);
+                                }
+                            }
+                            output.Save(Path.Combine(overlapDir, (overlapCount++) + ".png"));
+                        }
+                    }
+                }
+            }
         }
 
         private static void LineExtractorTest(Dictionary<int, int> knownCounts = null)
@@ -242,7 +310,7 @@ namespace DebugCLI
         private static void CornerParsingShim()
         {
             var parser = new CornerChatParser.RelativePixelParser();
-            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New New English\Spaces";
+            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Spaces";
             var allFiles = Directory.GetFiles(inputDir);
             var sw = new Stopwatch();
             sw.Start();
@@ -302,7 +370,7 @@ namespace DebugCLI
 
         private static void newCornerParseTrainer()
         {
-            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New New English\Spaces";
+            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Spaces";
             var allFiles = Directory.GetFiles(inputDir);
             var inputs = allFiles.Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct();
             var error = false;

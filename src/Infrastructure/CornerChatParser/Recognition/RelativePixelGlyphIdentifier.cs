@@ -36,7 +36,6 @@ namespace CornerChatParser.Recognition
             List<Glyph> overlaps = new List<Glyph>();
             if (current == null)
             {
-                extracted.Save(Path.Combine("overlaps", (_debugOverlapCount++) + ".png"), b);
                 //System.Diagnostics.Debugger.Break();
                 //Console.WriteLine($"Probably an overlap at {extracted.Left}, {extracted.Top}.");
                 var tree = TreeMaker(extracted, new BestMatchNode(new BestMatch(0, null)));
