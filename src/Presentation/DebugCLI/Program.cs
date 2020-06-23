@@ -352,6 +352,7 @@ namespace DebugCLI
 
         private static void CornerParsingShim()
         {
+            CornerChatParser.Database.GlyphDatabase.Init();
             var parser = new CornerChatParser.RelativePixelParser();
             var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps";
             var allFiles = Directory.GetFiles(inputDir);
@@ -439,7 +440,7 @@ namespace DebugCLI
 
             Console.WriteLine($"Extracted {glyphDict.Values.SelectMany(g => g).Count()} named glyphs without error.");
 
-            var finalGlyphs = glyphDict.Select((kvp) => GlyphTrainer.CombineExtractedGlyphs(kvp.Key, kvp.Value));
+            var finalGlyphs = glyphDict.Select((kvp) => GlyphTrainer.CombineExtractedGlyphsByRects(kvp.Key, kvp.Value)).SelectMany(o => o);
             File.WriteAllText("cornerDB.json", JsonConvert.SerializeObject(finalGlyphs.ToArray()));
 
             Console.WriteLine("Attempt to save finalGlyphs to debug images");

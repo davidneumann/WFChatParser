@@ -19,10 +19,11 @@ namespace CornerChatParser.Recognition
 
         public static Glyph[] IdentifyGlyph(ExtractedGlyph extracted, Bitmap b)
         {
-            var candidates = GlyphDatabase.AllGlyphs.Where(IsValidCandidate(extracted));
+            //var candidates = GlyphDatabase.AllGlyphs.Where(IsValidCandidate(extracted));
+            var candidates = GlyphDatabase.GetGlyphByTargetSize(extracted.Width, extracted.Height);
             //Also remove anything that doesn't look to be aligned correctly
             candidates = candidates.Where(g => extracted.PixelsFromTopOfLine >= g.ReferenceGapFromLineTop - 2
-                                            && extracted.PixelsFromTopOfLine <= g.ReferenceGapFromLineTop + 2);
+                                            && extracted.PixelsFromTopOfLine <= g.ReferenceGapFromLineTop + 2).ToArray();
 
             BestMatch current = null;
             foreach (var candidate in candidates)
@@ -60,10 +61,10 @@ namespace CornerChatParser.Recognition
 
         private static Func<Glyph, bool> IsValidCandidate(ExtractedGlyph extracted)
         {
-            return g => extracted.Width >= g.ReferenceMinWidth &&
-                        extracted.Width <= g.ReferenceMaxWidth &&
-                        extracted.Height >= g.ReferenceMinHeight &&
-                        extracted.Height <= g.ReferenceMaxHeight;
+            return g => extracted.Width >= g.ReferenceMinWidth - 1 &&
+                        extracted.Width <= g.ReferenceMaxWidth + 1 &&
+                        extracted.Height >= g.ReferenceMinHeight - 1 &&
+                        extracted.Height <= g.ReferenceMaxHeight + 1;
         }
 
         private static double GetMinDistanceSum(Point[] source, Point[] target)
