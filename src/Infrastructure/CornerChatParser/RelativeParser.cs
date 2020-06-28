@@ -46,7 +46,26 @@ namespace CornerChatParser
         public ChatMessageLineResult[] ParseChatImage(Bitmap image, bool useCache, bool isScrolledUp, int lineParseCount)
         {
             var imageCache = new ImageCache(image);
+            
+            Letter[][] allLetters = ExtractLetters(image, lineParseCount, imageCache);
 
+            Word[][] allWords = ConvertToWords(lineParseCount, allLetters);
+
+            var results = new ChatMessageLineResult[lineParseCount];
+            for (int i = 0; i < lineParseCount; i++)
+            {
+                var result = new ChatMessageLineResult();
+                result.RawMessage = allWords[i].Select(word => word.ToString()).Aggregate(new StringBuilder(), (acc, str) => acc.Append(str)).ToString();
+                lock (results)
+                {
+                    results[i] = result;
+                }
+            }
+            return results;
+        }
+
+        private static Letter[][] ExtractLetters(Bitmap image, int lineParseCount, ImageCache imageCache)
+        {
             var allLetters = new Letter[lineParseCount][];
             Parallel.For(0, lineParseCount, i =>
             {
@@ -61,8 +80,11 @@ namespace CornerChatParser
                     allLetters[i] = letters;
                 }
             });
+            return allLetters;
+        }
 
-            //Break up words on spaces
+        private static Word[][] ConvertToWords(int lineParseCount, Letter[][] allLetters)
+        {
             var allWords = new Word[lineParseCount][];
             for (int i = 0; i < lineParseCount; i++)
             {
@@ -73,7 +95,7 @@ namespace CornerChatParser
                     if (letter.FuzzyGlyph == null)
                     {
                         var last = currentWord.Letters.LastOrDefault();
-                        if(last != null)
+                        if (last != null)
                         {
                             var space = GlyphDatabase.Instance.GetDefaultSpace();
                             var gap = letter.ExtractedGlyph.Left - last.ExtractedGlyph.Right;
@@ -82,6 +104,7 @@ namespace CornerChatParser
                                 lineWords.Add(currentWord);
                                 lineWords.Add(Word.MakeSpaceWord((int)(Math.Round((float)gap / space))));
                                 currentWord = new Word();
+                                currentWord.WordColor = letter.ExtractedGlyph.FirstPixelColor;
                             }
                         }
                         currentWord.Letters.Add(new Letter(NullGlyph, letter.ExtractedGlyph));
@@ -100,12 +123,16 @@ namespace CornerChatParser
                                 lineWords.Add(Word.MakeSpaceWord(gap / space));
                                 currentWord = new Word();
                                 currentWord.Letters.Add(letter);
+                                currentWord.WordColor = letter.ExtractedGlyph.FirstPixelColor;
                             }
                             else
                                 currentWord.Letters.Add(letter);
                         }
                         else
+                        {
                             currentWord.Letters.Add(letter);
+                            currentWord.WordColor = letter.ExtractedGlyph.FirstPixelColor;
+                        }
                     }
                 }
                 if (currentWord.Letters.Count > 0)
@@ -113,17 +140,7 @@ namespace CornerChatParser
                 allWords[i] = lineWords.ToArray();
             }
 
-            var results = new ChatMessageLineResult[lineParseCount];
-            for (int i = 0; i < lineParseCount; i++)
-            {
-                var result = new ChatMessageLineResult();
-                result.RawMessage = allWords[i].Select(word => word.ToString()).Aggregate(new StringBuilder(), (acc, str) => acc.Append(str)).ToString();
-                lock (results)
-                {
-                    results[i] = result;
-                }
-            }
-            return results;
+            return allWords;
         }
     }
 }
