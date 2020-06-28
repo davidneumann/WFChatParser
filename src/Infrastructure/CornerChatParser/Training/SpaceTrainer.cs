@@ -43,7 +43,7 @@ namespace CornerChatParser.Training
                             Console.WriteLine($"Glyph count unextected on line {i}");
                             throw new Exception("Glyph count incorrect");
                         }
-                        for (int j = 0; j < expectedLines.Length; j += 2)
+                        for (int j = 0; j < expectedLines[i].Length; j += 2)
                         {
                             var def = new GlyphSpaceDefinition();
                             def.LeftCharacter = expectedLines[i][j].ToString();

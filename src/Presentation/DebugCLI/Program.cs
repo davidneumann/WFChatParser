@@ -100,18 +100,30 @@ namespace DebugCLI
             //NewTrainingVerifier();
             //CornerGlyphShim();
             //newCornerParseTrainer();
-            CornerParsingShim();
+            //CornerParsingShim();
             //ParseImageTest();
             //LineExtractorTest();
             //GetCrednetials();
             //OverlapExtractingShim();
             //newCornerParserSpaceShim();
+            RelativeParserWithSpacesShim();
+        }
+
+        private static void RelativeParserWithSpacesShim()
+        {
+            var ignored = CornerChatParser.Database.GlyphDatabase.Instance.AllGlyphs;
+            var rp = new RelativePixelParser();
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps\overlap_slice_0.png"))
+            {
+                var chatLines = rp.ParseChatImage(b, true, false, 27);
+            }
+
         }
 
         private static void newCornerParserSpaceShim()
         {
-            SpaceTrainer.TrainOnSpace(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Space Training", 
-                "NewCornerDB.json");
+            SpaceTrainer.TrainOnSpace(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Space Training",
+                "NewRelativeDB.json");
         }
 
         private static void OverlapExtractingShim()
@@ -131,7 +143,7 @@ namespace DebugCLI
             {
                 var text = new FileInfo(item + ".txt");
                 var image = new FileInfo(item + ".png");
-                if(!text.Exists || !image.Exists)
+                if (!text.Exists || !image.Exists)
                 {
                     Console.WriteLine($"Missing text {text.Exists}. Missing image {image.Exists}.");
                     throw new Exception("File missing");
@@ -277,7 +289,7 @@ namespace DebugCLI
             else
                 Console.WriteLine("\r\nHeight: " + heightTotal);
 
-            var lineCountsStrings = lineCounts.OrderBy(o => o.Key).Select(o => $"{o.Key, 4} :{o.Value, 3}|").ToArray();
+            var lineCountsStrings = lineCounts.OrderBy(o => o.Key).Select(o => $"{o.Key,4} :{o.Value,3}|").ToArray();
             var cTop = Console.CursorTop;
             for (int i = 0; i < lineCountsStrings.Length; i++)
             {
@@ -410,11 +422,11 @@ namespace DebugCLI
                                 errorLine += " ";
                         }
 
-                        if(isError)
+                        if (isError)
                         {
                             Console.WriteLine("Lines do not line up!");
                             Console.WriteLine($"{chatLines[i]}\n{expectedLines[i]}\n{errorLine}");
-                        }    
+                        }
                     }
                 }
                 b.Dispose();
@@ -426,7 +438,7 @@ namespace DebugCLI
 
         private static void newCornerParseTrainer()
         {
-            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Spaces";
+            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\All Chars\";
             var allFiles = Directory.GetFiles(inputDir);
             var inputs = allFiles.Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct();
             var error = false;
@@ -453,8 +465,10 @@ namespace DebugCLI
             Console.WriteLine($"Extracted {glyphDict.Values.SelectMany(g => g).Count()} named glyphs without error.");
 
             //var finalGlyphs = glyphDict.Select((kvp) => GlyphTrainer.CombineExtractedGlyphsByRects(kvp.Key, kvp.Value)).SelectMany(o => o);
-            var finalGlyphs = glyphDict.Select(kvp => GlyphTrainer.CombineExtractedGlyphs(kvp.Key.ToString()[0], kvp.Value));
-            File.WriteAllText("cornerDB.json", JsonConvert.SerializeObject(finalGlyphs.ToArray()));
+            var finalGlyphs = glyphDict.Select(kvp => GlyphTrainer.CombineExtractedGlyphs(kvp.Key.ToString()[0], kvp.Value)).ToList();
+            CornerChatParser.Database.GlyphDatabase.Instance.AllGlyphs = finalGlyphs;
+            CornerChatParser.Database.GlyphDatabase.Instance.AllSpaces.Clear();
+            File.WriteAllText("RelativeDB.json", JsonConvert.SerializeObject(CornerChatParser.Database.GlyphDatabase.Instance));
 
             Console.WriteLine("Attempt to save finalGlyphs to debug images");
             var glyphVisualizerDir = @"glyphs";

@@ -4,7 +4,22 @@ using System.Text;
 
 namespace CornerChatParser.Models
 {
-    class Letter
+    public class Letter
     {
+        public FuzzyGlyph FuzzyGlyph;
+        public ExtractedGlyph ExtractedGlyph;
+        public Letter(FuzzyGlyph fuzzyGlyph, ExtractedGlyph extractedGlyph)
+        {
+            FuzzyGlyph = fuzzyGlyph;
+            ExtractedGlyph = extractedGlyph;
+        }
+
+        public override string ToString()
+        {
+            if (FuzzyGlyph != null)
+                return FuzzyGlyph.Character;
+            else
+                return "";
+        }
     }
 }

@@ -14,7 +14,7 @@ namespace CornerChatParser.Extraction
 {
     public static class GlyphExtractor
     {
-        private const int distanceThreshold = 3;
+        private const int distanceThreshold = 1;
         private static ThreadLocal<bool[,]> _localCache = new ThreadLocal<bool[,]>();
         private static int currentCacheMinX = -1;
         private static int currentCacheMaxX = 0;
