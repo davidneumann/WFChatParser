@@ -99,17 +99,24 @@ namespace DebugCLI
             //SaveAllPixelGroups();
             //NewTrainingVerifier();
             //CornerGlyphShim();
-            newCornerParseTrainer();
-            //CornerParsingShim();
+            //newCornerParseTrainer();
+            CornerParsingShim();
             //ParseImageTest();
             //LineExtractorTest();
             //GetCrednetials();
             //OverlapExtractingShim();
+            //newCornerParserSpaceShim();
+        }
+
+        private static void newCornerParserSpaceShim()
+        {
+            SpaceTrainer.TrainOnSpace(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Space Training", 
+                "NewCornerDB.json");
         }
 
         private static void OverlapExtractingShim()
         {
-            var ignored = CornerChatParser.Database.GlyphDatabase.AllGlyphs;
+            var ignored = CornerChatParser.Database.GlyphDatabase.Instance.AllGlyphs;
             const string overlapDir = "overlaps";
             if (Directory.Exists(overlapDir))
             {
@@ -209,7 +216,7 @@ namespace DebugCLI
 
             //Combine glyphs
             var allGlyphs = new List<FuzzyGlyph>();
-            allGlyphs.AddRange(CornerChatParser.Database.GlyphDatabase.AllGlyphs);
+            allGlyphs.AddRange(CornerChatParser.Database.GlyphDatabase.Instance.AllGlyphs);
             allGlyphs.AddRange(overlappingGlyphs);
             var json = JsonConvert.SerializeObject(allGlyphs);
             File.WriteAllText("glyphDataWithOverlaps.json", json);
@@ -352,14 +359,15 @@ namespace DebugCLI
 
         private static void CornerParsingShim()
         {
-            CornerChatParser.Database.GlyphDatabase.Init();
+            var ignore = CornerChatParser.Database.GlyphDatabase.Instance.AllGlyphs;
             var parser = new CornerChatParser.RelativePixelParser();
-            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps";
+            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Spaces";
             var allFiles = Directory.GetFiles(inputDir);
             var sw = new Stopwatch();
             sw.Start();
             var filesDone = 0;
-            var cCount = 0;
+            var errorCount = 0;
+            var characterCount = 0;
             foreach (var input in allFiles.Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct())
             {
                 filesDone++;
@@ -379,9 +387,11 @@ namespace DebugCLI
                 for (int i = 0; i < expectedLines.Length; i++)
                 {
                     var isError = false;
+                    characterCount += expectedLines[i].Length;
                     if (expectedLines[i].Length != chatLines[i].Length)
                     {
                         isError = true;
+                        errorCount += Math.Abs(expectedLines[i].Length - chatLines[i].Length);
                         Console.WriteLine($"Expected {expectedLines[i].Length} characters but got {chatLines[i].Length}.");
                         Console.WriteLine($"{chatLines[i]}\n{expectedLines[i]}\n");
                     }
@@ -394,6 +404,7 @@ namespace DebugCLI
                             {
                                 isError = true;
                                 errorLine += "^";
+                                errorCount++;
                             }
                             else
                                 errorLine += " ";
@@ -410,6 +421,7 @@ namespace DebugCLI
             }
             sw.Stop();
             Console.WriteLine($"Parsed {filesDone} files in {sw.Elapsed.TotalSeconds}s. {sw.Elapsed.TotalSeconds / filesDone} seconds/file.");
+            Console.WriteLine($"Error count: {errorCount} out of {characterCount}. {(float)errorCount / characterCount}%");
         }
 
         private static void newCornerParseTrainer()
@@ -441,7 +453,7 @@ namespace DebugCLI
             Console.WriteLine($"Extracted {glyphDict.Values.SelectMany(g => g).Count()} named glyphs without error.");
 
             //var finalGlyphs = glyphDict.Select((kvp) => GlyphTrainer.CombineExtractedGlyphsByRects(kvp.Key, kvp.Value)).SelectMany(o => o);
-            var finalGlyphs = glyphDict.Select(kvp => GlyphTrainer.ExtractGlyphsFromSamples(kvp.Key.ToString(), kvp.Value)).SelectMany(o => o);
+            var finalGlyphs = glyphDict.Select(kvp => GlyphTrainer.CombineExtractedGlyphs(kvp.Key.ToString()[0], kvp.Value));
             File.WriteAllText("cornerDB.json", JsonConvert.SerializeObject(finalGlyphs.ToArray()));
 
             Console.WriteLine("Attempt to save finalGlyphs to debug images");
@@ -452,47 +464,9 @@ namespace DebugCLI
                 Thread.Sleep(1000);
             }
             Directory.CreateDirectory(glyphVisualizerDir);
-            //foreach (var glyph in finalGlyphs)
-            //{
-            //    var b = new Bitmap(glyph.ReferenceMaxWidth, glyph.ReferenceMaxHeight);
-            //    var pixelColor = Color.White;
-            //    var emptyColor = Color.Black;
-            //    var missingColor = Color.Magenta;
-            //    var bothColor = Color.CornflowerBlue;
-            //    for (int x = 0; x < b.Width; x++)
-            //    {
-            //        for (int y = 0; y < b.Height; y++)
-            //        {
-            //            bool isPixel = glyph.RelativePixelLocations.Any(p => p.X == x && p.Y == y);
-            //            bool isEmpty = glyph.RelativeEmptyLocations.Any(p => p.X == x && p.Y == y);
-            //            if(isPixel)
-            //            {
-            //                var pixel = glyph.RelativePixelLocations.First(p => p.X == x && p.Y == y);
-            //                var v = (int)(pixel.Z * byte.MaxValue);
-            //                if (isPixel && !isEmpty)
-            //                {
-            //                    var c = Color.FromArgb(v, v, v);
-            //                    b.SetPixel(x, y, c);
-            //                }
-            //                else if (isEmpty && isPixel)
-            //                {
-            //                    var c = Color.FromArgb(0, 0, v);
-            //                    b.SetPixel(x, y, c);
-            //                }
-            //            }
-            //            else if (isEmpty && !isPixel)
-            //                b.SetPixel(x, y, emptyColor);
-            //            else
-            //                b.SetPixel(x, y, missingColor);
-            //        }
-            //    }
-
-            //    b.Save(Path.Combine(glyphVisualizerDir, (int)glyph.Character[0] + ".png"));
-            //}
-            var imageCount = 0;
             foreach (var glyph in finalGlyphs)
             {
-                var b = new Bitmap(glyph.Width, glyph.Height);
+                var b = new Bitmap(glyph.ReferenceMaxWidth, glyph.ReferenceMaxHeight);
                 var pixelColor = Color.White;
                 var emptyColor = Color.Black;
                 var missingColor = Color.Magenta;
@@ -501,12 +475,12 @@ namespace DebugCLI
                 {
                     for (int y = 0; y < b.Height; y++)
                     {
-                        bool isPixel = glyph.Pixels.Any(p => p.Key.Item1 == x && p.Key.Item2 == y);
-                        bool isEmpty = glyph.Empties.Any(p => p.Item1 == x && p.Item2 == y);
+                        bool isPixel = glyph.RelativePixelLocations.Any(p => p.X == x && p.Y == y);
+                        bool isEmpty = glyph.RelativeEmptyLocations.Any(p => p.X == x && p.Y == y);
                         if (isPixel)
                         {
-                            var pixel = glyph.Pixels.First(p => p.Key.Item1 == x && p.Key.Item2 == y);
-                            var v = (int)(pixel.Value * byte.MaxValue);
+                            var pixel = glyph.RelativePixelLocations.First(p => p.X == x && p.Y == y);
+                            var v = (int)(pixel.Z * byte.MaxValue);
                             if (isPixel && !isEmpty)
                             {
                                 var c = Color.FromArgb(v, v, v);
@@ -525,11 +499,49 @@ namespace DebugCLI
                     }
                 }
 
-                var fileInfo = new FileInfo(Path.Combine(glyphVisualizerDir, ((int)glyph.Character[0]).ToString(), (imageCount++) + ".png"));
-                if (!fileInfo.Directory.Exists)
-                    Directory.CreateDirectory(fileInfo.Directory.FullName);
-                b.Save(fileInfo.FullName);
+                b.Save(Path.Combine(glyphVisualizerDir, (int)glyph.Character[0] + ".png"));
             }
+            //var imageCount = 0;
+            //foreach (var glyph in finalGlyphs)
+            //{
+            //    var b = new Bitmap(glyph.Width, glyph.Height);
+            //    var pixelColor = Color.White;
+            //    var emptyColor = Color.Black;
+            //    var missingColor = Color.Magenta;
+            //    var bothColor = Color.CornflowerBlue;
+            //    for (int x = 0; x < b.Width; x++)
+            //    {
+            //        for (int y = 0; y < b.Height; y++)
+            //        {
+            //            bool isPixel = glyph.Pixels.Any(p => p.Key.Item1 == x && p.Key.Item2 == y);
+            //            bool isEmpty = glyph.Empties.Any(p => p.Item1 == x && p.Item2 == y);
+            //            if (isPixel)
+            //            {
+            //                var pixel = glyph.Pixels.First(p => p.Key.Item1 == x && p.Key.Item2 == y);
+            //                var v = (int)(pixel.Value * byte.MaxValue);
+            //                if (isPixel && !isEmpty)
+            //                {
+            //                    var c = Color.FromArgb(v, v, v);
+            //                    b.SetPixel(x, y, c);
+            //                }
+            //                else if (isEmpty && isPixel)
+            //                {
+            //                    var c = Color.FromArgb(0, 0, v);
+            //                    b.SetPixel(x, y, c);
+            //                }
+            //            }
+            //            else if (isEmpty && !isPixel)
+            //                b.SetPixel(x, y, emptyColor);
+            //            else
+            //                b.SetPixel(x, y, missingColor);
+            //        }
+            //    }
+
+            //    var fileInfo = new FileInfo(Path.Combine(glyphVisualizerDir, ((int)glyph.Character[0]).ToString(), (imageCount++) + ".png"));
+            //    if (!fileInfo.Directory.Exists)
+            //        Directory.CreateDirectory(fileInfo.Directory.FullName);
+            //    b.Save(fileInfo.FullName);
+            //}
         }
 
         private static Vector2 PointToV2(Point p, int width, int height)

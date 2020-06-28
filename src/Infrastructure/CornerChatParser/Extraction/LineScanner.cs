@@ -35,6 +35,7 @@ namespace CornerChatParser.Extraction
                 if (nextPoint == Point.Empty)
                     break;
 
+                var chatColor = image.GetColor(nextPoint.X, nextPoint.Y);
                 var validPixels = new List<Point>();
 
                 var newValidPixels = GlyphExtractor.GetValidPixels(image, localBlacklist, nextPoint, lineRect);
@@ -54,6 +55,7 @@ namespace CornerChatParser.Extraction
                 }
 
                 var newGlyph = GlyphExtractor.ExtractGlyphFromPixels(validPixels, lineRect, image);
+                newGlyph.FirstPixelColor = chatColor;
                 results.Add(newGlyph);
 
                 globalX = lastGlobalX = newGlyph.Left;
@@ -134,7 +136,7 @@ namespace CornerChatParser.Extraction
             {
                 for (int globalY = globalLineRect.Top; globalY < globalLineRect.Bottom; globalY++)
                 {
-                    if (image[globalX, globalY] > 0 &&
+                    if (image[globalX, globalY] > 0.8 &&
                         !localBlacklist[globalX - globalLineRect.Left, globalY - globalLineRect.Top])
                         return new Point(globalX, globalY);
                 }

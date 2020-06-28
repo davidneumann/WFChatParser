@@ -27,6 +27,7 @@ namespace CornerChatParser.Models
         //public Point GlobalTopLeft;
         public float AspectRatio;
         public string FromFile;
+        public ChatColor FirstPixelColor;
 
         public ExtractedGlyph Subtract(FuzzyGlyph glyph)
         {

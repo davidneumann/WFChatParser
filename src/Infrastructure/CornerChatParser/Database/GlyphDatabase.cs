@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -10,14 +11,31 @@ using System.Text;
 
 namespace CornerChatParser.Database
 {
-    public static class GlyphDatabase
+    public class GlyphDatabase
     {
-        public static List<FuzzyGlyph> AllGlyphs = new List<FuzzyGlyph>();
+        private static GlyphDatabase _instance = null;
+        public static GlyphDatabase Instance { get
+            {
+                if (_instance == null)
+                {
+                    _instance = JsonConvert.DeserializeObject<GlyphDatabase>(File.ReadAllText("CornerDB.json"));
+                    //_instance = new GlyphDatabase();
+                    _instance.Init();
+                }
+                return _instance;
+            } }
 
-        private static ConcurrentDictionary<(int, int), FuzzyGlyph[]> _targetSizeCache = new ConcurrentDictionary<(int, int), FuzzyGlyph[]>();
-        static GlyphDatabase()
+        public List<FuzzyGlyph> AllGlyphs { get; set; } = new List<FuzzyGlyph>();
+        public List<GlyphSpaceDefinition> AllSpaces { get; set; } = new List<GlyphSpaceDefinition>();
+
+        private ConcurrentDictionary<(int, int), FuzzyGlyph[]> _targetSizeCache = new ConcurrentDictionary<(int, int), FuzzyGlyph[]>();
+        public GlyphDatabase()
         {
-            AllGlyphs = JsonConvert.DeserializeObject<List<FuzzyGlyph>>(File.ReadAllText("CornerDB.json"));
+            //AllGlyphs = JsonConvert.DeserializeObject<List<FuzzyGlyph>>(File.ReadAllText("CornerDB.json"));
+        }
+
+        public void Init()
+        {
             _cachedDescSize = AllGlyphs.Count;
             _cachedDesdSizeItems = AllGlyphs.OrderByDescending(g => g.ReferenceMaxWidth).ToArray();
 
@@ -42,21 +60,16 @@ namespace CornerChatParser.Database
             }
         }
 
-        public static void Init()
-        {
-
-        }
-
-        private static int _cachedDescSize = 0;
-        private static FuzzyGlyph[] _cachedDesdSizeItems;
-        public static FuzzyGlyph[] GlyphsBySizeDescending()
+        private int _cachedDescSize = 0;
+        private FuzzyGlyph[] _cachedDesdSizeItems;
+        public FuzzyGlyph[] GlyphsBySizeDescending()
         {
             return _cachedDesdSizeItems;
         }
 
-        private static Dictionary<int, FuzzyGlyph[]> _byWidth = new Dictionary<int, FuzzyGlyph[]>();
-        private static Dictionary<int, FuzzyGlyph[]> _byHeight = new Dictionary<int, FuzzyGlyph[]>();
-        public static FuzzyGlyph[] GetGlyphByTargetSize(int width, int height)
+        private Dictionary<int, FuzzyGlyph[]> _byWidth = new Dictionary<int, FuzzyGlyph[]>();
+        private Dictionary<int, FuzzyGlyph[]> _byHeight = new Dictionary<int, FuzzyGlyph[]>();
+        public FuzzyGlyph[] GetGlyphByTargetSize(int width, int height)
         {
             if (_targetSizeCache.ContainsKey((width, height)))
                 return _targetSizeCache[(width, height)];
@@ -73,6 +86,11 @@ namespace CornerChatParser.Database
 
             //_targetSizeCache[(width, height)] = AllGlyphs.Where(g => g.ReferenceMinWidth == width && g.ReferenceMinHeight == height).ToArray();
             return _targetSizeCache[(width, height)];
+        }
+
+        internal void SetSpaces(List<GlyphSpaceDefinition> spaceDefinitions)
+        {
+            AllSpaces = spaceDefinitions;
         }
     }
 }

@@ -19,8 +19,8 @@ namespace CornerChatParser.Recognition
 
         public static FuzzyGlyph[] IdentifyGlyph(ExtractedGlyph extracted, Bitmap b)
         {
-            //var candidates = GlyphDatabase.AllGlyphs.Where(IsValidCandidate(extracted));
-            var candidates = GlyphDatabase.GetGlyphByTargetSize(extracted.Width, extracted.Height);
+            //var candidates = GlyphDatabase.Instance.AllGlyphs.Where(IsValidCandidate(extracted));
+            var candidates = GlyphDatabase.Instance.GetGlyphByTargetSize(extracted.Width, extracted.Height);
             //Also remove anything that doesn't look to be aligned correctly
             candidates = candidates.Where(g => extracted.PixelsFromTopOfLine >= g.ReferenceGapFromLineTop - 2
                                             && extracted.PixelsFromTopOfLine <= g.ReferenceGapFromLineTop + 2).ToArray();
@@ -184,7 +184,7 @@ namespace CornerChatParser.Recognition
             //In theory the best match is what ever chains the most
             BestMatch current = null;
             var bests = new List<BestMatch>();
-            foreach (var glyph in GlyphDatabase.GlyphsBySizeDescending())
+            foreach (var glyph in GlyphDatabase.Instance.GlyphsBySizeDescending())
             {
                 // Can't be bigger
                 if (glyph.ReferenceMinWidth > extracted.Width)
