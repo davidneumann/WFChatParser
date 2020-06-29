@@ -1,6 +1,6 @@
 ﻿using Application.ChatLineExtractor;
-using CornerChatParser.Extraction;
-using CornerChatParser.Models;
+using RelativeChatParser.Extraction;
+using RelativeChatParser.Models;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -8,7 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace CornerChatParser.Training
+namespace RelativeChatParser.Training
 {
     public static class TrainingDataExtractor
     {

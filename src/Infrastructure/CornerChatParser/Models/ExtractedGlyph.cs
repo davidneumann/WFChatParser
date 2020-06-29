@@ -8,7 +8,7 @@ using System.Numerics;
 using System.Text;
 using System.Threading;
 
-namespace CornerChatParser.Models
+namespace RelativeChatParser.Models
 {
     public class ExtractedGlyph
     {

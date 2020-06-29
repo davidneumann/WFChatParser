@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace CornerChatParser.Models
+namespace RelativeChatParser.Models
 {
     public class Letter
     {

@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Infrastructure\CornerChatParser\CornerChatParser.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\CornerChatParser\RelativeChatParser.csproj" />
     <ProjectReference Include="..\..\Infrastructure\DataStream\DataStream.csproj" />
     <ProjectReference Include="..\..\Infrastructure\ImageOCR\ImageOCR.csproj" />
     <ProjectReference Include="..\..\Infrastructure\WarframeDriver\WarframeDriver.csproj" />

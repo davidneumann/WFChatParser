@@ -1,4 +1,4 @@
-﻿using CornerChatParser.Models;
+﻿using RelativeChatParser.Models;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -8,7 +8,7 @@ using System.Numerics;
 using System.Text;
 using System.Threading;
 
-namespace CornerChatParser.Training
+namespace RelativeChatParser.Training
 {
     public static class GlyphTrainer
     {

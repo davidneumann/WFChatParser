@@ -1,7 +1,7 @@
 ﻿using Application.ChatLineExtractor;
-using CornerChatParser.Database;
-using CornerChatParser.Extraction;
-using CornerChatParser.Models;
+using RelativeChatParser.Database;
+using RelativeChatParser.Extraction;
+using RelativeChatParser.Models;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -10,7 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace CornerChatParser.Training
+namespace RelativeChatParser.Training
 {
     public static class SpaceTrainer
     {

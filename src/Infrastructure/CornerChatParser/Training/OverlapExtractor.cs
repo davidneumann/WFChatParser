@@ -1,8 +1,8 @@
 ﻿using Application.ChatLineExtractor;
 using Application.LineParseResult;
-using CornerChatParser.Extraction;
-using CornerChatParser.Models;
-using CornerChatParser.Recognition;
+using RelativeChatParser.Extraction;
+using RelativeChatParser.Models;
+using RelativeChatParser.Recognition;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -12,7 +12,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CornerChatParser.Training
+namespace RelativeChatParser.Training
 {
     public static class OverlapExtractor
     {

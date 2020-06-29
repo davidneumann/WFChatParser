@@ -1,5 +1,5 @@
 ﻿using Application.ChatLineExtractor;
-using CornerChatParser.Models;
+using RelativeChatParser.Models;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using WebSocketSharp;
 
-namespace CornerChatParser.Extraction
+namespace RelativeChatParser.Extraction
 {
     public static class LineScanner
     {

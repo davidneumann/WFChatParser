@@ -1,5 +1,5 @@
 ﻿using Application.ChatLineExtractor;
-using CornerChatParser.Models;
+using RelativeChatParser.Models;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
@@ -10,7 +10,7 @@ using System.Text;
 using System.Threading;
 using Tesseract;
 
-namespace CornerChatParser.Extraction
+namespace RelativeChatParser.Extraction
 {
     public static class GlyphExtractor
     {

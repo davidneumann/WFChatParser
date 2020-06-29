@@ -35,7 +35,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WarframeDriver", "src\Infra
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConfigHelper", "src\Presentation\ConfigHelper\ConfigHelper.csproj", "{51830611-08EE-407F-8FDE-3819DA9F3362}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CornerChatParser", "src\Infrastructure\CornerChatParser\CornerChatParser.csproj", "{CE7A63AC-7DEF-4B53-BD0C-07B41328A83E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RelativeChatParser", "src\Infrastructure\CornerChatParser\RelativeChatParser.csproj", "{CE7A63AC-7DEF-4B53-BD0C-07B41328A83E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

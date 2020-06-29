@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Numerics;
 
-namespace CornerChatParser.Models
+namespace RelativeChatParser.Models
 {
     [DebuggerDisplay("{Character}")]
     public class FuzzyGlyph

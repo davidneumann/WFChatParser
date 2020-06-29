@@ -1,6 +1,6 @@
 ﻿using Application.ChatLineExtractor;
-using CornerChatParser.Database;
-using CornerChatParser.Models;
+using RelativeChatParser.Database;
+using RelativeChatParser.Models;
 using ImageMagick;
 using System;
 using System.Collections.Generic;
@@ -11,7 +11,7 @@ using System.Linq;
 using System.Text;
 using WebSocketSharp;
 
-namespace CornerChatParser.Recognition
+namespace RelativeChatParser.Recognition
 {
     public static class RelativePixelGlyphIdentifier
     {

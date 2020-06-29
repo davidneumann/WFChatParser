@@ -1,10 +1,10 @@
 ﻿using Application.ChatLineExtractor;
 using Application.Interfaces;
 using Application.LineParseResult;
-using CornerChatParser.Database;
-using CornerChatParser.Extraction;
-using CornerChatParser.Models;
-using CornerChatParser.Recognition;
+using RelativeChatParser.Database;
+using RelativeChatParser.Extraction;
+using RelativeChatParser.Models;
+using RelativeChatParser.Recognition;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -13,7 +13,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CornerChatParser
+namespace RelativeChatParser
 {
     public class RelativePixelParser : IChatParser
     {

@@ -43,14 +43,14 @@ using HtmlAgilityPack;
 using Application.Utils;
 using ImageOCR.ComplexRivenParser;
 using Application.ChatLineExtractor;
-using CornerChatParser;
+using RelativeChatParser;
 using System.Numerics;
-using CornerChatParser.Models;
-using CornerChatParser.Extraction;
-using CornerChatParser.Training;
+using RelativeChatParser.Models;
+using RelativeChatParser.Extraction;
+using RelativeChatParser.Training;
 using System.Reflection;
 using WebSocketSharp;
-using CornerChatParser.Database;
+using RelativeChatParser.Database;
 
 namespace DebugCLI
 {
@@ -111,11 +111,15 @@ namespace DebugCLI
 
         private static void RelativeParserWithSpacesShim()
         {
-            var ignored = CornerChatParser.Database.GlyphDatabase.Instance.AllGlyphs;
+            var ignored = RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs;
             var rp = new RelativePixelParser();
-            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps\overlap_slice_0.png"))
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\132378502626565768.png"))
             {
                 var chatLines = rp.ParseChatImage(b, true, false, 27);
+                foreach (var line in chatLines)
+                {
+                    Console.WriteLine(line);
+                }
             }
 
         }
@@ -128,7 +132,7 @@ namespace DebugCLI
 
         private static void OverlapExtractingShim()
         {
-            var ignored = CornerChatParser.Database.GlyphDatabase.Instance.AllGlyphs;
+            var ignored = RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs;
             const string overlapDir = "overlaps";
             if (Directory.Exists(overlapDir))
             {
@@ -228,7 +232,7 @@ namespace DebugCLI
 
             //Combine glyphs
             var allGlyphs = new List<FuzzyGlyph>();
-            allGlyphs.AddRange(CornerChatParser.Database.GlyphDatabase.Instance.AllGlyphs);
+            allGlyphs.AddRange(RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs);
             allGlyphs.AddRange(overlappingGlyphs);
             var json = JsonConvert.SerializeObject(allGlyphs);
             File.WriteAllText("glyphDataWithOverlaps.json", json);
@@ -371,8 +375,8 @@ namespace DebugCLI
 
         private static void CornerParsingShim()
         {
-            var ignore = CornerChatParser.Database.GlyphDatabase.Instance.AllGlyphs;
-            var parser = new CornerChatParser.RelativePixelParser();
+            var ignore = RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs;
+            var parser = new RelativeChatParser.RelativePixelParser();
             var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Spaces";
             var allFiles = Directory.GetFiles(inputDir);
             var sw = new Stopwatch();
@@ -466,9 +470,9 @@ namespace DebugCLI
 
             //var finalGlyphs = glyphDict.Select((kvp) => GlyphTrainer.CombineExtractedGlyphsByRects(kvp.Key, kvp.Value)).SelectMany(o => o);
             var finalGlyphs = glyphDict.Select(kvp => GlyphTrainer.CombineExtractedGlyphs(kvp.Key.ToString()[0], kvp.Value)).ToList();
-            CornerChatParser.Database.GlyphDatabase.Instance.AllGlyphs = finalGlyphs;
-            CornerChatParser.Database.GlyphDatabase.Instance.AllSpaces.Clear();
-            File.WriteAllText("RelativeDB.json", JsonConvert.SerializeObject(CornerChatParser.Database.GlyphDatabase.Instance));
+            RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs = finalGlyphs;
+            RelativeChatParser.Database.GlyphDatabase.Instance.AllSpaces.Clear();
+            File.WriteAllText("RelativeDB.json", JsonConvert.SerializeObject(RelativeChatParser.Database.GlyphDatabase.Instance));
 
             Console.WriteLine("Attempt to save finalGlyphs to debug images");
             var glyphVisualizerDir = @"glyphs";
