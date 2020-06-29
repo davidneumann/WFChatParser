@@ -100,13 +100,13 @@ namespace DebugCLI
             //NewTrainingVerifier();
             //CornerGlyphShim();
             //newCornerParseTrainer();
-            //CornerParsingShim();
+            CornerParsingShim();
             //ParseImageTest();
             //LineExtractorTest();
             //GetCrednetials();
             //OverlapExtractingShim();
             //newCornerParserSpaceShim();
-            RelativeParserWithSpacesShim();
+            //RelativeParserWithSpacesShim();
         }
 
         private static void RelativeParserWithSpacesShim()
@@ -392,7 +392,7 @@ namespace DebugCLI
                 var inputImg = input + ".png";
                 ImageCleaner.SaveSoftMask(inputImg, "current.png");
                 var b = new Bitmap(inputImg);
-                var chatLines = parser.ParseChatImage(b, false, false, 27).Select(line => line.RawMessage).ToArray();
+                var chatLines = parser.ParseChatImage(b, false, false, 27).Select(line => line.RawMessage.Replace(" ", "")).ToArray();
                 //Console.WriteLine();
 
                 var expectedLines = File.ReadAllLines(inputTxt).Select(line => line.Replace(" ", "").Trim()).ToArray();

@@ -78,7 +78,7 @@ namespace RelativeChatParser.Recognition
                 double minDistance = double.MaxValue;
                 foreach (var p in target)
                 {
-                    var d = p.Distance(valid);
+                    var d = p.Distance(valid, 2);
                     if (d < minDistance)
                         minDistance = d;
                     if (d == 0)
@@ -102,7 +102,7 @@ namespace RelativeChatParser.Recognition
                 double minDistance = double.MaxValue;
                 foreach (var p in target)
                 {
-                    var d = p.Distance(valid);
+                    var d = p.Distance(valid, 2);
                     if (d < minDistance)
                         minDistance = d;
                     if (d == 0)
@@ -126,7 +126,7 @@ namespace RelativeChatParser.Recognition
                 double minDistance = double.MaxValue;
                 foreach (var p in candidate.RelativePixelLocations)
                 {
-                    var d = p.Distance(valid);
+                    var d = p.Distance(valid, 2);
                     if (d < minDistance)
                         minDistance = d;
                     if (d == 0)
@@ -143,7 +143,7 @@ namespace RelativeChatParser.Recognition
                 double minDistance = double.MaxValue;
                 foreach (var p in candidate.RelativeEmptyLocations)
                 {
-                    var d = p.Distance(empty);
+                    var d = p.Distance(empty, 2);
                     if (d < minDistance)
                         minDistance = d;
                     if (d == 0)
@@ -288,19 +288,23 @@ namespace RelativeChatParser.Recognition
 
     internal static class Extensions
     {
-        internal static double Distance(this Point p1, Point p2)
+        internal static double Distance(this Point p1, Point p2, int maxAxisDistance = int.MaxValue)
         {
-            var a = p2.X - p1.X;
-            var b = p2.Y - p1.Y;
-            return Math.Sqrt(a * a + b * b);
+            var x = p2.X - p1.X;
+            var y = p2.Y - p1.Y;
+            if (maxAxisDistance < int.MaxValue && (Math.Abs(x) > maxAxisDistance || Math.Abs(y) > maxAxisDistance))
+                return 10000;
+            return Math.Sqrt(x * x + y * y);
         }
 
-        internal static double Distance(this Point3 p1, Point3 p2)
+        internal static double Distance(this Point3 p1, Point3 p2, int maxAxisDistance)
         {
-            var a = p2.X - p1.X;
-            var b = p2.Y - p1.Y;
+            var x = p2.X - p1.X;
+            var y = p2.Y - p1.Y;
+            if (maxAxisDistance < int.MaxValue && (Math.Abs(x) > maxAxisDistance || Math.Abs(y) > maxAxisDistance))
+                return 10000;
             var c = p2.Z - p1.Z;
-            return Math.Sqrt(a * a + b * b + c * c);
+            return Math.Sqrt(x * x + y * y + c * c);
         }
     }
 }
