@@ -57,13 +57,17 @@ namespace RelativeChatParser
             var results = new ChatMessageLineResult[lineParseCount];
             for (int i = 0; i < lineParseCount; i++)
             {
-                var firstLetter = allLetters[i].First();
-                var lastLetter = allLetters[i].Last();
-                var top = allLetters[i].Min(l => l.ExtractedGlyph.Top);
-                var height = allLetters[i].Max(l => l.ExtractedGlyph.Bottom) - top;
-                var rect = new Rectangle(firstLetter.ExtractedGlyph.Left, top,
-                    lastLetter.ExtractedGlyph.Right + 1 - firstLetter.ExtractedGlyph.Left,
-                    height);
+                var rect = Rectangle.Empty;
+                if (allLetters[i].Length != 0)
+                {
+                    var firstLetter = allLetters[i].First();
+                    var lastLetter = allLetters[i].Last();
+                    var top = allLetters[i].Min(l => l.ExtractedGlyph.Top);
+                    var height = allLetters[i].Max(l => l.ExtractedGlyph.Bottom) - top;
+                    rect = new Rectangle(firstLetter.ExtractedGlyph.Left, top,
+                        lastLetter.ExtractedGlyph.Right + 1 - firstLetter.ExtractedGlyph.Left,
+                        height);
+                }
                 var result = new ChatMessageLineResult()
                 {
                     RawMessage = allWords[i].Select(word => word.ToString()).Aggregate(new StringBuilder(), (acc, str) => acc.Append(str)).ToString(),
@@ -116,7 +120,7 @@ namespace RelativeChatParser
                             Index = index++,
                             X = extractedGlyph.Left,
                             Y = extractedGlyph.Top + extractedGlyph.Height / 2,
-                            RivenName = rivenName
+                            RivenName = rivenName                             
                         });
                     }
                     else
@@ -133,6 +137,7 @@ namespace RelativeChatParser
         {
             var allLetters = new Letter[lineParseCount][];
             Parallel.For(0, lineParseCount, i =>
+            //for (int i = 0; i < lineParseCount; i++)
             {
                 var letters = LineScanner.ExtractGlyphsFromLine(imageCache, i)
                     .AsParallel().Select(extracted =>
@@ -145,6 +150,7 @@ namespace RelativeChatParser
                     allLetters[i] = letters;
                 }
             });
+        //}
             return allLetters;
         }
 

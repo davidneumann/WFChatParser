@@ -47,31 +47,51 @@ namespace Application.ChatLineExtractor
                 if (!_valueMapMask[x, y])
                 {
                     var hsvPixel = _converter.ToHsv(_image[x, y]);
-                    var minV = 0.35f;
                     var v = hsvPixel.V;
 
                     var color = GetColor(x, y);
                     if (color == ChatColor.ChatTimestampName)
                     {
+                        var minV = 0.231f;
                         //Timestamps and username max out at 0.8
-                        v = Math.Min(1f, (v - minV) / (0.808f - minV)); //0.808
-                        //if (v < 0.31)
-                        //    v = 0;
+                        v = Math.Max(0f, v - minV);
+                        if (v > 0)
+                            v += minV;
+                        v = Math.Min(1f, v / 0.808f); //0.808
+                        //if (v < 0.5528f)
+                        //v = 0;
                     }
                     else if (color == ChatColor.Text)
                     {
-                        v = Math.Min(1f, ((v - minV) / (0.937f - minV)));
-                        //if (v < 0.267)
+                        var minV = 0.35f;
+                        v = Math.Max(0f, v - minV);
+                        if (v > 0)
+                            v += minV;
+                        //v = Math.Min(1f, ((v - minV) / (0.937f - minV)));
+                        v = Math.Min(1f, v / 0.937f);
+                        //if (v < 0.4327f)
+                        //    v = 0;
                     }
                     else if (color == ChatColor.ClanTimeStampName)
                     {
-                        v = Math.Min(1f, (v - minV) / (0.7f - minV));
+                        var minV = 0.231f;
+                        v = Math.Max(0f, v - minV);
+                        if(v > 0)
+                            v += minV;
+                        v = Math.Min(1f, v / 0.667f);
+                        //v = Math.Min(1f, (v - minV) / (0.7f - minV));
                         //if (v < 0.358)
                         //    v = 0;
                     }
                     else if (color == ChatColor.ItemLink)
                     {
-                        v = Math.Min(1f, (v - minV) / (1f - minV));
+                        var minV = 0.35f;
+                        v = Math.Max(0f, v - minV);
+                        if (v > 0)
+                            v += minV;
+                        //v = Math.Max(0f, v - minV); // Drop any background interference
+                        //if(v > 0)
+                        //    v += 0.35f; // item links max at 1 so just add that back if it survived
                         //if (v < 0.251)
                         //    v = 0;
                     }

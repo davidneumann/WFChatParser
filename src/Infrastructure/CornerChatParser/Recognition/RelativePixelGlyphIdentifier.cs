@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using WebSocketSharp;
+using System.Drawing.Imaging;
 
 namespace RelativeChatParser.Recognition
 {
@@ -19,20 +20,31 @@ namespace RelativeChatParser.Recognition
 
         public static FuzzyGlyph[] IdentifyGlyph(ExtractedGlyph extracted, Bitmap b)
         {
+            //if (extracted.Left >= 1795 && extracted.Top >= 755)
+            //    System.Diagnostics.Debugger.Break();
+
             //var candidates = GlyphDatabase.Instance.AllGlyphs.Where(IsValidCandidate(extracted));
             var candidates = GlyphDatabase.Instance.GetGlyphByTargetSize(extracted.Width, extracted.Height);
             //Also remove anything that doesn't look to be aligned correctly
             candidates = candidates.Where(g => extracted.PixelsFromTopOfLine >= g.ReferenceGapFromLineTop - 2
                                             && extracted.PixelsFromTopOfLine <= g.ReferenceGapFromLineTop + 2).ToArray();
 
+            //if (extracted.Width <= 4 && (candidates.Any(g => g.Character == "I" || g.Character == "|" || g.Character == "L")))
+            //    candidates = candidates.Where(g => extracted.Height >= g.ReferenceMinHeight).ToArray();
+            if (candidates.Any(g => g.Character == "]" || g.Character == "j"))
+                candidates = candidates.Where(g => extracted.PixelsFromTopOfLine + 1 >= g.ReferenceGapFromLineTop).ToArray();
             BestMatch current = null;
             foreach (var candidate in candidates)
             {
-                double distances = ScoreGlyph(extracted, candidate);
+                var strict = candidate.Character == "!" || candidate.Character == "i" || candidate.Character == "j" || extracted.Width <= 4 || candidate.Character == "O" || candidate.Character == "Q";
+                double distances = ScoreGlyph(extracted, candidate, strict);
 
                 if (current == null || current.distanceSum > distances)
                     current = new BestMatch(distances, candidate);
             }
+
+            if (current.distanceSum > 1000)
+                Console.WriteLine("Possible error");
 
             List<FuzzyGlyph> overlaps = new List<FuzzyGlyph>();
             if (current == null)
@@ -117,14 +129,35 @@ namespace RelativeChatParser.Recognition
             return result;
         }
 
-        private static double ScoreGlyph(ExtractedGlyph extracted, FuzzyGlyph candidate)
+        private static double ScoreGlyph(ExtractedGlyph extracted, FuzzyGlyph candidate, bool strict = false)
         {
             double distances = 0;
+            //Shift extracted to have bottom match extracted
+            Point3[] ePixels = extracted.RelativePixelLocations;
+            Point3[] cPixels = candidate.RelativePixelLocations;
+            Point[] eEmpties = extracted.RelativeEmptyLocations;
+
+            if(strict)
+            {
+                ePixels = ePixels.Where(p => p.Z > 0.8f).ToArray();
+                cPixels = cPixels.Where(p => p.Z > 0.8f).ToArray();
+            }
+
+            ////Align bottoms
+            //var bottomCandidate = cPixels.Max(p => p.Y);
+            //var bottomExtracted = ePixels.Max(p => p.Y);
+            //if (bottomCandidate > bottomExtracted)
+            //{
+            //    var diff = bottomCandidate - bottomExtracted;
+            //    ePixels = ePixels.Select(p => new Point3(p.X, p.Y + diff, p.Z)).ToArray();
+            //    eEmpties = eEmpties.Select(p => new Point(p.X, p.Y + diff)).ToArray();
+            //}
+            
             //For ever valid pixel find the min distance to a refrence pixel
-            foreach (var valid in extracted.RelativePixelLocations)
+            foreach (var valid in ePixels)
             {
                 double minDistance = double.MaxValue;
-                foreach (var p in candidate.RelativePixelLocations)
+                foreach (var p in cPixels)
                 {
                     var d = p.Distance(valid, 4);
                     if (d < minDistance)
@@ -138,12 +171,14 @@ namespace RelativeChatParser.Recognition
                 //distances += candidate.RelativePixelLocations.Min(p => p.Distance(valid));
             }
             //Do the same but with empties
-            foreach (var empty in extracted.RelativeEmptyLocations)
+            foreach (var empty in eEmpties)
             {
                 double minDistance = double.MaxValue;
                 foreach (var p in candidate.RelativeEmptyLocations)
                 {
-                    var d = p.Distance(empty, 4);
+                    var d = p.Distance(empty, 12);
+                    if (extracted.Width <= 4)
+                        d = d * 5f;
                     if (d < minDistance)
                         minDistance = d;
                     if (d == 0)

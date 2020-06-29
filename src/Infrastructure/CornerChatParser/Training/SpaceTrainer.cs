@@ -57,6 +57,7 @@ namespace RelativeChatParser.Training
 
             Console.WriteLine($"Saving resulting DB with {spaceDefinitions.Count} space definitions to {outputFilepath}");
             GlyphDatabase.Instance.AllSpaces = spaceDefinitions;
+            GlyphDatabase.Instance.Init();
             var json = JsonConvert.SerializeObject(GlyphDatabase.Instance);
             var fileInfo = new FileInfo(outputFilepath);
             if (!fileInfo.Directory.Exists)

@@ -32,7 +32,7 @@ namespace RelativeChatParser.Database
                     catch (Exception e)
                     {
                         _instance = new GlyphDatabase();
-                        Console.WriteLine("DATABASE FAILED TO INITIALIZE");
+                        Console.WriteLine("DATABASE FAILED TO INITIALIZE\n" + e.ToString());
                     }
                     //_instance = new GlyphDatabase();
                     _instance.Init();
@@ -53,15 +53,18 @@ namespace RelativeChatParser.Database
             _cachedDescSize = AllGlyphs.Count;
             _cachedDesdSizeItems = AllGlyphs.OrderByDescending(g => g.ReferenceMaxWidth).ToArray();
 
+            _byWidth.Clear();
             foreach (var group in AllGlyphs.GroupBy(g => g.ReferenceMinWidth))
             {
                 _byWidth[group.Key] = group.ToArray();
             }
+            _byHeight.Clear();
             foreach (var group in AllGlyphs.GroupBy(g => g.ReferenceMinHeight))
             {
                 _byHeight[group.Key] = group.ToArray();
             }
 
+            _targetSizeCache.Clear();
             foreach (var glyph in AllGlyphs)
             {
                 for (int width = Math.Max(1, glyph.ReferenceMinWidth - 1); width <= glyph.ReferenceMinWidth + 1; width++)
@@ -73,6 +76,7 @@ namespace RelativeChatParser.Database
                 }
             }
 
+            _spaceCache.Clear();
             foreach (var space in AllSpaces)
             {
                 if (!_spaceCache.ContainsKey(space.LeftCharacter))
@@ -105,7 +109,7 @@ namespace RelativeChatParser.Database
             if (_byWidth.ContainsKey(width + 1))
                 results.AddRange(_byWidth[width + 1]);
 
-            _targetSizeCache[(width, height)] = results.Where(g => height >= g.ReferenceMinHeight - 1 && height <= g.ReferenceMinHeight + 1).ToArray();
+            _targetSizeCache[(width, height)] = results.Where(g => height >= g.ReferenceMinHeight - 1 && height <= g.ReferenceMaxHeight + 1).ToArray();
 
             //_targetSizeCache[(width, height)] = AllGlyphs.Where(g => g.ReferenceMinWidth == width && g.ReferenceMinHeight == height).ToArray();
             return _targetSizeCache[(width, height)];

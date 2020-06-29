@@ -100,14 +100,35 @@ namespace DebugCLI
             //SaveAllPixelGroups();
             //NewTrainingVerifier();
             //CornerGlyphShim();
-            //newCornerParseTrainer();
-            //CornerParsingShim();
             //ParseImageTest();
             //LineExtractorTest();
             //GetCrednetials();
+            //RelativeParserWithSpacesShim();
+
+            //GenerateRelativeParserCharacterTrainingData();
+            //RelativeParserGlyphTrainer();
+            //RelativeParserSpaceTrainer();
             //OverlapExtractingShim();
-            //newCornerParserSpaceShim();
-            RelativeParserWithSpacesShim();
+            RelativeParserTest();
+        }
+
+        private static void GenerateRelativeParserCharacterTrainingData()
+        {
+            var chars = GetSupportedCharacters().Replace(" ", "").Trim();
+            Console.WriteLine(chars + "\n\n");
+            for (int i = 0; i < chars.Length; i++)
+            {
+                if (i % 27 == 0)
+                    Console.WriteLine("\n");
+                var line = chars.Substring(i, chars.Length - i) + chars.Substring(0, i);
+                var realLine = string.Empty;
+                for (int j = 0; j < line.Length; j++)
+                {
+                    realLine += line[j] + " ";
+                }
+                realLine += "[";
+                Console.WriteLine(realLine);
+            }
         }
 
         private static void RelativeParserWithSpacesShim()
@@ -133,14 +154,15 @@ namespace DebugCLI
 
         }
 
-        private static void newCornerParserSpaceShim()
+        private static void RelativeParserSpaceTrainer()
         {
             SpaceTrainer.TrainOnSpace(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Space Training",
-                "NewRelativeDB.json");
+                "RelativeDB_with_spaces.json");
         }
 
         private static void OverlapExtractingShim()
         {
+            GlyphExtractor.distanceThreshold += 1;
             var ignored = RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs;
             const string overlapDir = "overlaps";
             if (Directory.Exists(overlapDir))
@@ -172,14 +194,14 @@ namespace DebugCLI
                         var str = overlap.IdentifiedGlyphs.Aggregate("", (acc, glyph) => acc + glyph.Character);
                         ExtractedGlyph extracted = overlap.Extracted;
                         Console.WriteLine($"Saving overlap {str}/{overlap.ExpectedCharacters} from {extracted.Left},{extracted.Top} {extracted.Width}x{extracted.Height}.");
-                        using (var output = new Bitmap(extracted.Width, Math.Max(LineScanner.Lineheight, extracted.Height)))
+                        using (var output = new Bitmap(extracted.Width, LineScanner.Lineheight))
                         {
                             for (int x = 0; x < output.Width; x++)
                             {
                                 for (int y = 0; y < output.Height; y++)
                                 {
-                                    var pixel = extracted.RelativePixelLocations.FirstOrDefault(p => p.X == x && p.Y == y);
-                                    bool emptyValid = extracted.RelativeEmptyLocations.Any(p => p.X == x && p.Y == y);
+                                    var pixel = extracted.RelativePixelLocations.FirstOrDefault(p => p.X == x && p.Y + extracted.PixelsFromTopOfLine == y);
+                                    bool emptyValid = extracted.RelativeEmptyLocations.Any(p => p.X == x && p.Y + extracted.PixelsFromTopOfLine == y);
 
                                     if (pixel != null)
                                     {
@@ -243,8 +265,11 @@ namespace DebugCLI
             var allGlyphs = new List<FuzzyGlyph>();
             allGlyphs.AddRange(RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs);
             allGlyphs.AddRange(overlappingGlyphs);
-            var json = JsonConvert.SerializeObject(allGlyphs);
-            File.WriteAllText("glyphDataWithOverlaps.json", json);
+            RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs = allGlyphs;
+            RelativeChatParser.Database.GlyphDatabase.Instance.Init();
+            var json = JsonConvert.SerializeObject(RelativeChatParser.Database.GlyphDatabase.Instance);
+            File.WriteAllText("RelativeDB_with_overlaps.json", json);
+            GlyphExtractor.distanceThreshold -= 1;
         }
 
         private static void LineExtractorTest(Dictionary<int, int> knownCounts = null)
@@ -382,7 +407,7 @@ namespace DebugCLI
             }
         }
 
-        private static void CornerParsingShim()
+        private static void RelativeParserTest()
         {
             var ignore = RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs;
             var parser = new RelativeChatParser.RelativePixelParser();
@@ -417,7 +442,7 @@ namespace DebugCLI
                     {
                         isError = true;
                         errorCount += Math.Abs(expectedLines[i].Length - chatLines[i].Length);
-                        Console.WriteLine($"Expected {expectedLines[i].Length} characters but got {chatLines[i].Length}.");
+                        Console.WriteLine($"On line {i} expected {expectedLines[i].Length} characters but got {chatLines[i].Length}.");
                         Console.WriteLine($"{chatLines[i]}\n{expectedLines[i]}\n");
                     }
                     if (!isError)
@@ -437,7 +462,7 @@ namespace DebugCLI
 
                         if (isError)
                         {
-                            Console.WriteLine("Lines do not line up!");
+                            Console.WriteLine($"Lines {i} do not line up!");
                             Console.WriteLine($"{chatLines[i]}\n{expectedLines[i]}\n{errorLine}");
                         }
                     }
@@ -446,12 +471,12 @@ namespace DebugCLI
             }
             sw.Stop();
             Console.WriteLine($"Parsed {filesDone} files in {sw.Elapsed.TotalSeconds}s. {sw.Elapsed.TotalSeconds / filesDone} seconds/file.");
-            Console.WriteLine($"Error count: {errorCount} out of {characterCount}. {(float)errorCount / characterCount}%");
+            Console.WriteLine($"Error count: {errorCount} out of {characterCount}. {((float)errorCount / characterCount)*100f}%");
         }
 
-        private static void newCornerParseTrainer()
+        private static void RelativeParserGlyphTrainer()
         {
-            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\All Chars\";
+            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\New Character Training\";
             var allFiles = Directory.GetFiles(inputDir);
             var inputs = allFiles.Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct();
             var error = false;
@@ -481,6 +506,7 @@ namespace DebugCLI
             var finalGlyphs = glyphDict.Select(kvp => GlyphTrainer.CombineExtractedGlyphs(kvp.Key.ToString()[0], kvp.Value)).ToList();
             RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs = finalGlyphs;
             RelativeChatParser.Database.GlyphDatabase.Instance.AllSpaces.Clear();
+            RelativeChatParser.Database.GlyphDatabase.Instance.Init();
             File.WriteAllText("RelativeDB.json", JsonConvert.SerializeObject(RelativeChatParser.Database.GlyphDatabase.Instance));
 
             Console.WriteLine("Attempt to save finalGlyphs to debug images");
