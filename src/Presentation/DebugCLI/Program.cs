@@ -51,6 +51,7 @@ using RelativeChatParser.Training;
 using System.Reflection;
 using WebSocketSharp;
 using RelativeChatParser.Database;
+using RelativeChatParser.Recognition;
 
 namespace DebugCLI
 {
@@ -100,13 +101,13 @@ namespace DebugCLI
             //NewTrainingVerifier();
             //CornerGlyphShim();
             //newCornerParseTrainer();
-            CornerParsingShim();
+            //CornerParsingShim();
             //ParseImageTest();
             //LineExtractorTest();
             //GetCrednetials();
             //OverlapExtractingShim();
             //newCornerParserSpaceShim();
-            //RelativeParserWithSpacesShim();
+            RelativeParserWithSpacesShim();
         }
 
         private static void RelativeParserWithSpacesShim()
@@ -118,7 +119,15 @@ namespace DebugCLI
                 var chatLines = rp.ParseChatImage(b, true, false, 27);
                 foreach (var line in chatLines)
                 {
-                    Console.WriteLine(line);
+                    if(line.ClickPoints.Count > 0)
+                    {
+                        Console.WriteLine(line.EnhancedMessage);
+                        foreach (var cp in line.ClickPoints)
+                        {
+                            Console.WriteLine($"{cp.Index}:{cp.RivenName} {cp.X},{cp.Y}");
+                        }
+                    }
+                    //Console.WriteLine(line);
                 }
             }
 

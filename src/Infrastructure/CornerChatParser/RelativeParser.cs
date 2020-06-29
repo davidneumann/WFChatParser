@@ -1,4 +1,5 @@
 ﻿using Application.ChatLineExtractor;
+using Application.ChatMessages.Model;
 using Application.Interfaces;
 using Application.LineParseResult;
 using RelativeChatParser.Database;
@@ -51,15 +52,79 @@ namespace RelativeChatParser
 
             Word[][] allWords = ConvertToWords(lineParseCount, allLetters);
 
+            EnhancedMessage[] enhancedMessages = GetEnhancedMessages(lineParseCount, allWords);
+
             var results = new ChatMessageLineResult[lineParseCount];
             for (int i = 0; i < lineParseCount; i++)
             {
-                var result = new ChatMessageLineResult();
-                result.RawMessage = allWords[i].Select(word => word.ToString()).Aggregate(new StringBuilder(), (acc, str) => acc.Append(str)).ToString();
+                var firstLetter = allLetters[i].First();
+                var lastLetter = allLetters[i].Last();
+                var top = allLetters[i].Min(l => l.ExtractedGlyph.Top);
+                var height = allLetters[i].Max(l => l.ExtractedGlyph.Bottom) - top;
+                var rect = new Rectangle(firstLetter.ExtractedGlyph.Left, top,
+                    lastLetter.ExtractedGlyph.Right + 1 - firstLetter.ExtractedGlyph.Left,
+                    height);
+                var result = new ChatMessageLineResult()
+                {
+                    RawMessage = allWords[i].Select(word => word.ToString()).Aggregate(new StringBuilder(), (acc, str) => acc.Append(str)).ToString(),
+                    EnhancedMessage = enhancedMessages[i].EnhancedString.ToString(),
+                    ClickPoints = enhancedMessages[i].ClickPoints,
+                    MessageBounds = rect
+                };
                 lock (results)
                 {
                     results[i] = result;
                 }
+            }
+            return results;
+        }
+
+        private EnhancedMessage[] GetEnhancedMessages(int lineParseCount, Word[][] allWords)
+        {
+            var results = new EnhancedMessage[lineParseCount];
+            for (int i = 0; i < lineParseCount; i++)
+            {
+                var message = new EnhancedMessage();
+                var index = 0;
+                var sb = new StringBuilder();
+                for (int j = 0; j < allWords[i].Length; j++)
+                {
+                    var currentWord = allWords[i][j];
+                    var str = currentWord.ToString().Trim();
+                    //Skip any easily incorrect word
+                    if (currentWord.WordColor != ChatColor.ItemLink || !str.Contains("]")
+                        || str.Length <= 0 || str[0] == '[')
+                    {
+                        sb.Append(currentWord);
+                        message.EnhancedString.Append(currentWord);
+                        continue;
+                    }
+
+                    if (RivenRecognizer.StringContainsRiven(str))
+                    {
+                        var line = sb.ToString().Trim();
+                        var rivenName = line.Substring(line.LastIndexOf('[') + 1) + " " + str.Substring(0, str.IndexOf(']'));
+                        //rivenName = rivenName.Substring(0, rivenName.IndexOf(']'));
+                        message.EnhancedString.Append(str.Substring(0, str.IndexOf(']') + 1));
+                        message.EnhancedString.Append("(");
+                        message.EnhancedString.Append(index);
+                        message.EnhancedString.Append(")");
+                        message.EnhancedString.Append(str.Substring(str.IndexOf(']') + 1));
+                        ExtractedGlyph extractedGlyph = currentWord.Letters[0].ExtractedGlyph;
+                        message.ClickPoints.Add(new ClickPoint()
+                        {
+                            Index = index++,
+                            X = extractedGlyph.Left,
+                            Y = extractedGlyph.Top + extractedGlyph.Height / 2,
+                            RivenName = rivenName
+                        });
+                    }
+                    else
+                        message.EnhancedString.Append(currentWord);
+
+                    sb.Append(currentWord);
+                }
+                results[i] = message;
             }
             return results;
         }
@@ -141,6 +206,12 @@ namespace RelativeChatParser
             }
 
             return allWords;
+        }
+
+        private class EnhancedMessage
+        {
+            public StringBuilder EnhancedString = new StringBuilder();
+            public List<ClickPoint> ClickPoints = new List<ClickPoint>();
         }
     }
 }

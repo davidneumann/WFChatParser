@@ -78,7 +78,7 @@ namespace RelativeChatParser.Recognition
                 double minDistance = double.MaxValue;
                 foreach (var p in target)
                 {
-                    var d = p.Distance(valid, 2);
+                    var d = p.Distance(valid, 4);
                     if (d < minDistance)
                         minDistance = d;
                     if (d == 0)
@@ -102,7 +102,7 @@ namespace RelativeChatParser.Recognition
                 double minDistance = double.MaxValue;
                 foreach (var p in target)
                 {
-                    var d = p.Distance(valid, 2);
+                    var d = p.Distance(valid, 4);
                     if (d < minDistance)
                         minDistance = d;
                     if (d == 0)
@@ -126,7 +126,7 @@ namespace RelativeChatParser.Recognition
                 double minDistance = double.MaxValue;
                 foreach (var p in candidate.RelativePixelLocations)
                 {
-                    var d = p.Distance(valid, 2);
+                    var d = p.Distance(valid, 4);
                     if (d < minDistance)
                         minDistance = d;
                     if (d == 0)
@@ -143,7 +143,7 @@ namespace RelativeChatParser.Recognition
                 double minDistance = double.MaxValue;
                 foreach (var p in candidate.RelativeEmptyLocations)
                 {
-                    var d = p.Distance(empty, 2);
+                    var d = p.Distance(empty, 4);
                     if (d < minDistance)
                         minDistance = d;
                     if (d == 0)
