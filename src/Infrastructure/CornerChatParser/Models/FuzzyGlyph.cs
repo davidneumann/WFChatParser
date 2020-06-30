@@ -12,6 +12,7 @@ namespace RelativeChatParser.Models
     {
         public string Character;
         public Point3[] RelativePixelLocations;
+        [JsonIgnore] public Point3[] RelativeBrights;
         public Point[] RelativeEmptyLocations;
         public float AspectRatio;
         public int ReferenceMaxWidth;

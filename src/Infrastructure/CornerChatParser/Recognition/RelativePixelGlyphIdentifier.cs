@@ -41,14 +41,15 @@ namespace RelativeChatParser.Recognition
                 //double distances = ScoreGlyph(extracted, candidate, strict);
                 double distances = 0;
                 //Match whichever has more pixels agianst the smlaler one
-                if(extracted.RelativePixelLocations.Where(g => g.Z >= 0.85f).Count() > candidate.RelativePixelLocations.Where(g => g.Z >= 0.85f).Count())
+                //if(extracted.RelativePixelLocations.Where(g => g.Z >= 0.85f).Count() > candidate.RelativePixelLocations.Where(g => g.Z >= 0.85f).Count())
+                if(extracted.RelativeBrights.Length > candidate.RelativeBrights.Length)
                 {
-                    distances += GetMinDistanceSum(extracted.RelativePixelLocations, candidate.RelativePixelLocations);
+                    distances += GetMinDistanceSum(extracted.RelativeBrights, candidate.RelativeBrights);
                     distances += GetMinDistanceSum(extracted.RelativeEmptyLocations, candidate.RelativeEmptyLocations);
                 }
                 else
                 {
-                    distances += GetMinDistanceSum(candidate.RelativePixelLocations, extracted.RelativePixelLocations);
+                    distances += GetMinDistanceSum(candidate.RelativeBrights, extracted.RelativeBrights);
                     distances += GetMinDistanceSum(candidate.RelativeEmptyLocations, extracted.RelativeEmptyLocations);
                 }
 
@@ -94,7 +95,7 @@ namespace RelativeChatParser.Recognition
                         extracted.Height <= g.ReferenceMaxHeight + 1;
         }
 
-        private static double GetMinDistanceSum(Point[] source, Point[] target)
+        private static double GetMinDistanceSum(Point[] source, Point[] target, int distanceThreshold = 7)
         {
             double result = 0;
             //For ever valid pixel find the min distance to a refrence pixel
@@ -103,7 +104,7 @@ namespace RelativeChatParser.Recognition
                 double minDistance = double.MaxValue;
                 foreach (var p in target)
                 {
-                    var d = p.Distance(valid, 7);
+                    var d = p.Distance(valid, distanceThreshold);
                     if (d < minDistance)
                         minDistance = d;
                     if (d == 0)
@@ -118,7 +119,7 @@ namespace RelativeChatParser.Recognition
             return result;
         }
 
-        private static double GetMinDistanceSum(Point3[] source, Point3[] target)
+        private static double GetMinDistanceSum(Point3[] source, Point3[] target, int distanceThreshold = 2)
         {
             double result = 0;
             //For ever valid pixel find the min distance to a refrence pixel
@@ -127,7 +128,7 @@ namespace RelativeChatParser.Recognition
                 double minDistance = double.MaxValue;
                 foreach (var p in target)
                 {
-                    var d = p.Distance(valid, 2);
+                    var d = p.Distance(valid, distanceThreshold);
                     if (d < minDistance)
                         minDistance = d;
                     if (d == 0)

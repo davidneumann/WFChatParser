@@ -418,6 +418,7 @@ namespace DebugCLI
             var filesDone = 0;
             var errorCount = 0;
             var characterCount = 0;
+            var errorsByCharacter = new Dictionary<char, int>();
             foreach (var input in allFiles.Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct())
             {
                 filesDone++;
@@ -452,6 +453,11 @@ namespace DebugCLI
                         {
                             if (expectedLines[i][j] != chatLines[i][j])
                             {
+                                if (!errorsByCharacter.ContainsKey(expectedLines[i][j]))
+                                    errorsByCharacter[expectedLines[i][j]] = 1;
+                                else
+                                    errorsByCharacter[expectedLines[i][j]]++;
+
                                 isError = true;
                                 errorLine += "^";
                                 errorCount++;
@@ -472,6 +478,10 @@ namespace DebugCLI
             sw.Stop();
             Console.WriteLine($"Parsed {filesDone} files in {sw.Elapsed.TotalSeconds}s. {sw.Elapsed.TotalSeconds / filesDone} seconds/file.");
             Console.WriteLine($"Error count: {errorCount} out of {characterCount}. {((float)errorCount / characterCount)*100f}%");
+            foreach(var error in errorsByCharacter.OrderByDescending(kvp => kvp.Value))
+            {
+                Console.WriteLine($"{error.Key}: {error.Value,3}");
+            }
         }
 
         private static void RelativeParserGlyphTrainer()

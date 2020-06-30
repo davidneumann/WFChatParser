@@ -1,4 +1,5 @@
 ﻿using Application.ChatLineExtractor;
+using RelativeChatParser.Database;
 using RelativeChatParser.Models;
 using System;
 using System.Collections.Generic;
@@ -127,6 +128,7 @@ namespace RelativeChatParser.Extraction
                 int y = p.Y - extractedGlobalMinY;
                 return new Point3(x, y, image[p.X, p.Y]);
             });
+            var relativeBrights = relativePixels.Where(p => p.Z >= GlyphDatabase.BrightMinV).ToArray();
             var relativeEmpties = emptyPixels.Select(p => new Point(p.X - extractedGlobalMinX, p.Y - extractedGlobalMinY));
 
             var glyphRect = new Rectangle(extractedGlobalMinX, extractedGlobalMinY, width, height);
@@ -144,7 +146,8 @@ namespace RelativeChatParser.Extraction
                 AspectRatio = (float)width / height,
                 RelativeEmptyLocations = relativeEmpties.ToArray(),
                 RelativePixelLocations = relativePixels.ToArray(),
-                FromFile = image.DebugFilename
+                FromFile = image.DebugFilename,
+                RelativeBrights = relativeBrights
             };
 
             ClearCacheSubregion(lineRect);

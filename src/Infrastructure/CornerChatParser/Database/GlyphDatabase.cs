@@ -20,6 +20,8 @@ namespace RelativeChatParser.Database
         private Dictionary<string, Dictionary<string, int>> _spaceCache = new Dictionary<string, Dictionary<string, int>>();
         private ConcurrentDictionary<(int, int), FuzzyGlyph[]> _targetSizeCache = new ConcurrentDictionary<(int, int), FuzzyGlyph[]>();
 
+        public const float BrightMinV = 0.85f;
+
         private static GlyphDatabase _instance = null;
         public static GlyphDatabase Instance { get
             {
@@ -50,6 +52,14 @@ namespace RelativeChatParser.Database
 
         public void Init()
         {
+            foreach (var glyph in AllGlyphs)
+            {
+                glyph.RelativeBrights = glyph.RelativePixelLocations.Where(p =>
+                {
+                    return p.Z >= BrightMinV;
+                }).ToArray();
+            }
+
             _cachedDescSize = AllGlyphs.Count;
             _cachedDesdSizeItems = AllGlyphs.OrderByDescending(g => g.ReferenceMaxWidth).ToArray();
 

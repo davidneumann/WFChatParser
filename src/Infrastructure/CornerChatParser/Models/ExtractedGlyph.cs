@@ -29,6 +29,8 @@ namespace RelativeChatParser.Models
         public string FromFile;
         public ChatColor FirstPixelColor;
 
+        public Point3[] RelativeBrights { get; internal set; }
+
         public ExtractedGlyph Subtract(FuzzyGlyph glyph)
         {
             if (this.Width <= glyph.ReferenceMaxWidth)
