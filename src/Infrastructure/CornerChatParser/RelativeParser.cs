@@ -136,11 +136,11 @@ namespace RelativeChatParser
         private static Letter[][] ExtractLetters(Bitmap image, int lineParseCount, ImageCache imageCache)
         {
             var allLetters = new Letter[lineParseCount][];
-            Parallel.For(0, lineParseCount, i =>
-            //for (int i = 0; i < lineParseCount; i++)
+            //Parallel.For(0, lineParseCount, i =>
+            for (int i = 0; i < lineParseCount; i++)
             {
                 var letters = LineScanner.ExtractGlyphsFromLine(imageCache, i)
-                    .AsParallel().Select(extracted =>
+                    /*.AsParallel()*/.Select(extracted =>
                     {
                         var fuzzies = RelativePixelGlyphIdentifier.IdentifyGlyph(extracted, image);
                         return fuzzies.Select(f => new Letter(f, extracted));
@@ -149,8 +149,8 @@ namespace RelativeChatParser
                 {
                     allLetters[i] = letters;
                 }
-            });
-        //}
+                //});
+            }
             return allLetters;
         }
 

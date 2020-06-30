@@ -20,8 +20,8 @@ namespace RelativeChatParser.Recognition
 
         public static FuzzyGlyph[] IdentifyGlyph(ExtractedGlyph extracted, Bitmap b)
         {
-            //if (extracted.Left >= 1795 && extracted.Top >= 755)
-            //    System.Diagnostics.Debugger.Break();
+            if (extracted.Left >= 2346 && extracted.Top >= 764)
+                System.Diagnostics.Debugger.Break();
 
             //var candidates = GlyphDatabase.Instance.AllGlyphs.Where(IsValidCandidate(extracted));
             var candidates = GlyphDatabase.Instance.GetGlyphByTargetSize(extracted.Width, extracted.Height);
@@ -31,20 +31,33 @@ namespace RelativeChatParser.Recognition
 
             //if (extracted.Width <= 4 && (candidates.Any(g => g.Character == "I" || g.Character == "|" || g.Character == "L")))
             //    candidates = candidates.Where(g => extracted.Height >= g.ReferenceMinHeight).ToArray();
-            if (candidates.Any(g => g.Character == "]" || g.Character == "j"))
-                candidates = candidates.Where(g => extracted.PixelsFromTopOfLine + 1 >= g.ReferenceGapFromLineTop).ToArray();
+            //if (candidates.Any(g => g.Character == "]" || g.Character == "j"))
+            //    candidates = candidates.Where(g => extracted.PixelsFromTopOfLine + 1 >= g.ReferenceGapFromLineTop).ToArray();
+
             BestMatch current = null;
             foreach (var candidate in candidates)
             {
-                var strict = candidate.Character == "!" || candidate.Character == "i" || candidate.Character == "j" || extracted.Width <= 4 || candidate.Character == "O" || candidate.Character == "Q";
-                double distances = ScoreGlyph(extracted, candidate, strict);
+                //var strict = candidate.Character == "!" || candidate.Character == "i" || candidate.Character == "j" || extracted.Width <= 4 || candidate.Character == "O" || candidate.Character == "Q";
+                //double distances = ScoreGlyph(extracted, candidate, strict);
+                double distances = 0;
+                //Match whichever has more pixels agianst the smlaler one
+                if(extracted.RelativePixelLocations.Where(g => g.Z >= 0.85f).Count() > candidate.RelativePixelLocations.Where(g => g.Z >= 0.85f).Count())
+                {
+                    distances += GetMinDistanceSum(extracted.RelativePixelLocations, candidate.RelativePixelLocations);
+                    distances += GetMinDistanceSum(extracted.RelativeEmptyLocations, candidate.RelativeEmptyLocations);
+                }
+                else
+                {
+                    distances += GetMinDistanceSum(candidate.RelativePixelLocations, extracted.RelativePixelLocations);
+                    distances += GetMinDistanceSum(candidate.RelativeEmptyLocations, extracted.RelativeEmptyLocations);
+                }
 
                 if (current == null || current.distanceSum > distances)
                     current = new BestMatch(distances, candidate);
             }
 
-            if (current.distanceSum > 1000)
-                Console.WriteLine("Possible error");
+            //if (current.distanceSum > 1000)
+            //    Console.WriteLine("Possible error");
 
             List<FuzzyGlyph> overlaps = new List<FuzzyGlyph>();
             if (current == null)
@@ -90,7 +103,7 @@ namespace RelativeChatParser.Recognition
                 double minDistance = double.MaxValue;
                 foreach (var p in target)
                 {
-                    var d = p.Distance(valid, 4);
+                    var d = p.Distance(valid, 7);
                     if (d < minDistance)
                         minDistance = d;
                     if (d == 0)
@@ -114,7 +127,7 @@ namespace RelativeChatParser.Recognition
                 double minDistance = double.MaxValue;
                 foreach (var p in target)
                 {
-                    var d = p.Distance(valid, 4);
+                    var d = p.Distance(valid, 2);
                     if (d < minDistance)
                         minDistance = d;
                     if (d == 0)
