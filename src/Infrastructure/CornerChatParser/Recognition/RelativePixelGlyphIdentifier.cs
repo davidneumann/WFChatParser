@@ -21,7 +21,7 @@ namespace RelativeChatParser.Recognition
 
         public static FuzzyGlyph[] IdentifyGlyph(ExtractedGlyph extracted, Bitmap b)
         {
-            //if (extracted.Left >= 673 && extracted.Top >= 1059)
+            //if (extracted.Left >= 1382 && extracted.Top >= 1063)
             //{
             //    extracted.Save("bad_glyph.png");
             //    System.Diagnostics.Debugger.Break();
@@ -34,6 +34,9 @@ namespace RelativeChatParser.Recognition
                                             && extracted.PixelsFromTopOfLine <= g.ReferenceGapFromLineTop + 2).ToArray();
 
             var useBrights = true;
+            //Add a stupid hack for O Q. 
+            if (extracted.Height == 25)
+                candidates = candidates.Where(g => g.Character != "Q").ToArray();
             if (extracted.Width <= 4 && (candidates.Any(g => g.Character == "I" || g.Character == "|" || g.Character == "l")))
             {
                 var brights = extracted.RelativeBrights.Where(p => p.Z >= 0.949f).ToArray();
