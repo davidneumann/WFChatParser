@@ -17,11 +17,15 @@ namespace RelativeChatParser.Recognition
     public static class RelativePixelGlyphIdentifier
     {
         private static int _debugOverlapCount;
+        public const int MissedDistancePenalty = 10000;
 
         public static FuzzyGlyph[] IdentifyGlyph(ExtractedGlyph extracted, Bitmap b)
         {
-            if (extracted.Left >= 2346 && extracted.Top >= 764)
-                System.Diagnostics.Debugger.Break();
+            //if (extracted.Left >= 2136 && extracted.Top >= 1163)
+            //{
+            //    extracted.Save("bad_glyph.png");
+            //    System.Diagnostics.Debugger.Break();
+            //}
 
             //var candidates = GlyphDatabase.Instance.AllGlyphs.Where(IsValidCandidate(extracted));
             var candidates = GlyphDatabase.Instance.GetGlyphByTargetSize(extracted.Width, extracted.Height);
@@ -29,27 +33,44 @@ namespace RelativeChatParser.Recognition
             candidates = candidates.Where(g => extracted.PixelsFromTopOfLine >= g.ReferenceGapFromLineTop - 2
                                             && extracted.PixelsFromTopOfLine <= g.ReferenceGapFromLineTop + 2).ToArray();
 
-            //if (extracted.Width <= 4 && (candidates.Any(g => g.Character == "I" || g.Character == "|" || g.Character == "L")))
-            //    candidates = candidates.Where(g => extracted.Height >= g.ReferenceMinHeight).ToArray();
+            var useBrights = true;
+            if (extracted.Width <= 4 && (candidates.Any(g => g.Character == "I" || g.Character == "|" || g.Character == "l")))
+            {
+                var brights = extracted.RelativeBrights.Where(p => p.Z >= 0.949f).ToArray();
+                var height = brights.Max(p => p.Y) - brights.Min(p => p.Y) + 1;
+                // Try to help with I l.
+                // I should be smaller although l and I can both be 24 pixels tall at times
+                if (height < 24)
+                    candidates = candidates.Where(g => g.Character != "l").ToArray();
+                else if(height >= 25)
+                    candidates = candidates.Where(g => g.Character != "I").ToArray();
+                candidates = candidates.Where(g => {
+                    return extracted.Height >= g.ReferenceMinHeight && extracted.Height <= g.ReferenceMaxHeight 
+                        && extracted.PixelsFromTopOfLine + 1 >= g.ReferenceGapFromLineTop;
+                }).ToArray();
+                useBrights = false;
+            }
             //if (candidates.Any(g => g.Character == "]" || g.Character == "j"))
             //    candidates = candidates.Where(g => extracted.PixelsFromTopOfLine + 1 >= g.ReferenceGapFromLineTop).ToArray();
 
             BestMatch current = null;
             foreach (var candidate in candidates)
             {
+                var extractedPixels = useBrights ? extracted.RelativeBrights : extracted.RelativePixelLocations;
+                var candiatePixels = useBrights ? candidate.RelativeBrights : candidate.RelativePixelLocations;
                 //var strict = candidate.Character == "!" || candidate.Character == "i" || candidate.Character == "j" || extracted.Width <= 4 || candidate.Character == "O" || candidate.Character == "Q";
                 //double distances = ScoreGlyph(extracted, candidate, strict);
                 double distances = 0;
                 //Match whichever has more pixels agianst the smlaler one
                 //if(extracted.RelativePixelLocations.Where(g => g.Z >= 0.85f).Count() > candidate.RelativePixelLocations.Where(g => g.Z >= 0.85f).Count())
-                if(extracted.RelativeBrights.Length > candidate.RelativeBrights.Length)
+                if(extractedPixels.Length > candiatePixels.Length)
                 {
-                    distances += GetMinDistanceSum(extracted.RelativeBrights, candidate.RelativeBrights);
+                    distances += GetMinDistanceSum(extractedPixels, candiatePixels);
                     distances += GetMinDistanceSum(extracted.RelativeEmptyLocations, candidate.RelativeEmptyLocations);
                 }
                 else
                 {
-                    distances += GetMinDistanceSum(candidate.RelativeBrights, extracted.RelativeBrights);
+                    distances += GetMinDistanceSum(candiatePixels, extractedPixels);
                     distances += GetMinDistanceSum(candidate.RelativeEmptyLocations, extracted.RelativeEmptyLocations);
                 }
 
@@ -101,7 +122,7 @@ namespace RelativeChatParser.Recognition
             //For ever valid pixel find the min distance to a refrence pixel
             foreach (var valid in source)
             {
-                double minDistance = double.MaxValue;
+                double minDistance = MissedDistancePenalty;
                 foreach (var p in target)
                 {
                     var d = p.Distance(valid, distanceThreshold);
@@ -110,8 +131,7 @@ namespace RelativeChatParser.Recognition
                     if (d == 0)
                         break;
                 }
-                if (minDistance < double.MaxValue)
-                    result += minDistance;
+                result += minDistance;
 
                 //distances += candidate.RelativePixelLocations.Min(p => p.Distance(valid));
             }
@@ -125,7 +145,7 @@ namespace RelativeChatParser.Recognition
             //For ever valid pixel find the min distance to a refrence pixel
             foreach (var valid in source)
             {
-                double minDistance = double.MaxValue;
+                double minDistance = MissedDistancePenalty;
                 foreach (var p in target)
                 {
                     var d = p.Distance(valid, distanceThreshold);
@@ -134,9 +154,7 @@ namespace RelativeChatParser.Recognition
                     if (d == 0)
                         break;
                 }
-                if (minDistance < double.MaxValue)
-                    result += minDistance;
-
+                result += minDistance;
                 //distances += candidate.RelativePixelLocations.Min(p => p.Distance(valid));
             }
 
@@ -170,7 +188,7 @@ namespace RelativeChatParser.Recognition
             //For ever valid pixel find the min distance to a refrence pixel
             foreach (var valid in ePixels)
             {
-                double minDistance = double.MaxValue;
+                double minDistance = MissedDistancePenalty;
                 foreach (var p in cPixels)
                 {
                     var d = p.Distance(valid, 4);
@@ -179,15 +197,14 @@ namespace RelativeChatParser.Recognition
                     if (d == 0)
                         break;
                 }
-                if (minDistance < double.MaxValue)
-                    distances += minDistance;
+                distances += minDistance;
 
                 //distances += candidate.RelativePixelLocations.Min(p => p.Distance(valid));
             }
             //Do the same but with empties
             foreach (var empty in eEmpties)
             {
-                double minDistance = double.MaxValue;
+                double minDistance = MissedDistancePenalty;
                 foreach (var p in candidate.RelativeEmptyLocations)
                 {
                     var d = p.Distance(empty, 12);
@@ -198,8 +215,7 @@ namespace RelativeChatParser.Recognition
                     if (d == 0)
                         break;
                 }
-                if (minDistance < double.MaxValue)
-                    distances += minDistance;
+                distances += minDistance;
 
                 //distances += candidate.RelativeEmptyLocations.Min(p => p.Distance(empty));
             }
@@ -342,7 +358,7 @@ namespace RelativeChatParser.Recognition
             var x = p2.X - p1.X;
             var y = p2.Y - p1.Y;
             if (maxAxisDistance < int.MaxValue && (Math.Abs(x) > maxAxisDistance || Math.Abs(y) > maxAxisDistance))
-                return 10000;
+                return RelativePixelGlyphIdentifier.MissedDistancePenalty;
             return Math.Sqrt(x * x + y * y);
         }
 
@@ -351,7 +367,7 @@ namespace RelativeChatParser.Recognition
             var x = p2.X - p1.X;
             var y = p2.Y - p1.Y;
             if (maxAxisDistance < int.MaxValue && (Math.Abs(x) > maxAxisDistance || Math.Abs(y) > maxAxisDistance))
-                return 10000;
+                return RelativePixelGlyphIdentifier.MissedDistancePenalty;
             var c = p2.Z - p1.Z;
             return Math.Sqrt(x * x + y * y + c * c);
         }

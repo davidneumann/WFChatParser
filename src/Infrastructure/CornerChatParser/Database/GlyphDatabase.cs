@@ -58,6 +58,11 @@ namespace RelativeChatParser.Database
                 {
                     return p.Z >= BrightMinV;
                 }).ToArray();
+
+                if (glyph.Character == "l" || glyph.Character == "I")
+                {
+                    glyph.RelativeEmptyLocations = new System.Drawing.Point[0];
+                }
             }
 
             _cachedDescSize = AllGlyphs.Count;
