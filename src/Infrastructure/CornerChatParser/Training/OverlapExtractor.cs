@@ -25,8 +25,8 @@ namespace RelativeChatParser.Training
                 ic.DebugFilename = imagePath;
                 var expectedLines = File.ReadAllLines(textPath).Select(line => line.Replace(" ","").Trim()).ToArray();
                 var result = new ChatMessageLineResult[expectedLines.Length];
-                Parallel.For(0, expectedLines.Length, i =>
-                //for (int i = 0; i < expectedLines.Length; i++)
+                //Parallel.For(0, expectedLines.Length, i =>
+                for (int i = 4; i < expectedLines.Length; i++)
                 {
                     var charI = 0;
                     var glyphs = LineScanner.ExtractGlyphsFromLine(ic, i);
@@ -50,8 +50,8 @@ namespace RelativeChatParser.Training
                             charI++;
                         //});
                     }
-                });
-            //}
+                    //});
+                }
             }
             return overlaps.ToArray();
         }

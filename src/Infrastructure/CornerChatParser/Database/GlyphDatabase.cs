@@ -8,6 +8,8 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using RelativeChatParser.Recognition;
+using System.Drawing;
 
 namespace RelativeChatParser.Database
 {
@@ -56,6 +58,15 @@ namespace RelativeChatParser.Database
                 {
                     return p.Z >= BrightMinV;
                 }).ToArray();
+
+                var validEmpties = new List<Point>();
+                foreach (var empty in glyph.RelativeEmptyLocations.ToList())
+                {
+                    var neighborCount = glyph.RelativeEmptyLocations.Where(p => p != empty ? p.Distance(empty, 2) <= 1 : false).Count();
+                    if (neighborCount != 0)
+                        validEmpties.Add(empty);
+                }
+                glyph.RelativeEmptyLocations = validEmpties.ToArray();
 
                 if (glyph.Character == "l" || glyph.Character == "I")
                 {

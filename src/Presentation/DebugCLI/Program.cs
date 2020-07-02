@@ -162,8 +162,10 @@ namespace DebugCLI
 
         private static void OverlapExtractingShim()
         {
-            GlyphExtractor.distanceThreshold += 1;
-            var ignored = RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs;
+            const int overlapExtraThreshold = 2;
+            GlyphExtractor.distanceThreshold += overlapExtraThreshold;
+            RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs.RemoveAll(g => g.IsOverlap == true);
+            RelativeChatParser.Database.GlyphDatabase.Instance.Init();
             const string overlapDir = "overlaps";
             if (Directory.Exists(overlapDir))
             {
@@ -174,8 +176,10 @@ namespace DebugCLI
 
             var overlapCount = 0;
             var overlappingGlyphs = new List<FuzzyGlyph>();
+            Console.WriteLine("Looking for overlaps");
             foreach (var item in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps").Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct())
             {
+                Console.WriteLine($"={item}=");
                 var text = new FileInfo(item + ".txt");
                 var image = new FileInfo(item + ".png");
                 if (!text.Exists || !image.Exists)
@@ -269,7 +273,7 @@ namespace DebugCLI
             RelativeChatParser.Database.GlyphDatabase.Instance.Init();
             var json = JsonConvert.SerializeObject(RelativeChatParser.Database.GlyphDatabase.Instance);
             File.WriteAllText("RelativeDB_with_overlaps.json", json);
-            GlyphExtractor.distanceThreshold -= 1;
+            GlyphExtractor.distanceThreshold -= overlapExtraThreshold;
         }
 
         private static void LineExtractorTest(Dictionary<int, int> knownCounts = null)
@@ -411,7 +415,7 @@ namespace DebugCLI
         {
             var ignore = RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs;
             var parser = new RelativeChatParser.RelativePixelParser();
-            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Spaces";
+            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\New Character Training";
             var allFiles = Directory.GetFiles(inputDir);
             var sw = new Stopwatch();
             sw.Start();

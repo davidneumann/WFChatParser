@@ -18,10 +18,10 @@ namespace RelativeChatParser.Recognition
     {
         private static int _debugOverlapCount;
         public const int MissedDistancePenalty = 10000;
-
+        public static double _debugWorstScore = float.MinValue;
         public static FuzzyGlyph[] IdentifyGlyph(ExtractedGlyph extracted, Bitmap b)
         {
-            //if (extracted.Left >= 1382 && extracted.Top >= 1063)
+            //if (extracted.Left >= 417 && extracted.Top >= 933)
             //{
             //    extracted.Save("bad_glyph.png");
             //    System.Diagnostics.Debugger.Break();
@@ -85,6 +85,11 @@ namespace RelativeChatParser.Recognition
             //    Console.WriteLine("Possible error");
 
             List<FuzzyGlyph> overlaps = new List<FuzzyGlyph>();
+            if(current != null && current.distanceSum > _debugWorstScore)
+            {
+                Console.WriteLine($"New worst score seen {current.distanceSum} at {extracted.Left},{extracted.Top}");
+                _debugWorstScore = current.distanceSum;
+            }
             if (current == null)
             {
                 //todo: fix tree code not handling way bigger DB

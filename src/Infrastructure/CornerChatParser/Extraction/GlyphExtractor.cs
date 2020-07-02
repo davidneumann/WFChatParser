@@ -1,6 +1,7 @@
 ﻿using Application.ChatLineExtractor;
 using RelativeChatParser.Database;
 using RelativeChatParser.Models;
+using RelativeChatParser.Recognition;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
@@ -169,6 +170,15 @@ namespace RelativeChatParser.Extraction
                     }
                 }
             }
+
+            var validEmpties = new List<Point>();
+            foreach (var empty in empties)
+            {
+                var neighborCount = empties.Where(p => p != empty ? p.Distance(empty, 1) <= 1 : false).Count();
+                if (neighborCount != 0)
+                    validEmpties.Add(empty);
+            }
+            empties = validEmpties;
 
             return empties;
         }
