@@ -72,6 +72,8 @@ namespace RelativeChatParser.Database
                 {
                     glyph.RelativeEmptyLocations = new System.Drawing.Point[0];
                 }
+
+                glyph.RelativeCombinedLocations = glyph.RelativePixelLocations.Select(p => new Point(p.X, p.Y)).Union(glyph.RelativeEmptyLocations).ToArray();
             }
 
             _cachedDescSize = AllGlyphs.Count;

@@ -21,6 +21,7 @@ namespace RelativeChatParser.Models
         public int ReferenceMinHeight;
         public float ReferenceGapFromLineTop;
         public bool IsOverlap = false;
+        public Point[] RelativeCombinedLocations;
 
         public FuzzyGlyph()
         {

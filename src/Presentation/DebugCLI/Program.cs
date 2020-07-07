@@ -103,6 +103,7 @@ namespace DebugCLI
             //ParseImageTest();
             //LineExtractorTest();
             //GetCrednetials();
+
             //RelativeParserWithSpacesShim();
 
             //GenerateRelativeParserCharacterTrainingData();
@@ -140,15 +141,15 @@ namespace DebugCLI
                 var chatLines = rp.ParseChatImage(b, true, false, 27);
                 foreach (var line in chatLines)
                 {
-                    if(line.ClickPoints.Count > 0)
-                    {
-                        Console.WriteLine(line.EnhancedMessage);
-                        foreach (var cp in line.ClickPoints)
-                        {
-                            Console.WriteLine($"{cp.Index}:{cp.RivenName} {cp.X},{cp.Y}");
-                        }
-                    }
-                    //Console.WriteLine(line);
+                    //if(line.ClickPoints.Count > 0)
+                    //{
+                    //    Console.WriteLine(line.EnhancedMessage);
+                    //    foreach (var cp in line.ClickPoints)
+                    //    {
+                    //        Console.WriteLine($"{cp.Index}:{cp.RivenName} {cp.X},{cp.Y}");
+                    //    }
+                    //}
+                    Console.WriteLine(line);
                 }
             }
 
@@ -415,7 +416,7 @@ namespace DebugCLI
         {
             var ignore = RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs;
             var parser = new RelativeChatParser.RelativePixelParser();
-            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\New Character Training";
+            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps";
             var allFiles = Directory.GetFiles(inputDir);
             var sw = new Stopwatch();
             sw.Start();
@@ -480,6 +481,7 @@ namespace DebugCLI
                 b.Dispose();
             }
             sw.Stop();
+            Console.WriteLine(inputDir);
             Console.WriteLine($"Parsed {filesDone} files in {sw.Elapsed.TotalSeconds}s. {sw.Elapsed.TotalSeconds / filesDone} seconds/file.");
             Console.WriteLine($"Error count: {errorCount} out of {characterCount}. {((float)errorCount / characterCount)*100f}%");
             foreach(var error in errorsByCharacter.OrderByDescending(kvp => kvp.Value))

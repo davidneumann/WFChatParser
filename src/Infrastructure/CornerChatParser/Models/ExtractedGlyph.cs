@@ -28,6 +28,7 @@ namespace RelativeChatParser.Models
         public float AspectRatio;
         public string FromFile;
         public ChatColor FirstPixelColor;
+        internal Point[] CombinedLocations;
 
         public Point3[] RelativeBrights { get; internal set; }
 

@@ -133,6 +133,7 @@ namespace RelativeChatParser.Extraction
             var relativeEmpties = emptyPixels.Select(p => new Point(p.X - extractedGlobalMinX, p.Y - extractedGlobalMinY));
 
             var glyphRect = new Rectangle(extractedGlobalMinX, extractedGlobalMinY, width, height);
+            var extracedCombinedEmpties = relativePixels.Select(p => new Point(p.X, p.Y)).Union(relativeEmpties).ToArray();
 
             var result = new ExtractedGlyph()
             {
@@ -148,7 +149,8 @@ namespace RelativeChatParser.Extraction
                 RelativeEmptyLocations = relativeEmpties.ToArray(),
                 RelativePixelLocations = relativePixels.ToArray(),
                 FromFile = image.DebugFilename,
-                RelativeBrights = relativeBrights
+                RelativeBrights = relativeBrights,
+                CombinedLocations = extracedCombinedEmpties
             };
 
             ClearCacheSubregion(lineRect);

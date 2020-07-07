@@ -19,21 +19,23 @@ namespace RelativeChatParser.Recognition
         private static int _debugOverlapCount;
         public const int MissedDistancePenalty = 10000;
         public static double _debugWorstScore = float.MinValue;
-        public static FuzzyGlyph[] IdentifyGlyph(ExtractedGlyph extracted, Bitmap b)
+        public static FuzzyGlyph[] IdentifyGlyph(ExtractedGlyph extracted, Bitmap b, bool allowOverlaps = false)
         {
-            //if (extracted.Left >= 417 && extracted.Top >= 933)
+            //if (extracted.Left >= 633 && extracted.Top >= 1904)
             //{
             //    extracted.Save("bad_glyph.png");
             //    System.Diagnostics.Debugger.Break();
             //}
 
             //var candidates = GlyphDatabase.Instance.AllGlyphs.Where(IsValidCandidate(extracted));
-            var candidates = GlyphDatabase.Instance.GetGlyphByTargetSize(extracted.Width, extracted.Height);
+            var candidates = GlyphDatabase.Instance.GetGlyphByTargetSize(extracted.Width, extracted.Height).Where(g => g.IsOverlap == allowOverlaps).ToArray();
             //Also remove anything that doesn't look to be aligned correctly
             candidates = candidates.Where(g => extracted.PixelsFromTopOfLine >= g.ReferenceGapFromLineTop - 2
                                             && extracted.PixelsFromTopOfLine <= g.ReferenceGapFromLineTop + 2).ToArray();
 
             var useBrights = true;
+            //if (allowOverlaps)
+            //    useBrights = false;
             //Add a stupid hack for O Q. 
             if (extracted.Height == 25)
                 candidates = candidates.Where(g => g.Character != "Q").ToArray();
@@ -45,10 +47,11 @@ namespace RelativeChatParser.Recognition
                 // I should be smaller although l and I can both be 24 pixels tall at times
                 if (height < 24)
                     candidates = candidates.Where(g => g.Character != "l").ToArray();
-                else if(height >= 25)
+                else if (height >= 25)
                     candidates = candidates.Where(g => g.Character != "I").ToArray();
-                candidates = candidates.Where(g => {
-                    return extracted.Height >= g.ReferenceMinHeight && extracted.Height <= g.ReferenceMaxHeight 
+                candidates = candidates.Where(g =>
+                {
+                    return extracted.Height >= g.ReferenceMinHeight && extracted.Height <= g.ReferenceMaxHeight
                         && extracted.PixelsFromTopOfLine + 1 >= g.ReferenceGapFromLineTop;
                 }).ToArray();
                 useBrights = false;
@@ -66,34 +69,49 @@ namespace RelativeChatParser.Recognition
                 double distances = 0;
                 //Match whichever has more pixels agianst the smlaler one
                 //if(extracted.RelativePixelLocations.Where(g => g.Z >= 0.85f).Count() > candidate.RelativePixelLocations.Where(g => g.Z >= 0.85f).Count())
-                if(extractedPixels.Length > candiatePixels.Length)
+                if (extractedPixels.Length > candiatePixels.Length)
                 {
                     distances += GetMinDistanceSum(extractedPixels, candiatePixels);
-                    distances += GetMinDistanceSum(extracted.RelativeEmptyLocations, candidate.RelativeEmptyLocations);
+                    var eDistance = GetMinDistanceSum(extracted.RelativeEmptyLocations, candidate.RelativeEmptyLocations);
+                    if (eDistance >= MissedDistancePenalty)
+                    {
+                        eDistance = GetMinDistanceSum(extracted.CombinedLocations, candidate.RelativeCombinedLocations) * 15f;
+                    }
+                    distances += eDistance;
                 }
                 else
                 {
                     distances += GetMinDistanceSum(candiatePixels, extractedPixels);
-                    distances += GetMinDistanceSum(candidate.RelativeEmptyLocations, extracted.RelativeEmptyLocations);
+                    var eDistance = GetMinDistanceSum(candidate.RelativeEmptyLocations, extracted.RelativeEmptyLocations);
+                    if (eDistance >= MissedDistancePenalty)
+                    {
+                        eDistance = GetMinDistanceSum(candidate.RelativeCombinedLocations, extracted.CombinedLocations) * 15f;
+                    }
+                    distances += eDistance;
                 }
 
-                if (current == null || current.distanceSum > distances)
+                if (distances < MissedDistancePenalty && (current == null || current.distanceSum > distances))
                     current = new BestMatch(distances, candidate);
             }
+
+            if (current == null && !allowOverlaps)
+                return IdentifyGlyph(extracted, b, !allowOverlaps);
 
             //if (current.distanceSum > 1000)
             //    Console.WriteLine("Possible error");
 
             List<FuzzyGlyph> overlaps = new List<FuzzyGlyph>();
-            if(current != null && current.distanceSum > _debugWorstScore)
+            if (current != null && current.distanceSum > _debugWorstScore)
             {
-                Console.WriteLine($"New worst score seen {current.distanceSum} at {extracted.Left},{extracted.Top}");
+                //Console.WriteLine($"New worst score seen {current.distanceSum} at {extracted.Left},{extracted.Top}");
                 _debugWorstScore = current.distanceSum;
             }
             if (current == null)
             {
+#if DEBUG
+                extracted.Save("overlap.png");
+#endif
                 //todo: fix tree code not handling way bigger DB
-                return overlaps.ToArray();
                 //System.Diagnostics.Debugger.Break();
                 //Console.WriteLine($"Probably an overlap at {extracted.Left}, {extracted.Top}.");
                 var tree = TreeMaker(extracted, new BestMatchNode(new BestMatch(0, null)));
@@ -108,6 +126,7 @@ namespace RelativeChatParser.Recognition
                 {
                     overlaps.Add(g);
                 }
+                return overlaps.ToArray();
                 //Console.WriteLine(flat);
             }
             //else
@@ -177,7 +196,7 @@ namespace RelativeChatParser.Recognition
             Point3[] cPixels = candidate.RelativePixelLocations;
             Point[] eEmpties = extracted.RelativeEmptyLocations;
 
-            if(strict)
+            if (strict)
             {
                 ePixels = ePixels.Where(p => p.Z > 0.8f).ToArray();
                 cPixels = cPixels.Where(p => p.Z > 0.8f).ToArray();
@@ -192,7 +211,7 @@ namespace RelativeChatParser.Recognition
             //    ePixels = ePixels.Select(p => new Point3(p.X, p.Y + diff, p.Z)).ToArray();
             //    eEmpties = eEmpties.Select(p => new Point(p.X, p.Y + diff)).ToArray();
             //}
-            
+
             //For ever valid pixel find the min distance to a refrence pixel
             foreach (var valid in ePixels)
             {

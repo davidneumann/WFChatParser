@@ -47,7 +47,7 @@ namespace RelativeChatParser
         public ChatMessageLineResult[] ParseChatImage(Bitmap image, bool useCache, bool isScrolledUp, int lineParseCount)
         {
             var imageCache = new ImageCache(image);
-            
+
             Letter[][] allLetters = ExtractLetters(image, lineParseCount, imageCache);
 
             Word[][] allWords = ConvertToWords(lineParseCount, allLetters);
@@ -120,7 +120,7 @@ namespace RelativeChatParser
                             Index = index++,
                             X = extractedGlyph.Left,
                             Y = extractedGlyph.Top + extractedGlyph.Height / 2,
-                            RivenName = rivenName                             
+                            RivenName = rivenName
                         });
                     }
                     else
@@ -136,11 +136,11 @@ namespace RelativeChatParser
         private static Letter[][] ExtractLetters(Bitmap image, int lineParseCount, ImageCache imageCache)
         {
             var allLetters = new Letter[lineParseCount][];
-            //Parallel.For(0, lineParseCount, i =>
-            for (int i = 0; i < lineParseCount; i++)
+            Parallel.For(0, lineParseCount, i =>
+            //for (int i = 0; i < lineParseCount; i++)
             {
                 var letters = LineScanner.ExtractGlyphsFromLine(imageCache, i)
-                    /*.AsParallel()*/.Select(extracted =>
+                    .AsParallel().Select(extracted =>
                     {
                         var fuzzies = RelativePixelGlyphIdentifier.IdentifyGlyph(extracted, image);
                         return fuzzies.Select(f => new Letter(f, extracted));
@@ -149,8 +149,8 @@ namespace RelativeChatParser
                 {
                     allLetters[i] = letters;
                 }
-                //});
-            }
+            });
+            //}
             return allLetters;
         }
 
