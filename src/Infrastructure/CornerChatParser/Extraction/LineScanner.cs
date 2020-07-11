@@ -24,7 +24,7 @@ namespace RelativeChatParser.Extraction
 
         public static readonly int ChatLeftX = 4;
         
-        public static ExtractedGlyph[] ExtractGlyphsFromLine(ImageCache image, Rectangle lineRect)
+        public static ExtractedGlyph[] ExtractGlyphsFromLine(ImageCache image, Rectangle lineRect, bool abortAfterUsername = false)
         {
             var results = new List<ExtractedGlyph>();
             var lastGlobalX = lineRect.Left;
@@ -33,6 +33,9 @@ namespace RelativeChatParser.Extraction
             {
                 var nextPoint = FindNextPoint(image, lineRect, localBlacklist, lastGlobalX);
                 if (nextPoint == Point.Empty)
+                    break;
+
+                if (abortAfterUsername && image.GetColor(nextPoint.X, nextPoint.Y) != ChatColor.ChatTimestampName)
                     break;
 
                 var chatColor = image.GetColor(nextPoint.X, nextPoint.Y);
@@ -74,9 +77,9 @@ namespace RelativeChatParser.Extraction
             }
         }
 
-        public static ExtractedGlyph[] ExtractGlyphsFromLine(ImageCache image, int lineIndex)
+        public static ExtractedGlyph[] ExtractGlyphsFromLine(ImageCache image, int lineIndex, bool abortAfterUsername = false)
         {
-            return ExtractGlyphsFromLine(image, new Rectangle(ChatLeftX, LineOffsets[lineIndex], ChatWidth, Lineheight));
+            return ExtractGlyphsFromLine(image, new Rectangle(ChatLeftX, LineOffsets[lineIndex], ChatWidth, Lineheight), abortAfterUsername:abortAfterUsername);
         }
 
         public static void SaveExtractedGlyphs(ImageCache image, string outputDir, ExtractedGlyph[] glyphs)

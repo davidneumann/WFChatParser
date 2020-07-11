@@ -110,7 +110,26 @@ namespace DebugCLI
             //RelativeParserGlyphTrainer();
             //RelativeParserSpaceTrainer();
             //OverlapExtractingShim();
-            RelativeParserTest();
+            //RelativeParserTest();
+
+            RelativeCacheShim();
+        }
+
+        private static void RelativeCacheShim()
+        {
+            var cp = new RelativePixelParser();
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\637289931922469590.png"))
+            {
+                var lines = cp.ParseChatImage(b, true, true, 27);
+                Console.WriteLine("Timestamp\tUsername");
+                foreach (var line in lines)
+                {
+                    if(line.Username != null && line.Timestamp != null)
+                    {
+                        Console.WriteLine($"{line.Timestamp}\t{line.Username}");
+                    }
+                }
+            }
         }
 
         private static void GenerateRelativeParserCharacterTrainingData()

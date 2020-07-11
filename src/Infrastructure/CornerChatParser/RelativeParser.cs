@@ -48,13 +48,14 @@ namespace RelativeChatParser
         {
             var imageCache = new ImageCache(image);
 
-            Letter[][] allLetters = ExtractLetters(image, lineParseCount, imageCache);
+            Letter[][] allLetters = ExtractLetters(image, lineParseCount, imageCache, useCache);
 
             Word[][] allWords = ConvertToWords(lineParseCount, allLetters);
 
+            ChatMessageLineResult[] results = GetUsernameAndTimestamp(lineParseCount, allWords);
+
             EnhancedMessage[] enhancedMessages = GetEnhancedMessages(lineParseCount, allWords);
 
-            var results = new ChatMessageLineResult[lineParseCount];
             for (int i = 0; i < lineParseCount; i++)
             {
                 var rect = Rectangle.Empty;
@@ -73,11 +74,37 @@ namespace RelativeChatParser
                     RawMessage = allWords[i].Select(word => word.ToString()).Aggregate(new StringBuilder(), (acc, str) => acc.Append(str)).ToString(),
                     EnhancedMessage = enhancedMessages[i].EnhancedString.ToString(),
                     ClickPoints = enhancedMessages[i].ClickPoints,
-                    MessageBounds = rect
+                    MessageBounds = rect,
                 };
+                if (results[i] != null && results[i].Timestamp != null)
+                    result.Timestamp = results[i].Timestamp;
+                if (results[i] != null && results[i].Username != null)
+                    result.Username = results[i].Username;
+
                 lock (results)
                 {
                     results[i] = result;
+                }
+            }
+            return results;
+        }
+
+        private ChatMessageLineResult[] GetUsernameAndTimestamp(int lineParseCount, Word[][] allWords)
+        {
+            var results = new ChatMessageLineResult[lineParseCount];
+            for (int i = 0; i < lineParseCount; i++)
+            {
+                if(allWords[i].Length >= 3)
+                {
+                    if (!allWords[i][0].WordColor.IsTimestamp())
+                        continue;
+                    results[i] = new ChatMessageLineResult();
+
+                    results[i].Timestamp = allWords[i][0].ToString();
+                    if (allWords[i][1].ToString().Trim().Length == 0)
+                        results[i].Username = allWords[i][2].ToString();
+                    else
+                        results[i].Username = allWords[i][1].ToString();
                 }
             }
             return results;
@@ -133,13 +160,13 @@ namespace RelativeChatParser
             return results;
         }
 
-        private static Letter[][] ExtractLetters(Bitmap image, int lineParseCount, ImageCache imageCache)
+        private static Letter[][] ExtractLetters(Bitmap image, int lineParseCount, ImageCache imageCache, bool abortAfterUsername = false)
         {
             var allLetters = new Letter[lineParseCount][];
-            Parallel.For(0, lineParseCount, i =>
-            //for (int i = 0; i < lineParseCount; i++)
+            //Parallel.For(0, lineParseCount, i =>
+            for (int i = 0; i < lineParseCount; i++)
             {
-                var letters = LineScanner.ExtractGlyphsFromLine(imageCache, i)
+                var letters = LineScanner.ExtractGlyphsFromLine(imageCache, i, abortAfterUsername: abortAfterUsername)
                     .AsParallel().Select(extracted =>
                     {
                         var fuzzies = RelativePixelGlyphIdentifier.IdentifyGlyph(extracted, image);
@@ -149,8 +176,8 @@ namespace RelativeChatParser
                 {
                     allLetters[i] = letters;
                 }
-            });
-            //}
+                //});
+            }
             return allLetters;
         }
 
