@@ -19,7 +19,7 @@ namespace RelativeChatParser.Recognition
         private static int _debugOverlapCount;
         public const int MissedDistancePenalty = 10000;
         public static double _debugWorstScore = float.MinValue;
-        public static FuzzyGlyph[] IdentifyGlyph(ExtractedGlyph extracted, Bitmap b, bool allowOverlaps = false)
+        public static FuzzyGlyph[] IdentifyGlyph(ExtractedGlyph extracted, bool allowOverlaps = false)
         {
             //if (extracted.Left >= 633 && extracted.Top >= 1904)
             //{
@@ -95,7 +95,7 @@ namespace RelativeChatParser.Recognition
             }
 
             if (current == null && !allowOverlaps)
-                return IdentifyGlyph(extracted, b, !allowOverlaps);
+                return IdentifyGlyph(extracted, !allowOverlaps);
 
             //if (current.distanceSum > 1000)
             //    Console.WriteLine("Possible error");

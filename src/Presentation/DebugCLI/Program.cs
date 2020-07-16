@@ -118,17 +118,22 @@ namespace DebugCLI
         private static void RelativeCacheShim()
         {
             var cp = new RelativePixelParser();
-            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\637289931922469590.png"))
+            const string input = @"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\637289931922469590.png";
+            using (var b = new Bitmap(input))
             {
-                var lines = cp.ParseChatImage(b, true, true, 27);
+                ImageCleaner.SaveSoftMask(input, "debug_chat.png");
+                var lines = cp.ParseChatImage2(b, true, true, 27);
                 Console.WriteLine("Timestamp\tUsername");
                 foreach (var line in lines)
                 {
-                    if(line.Username != null && line.Timestamp != null)
-                    {
-                        Console.WriteLine($"{line.Timestamp}\t{line.Username}");
-                    }
+                    //if(line.Username != null && line.Timestamp != null)
+                    //{
+                    //    Console.WriteLine($"{line.Timestamp}\t{line.Username}");
+                    //}
+                    Console.WriteLine(line.EnhancedMessage);
                 }
+
+                var lines2 = cp.ParseChatImage2(b, true, true, 27);
             }
         }
 

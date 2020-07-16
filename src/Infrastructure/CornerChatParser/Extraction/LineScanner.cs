@@ -77,9 +77,16 @@ namespace RelativeChatParser.Extraction
             }
         }
 
-        public static ExtractedGlyph[] ExtractGlyphsFromLine(ImageCache image, int lineIndex, bool abortAfterUsername = false)
+        public static ExtractedGlyph[] ExtractGlyphsFromLine(ImageCache image, int lineIndex, bool abortAfterUsername = false, int startX = 0)
         {
-            return ExtractGlyphsFromLine(image, new Rectangle(ChatLeftX, LineOffsets[lineIndex], ChatWidth, Lineheight), abortAfterUsername:abortAfterUsername);
+            var rect = new Rectangle(ChatLeftX, LineOffsets[lineIndex], ChatWidth, Lineheight);
+            if(startX > 0)
+            {
+                var left = startX;
+                var width = ChatWidth - (startX - ChatLeftX);
+                rect = new Rectangle(left, LineOffsets[lineIndex], width, Lineheight);
+            }
+            return ExtractGlyphsFromLine(image, rect, abortAfterUsername:abortAfterUsername);
         }
 
         public static void SaveExtractedGlyphs(ImageCache image, string outputDir, ExtractedGlyph[] glyphs)
