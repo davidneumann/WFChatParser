@@ -79,6 +79,7 @@ namespace RelativeChatParser
 
         public ChatMessageLineResult[] ParseChatImage(Bitmap image, bool useCache, bool isScrolledUp, int lineParseCount)
         {
+            lineParseCount = Math.Min(lineParseCount, LineScanner.LineOffsets.Length);
             var imageCache = new ImageCache(image);
             while (_timeUserCache.Count > 50)
                 _timeUserCache.Dequeue();
