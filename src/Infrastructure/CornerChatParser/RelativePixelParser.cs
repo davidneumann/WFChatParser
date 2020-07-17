@@ -1,5 +1,6 @@
 ﻿using Application.ChatLineExtractor;
 using Application.ChatMessages.Model;
+using Application.Data;
 using Application.Interfaces;
 using Application.LineParseResult;
 using RelativeChatParser.Database;
@@ -21,8 +22,9 @@ namespace RelativeChatParser
     {
         private static int _debugCounter = 0;
         private static readonly FuzzyGlyph NullGlyph;
-
         private Queue<string> _timeUserCache = new Queue<string>();
+        private static List<Regex> _blacklistedRegex = new List<Regex>();
+        private static readonly Regex _kickRegex =  new Regex(@"\w was kicked.", RegexOptions.Compiled);
 
         static RelativePixelParser()
         {
@@ -30,6 +32,15 @@ namespace RelativeChatParser
             {
                 Character = "",
             };
+
+            //Load blacklists
+            if (File.Exists(Path.Combine(DataHelper.OcrDataPathEnglish, @"MessageBlacklists.txt")))
+            {
+                foreach (var line in File.ReadAllLines(Path.Combine(DataHelper.OcrDataPathEnglish, @"MessageBlacklists.txt")))
+                {
+                    _blacklistedRegex.Add(new Regex(line, RegexOptions.Compiled));
+                }
+            }
         }
 
         public void InvalidateCache(string key)
@@ -146,6 +157,11 @@ namespace RelativeChatParser
                 }
 
                 //Append to last message if wrapped line
+                if (headLines[i] != null && headLines[i].RawMessage != null && headLines[i].RawMessage.Length > 0 && _kickRegex.Match(headLines[i].RawMessage).Success)
+                {
+                    continue;
+                }
+
                 if (!fullWords[i].First().WordColor.IsTimestamp() && last != null)
                 {
                     if (isScrolledUp && i == LineScanner.LineOffsets.Length - 1 && headLines[i] != null && headLines[i].LineType == LineType.Continuation && results.Count > 0)
@@ -154,7 +170,7 @@ namespace RelativeChatParser
                         var tempLast = results.Last();
                         results.Remove(tempLast);
                     }
-                    else
+                    else if(!_blacklistedRegex.Any(r => r.Match(headLines[i].RawMessage).Success))
                         last.Append(headLines[i], LineScanner.Lineheight, LineScanner.LineOffsets[i]);
                 }
                 else
