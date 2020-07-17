@@ -47,11 +47,8 @@ namespace RelativeChatParser
             throw new NotImplementedException();
         }
 
-        public ChatMessageLineResult[] ParseChatImage2(Bitmap image, bool useCache, bool isScrolledUp, int lineParseCount)
+        public ChatMessageLineResult[] ParseChatImage(Bitmap image, bool useCache, bool isScrolledUp, int lineParseCount)
         {
-            if (!useCache)
-                return ParseChatImage(image, useCache, isScrolledUp, lineParseCount);
-
             var imageCache = new ImageCache(image);
 
             var results = new List<ChatMessageLineResult>();
@@ -66,7 +63,7 @@ namespace RelativeChatParser
                 bool inCache = IsLineInCache(line);
 
                 //If this line is in the cache then skip
-                if (inCache)
+                if (inCache && useCache)
                 {
                     last = null;
                     continue;
@@ -133,42 +130,6 @@ namespace RelativeChatParser
                     var fuzzies = RelativePixelGlyphIdentifier.IdentifyGlyph(extracted);
                     return fuzzies.Select(f => new Letter(f, extracted));
                 }).SelectMany(gs => gs).ToArray();
-        }
-
-        public ChatMessageLineResult[] ParseChatImage(Bitmap image, bool useCache, bool isScrolledUp, int lineParseCount)
-        {
-            var imageCache = new ImageCache(image);
-
-            Letter[][] allLetters = ExtractLetters(image, lineParseCount, imageCache, useCache);
-
-            Word[][] allWords = ConvertToWords(lineParseCount, allLetters);
-
-            ChatMessageLineResult[] results = GetUsernameAndTimestamp(lineParseCount, allWords);
-
-            EnhancedMessage[] enhancedMessages = GetEnhancedMessages(lineParseCount, allWords);
-
-            for (int i = 0; i < lineParseCount; i++)
-            {
-                Letter[] lineLetters = allLetters[i];
-                Rectangle rect = GetLineRect(lineLetters);
-                var result = new ChatMessageLineResult()
-                {
-                    RawMessage = allWords[i].Select(word => word.ToString()).Aggregate(new StringBuilder(), (acc, str) => acc.Append(str)).ToString(),
-                    EnhancedMessage = enhancedMessages[i].EnhancedString.ToString(),
-                    ClickPoints = enhancedMessages[i].ClickPoints,
-                    MessageBounds = rect,
-                };
-                if (results[i] != null && results[i].Timestamp != null)
-                    result.Timestamp = results[i].Timestamp;
-                if (results[i] != null && results[i].Username != null)
-                    result.Username = results[i].Username;
-
-                lock (results)
-                {
-                    results[i] = result;
-                }
-            }
-            return results;
         }
 
         private static Rectangle GetLineRect(Letter[] lineLetters)
