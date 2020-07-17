@@ -121,6 +121,9 @@ namespace RelativeChatParser
             var fullWords = new Word[lineParseCount][];
             for (int i = 0; i < lineParseCount; i++)
             {
+                if (!headLinesValid[i])
+                    continue;
+
                 fullWords[i] = headWords[i].Concat(bodyWords[i]).ToArray();
 
                 var enhancedMessage = GetEnhancedMessageSingleLine(fullWords[i]);
@@ -136,6 +139,11 @@ namespace RelativeChatParser
             ChatMessageLineResult last = null;
             for (int i = 0; i < lineParseCount; i++)
             {
+                if(!headLinesValid[i])
+                {
+                    last = null;
+                    continue;
+                }
 
                 //Append to last message if wrapped line
                 if (!fullWords[i].First().WordColor.IsTimestamp() && last != null)
