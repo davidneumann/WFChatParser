@@ -122,7 +122,7 @@ namespace DebugCLI
             using (var b = new Bitmap(input))
             {
                 ImageCleaner.SaveSoftMask(input, "debug_chat.png");
-                var lines = cp.ParseChatImage2(b, true, true, 27);
+                var lines = cp.ParseChatImage(b, true, true, 27);
                 Console.WriteLine("Timestamp\tUsername");
                 foreach (var line in lines)
                 {
@@ -133,7 +133,7 @@ namespace DebugCLI
                     Console.WriteLine(line.EnhancedMessage);
                 }
 
-                var lines2 = cp.ParseChatImage2(b, true, true, 27);
+                var lines2 = cp.ParseChatImage(b, true, true, 27);
             }
         }
 
