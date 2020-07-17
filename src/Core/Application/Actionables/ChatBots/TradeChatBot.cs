@@ -571,7 +571,10 @@ namespace Application.Actionables.ChatBots
                     debugReason += "Invalid username or timestamp!" + "\t\r\n" + line.RawMessage + "\n";
 
                 if (username.Trim().Length < 3)
-                    debugReason += "Name is less than 3 characters" + "\n";
+                    debugReason += $"Name is less than 3 characters: {username}\n";
+
+                if (username.Trim().Contains(' '))
+                    debugReason += $"Name contains a space: {username}\n";
             }
             catch { debugReason += "Bade name: " + username + "\n"; }
             var cm = new ChatMessageModel()
