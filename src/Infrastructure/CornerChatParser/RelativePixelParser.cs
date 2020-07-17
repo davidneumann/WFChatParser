@@ -120,7 +120,7 @@ namespace RelativeChatParser
 
                 var enhancedMessage = GetEnhancedMessageSingleLine(fullWords);
                 line.RawMessage = fullWords.Select(word => word.ToString()).Aggregate(new StringBuilder(), (acc, str) => acc.Append(str)).ToString();
-                line.EnhancedMessage = enhancedMessage.EnhancedString.ToString();
+                line.EnhancedMessage = enhancedMessage.EnhancedString.ToString().Trim();
                 line.ClickPoints = enhancedMessage.ClickPoints;
                 line.MessageBounds = GetLineRect(headLetters.Concat(remainingLetters).ToArray());
 
@@ -243,6 +243,11 @@ namespace RelativeChatParser
             for (int j = 0; j < lineWords.Length; j++)
             {
                 var currentWord = lineWords[j];
+                //Skip everything in the timestamp, username, first : 
+                if (currentWord.WordColor.IsTimestamp())
+                    continue;
+                if (j >= 2 && j <= 7 && currentWord.ToString() == ":" && (lineWords[j - 1].WordColor.IsTimestamp() || lineWords[j - 2].WordColor.IsTimestamp()))
+                    continue;
                 var str = currentWord.ToString().Trim();
                 //Skip any easily incorrect word
                 if (currentWord.WordColor != ChatColor.ItemLink || !str.Contains("]")
