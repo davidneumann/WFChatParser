@@ -34,22 +34,54 @@ namespace RelativeChatParser
 
         public void InvalidateCache(string key)
         {
-            throw new NotImplementedException();
+            var duplicateCache = new Queue<string>(_timeUserCache.Where(i => i != key));
+            _timeUserCache = duplicateCache;
         }
 
         public bool IsChatFocused(Bitmap chatIconBitmap)
         {
-            throw new NotImplementedException();
+            var darkPixels = new Point[] { new Point(23, 15), new Point(30, 35), new Point(37, 15), new Point(43, 35) };
+            var lightPixles = new Point[] { new Point(17, 25), new Point(24, 12), new Point(26, 19), new Point(32, 24), new Point(40, 32), new Point(30, 43) };
+            if (darkPixels.Any(p =>
+            {
+                var pixel = chatIconBitmap.GetPixel(p.X, p.Y);
+                if (pixel.R > 100 || pixel.G > 100 || pixel.G > 100)
+                    return true;
+                return false;
+            }))
+                return false;
+            if (lightPixles.Any(p =>
+            {
+                var pixel = chatIconBitmap.GetPixel(p.X, p.Y);
+                if (pixel.R < 180 || pixel.G < 180 || pixel.G < 180)
+                    return true;
+                return false;
+            }))
+                return false;
+            return true;
         }
 
-        public bool IsScrollbarPresent(Bitmap fullScreenBitmap)
+        public bool IsScrollbarPresent(Bitmap screenImage)
         {
-            throw new NotImplementedException();
+            if (screenImage.Width != 4096 || screenImage.Height != 2160)
+                return false;
+
+            var threshold = (byte)252;
+            for (int y = 2097; y > 655; y--)
+            {
+                var pixel = screenImage.GetPixel(3256, y);
+                if (pixel.R > threshold && pixel.G > threshold && pixel.B > threshold)
+                    return true;
+            }
+
+            return false;
         }
 
         public ChatMessageLineResult[] ParseChatImage(Bitmap image, bool useCache, bool isScrolledUp, int lineParseCount)
         {
             var imageCache = new ImageCache(image);
+            while (_timeUserCache.Count > 50)
+                _timeUserCache.Dequeue();
 
             var results = new List<ChatMessageLineResult>();
             ChatMessageLineResult last = null;
@@ -69,7 +101,7 @@ namespace RelativeChatParser
                     continue;
                 }
                 else
-                    _timeUserCache.Enqueue(GetLineKey(line));
+                    _timeUserCache.Enqueue(line.GetKey());
 
                 //Skip any line that is a continuation when the last message is unkown
                 if(last == null && 
@@ -109,17 +141,12 @@ namespace RelativeChatParser
             var inCache = false;
             if (!string.IsNullOrEmpty(line.Timestamp) && !string.IsNullOrEmpty(line.Username))
             {
-                string key = GetLineKey(line);
+                string key = line.GetKey();
                 if (_timeUserCache.Contains(key))
                     inCache = true;
             }
 
             return inCache;
-        }
-
-        private static string GetLineKey(ChatMessageLineResult line)
-        {
-            return line.Timestamp.Trim() + line.Username.Trim();
         }
 
         private static Letter[] ExtractLettersSingleLine(int i, ImageCache imageCache, bool abortAfterUsername, int startX = 0)
