@@ -567,7 +567,7 @@ namespace Application.Actionables.ChatBots
                     debugReason += "Bade name: " + username  + "\n";
                 }
 
-                if (!Regex.Match(line.RawMessage, @"^(\[\d\d:\d\d\])\s*((?:\[DE\])?[-A-Za-z0-9._]+)[:\s]\s*(.+)").Success)
+                if (!Regex.Match(line.RawMessage, @"^(\[\d\d:\d\d\])\s*((?:\[DE\])?[-A-Za-z0-9._]+)[:]\s*(.+)").Success)
                     debugReason += "Invalid username or timestamp!" + "\t\r\n" + line.RawMessage + "\n";
 
                 if (username.Trim().Length < 3)
