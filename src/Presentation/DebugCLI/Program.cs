@@ -9,7 +9,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using WFGameCapture;
-using WFImageParser;
 using DataStream;
 using Microsoft.Extensions.Configuration;
 using System.Text.RegularExpressions;
@@ -35,9 +34,7 @@ using Application.Logger;
 using Application.ChatBoxParsing.ChatLineExtractor;
 using Application.ChatBoxParsing;
 using Application.ChatBoxParsing.CustomChatParsing;
-using WFImageParser.Training;
 using Application.Data;
-using WFImageParser.GlyphRecognition;
 using System.Net;
 using HtmlAgilityPack;
 using Application.Utils;
@@ -662,75 +659,75 @@ namespace DebugCLI
             b.Dispose();
         }
 
-        private static void NewTrainingVerifier()
-        {
-            var inputPaths = new string[] { @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Orig\Overlaps",
-                @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Orig\Spaces"};
-            var inputs = new List<string>();
-            foreach (var inputPath in inputPaths)
-            {
-                var allFiles = Directory.GetFiles(inputPath);
-                foreach (var file in allFiles.Select(f => f.Replace(".png", "").Replace(".txt", "")).Distinct())
-                {
-                    if (allFiles.Contains(file + ".png") && allFiles.Contains(file + ".txt"))
-                    {
-                        inputs.Add(file);
-                    }
-                }
-            }
+        //private static void NewTrainingVerifier()
+        //{
+        //    var inputPaths = new string[] { @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Orig\Overlaps",
+        //        @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Orig\Spaces"};
+        //    var inputs = new List<string>();
+        //    foreach (var inputPath in inputPaths)
+        //    {
+        //        var allFiles = Directory.GetFiles(inputPath);
+        //        foreach (var file in allFiles.Select(f => f.Replace(".png", "").Replace(".txt", "")).Distinct())
+        //        {
+        //            if (allFiles.Contains(file + ".png") && allFiles.Contains(file + ".txt"))
+        //            {
+        //                inputs.Add(file);
+        //            }
+        //        }
+        //    }
 
-            var cp = new ChatParser(new DummyLogger(), DataHelper.OcrDataPathEnglish);
-            foreach (var input in inputs)
-            {
-                Console.WriteLine($"={input}=");
-                var b = new System.Drawing.Bitmap(input + ".png");
-                var lines = cp.ParseChatImage(b).Select(o => o.RawMessage).ToArray();
+        //    var cp = new ChatParser(new DummyLogger(), DataHelper.OcrDataPathEnglish);
+        //    foreach (var input in inputs)
+        //    {
+        //        Console.WriteLine($"={input}=");
+        //        var b = new System.Drawing.Bitmap(input + ".png");
+        //        var lines = cp.ParseChatImage(b).Select(o => o.RawMessage).ToArray();
 
-                lines = lines.Select(l => Regex.Replace(l, @"^\[.....\]\s*[^\s]+\s+", "").Trim())
-                    .Where(l => l.ToLower() != "clear").ToArray();
-                //lines = lines.Select(l => l.Remove(0, l.IndexOf(':')+1).Trim()).ToArray();
-                var expectedLines = File.ReadAllLines(input + ".txt").Select(line => line.Trim()).ToArray();
-                if (lines.Length != expectedLines.Length)
-                    Console.WriteLine("Parsed lines and expected lines don't match!");
-                else
-                {
-                    for (int i = 0; i < lines.Length; i++)
-                    {
-                        var match = true;
-                        if (lines[i].Length != expectedLines[i].Length)
-                        {
-                            Console.WriteLine($"Line index {i} does not have expected number of characters");
-                            match = false;
-                        }
-                        else
-                        {
-                            for (int j = 0; j < lines[i].Length; j++)
-                            {
-                                if (!match)
-                                    break;
-                                if (lines[i][j] != expectedLines[i][j])
-                                {
-                                    match = false;
-                                }
-                            }
-                        }
-                        if (!match)
-                        {
-                            Console.WriteLine($"Lines index {i} does not match\n{lines[i]}\n{expectedLines[i]}\n");
-                        }
-                    }
-                }
-                b.Dispose();
-            }
-        }
+        //        lines = lines.Select(l => Regex.Replace(l, @"^\[.....\]\s*[^\s]+\s+", "").Trim())
+        //            .Where(l => l.ToLower() != "clear").ToArray();
+        //        //lines = lines.Select(l => l.Remove(0, l.IndexOf(':')+1).Trim()).ToArray();
+        //        var expectedLines = File.ReadAllLines(input + ".txt").Select(line => line.Trim()).ToArray();
+        //        if (lines.Length != expectedLines.Length)
+        //            Console.WriteLine("Parsed lines and expected lines don't match!");
+        //        else
+        //        {
+        //            for (int i = 0; i < lines.Length; i++)
+        //            {
+        //                var match = true;
+        //                if (lines[i].Length != expectedLines[i].Length)
+        //                {
+        //                    Console.WriteLine($"Line index {i} does not have expected number of characters");
+        //                    match = false;
+        //                }
+        //                else
+        //                {
+        //                    for (int j = 0; j < lines[i].Length; j++)
+        //                    {
+        //                        if (!match)
+        //                            break;
+        //                        if (lines[i][j] != expectedLines[i][j])
+        //                        {
+        //                            match = false;
+        //                        }
+        //                    }
+        //                }
+        //                if (!match)
+        //                {
+        //                    Console.WriteLine($"Lines index {i} does not match\n{lines[i]}\n{expectedLines[i]}\n");
+        //                }
+        //            }
+        //        }
+        //        b.Dispose();
+        //    }
+        //}
 
-        private static void SaveAllPixelGroups()
-        {
-            var overlapCSV = @"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\overlaps.csv";
-            OverlapDetector.ExtractPixelGroupsOnImages(overlapCSV,
-                @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps",
-                "overlaps");
-        }
+        //private static void SaveAllPixelGroups()
+        //{
+        //    var overlapCSV = @"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\overlaps.csv";
+        //    OverlapDetector.ExtractPixelGroupsOnImages(overlapCSV,
+        //        @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps",
+        //        "overlaps");
+        //}
 
         private static void SaveSoftMask()
         {
@@ -781,14 +778,14 @@ namespace DebugCLI
             }
         }
 
-        private static void ChatParsingShim()
-        {
-            var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish);
-            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\noclick_screen_chat.png"))
-            {
-                var lines = cp.ParseChatImage(b);
-            }
-        }
+        //private static void ChatParsingShim()
+        //{
+        //    var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish);
+        //    using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\noclick_screen_chat.png"))
+        //    {
+        //        var lines = cp.ParseChatImage(b);
+        //    }
+        //}
 
         private static void GroupShim()
         {
@@ -1117,75 +1114,75 @@ namespace DebugCLI
             public float Value { get; set; }
             public string Name { get; set; }
         }
-        private static void GlyphAudit()
-        {
-            var eGD = new WFImageParser.GlyphRecognition.GlyphDatabase(DataHelper.OcrDataPathEnglish);
+        //private static void GlyphAudit()
+        //{
+        //    var eGD = new WFImageParser.GlyphRecognition.GlyphDatabase(DataHelper.OcrDataPathEnglish);
 
-            //Find smallest known leftmost glyph that can overlap
-            //Find the lowest connective tissue
-            GlyphAuditItem smallestLeftmostGlyph = null;
-            foreach (var glyph in eGD.KnownGlyphs.Where(g => g.Name.Contains(", ")))
-            {
-                var leftGlyphName = glyph.Name.Split(',').First();
-                var leftGlyph = eGD.KnownGlyphs.First(g => g.Name == leftGlyphName);
-                if (smallestLeftmostGlyph == null || smallestLeftmostGlyph.Value > leftGlyph.Width)
-                {
-                    smallestLeftmostGlyph = new GlyphAuditItem() { Name = leftGlyph.Name, Value = leftGlyph.Width };
-                }
-            }
-            if (smallestLeftmostGlyph != null)
-                Console.WriteLine($"{smallestLeftmostGlyph.Name} is smallest leftmost glyph with width {smallestLeftmostGlyph.Value}");
+        //    //Find smallest known leftmost glyph that can overlap
+        //    //Find the lowest connective tissue
+        //    GlyphAuditItem smallestLeftmostGlyph = null;
+        //    foreach (var glyph in eGD.KnownGlyphs.Where(g => g.Name.Contains(", ")))
+        //    {
+        //        var leftGlyphName = glyph.Name.Split(',').First();
+        //        var leftGlyph = eGD.KnownGlyphs.First(g => g.Name == leftGlyphName);
+        //        if (smallestLeftmostGlyph == null || smallestLeftmostGlyph.Value > leftGlyph.Width)
+        //        {
+        //            smallestLeftmostGlyph = new GlyphAuditItem() { Name = leftGlyph.Name, Value = leftGlyph.Width };
+        //        }
+        //    }
+        //    if (smallestLeftmostGlyph != null)
+        //        Console.WriteLine($"{smallestLeftmostGlyph.Name} is smallest leftmost glyph with width {smallestLeftmostGlyph.Value}");
 
-            var topLowest = new GlyphAuditItem[] { null, null, null, null, null, null, null, null, null, null };
-            foreach (var glyph in eGD.KnownGlyphs)
-            {
-                if (glyph.Name.Contains(","))
-                    continue;
+        //    var topLowest = new GlyphAuditItem[] { null, null, null, null, null, null, null, null, null, null };
+        //    foreach (var glyph in eGD.KnownGlyphs)
+        //    {
+        //        if (glyph.Name.Contains(","))
+        //            continue;
 
-                var lowestTotal = float.NaN;
-                if (glyph.Width <= smallestLeftmostGlyph.Value)
-                    continue;
-                for (int x = (int)smallestLeftmostGlyph.Value; x < glyph.Width - 2; x++)
-                {
-                    var total = 0f;
-                    for (int y = 0; y < glyph.Height; y++)
-                    {
-                        total += glyph.WeightMappings[x, y];
-                    }
-                    if (total <= 0.2f)
-                        continue;
-                    if (float.IsNaN(lowestTotal))
-                        lowestTotal = total;
-                    else
-                        lowestTotal = Math.Min(lowestTotal, total);
-                }
+        //        var lowestTotal = float.NaN;
+        //        if (glyph.Width <= smallestLeftmostGlyph.Value)
+        //            continue;
+        //        for (int x = (int)smallestLeftmostGlyph.Value; x < glyph.Width - 2; x++)
+        //        {
+        //            var total = 0f;
+        //            for (int y = 0; y < glyph.Height; y++)
+        //            {
+        //                total += glyph.WeightMappings[x, y];
+        //            }
+        //            if (total <= 0.2f)
+        //                continue;
+        //            if (float.IsNaN(lowestTotal))
+        //                lowestTotal = total;
+        //            else
+        //                lowestTotal = Math.Min(lowestTotal, total);
+        //        }
 
-                for (int i = 0; i < topLowest.Length; i++)
-                {
-                    if (topLowest[i] == null || topLowest[i].Value > lowestTotal)
-                    {
-                        //Shift everyone right;
-                        var oldValue = topLowest[i];
-                        for (int j = i + 1; j < topLowest.Length - 1; j++)
-                        {
-                            var temp = topLowest[j];
-                            topLowest[j] = oldValue;
-                            oldValue = temp;
-                        }
-                        //Store result
-                        topLowest[i] = new GlyphAuditItem() { Name = glyph.Name, Value = lowestTotal };
-                        break;
-                    }
-                }
-            }
+        //        for (int i = 0; i < topLowest.Length; i++)
+        //        {
+        //            if (topLowest[i] == null || topLowest[i].Value > lowestTotal)
+        //            {
+        //                //Shift everyone right;
+        //                var oldValue = topLowest[i];
+        //                for (int j = i + 1; j < topLowest.Length - 1; j++)
+        //                {
+        //                    var temp = topLowest[j];
+        //                    topLowest[j] = oldValue;
+        //                    oldValue = temp;
+        //                }
+        //                //Store result
+        //                topLowest[i] = new GlyphAuditItem() { Name = glyph.Name, Value = lowestTotal };
+        //                break;
+        //            }
+        //        }
+        //    }
 
-            foreach (var lowest in topLowest)
-            {
-                if (lowest == null)
-                    continue;
-                Console.WriteLine($"{lowest.Name} {lowest.Value}");
-            }
-        }
+        //    foreach (var lowest in topLowest)
+        //    {
+        //        if (lowest == null)
+        //            continue;
+        //        Console.WriteLine($"{lowest.Name} {lowest.Value}");
+        //    }
+        //}
 
         private static string[] NewChatParsingShim(string path = null)
         {
@@ -1248,76 +1245,76 @@ namespace DebugCLI
             //return null;
         }
 
-        private static void ChineseChatShim()
-        {
-            var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathChinese);
-            const string source = @"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\fake_chinese_wrap_altered.png";
-            ImageCleaner.SaveSoftMask(source, "lines_white.png");
-            var lp = new TessChatLineParser(ClientLanguage.Chinese);
-            using (var b = new Bitmap(source))
-            {
-                foreach (var line in Directory.GetFiles(Environment.CurrentDirectory).Where(f => f.StartsWith("line_") && f.EndsWith(".png")))
-                {
-                    File.Delete(line);
-                }
-                var lines = cp.ParseUsernamesFromChatImage(b, false);
-                for (int i = 0; i < lines.Length; i++)
-                {
-                    Rectangle rect = lines[i].LineRect;
-                    using (var lineBitmap = new Bitmap(rect.Width, rect.Height))
-                    {
-                        for (int x = 0; x < lineBitmap.Width; x++)
-                        {
-                            for (int y = 0; y < lineBitmap.Height; y++)
-                            {
-                                lineBitmap.SetPixel(x, y, b.GetPixel(rect.Left + x, rect.Top + y));
-                            }
-                        }
-                        lineBitmap.Save("line_" + i + ".png");
-                    }
+        //private static void ChineseChatShim()
+        //{
+        //    var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathChinese);
+        //    const string source = @"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\fake_chinese_wrap_altered.png";
+        //    ImageCleaner.SaveSoftMask(source, "lines_white.png");
+        //    var lp = new TessChatLineParser(ClientLanguage.Chinese);
+        //    using (var b = new Bitmap(source))
+        //    {
+        //        foreach (var line in Directory.GetFiles(Environment.CurrentDirectory).Where(f => f.StartsWith("line_") && f.EndsWith(".png")))
+        //        {
+        //            File.Delete(line);
+        //        }
+        //        var lines = cp.ParseUsernamesFromChatImage(b, false);
+        //        for (int i = 0; i < lines.Length; i++)
+        //        {
+        //            Rectangle rect = lines[i].LineRect;
+        //            using (var lineBitmap = new Bitmap(rect.Width, rect.Height))
+        //            {
+        //                for (int x = 0; x < lineBitmap.Width; x++)
+        //                {
+        //                    for (int y = 0; y < lineBitmap.Height; y++)
+        //                    {
+        //                        lineBitmap.SetPixel(x, y, b.GetPixel(rect.Left + x, rect.Top + y));
+        //                    }
+        //                }
+        //                lineBitmap.Save("line_" + i + ".png");
+        //            }
 
-                    var tessLines = WFImageParser.ChatLineExtractor.ExtractChatLines(b, rect);
-                    ChatMessageLineResult fullMessage = null;
-                    for (int j = 0; j < tessLines.Length; j++)
-                    {
-                        tessLines[j].Save("line_" + i + "_" + j + ".png");
-                        var parsedLine = lp.ParseLine(tessLines[j]) as ChatMessageLineResult;
-                        if (fullMessage == null)
-                        {
-                            fullMessage = parsedLine;
-                            fullMessage.Username = lines[i].Username;
-                            fullMessage.Timestamp = lines[i].Timestamp;
-                            fullMessage.RawMessage = $"{fullMessage.Timestamp} {fullMessage.Username}{fullMessage.RawMessage}";
-                            fullMessage.EnhancedMessage = $"{fullMessage.Timestamp} {fullMessage.Username}{fullMessage.EnhancedMessage}";
-                        }
-                        else
-                            fullMessage.Append(parsedLine, 0, 0);
-                    }
-                    fullMessage.MessageBounds = rect;
+        //            var tessLines = WFImageParser.ChatLineExtractor.ExtractChatLines(b, rect);
+        //            ChatMessageLineResult fullMessage = null;
+        //            for (int j = 0; j < tessLines.Length; j++)
+        //            {
+        //                tessLines[j].Save("line_" + i + "_" + j + ".png");
+        //                var parsedLine = lp.ParseLine(tessLines[j]) as ChatMessageLineResult;
+        //                if (fullMessage == null)
+        //                {
+        //                    fullMessage = parsedLine;
+        //                    fullMessage.Username = lines[i].Username;
+        //                    fullMessage.Timestamp = lines[i].Timestamp;
+        //                    fullMessage.RawMessage = $"{fullMessage.Timestamp} {fullMessage.Username}{fullMessage.RawMessage}";
+        //                    fullMessage.EnhancedMessage = $"{fullMessage.Timestamp} {fullMessage.Username}{fullMessage.EnhancedMessage}";
+        //                }
+        //                else
+        //                    fullMessage.Append(parsedLine, 0, 0);
+        //            }
+        //            fullMessage.MessageBounds = rect;
 
-                    var debug = JsonConvert.SerializeObject(fullMessage);
-                }
-            }
-        }
+        //            var debug = JsonConvert.SerializeObject(fullMessage);
+        //        }
+        //    }
+        //}
 
         private static void ModiDescrShim()
         {
             var modi = new Modifier();
         }
 
-        private static void ChatLineExtractorShim()
-        {
-            var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish);
-            var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chat_new.png");
-            var lines = cp.ExtractChatLines(b);
-            for (int i = 0; i < lines.Length; i++)
-            {
-                lines[i].Save("line_" + i + ".png");
-                var username = cp.GetUsernameFromChatLine(lines[i]);
-                if (username != null)
-                    Console.WriteLine("Username: " + username);
-            }
-        }
+        //private static void ChatLineExtractorShim()
+        //{
+        //    var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish);
+        //    var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chat_new.png");
+        //    var lines = cp.ExtractChatLines(b);
+        //    for (int i = 0; i < lines.Length; i++)
+        //    {
+        //        lines[i].Save("line_" + i + ".png");
+        //        var username = cp.GetUsernameFromChatLine(lines[i]);
+        //        if (username != null)
+        //            Console.WriteLine("Username: " + username);
+        //    }
+        //}
 
         private static void ChatMovingShim()
         {
@@ -1401,20 +1398,20 @@ namespace DebugCLI
             //var res = lp.ParseLine(new Bitmap("debug.png"));
         }
 
-        private static void FindErrorAgain()
-        {
-            var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish);
-            foreach (var file in Directory.GetFiles(@"\\DESKTOP-BJRVJJQ\ChatLog\debug").Where(f => f.Contains("131992381447623296")))
-            {
-                var lines = cp.ParseChatImage(new Bitmap(file));
-                foreach (var line in lines)
-                {
-                    var clr = line as ChatMessageLineResult;
+        //private static void FindErrorAgain()
+        //{
+        //    var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish);
+        //    foreach (var file in Directory.GetFiles(@"\\DESKTOP-BJRVJJQ\ChatLog\debug").Where(f => f.Contains("131992381447623296")))
+        //    {
+        //        var lines = cp.ParseChatImage(new Bitmap(file));
+        //        foreach (var line in lines)
+        //        {
+        //            var clr = line as ChatMessageLineResult;
 
-                    var chatMessage = MakeChatModel(line as Application.LineParseResult.ChatMessageLineResult);
-                }
-            }
-        }
+        //            var chatMessage = MakeChatModel(line as Application.LineParseResult.ChatMessageLineResult);
+        //        }
+        //    }
+        //}
 
         private static ChatMessageModel MakeChatModel(Application.LineParseResult.ChatMessageLineResult line)
         {
@@ -1509,66 +1506,66 @@ namespace DebugCLI
             }
         }
 
-        private static void ParseChatImage()
-        {
-            //var filePath = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Validation Inputs\error_blurry1.png";
-            //foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai")
-            //                            .Select(f => new FileInfo(f))
-            //                            .Where(f => f.Name.StartsWith("637") && !f.Name.Contains("_white") && f.Name.EndsWith(".png"))
-            //                            .Select(f => f.FullName))
-            foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps").Where(f => f.EndsWith("_3.png")))
-            {
-                using (var bitmap = new Bitmap(filePath))
-                {
-                    var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish);
-                    //ic.SaveSoftMask(filePath, "error_blurry1_white.png");
-                    ImageCleaner.SaveSoftMask(filePath, filePath.Replace(".png", "_white.png"));
-                    var sw = new Stopwatch();
-                    sw.Start();
-                    var lines = cp.ParseChatImage(bitmap);
-                    sw.Stop();
-                    var sb = new StringBuilder();
-                    try
-                    {
-                        var oldDebugs = Directory.GetFiles(Environment.CurrentDirectory).Select(f => new FileInfo(f)).Where(fi => fi.Name.StartsWith("debug_chat_line") && fi.Name.EndsWith(".png"));
-                        foreach (var item in oldDebugs)
-                        {
-                            File.Delete(item.FullName);
-                        }
-                    }
-                    catch
-                    {
+        //private static void ParseChatImage()
+        //{
+        //    //var filePath = @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Validation Inputs\error_blurry1.png";
+        //    //foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai")
+        //    //                            .Select(f => new FileInfo(f))
+        //    //                            .Where(f => f.Name.StartsWith("637") && !f.Name.Contains("_white") && f.Name.EndsWith(".png"))
+        //    //                            .Select(f => f.FullName))
+        //    foreach (var filePath in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps").Where(f => f.EndsWith("_3.png")))
+        //    {
+        //        using (var bitmap = new Bitmap(filePath))
+        //        {
+        //            var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish);
+        //            //ic.SaveSoftMask(filePath, "error_blurry1_white.png");
+        //            ImageCleaner.SaveSoftMask(filePath, filePath.Replace(".png", "_white.png"));
+        //            var sw = new Stopwatch();
+        //            sw.Start();
+        //            var lines = cp.ParseChatImage(bitmap);
+        //            sw.Stop();
+        //            var sb = new StringBuilder();
+        //            try
+        //            {
+        //                var oldDebugs = Directory.GetFiles(Environment.CurrentDirectory).Select(f => new FileInfo(f)).Where(fi => fi.Name.StartsWith("debug_chat_line") && fi.Name.EndsWith(".png"));
+        //                foreach (var item in oldDebugs)
+        //                {
+        //                    File.Delete(item.FullName);
+        //                }
+        //            }
+        //            catch
+        //            {
 
-                    }
-                    for (int i = 0; i < lines.Length; i++)
-                    {
-                        var line = lines[i];
-                        using (var b = new Bitmap(line.MessageBounds.Width, line.MessageBounds.Height))
-                        {
-                            for (int x = 0; x < b.Width; x++)
-                            {
-                                for (int y = 0; y < b.Height; y++)
-                                {
-                                    b.SetPixel(x, y, bitmap.GetPixel(line.MessageBounds.Left + x, line.MessageBounds.Top + y));
-                                }
-                            }
-                            b.Save("debug_chat_line_" + i + ".png");
-                        }
-                        Console.WriteLine(line.RawMessage);
-                        sb.AppendLine(line.RawMessage);
-                    }
-                    File.WriteAllText(filePath.Replace(".png", ".txt"), sb.ToString());
-                }
-            }
-        }
+        //            }
+        //            for (int i = 0; i < lines.Length; i++)
+        //            {
+        //                var line = lines[i];
+        //                using (var b = new Bitmap(line.MessageBounds.Width, line.MessageBounds.Height))
+        //                {
+        //                    for (int x = 0; x < b.Width; x++)
+        //                    {
+        //                        for (int y = 0; y < b.Height; y++)
+        //                        {
+        //                            b.SetPixel(x, y, bitmap.GetPixel(line.MessageBounds.Left + x, line.MessageBounds.Top + y));
+        //                        }
+        //                    }
+        //                    b.Save("debug_chat_line_" + i + ".png");
+        //                }
+        //                Console.WriteLine(line.RawMessage);
+        //                sb.AppendLine(line.RawMessage);
+        //            }
+        //            File.WriteAllText(filePath.Replace(".png", ".txt"), sb.ToString());
+        //        }
+        //    }
+        //}
 
-        private static void TestRedText()
-        {
-            var input = @"C:\Users\david\OneDrive\Documents\WFChatParser\ErrorImages\Screenshot (175).png";
-            ImageCleaner.SaveSoftMask(input, "test2.png");
-            var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish);
-            var lines = cp.ParseChatImage(new Bitmap(input), false, false, 50);
-        }
+        //private static void TestRedText()
+        //{
+        //    var input = @"C:\Users\david\OneDrive\Documents\WFChatParser\ErrorImages\Screenshot (175).png";
+        //    ImageCleaner.SaveSoftMask(input, "test2.png");
+        //    var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish);
+        //    var lines = cp.ParseChatImage(new Bitmap(input), false, false, 50);
+        //}
 
         private static void AsyncRivenParsingShim()
         {
@@ -1901,47 +1898,47 @@ namespace DebugCLI
             return null;
         }
 
-        private static void TestBot()
-        {
-            IConfiguration config = new ConfigurationBuilder()
-                 .AddJsonFile("appsettings.json", true, true)
-                 .AddJsonFile("appsettings.development.json", true, true)
-                 .AddJsonFile("appsettings.production.json", true, true)
-                 .Build();
+        //private static void TestBot()
+        //{
+        //    IConfiguration config = new ConfigurationBuilder()
+        //         .AddJsonFile("appsettings.json", true, true)
+        //         .AddJsonFile("appsettings.development.json", true, true)
+        //         .AddJsonFile("appsettings.production.json", true, true)
+        //         .Build();
 
-            var dataSender = new ClientWebsocketDataSender(new Uri(config["DataSender:HostName"]),
-                config.GetSection("DataSender:ConnectionMessages").GetChildren().Select(i => i.Value),
-                config["DataSender:MessagePrefix"],
-                config["DataSender:DebugMessagePrefix"],
-                true,
-                config["DataSender:RawMessagePrefix"],
-                config["DataSender:RedtextMessagePrefix"],
-                config["DataSender:RivenImageMessagePrefix"],
-                config["DataSender:LogMessagePrefix"],
-                config["DataSender:LogLineMessagePrefix"]);
+        //    var dataSender = new ClientWebsocketDataSender(new Uri(config["DataSender:HostName"]),
+        //        config.GetSection("DataSender:ConnectionMessages").GetChildren().Select(i => i.Value),
+        //        config["DataSender:MessagePrefix"],
+        //        config["DataSender:DebugMessagePrefix"],
+        //        true,
+        //        config["DataSender:RawMessagePrefix"],
+        //        config["DataSender:RedtextMessagePrefix"],
+        //        config["DataSender:RivenImageMessagePrefix"],
+        //        config["DataSender:LogMessagePrefix"],
+        //        config["DataSender:LogLineMessagePrefix"]);
 
-            var pass = Console.ReadLine().Trim();
-            PasswordShim(config["Credentials:Key"], config["Credentials:Salt"], pass);
+        //    var pass = Console.ReadLine().Trim();
+        //    PasswordShim(config["Credentials:Key"], config["Credentials:Salt"], pass);
 
-            var password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"]);
-            CancellationToken token = new System.Threading.CancellationToken();
-            var gc = new GameCapture(new Application.Logger.Logger(dataSender, token));
-            var obs = GetObsSettings(config["Credentials:Key"], config["Credentials:Salt"]);
-            var logParser = new WarframeLogParser();
-            var textParser = new AllTextParser(dataSender, logParser);
-            var bot = new ChatRivenBot(config["LauncherPath"], new MouseHelper(),
-                new ScreenStateHandler(),
-                gc,
-                obs,
-                password,
-                new KeyboardHelper(),
-                new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish),
-                dataSender,
-                new RivenCleaner(),
-                new RivenParserFactory(ClientLanguage.English),
-                new Application.LogParser.RedTextParser(logParser));
-            bot.AsyncRun(token);
-        }
+        //    var password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"]);
+        //    CancellationToken token = new System.Threading.CancellationToken();
+        //    var gc = new GameCapture(new Application.Logger.Logger(dataSender, token));
+        //    var obs = GetObsSettings(config["Credentials:Key"], config["Credentials:Salt"]);
+        //    var logParser = new WarframeLogParser();
+        //    var textParser = new AllTextParser(dataSender, logParser);
+        //    var bot = new ChatRivenBot(config["LauncherPath"], new MouseHelper(),
+        //        new ScreenStateHandler(),
+        //        gc,
+        //        obs,
+        //        password,
+        //        new KeyboardHelper(),
+        //        new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish),
+        //        dataSender,
+        //        new RivenCleaner(),
+        //        new RivenParserFactory(ClientLanguage.English),
+        //        new Application.LogParser.RedTextParser(logParser));
+        //    bot.AsyncRun(token);
+        //}
 
         private static void testRivenSplit()
         {
@@ -2188,17 +2185,17 @@ namespace DebugCLI
             }
         }
 
-        private static void TestCanExit()
-        {
-            var fullImage = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\Screenshot (117).png");
-            var ss = new ScreenStateHandler();
-            var isExitable = ss.IsExitable(fullImage);
-            fullImage.Dispose();
+        //private static void TestCanExit()
+        //{
+        //    var fullImage = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Riven Inputs\Screenshot (117).png");
+        //    var ss = new ScreenStateHandler();
+        //    var isExitable = ss.IsExitable(fullImage);
+        //    fullImage.Dispose();
 
-            var chatIcon = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chaticon.png");
-            var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish);
-            var isChat = cp.IsChatFocused(chatIcon);
-        }
+        //    var chatIcon = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\chaticon.png");
+        //    var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish);
+        //    var isChat = cp.IsChatFocused(chatIcon);
+        //}
 
         private static void TestRivenParsing()
         {
@@ -2367,17 +2364,17 @@ namespace DebugCLI
             return "";
         }
 
-        private static void VisualizeClickpoints()
-        {
-            var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish);
-            var r = cp.ParseChatImage(new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\bad.png"));
-            var list = new CoordinateList();
-            r.Where(r1 => r1 is ChatMessageLineResult).Cast<ChatMessageLineResult>().SelectMany(r1 => r1.ClickPoints).ToList().ForEach(p => list.Add(p.X, p.Y));
-            var ic = new ImageCleaner();
-            ic.SaveClickMarkers(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\bad.png",
-                Path.Combine(outputDir, "bad_clicks.png"),
-                list);
-        }
+        //private static void VisualizeClickpoints()
+        //{
+        //    var cp = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish);
+        //    var r = cp.ParseChatImage(new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\bad.png"));
+        //    var list = new CoordinateList();
+        //    r.Where(r1 => r1 is ChatMessageLineResult).Cast<ChatMessageLineResult>().SelectMany(r1 => r1.ClickPoints).ToList().ForEach(p => list.Add(p.X, p.Y));
+        //    var ic = new ImageCleaner();
+        //    ic.SaveClickMarkers(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\bad.png",
+        //        Path.Combine(outputDir, "bad_clicks.png"),
+        //        list);
+        //}
 
         private static void TestScreenHandler()
         {
@@ -2583,99 +2580,99 @@ namespace DebugCLI
             }
         }
 
-        private static void TestRivenStuff()
-        {
-            var c = new GameCapture(new DummyLogger());
-            var rp = new RivenParser(ClientLanguage.English);
-            var ss = new ScreenStateHandler();
+        //private static void TestRivenStuff()
+        //{
+        //    var c = new GameCapture(new DummyLogger());
+        //    var rp = new RivenParser(ClientLanguage.English);
+        //    var ss = new ScreenStateHandler();
 
-            var image = "test.png";
-            var b = c.GetFullImage();
-            b.Save("test.png");
-            b.Dispose();
+        //    var image = "test.png";
+        //    var b = c.GetFullImage();
+        //    b.Save("test.png");
+        //    b.Dispose();
 
-            var p = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish);
-            var results = p.ParseChatImage(new Bitmap(image), true, true, 27).Where(r => r is ChatMessageLineResult).Cast<ChatMessageLineResult>();
+        //    var p = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish);
+        //    var results = p.ParseChatImage(new Bitmap(image), true, true, 27).Where(r => r is ChatMessageLineResult).Cast<ChatMessageLineResult>();
 
-            var clean = new ImageCleaner();
-            var coords = new CoordinateList();
-            results.SelectMany(r => r.ClickPoints).ToList().ForEach(i => coords.Add(i.X, i.Y));
-            clean.SaveClickMarkers("test.png", "test_marked.png", coords);
+        //    var clean = new ImageCleaner();
+        //    var coords = new CoordinateList();
+        //    results.SelectMany(r => r.ClickPoints).ToList().ForEach(i => coords.Add(i.X, i.Y));
+        //    clean.SaveClickMarkers("test.png", "test_marked.png", coords);
 
-            var mouse = new MouseHelper();
+        //    var mouse = new MouseHelper();
 
-            var index = 0;
-            var sw = new Stopwatch();
-            foreach (var clr in results.Where(r => r is ChatMessageLineResult).Cast<ChatMessageLineResult>())
-            {
-                foreach (var click in clr.ClickPoints)
-                {
-                    b = c.GetFullImage();
-                    if (ss.IsChatOpen(b))
-                    {
-                        //Hover over riven
-                        System.Threading.Thread.Sleep(17);
-                        mouse.MoveTo(click.X, click.Y);
+        //    var index = 0;
+        //    var sw = new Stopwatch();
+        //    foreach (var clr in results.Where(r => r is ChatMessageLineResult).Cast<ChatMessageLineResult>())
+        //    {
+        //        foreach (var click in clr.ClickPoints)
+        //        {
+        //            b = c.GetFullImage();
+        //            if (ss.IsChatOpen(b))
+        //            {
+        //                //Hover over riven
+        //                System.Threading.Thread.Sleep(17);
+        //                mouse.MoveTo(click.X, click.Y);
 
-                        //Click riven
-                        System.Threading.Thread.Sleep(17);
-                        mouse.Click(click.X, click.Y);
-                        System.Threading.Thread.Sleep(17);
-                    }
+        //                //Click riven
+        //                System.Threading.Thread.Sleep(17);
+        //                mouse.Click(click.X, click.Y);
+        //                System.Threading.Thread.Sleep(17);
+        //            }
 
-                    //Move mouse out of the way
-                    mouse.MoveTo(0, 0);
-                    sw.Restart();
-                    var tries = 0;
-                    while (true)
-                    {
-                        try
-                        {
-                            var bitmap2 = c.GetFullImage();
-                            if (ss.GetScreenState(bitmap2) == ScreenState.RivenWindow)
-                            {
-                                var crop = rp.CropToRiven(bitmap2);
-                                crop.Save(index.ToString() + ".png");
-                                crop.Dispose();
-                                bitmap2.Dispose();
-                                break;
-                            }
-                            bitmap2.Dispose();
-                        }
-                        catch { }
-                        tries++;
-                        if (tries > 15)
-                        {
-                            Console.WriteLine("Riven not detected! Abort!");
-                            break;
-                        }
-                    }
-                    Console.WriteLine("Got \"riven\" in " + sw.Elapsed.TotalSeconds + " seconds");
+        //            //Move mouse out of the way
+        //            mouse.MoveTo(0, 0);
+        //            sw.Restart();
+        //            var tries = 0;
+        //            while (true)
+        //            {
+        //                try
+        //                {
+        //                    var bitmap2 = c.GetFullImage();
+        //                    if (ss.GetScreenState(bitmap2) == ScreenState.RivenWindow)
+        //                    {
+        //                        var crop = rp.CropToRiven(bitmap2);
+        //                        crop.Save(index.ToString() + ".png");
+        //                        crop.Dispose();
+        //                        bitmap2.Dispose();
+        //                        break;
+        //                    }
+        //                    bitmap2.Dispose();
+        //                }
+        //                catch { }
+        //                tries++;
+        //                if (tries > 15)
+        //                {
+        //                    Console.WriteLine("Riven not detected! Abort!");
+        //                    break;
+        //                }
+        //            }
+        //            Console.WriteLine("Got \"riven\" in " + sw.Elapsed.TotalSeconds + " seconds");
 
-                    //Hover over exit
-                    System.Threading.Thread.Sleep(33);
-                    mouse.MoveTo(3816, 2013);
+        //            //Hover over exit
+        //            System.Threading.Thread.Sleep(33);
+        //            mouse.MoveTo(3816, 2013);
 
-                    //Click exit
-                    var bitmap = c.GetFullImage();
-                    if (ss.GetScreenState(bitmap) == ScreenState.RivenWindow)
-                    {
-                        System.Threading.Thread.Sleep(17);
-                        mouse.Click(3816, 2013);
-                        System.Threading.Thread.Sleep(17);
-                    }
-                    bitmap.Dispose();
+        //            //Click exit
+        //            var bitmap = c.GetFullImage();
+        //            if (ss.GetScreenState(bitmap) == ScreenState.RivenWindow)
+        //            {
+        //                System.Threading.Thread.Sleep(17);
+        //                mouse.Click(3816, 2013);
+        //                System.Threading.Thread.Sleep(17);
+        //            }
+        //            bitmap.Dispose();
 
-                    //Move mouse out of the way
-                    System.Threading.Thread.Sleep(17);
-                    mouse.MoveTo(0, 0);
+        //            //Move mouse out of the way
+        //            System.Threading.Thread.Sleep(17);
+        //            mouse.MoveTo(0, 0);
 
-                    System.Threading.Thread.Sleep(17);
-                    index++;
-                }
-            }
-            //c.Dispose();
-        }
+        //            System.Threading.Thread.Sleep(17);
+        //            index++;
+        //        }
+        //    }
+        //    //c.Dispose();
+        //}
         private static void SimulateParseRiven()
         {
             var rc = new RivenCleaner();
@@ -2719,17 +2716,17 @@ namespace DebugCLI
         //    Console.WriteLine(JsonConvert.SerializeObject(rivens));
         //}
 
-        private static void FixImages()
-        {
-            var cleaner = new ImageCleaner();
-            cleaner.SaveChatColors(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png", @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input_white.png");
-            var p = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish);
-            var r = p.ParseChatImage(new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png"));
-            foreach (var line in r)
-            {
-                Console.WriteLine(line.RawMessage);
-            }
-        }
+        //private static void FixImages()
+        //{
+        //    var cleaner = new ImageCleaner();
+        //    cleaner.SaveChatColors(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png", @"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input_white.png");
+        //    var p = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish);
+        //    var r = p.ParseChatImage(new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\Inputs\input.png"));
+        //    foreach (var line in r)
+        //    {
+        //        Console.WriteLine(line.RawMessage);
+        //    }
+        //}
 
         //private static async void MouseTests()
         //{
@@ -2809,34 +2806,34 @@ namespace DebugCLI
         //    Console.WriteLine(json);
         //}
 
-        private static void TrainSpacesOnImages()
-        {
-            var spaceTrainer = new OCRSpaceTrainer();
-            spaceTrainer.TrainOnImages(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Images", "newnewdata", GetSupportedCharacters().ToCharArray());
-        }
+        //private static void TrainSpacesOnImages()
+        //{
+        //    var spaceTrainer = new OCRSpaceTrainer();
+        //    spaceTrainer.TrainOnImages(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Images", "newnewdata", GetSupportedCharacters().ToCharArray());
+        //}
 
-        private static void TrainOnImages()
-        {
-            var sourceDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Spaces";
-            var outputDir = "newEnglishData3";
-            var trainer = new OCRTrainer();
-            trainer.TrainOnImages(sourceDir, outputDir);
+        //private static void TrainOnImages()
+        //{
+        //    var sourceDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Spaces";
+        //    var outputDir = "newEnglishData3";
+        //    var trainer = new OCRTrainer();
+        //    trainer.TrainOnImages(sourceDir, outputDir);
 
-            var spaceTrainer = new OCRSpaceTrainer();
-            spaceTrainer.TrainOnImages(sourceDir, outputDir, GetSupportedCharacters().ToCharArray());
-        }
+        //    var spaceTrainer = new OCRSpaceTrainer();
+        //    spaceTrainer.TrainOnImages(sourceDir, outputDir, GetSupportedCharacters().ToCharArray());
+        //}
 
-        private static void FindOverlappingLines()
-        {
-            const string sourceDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps";
-            //if (!Directory.Exists("overlaps"))
-            //    Directory.CreateDirectory("overlaps");
-            //foreach (var image in Directory.GetFiles(sourceDir).Where(f => f.EndsWith(".png")))
-            //{
-            //    ImageCleaner.SaveSoftMask(image, Path.Combine("overlaps", (new FileInfo(image)).Name));
-            //}
-            OverlapDetector.DetectOverlaps(sourceDir, DataHelper.OcrDataPathEnglish);
-        }
+        //private static void FindOverlappingLines()
+        //{
+        //    const string sourceDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps";
+        //    //if (!Directory.Exists("overlaps"))
+        //    //    Directory.CreateDirectory("overlaps");
+        //    //foreach (var image in Directory.GetFiles(sourceDir).Where(f => f.EndsWith(".png")))
+        //    //{
+        //    //    ImageCleaner.SaveSoftMask(image, Path.Combine("overlaps", (new FileInfo(image)).Name));
+        //    //}
+        //    OverlapDetector.DetectOverlaps(sourceDir, DataHelper.OcrDataPathEnglish);
+        //}
 
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
         {
@@ -2849,116 +2846,116 @@ namespace DebugCLI
                 _gameCapture.Dispose();
         }
 
-        private static int VerifyNoErrors(int verboseLevel = 0, bool fastFail = false, int xOffset = 4)
-        {
-            var trainingImages = new List<string>();
-            Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps").Where(f => f.EndsWith(".png")).ToList().ForEach(f => trainingImages.Add(f));
-            //Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith(".png")).ToList().ForEach(f => trainingImages.Add(f));
-            var trainingText = new List<string>();
-            Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps").Where(f => f.EndsWith(".txt")).ToList().ForEach(f => trainingText.Add(f));
-            //Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith(".txt")).ToList().ForEach(f => trainingText.Add(f));
-            //var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".png")).ToArray();
-            //var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".txt")).ToArray();
-            //var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith("e1.png")).ToArray();
-            //var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith("e1.txt")).ToArray();
+        //private static int VerifyNoErrors(int verboseLevel = 0, bool fastFail = false, int xOffset = 4)
+        //{
+        //    var trainingImages = new List<string>();
+        //    Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps").Where(f => f.EndsWith(".png")).ToList().ForEach(f => trainingImages.Add(f));
+        //    //Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith(".png")).ToList().ForEach(f => trainingImages.Add(f));
+        //    var trainingText = new List<string>();
+        //    Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps").Where(f => f.EndsWith(".txt")).ToList().ForEach(f => trainingText.Add(f));
+        //    //Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith(".txt")).ToList().ForEach(f => trainingText.Add(f));
+        //    //var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".png")).ToArray();
+        //    //var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Test Runs\OCR Test Inputs\").Where(f => f.EndsWith(".txt")).ToArray();
+        //    //var trainingImages = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith("e1.png")).ToArray();
+        //    //var trainingText = Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\Char Spacing\").Where(f => f.EndsWith("e1.txt")).ToArray();
 
-            var errorCount = 0;
-            for (int k = 0; k < trainingImages.Count; k++)
-            {
-                var fileInfo = new FileInfo(trainingText[k]);
-                Console.WriteLine($"=={fileInfo.Name}==");
-                var masterKeyFile = trainingImages[k];
-                var correctResults = File.ReadAllLines(trainingText[k]).Select(line => line.Trim()).ToArray();
+        //    var errorCount = 0;
+        //    for (int k = 0; k < trainingImages.Count; k++)
+        //    {
+        //        var fileInfo = new FileInfo(trainingText[k]);
+        //        Console.WriteLine($"=={fileInfo.Name}==");
+        //        var masterKeyFile = trainingImages[k];
+        //        var correctResults = File.ReadAllLines(trainingText[k]).Select(line => line.Trim()).ToArray();
 
-                var c = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish);
-                var cleaner = new ImageCleaner();
-                cleaner.SaveChatColors(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name));
+        //        var c = new ChatParser(new FakeLogger(), DataHelper.OcrDataPathEnglish);
+        //        var cleaner = new ImageCleaner();
+        //        cleaner.SaveChatColors(masterKeyFile, Path.Combine(outputDir, (new FileInfo(masterKeyFile)).Name));
 
-                var sw = new Stopwatch();
-                sw.Restart();
-                //var fullResults = c.ParseChatImage(new Bitmap(masterKeyFile), xOffset, false, false);
-                var lines = NewChatParsingShim(masterKeyFile);
-                var fullResults = lines.Select(l => new ChatMessageLineResult() { RawMessage = l });
-                //var fullResults = NewChatParsingShim(masterKeyFile);
+        //        var sw = new Stopwatch();
+        //        sw.Restart();
+        //        //var fullResults = c.ParseChatImage(new Bitmap(masterKeyFile), xOffset, false, false);
+        //        var lines = NewChatParsingShim(masterKeyFile);
+        //        var fullResults = lines.Select(l => new ChatMessageLineResult() { RawMessage = l });
+        //        //var fullResults = NewChatParsingShim(masterKeyFile);
 
-                var m = fullResults.OfType<ChatMessageLineResult>().Select(line => MakeChatModel(line)).ToArray();
-                var m2 = fullResults.Select(line => GetUsername(line.RawMessage)).ToArray();
-                var allThere = !m.Select(model => m2.Any(old => old.Item2 == model.Author)).Any(b => !b);
-                var allThere2 = !m2.Select(old => m.Any(model => model.Author == old.Item2)).Any(b => !b);
-                if (!allThere || !allThere2)
-                    Debugger.Break();
-                var newE = m.Select(model => model.EnhancedMessage);
-                var oldE = fullResults.Select(line => line.RawMessage.Substring(5).Substring(line.RawMessage.Substring(5).IndexOf(":") + 1).Trim());
+        //        var m = fullResults.OfType<ChatMessageLineResult>().Select(line => MakeChatModel(line)).ToArray();
+        //        var m2 = fullResults.Select(line => GetUsername(line.RawMessage)).ToArray();
+        //        var allThere = !m.Select(model => m2.Any(old => old.Item2 == model.Author)).Any(b => !b);
+        //        var allThere2 = !m2.Select(old => m.Any(model => model.Author == old.Item2)).Any(b => !b);
+        //        if (!allThere || !allThere2)
+        //            Debugger.Break();
+        //        var newE = m.Select(model => model.EnhancedMessage);
+        //        var oldE = fullResults.Select(line => line.RawMessage.Substring(5).Substring(line.RawMessage.Substring(5).IndexOf(":") + 1).Trim());
 
-                var result = fullResults.Select(i => i.RawMessage.Trim()).ToArray();
-                Console.WriteLine("Parsed in: " + sw.Elapsed.TotalSeconds + " seconds");
-                sw.Stop();
+        //        var result = fullResults.Select(i => i.RawMessage.Trim()).ToArray();
+        //        Console.WriteLine("Parsed in: " + sw.Elapsed.TotalSeconds + " seconds");
+        //        sw.Stop();
 
-                Console.WriteLine("Expected");
-                Console.WriteLine("Recieved");
-                Console.WriteLine();
+        //        Console.WriteLine("Expected");
+        //        Console.WriteLine("Recieved");
+        //        Console.WriteLine();
 
-                if (correctResults.Length != result.Length)
-                {
-                    errorCount += correctResults.Length;
-                    return errorCount;
-                }
-                for (int i = 0; i < result.Length; i++)
-                {
-                    if (verboseLevel >= 1)
-                    {
-                        Console.WriteLine(correctResults[i]);
-                        Console.WriteLine(result[i]);
-                    }
-                    if (verboseLevel >= 2)
-                    {
-                        if (Enumerable.SequenceEqual(correctResults[i], result[i]))
-                        {
-                            Console.WriteLine("They match!");
-                        }
-                    }
-                    if (!String.Equals(correctResults[i].Trim(), result[i]))
-                    {
-                        if (verboseLevel >= 2)
-                        {
-                            if (correctResults[i].Length == result[i].Length)
-                            {
-                                for (int j = 0; j < correctResults[i].Length; j++)
-                                {
-                                    if (result[i][j] != correctResults[i][j])
-                                    {
-                                        Console.WriteLine("^");
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        Console.Write(" ");
-                                    }
-                                }
-                            }
-                            Console.WriteLine("They don't match");
-                        }
-                        errorCount++;
-                    }
+        //        if (correctResults.Length != result.Length)
+        //        {
+        //            errorCount += correctResults.Length;
+        //            return errorCount;
+        //        }
+        //        for (int i = 0; i < result.Length; i++)
+        //        {
+        //            if (verboseLevel >= 1)
+        //            {
+        //                Console.WriteLine(correctResults[i]);
+        //                Console.WriteLine(result[i]);
+        //            }
+        //            if (verboseLevel >= 2)
+        //            {
+        //                if (Enumerable.SequenceEqual(correctResults[i], result[i]))
+        //                {
+        //                    Console.WriteLine("They match!");
+        //                }
+        //            }
+        //            if (!String.Equals(correctResults[i].Trim(), result[i]))
+        //            {
+        //                if (verboseLevel >= 2)
+        //                {
+        //                    if (correctResults[i].Length == result[i].Length)
+        //                    {
+        //                        for (int j = 0; j < correctResults[i].Length; j++)
+        //                        {
+        //                            if (result[i][j] != correctResults[i][j])
+        //                            {
+        //                                Console.WriteLine("^");
+        //                                break;
+        //                            }
+        //                            else
+        //                            {
+        //                                Console.Write(" ");
+        //                            }
+        //                        }
+        //                    }
+        //                    Console.WriteLine("They don't match");
+        //                }
+        //                errorCount++;
+        //            }
 
-                    if (verboseLevel >= 2)
-                    {
-                        Console.WriteLine();
-                    }
-                }
+        //            if (verboseLevel >= 2)
+        //            {
+        //                Console.WriteLine();
+        //            }
+        //        }
 
-                if (errorCount > 0 && fastFail)
-                {
-                    return errorCount;
-                }
-            }
+        //        if (errorCount > 0 && fastFail)
+        //        {
+        //            return errorCount;
+        //        }
+        //    }
 
-            if (verboseLevel >= 2)
-            {
-                Console.WriteLine("Errors: " + errorCount);
-            }
-            return errorCount;
-        }
+        //    if (verboseLevel >= 2)
+        //    {
+        //        Console.WriteLine("Errors: " + errorCount);
+        //    }
+        //    return errorCount;
+        //}
 
         private class GeneratedPair
         {

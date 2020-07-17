@@ -7,7 +7,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Common\Common\Common.csproj" />
     <ProjectReference Include="..\..\Core\Application\Application.csproj" />
-    <ProjectReference Include="..\WFImageParser\WFImageParser.csproj" />
   </ItemGroup>
 
 </Project>

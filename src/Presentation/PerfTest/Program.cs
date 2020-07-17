@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using Application.Data;
 using Application.Logger;
-using WFImageParser;
 
 namespace PerfTest
 {

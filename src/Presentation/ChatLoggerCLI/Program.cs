@@ -5,10 +5,10 @@ using Application.Actionables.ChatBots;
 using Application.Data;
 using Application.Enums;
 using Application.LogParser;
-using ChineseChatParser;
 using DataStream;
 using ImageOCR;
 using Microsoft.Extensions.Configuration;
+using RelativeChatParser;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -21,7 +21,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using WarframeDriver;
 using WFGameCapture;
-using WFImageParser;
 
 namespace ChatLoggerCLI
 {
@@ -143,7 +142,7 @@ namespace ChatLoggerCLI
                     _dataSender,
                     gc,
                     logger,
-                    new ChineseChatParserFactory(logger));
+                    new RelativePixelParserFactory());
 
                 var drive = DriveInfo.GetDrives().First(d => d.Name == Path.GetPathRoot(Environment.CurrentDirectory));
                 logger.Log("Starting bot on drive: " + Path.GetPathRoot(Environment.CurrentDirectory) + ". Available space: " + drive.AvailableFreeSpace + " bytes");
