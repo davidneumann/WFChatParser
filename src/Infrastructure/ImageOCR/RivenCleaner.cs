@@ -16,23 +16,21 @@ namespace ImageOCR
 {
     public class RivenCleaner : IRivenCleaner
     {
-        private static Rgba32 _white = new Rgba32(byte.MaxValue, byte.MaxValue, byte.MaxValue);
-        private static Rgba32 _black = new Rgba32(0, 0, 0);
 
         public void FastPrepareRiven(string imagePath, string outputPath)
         {
 
             var converter = new ColorSpaceConverter();
-            using (Image<Rgba32> image = (Image<Rgba32>)SixLabors.ImageSharp.Image.Load(imagePath))
+            using (Image<Rgba32> image = SixLabors.ImageSharp.Image.Load(imagePath))
             {
-                image.Mutate(i => i.Crop(new SixLabors.ImageSharp.Rectangle(1804, 464, 488, 746)).Resize(232, 373));
+                image.Mutate(i => i.Crop(new SixLabors.Primitives.Rectangle(1804, 464, 488, 746)).Resize(232, 373));
                 image.Save(outputPath);
             }
         }
 
         private bool IsPurple(Rgba32 p)
         {
-            var color = System.Drawing.Color.FromArgb(p.R, p.G, p.B);
+            var color = Color.FromArgb(p.R, p.G, p.B);
             var hsv = color.ToHsv();
             if (hsv.Hue >= 240 && hsv.Hue <= 280
                 && hsv.Value >= 0.4)
@@ -42,13 +40,13 @@ namespace ImageOCR
         public Bitmap CleanRiven(Bitmap croppedRiven)
         {
             Bitmap result = null;
-            Rgba32 background = _white;
+            Rgba32 background = Rgba32.White;
             using (Image<Rgba32> outputImage = new Image<Rgba32>(null, 540, 780, background))
             {
                 var croppedAsMemory = new MemoryStream();
                 croppedRiven.Save(croppedAsMemory, System.Drawing.Imaging.ImageFormat.Bmp);
                 croppedAsMemory.Seek(0, SeekOrigin.Begin);
-                using (Image<Rgba32> image = (Image<Rgba32>)SixLabors.ImageSharp.Image.Load(croppedAsMemory))
+                using (Image<Rgba32> image = SixLabors.ImageSharp.Image.Load(croppedAsMemory))
                 {
                     if (image.Width != 582)
                         image.Mutate(i => i.Resize(582, 831));
@@ -58,7 +56,7 @@ namespace ImageOCR
                     //Copy title/modis
                     var pastBackground = false;
                     var converter = new ColorSpaceConverter();
-                    Rgba32 foreground = _black;
+                    Rgba32 foreground = Rgba32.Black;
                     for (int y = 0; y < 630; y++)
                     {
                         //Check if this line is still image
@@ -243,9 +241,9 @@ namespace ImageOCR
         public void PrepareRivenFromFullscreenImage(string imagePath, string outputPath)
         {
             var converter = new ColorSpaceConverter();
-            using (Image<Rgba32> outputImage = new Image<Rgba32>(null, 500, 765, _white))
+            using (Image<Rgba32> outputImage = new Image<Rgba32>(null, 500, 765, Rgba32.White))
             {
-                using (Image<Rgba32> image = (Image<Rgba32>)SixLabors.ImageSharp.Image.Load(imagePath))
+                using (Image<Rgba32> image = SixLabors.ImageSharp.Image.Load(imagePath))
                 {
                     //Copy title/modis
                     for (int x = 1800; x < 2300; x++)
@@ -253,9 +251,9 @@ namespace ImageOCR
                         for (int y = 525; y < 1155; y++)
                         {
                             if (image[x, y].R == 172 && image[x, y].G == 131 && image[x, y].B == 213)
-                                outputImage[x - 1800, y - 525] = _black;
+                                outputImage[x - 1800, y - 525] = Rgba32.Black;
                             else
-                                outputImage[x - 1800, y - 525] = _white;
+                                outputImage[x - 1800, y - 525] = Rgba32.White;
                         }
                     }
                     //Copy Drain
@@ -264,9 +262,9 @@ namespace ImageOCR
                         for (int y = 465; y < 510; y++)
                         {
                             if (image[x, y].R == 172 && image[x, y].G == 131 && image[x, y].B == 213)
-                                outputImage[x - 2225, y - 510 + 630 + 45] = _black;
+                                outputImage[x - 2225, y - 510 + 630 + 45] = Rgba32.Black;
                             else
-                                outputImage[x - 2225, y - 510 + 630 + 45] = _white;
+                                outputImage[x - 2225, y - 510 + 630 + 45] = Rgba32.White;
                         }
                     }
                     //Copy MR & rerolls
@@ -275,9 +273,9 @@ namespace ImageOCR
                         for (int y = 1165; y < 1210; y++)
                         {
                             if (image[x, y].R == 172 && image[x, y].G == 131 && image[x, y].B == 213)
-                                outputImage[x - 1820, y - 1165 + 630 + 45] = _black;
+                                outputImage[x - 1820, y - 1165 + 630 + 45] = Rgba32.Black;
                             else
-                                outputImage[x - 1820, y - 1165 + 630 + 45] = _white;
+                                outputImage[x - 1820, y - 1165 + 630 + 45] = Rgba32.White;
                         }
                     }
                     ////Copy rerolls
@@ -286,9 +284,9 @@ namespace ImageOCR
                     //    for (int y = 1166; y < 1211; y++)
                     //    {
                     //        if (image[x, y].R == 172 && image[x, y].G == 131 && image[x, y].B == 213)
-                    //            outputImage[x - 2212, y - 1166 + 630 + 45 + 45] = _black;
+                    //            outputImage[x - 2212, y - 1166 + 630 + 45 + 45] = Rgba32.Black;
                     //        else
-                    //            outputImage[x - 2212, y - 1166 + 630 + 45 + 45] = _white;
+                    //            outputImage[x - 2212, y - 1166 + 630 + 45 + 45] = Rgba32.White;
                     //    }
                     //}
                 }
