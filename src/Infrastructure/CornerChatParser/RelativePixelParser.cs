@@ -124,11 +124,27 @@ namespace RelativeChatParser
                 line.ClickPoints = enhancedMessage.ClickPoints;
                 line.MessageBounds = GetLineRect(headLetters.Concat(remainingLetters).ToArray());
 
+
                 //Append to last message if wrapped line
                 if (!fullWords.First().WordColor.IsTimestamp() && last != null)
-                    last.Append(line, LineScanner.Lineheight, LineScanner.LineOffsets[i]);
+                {
+                    if (isScrolledUp && i == LineScanner.LineOffsets.Length - 1 && line != null && line.LineType == LineType.Continuation && results.Count > 0)
+                    {
+                        //_logger.Log("Last line in chat box is contiuation. Removing last real message to prevent partial cut off.");
+                        var tempLast = results.Last();
+                        results.Remove(tempLast);
+                    }
+                    else
+                        last.Append(line, LineScanner.Lineheight, LineScanner.LineOffsets[i]);
+                }
                 else
                 {
+                    if (isScrolledUp && i == LineScanner.LineOffsets.Length - 1 && line != null && line.LineType == LineType.NewMessage)
+                    {
+                        //_logger.Log("Last line in chat box is a new message. Possible contiuation off screen, not adding.");
+                        continue;
+                    }
+                    line.LineType = LineType.NewMessage;
                     last = line;
                     results.Add(line);
                 }
