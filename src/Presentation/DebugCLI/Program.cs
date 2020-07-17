@@ -116,15 +116,15 @@ namespace DebugCLI
         {
             var cp = new RelativePixelParser();
             var sw = new Stopwatch();
-            const string input = @"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\debug_parsechat.png";
+            const string input = @"132393400426645778.png";
+            Console.WriteLine($"Parsing {input}");
             using (var b = new Bitmap(input))
             {
-                ImageCleaner.SaveSoftMask(input, "debug_chat.png");
                 sw.Start();
                 var lines = cp.ParseChatImage(b, true, true, 27);
                 sw.Stop();
                 Console.WriteLine($"Finished parsing in {sw.Elapsed.TotalSeconds}s.");
-                Console.WriteLine("Timestamp\tUsername");
+                //Console.WriteLine("Timestamp\tUsername");
                 foreach (var line in lines)
                 {
                     //if(line.Username != null && line.Timestamp != null)
