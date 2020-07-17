@@ -103,7 +103,7 @@ namespace RelativeChatParser
                 {
                     headLinesValid[i] = true;
                 }
-                else
+                else if(headLines[i].LineType == LineType.NewMessage)
                 {
                     headLinesValid[i] = true;
                     lastValidHeadLine = headLines[i];
