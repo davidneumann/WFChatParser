@@ -26,6 +26,8 @@ namespace RelativeChatParser.Extraction
         
         public static ExtractedGlyph[] ExtractGlyphsFromLine(ImageCache image, Rectangle lineRect, bool abortAfterUsername = false)
         {
+            var ge = new GlyphExtractor();
+
             var results = new List<ExtractedGlyph>();
             var lastGlobalX = lineRect.Left;
             var localBlacklist = new bool[lineRect.Width, lineRect.Height];
@@ -41,7 +43,7 @@ namespace RelativeChatParser.Extraction
                 var chatColor = image.GetColor(nextPoint.X, nextPoint.Y);
                 var validPixels = new List<Point>();
 
-                var newValidPixels = GlyphExtractor.GetValidPixels(image, localBlacklist, nextPoint, lineRect);
+                var newValidPixels = ge.GetValidPixels(image, localBlacklist, nextPoint, lineRect);
                 //Gotta keep scanning down for things like the dot in ! or the bits of a %
 
                 while(newValidPixels != null && newValidPixels.Count > 0)
@@ -54,10 +56,10 @@ namespace RelativeChatParser.Extraction
                     nextPoint = FindNextPoint(image, lineRect, localBlacklist, leftmostX);
                     if (nextPoint.X > rightmostX || nextPoint == Point.Empty)
                         break;
-                    newValidPixels = GlyphExtractor.GetValidPixels(image, localBlacklist, nextPoint, lineRect);
+                    newValidPixels = ge.GetValidPixels(image, localBlacklist, nextPoint, lineRect);
                 }
 
-                var newGlyph = GlyphExtractor.ExtractGlyphFromPixels(validPixels, lineRect, image);
+                var newGlyph = ge.ExtractGlyphFromPixels(validPixels, lineRect, image);
                 newGlyph.FirstPixelColor = chatColor;
                 results.Add(newGlyph);
 

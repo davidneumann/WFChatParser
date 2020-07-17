@@ -118,7 +118,7 @@ namespace DebugCLI
         private static void RelativeCacheShim()
         {
             var cp = new RelativePixelParser();
-            const string input = @"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\637289931922469590.png";
+            const string input = @"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\132393400426645778.png";
             using (var b = new Bitmap(input))
             {
                 ImageCleaner.SaveSoftMask(input, "debug_chat.png");
