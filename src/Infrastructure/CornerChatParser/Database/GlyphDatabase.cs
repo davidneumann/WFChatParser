@@ -23,24 +23,31 @@ namespace RelativeChatParser.Database
         public const float BrightMinV = 0.85f;
 
         private static GlyphDatabase _instance = null;
-        public static GlyphDatabase Instance { get
+        private static object _threadLock = new object();
+        public static GlyphDatabase Instance
+        {
+            get
             {
-                if (_instance == null)
+                lock (_threadLock)
                 {
-                    try
+                    if (_instance == null)
                     {
-                        _instance = JsonConvert.DeserializeObject<GlyphDatabase>(File.ReadAllText("RelativeDB.json"));
+                        try
+                        {
+                            _instance = JsonConvert.DeserializeObject<GlyphDatabase>(File.ReadAllText("RelativeDB.json"));
+                        }
+                        catch (Exception e)
+                        {
+                            _instance = new GlyphDatabase();
+                            Console.WriteLine("DATABASE FAILED TO INITIALIZE\n" + e.ToString());
+                        }
+                        //_instance = new GlyphDatabase();
+                        _instance.Init();
                     }
-                    catch (Exception e)
-                    {
-                        _instance = new GlyphDatabase();
-                        Console.WriteLine("DATABASE FAILED TO INITIALIZE\n" + e.ToString());
-                    }
-                    //_instance = new GlyphDatabase();
-                    _instance.Init();
+                    return _instance;
                 }
-                return _instance;
-            } }
+            }
+        }
 
         public List<FuzzyGlyph> AllGlyphs { get; set; } = new List<FuzzyGlyph>();
         public List<GlyphSpaceDefinition> AllSpaces { get; set; } = new List<GlyphSpaceDefinition>();
