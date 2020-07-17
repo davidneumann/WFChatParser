@@ -23,7 +23,7 @@ namespace RelativeChatParser.Extraction
         public static readonly int Lineheight = 35;
 
         public static readonly int ChatLeftX = 4;
-        
+
         public static ExtractedGlyph[] ExtractGlyphsFromLine(ImageCache image, Rectangle lineRect, bool abortAfterUsername = false)
         {
             var ge = new GlyphExtractor();
@@ -46,7 +46,7 @@ namespace RelativeChatParser.Extraction
                 var newValidPixels = ge.GetValidPixels(image, localBlacklist, nextPoint, lineRect);
                 //Gotta keep scanning down for things like the dot in ! or the bits of a %
 
-                while(newValidPixels != null && newValidPixels.Count > 0)
+                while (newValidPixels != null && newValidPixels.Count > 0)
                 {
                     validPixels.AddRange(newValidPixels);
                     BlacklistPixels(localBlacklist, newValidPixels, lineRect);
@@ -82,13 +82,13 @@ namespace RelativeChatParser.Extraction
         public static ExtractedGlyph[] ExtractGlyphsFromLine(ImageCache image, int lineIndex, bool abortAfterUsername = false, int startX = 0)
         {
             var rect = new Rectangle(ChatLeftX, LineOffsets[lineIndex], ChatWidth, Lineheight);
-            if(startX > 0)
+            if (startX > 0)
             {
                 var left = startX;
                 var width = ChatWidth - (startX - ChatLeftX);
                 rect = new Rectangle(left, LineOffsets[lineIndex], width, Lineheight);
             }
-            return ExtractGlyphsFromLine(image, rect, abortAfterUsername:abortAfterUsername);
+            return ExtractGlyphsFromLine(image, rect, abortAfterUsername: abortAfterUsername);
         }
 
         public static void SaveExtractedGlyphs(ImageCache image, string outputDir, ExtractedGlyph[] glyphs)
