@@ -557,20 +557,23 @@ namespace Application.Actionables.ChatBots
         {
             var badNameRegex = new Regex("[^-A-Za-z0-9._]");
             var m = line.RawMessage;
-            string debugReason = null;
+            string debugReason = string.Empty;
             var timestamp = m.Substring(0, 7).Trim();
             var username = line.Username;
             try
             {
                 if (username.Contains(" ") || username.Contains(@"\/") || username.Contains("]") || username.Contains("[") || badNameRegex.Match(username).Success)
                 {
-                    debugReason = "Bade name: " + username;
+                    debugReason += "Bade name: " + username  + "\n";
                 }
 
                 if (!Regex.Match(line.RawMessage, @"^(\[\d\d:\d\d\])\s*((?:\[DE\])?[-A-Za-z0-9._]+)[:\s]\s*(.+)").Success)
-                    debugReason = "Invalid username or timestamp!" + "\t\r\n" + line.RawMessage;
+                    debugReason += "Invalid username or timestamp!" + "\t\r\n" + line.RawMessage + "\n";
+
+                if (username.Trim().Length < 3)
+                    debugReason += "Name is less than 3 characters" + "\n";
             }
-            catch { debugReason = "Bade name: " + username; }
+            catch { debugReason += "Bade name: " + username + "\n"; }
             var cm = new ChatMessageModel()
             {
                 Raw = m,
@@ -579,7 +582,7 @@ namespace Application.Actionables.ChatBots
                 SystemTimestamp = DateTimeOffset.UtcNow,
                 Region = _warframeCredentials.Region
             };
-            if (debugReason != null)
+            if (debugReason.Length > 0)
             {
                 cm.DEBUGREASON = debugReason;
             }
