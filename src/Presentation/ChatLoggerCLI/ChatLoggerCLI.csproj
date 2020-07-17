@@ -25,12 +25,11 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Common\Common\Common.csproj" />
     <ProjectReference Include="..\..\Core\Application\Application.csproj" />
-    <ProjectReference Include="..\..\Infrastructure\ChineseChatParser\ChineseChatParser.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\CornerChatParser\RelativeChatParser.csproj" />
     <ProjectReference Include="..\..\Infrastructure\DataStream\DataStream.csproj" />
     <ProjectReference Include="..\..\Infrastructure\ImageOCR\ImageOCR.csproj" />
     <ProjectReference Include="..\..\Infrastructure\WarframeDriver\WarframeDriver.csproj" />
     <ProjectReference Include="..\..\Infrastructure\WFGameCapture\WFGameCapture.csproj" />
-    <ProjectReference Include="..\..\Infrastructure\WFImageParser\WFImageParser.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -41,9 +40,5 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-
-  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <Exec Command="xcopy /y /e /h &quot;$(ProjectDir)..\..\Core\Application\data\databases\*&quot; &quot;$(OutDir)data\&quot;" />
-  </Target>
 
 </Project>

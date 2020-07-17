@@ -10,7 +10,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Core\Application\Application.csproj" />
-    <ProjectReference Include="..\WFImageParser\WFImageParser.csproj" />
   </ItemGroup>
 
 </Project>

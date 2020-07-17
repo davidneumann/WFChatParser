@@ -34,6 +34,7 @@ namespace ImageOCR
         {
             _clientLanguage = clientLanguage;
             string dataPath = DataHelper.TessDataPath;
+            Console.WriteLine($"Trying to use datapath: {dataPath}");
             string language = "chi_sim+eng";
             if (_clientLanguage == ClientLanguage.English)
                 language = "eng";
