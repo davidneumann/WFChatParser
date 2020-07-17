@@ -84,69 +84,80 @@ namespace RelativeChatParser
             while (_timeUserCache.Count > 50)
                 _timeUserCache.Dequeue();
 
+            //Phase 1: Get all usernames and timestamps in parallel
+            var headWords = ConvertToWords(lineParseCount, ExtractLetters(image, lineParseCount, imageCache, true));
+            var headLines = GetUsernameAndTimestamp(lineParseCount, headWords);
+
+
+            //Phase 2: Figure out which messages should even be parsed
+            var headLinesValid = new bool[lineParseCount];
+            ChatMessageLineResult lastValidHeadLine = null;
+            for (int i = 0; i < lineParseCount; i++)
+            {
+                if (useCache && IsLineInCache(headLines[i]))
+                {
+                    headLinesValid[i] = false;
+                    lastValidHeadLine = null;
+                }
+                else if (useCache && headLines[i].LineType == LineType.Continuation && lastValidHeadLine != null)
+                {
+                    headLinesValid[i] = true;
+                }
+                else
+                {
+                    headLinesValid[i] = true;
+                    lastValidHeadLine = headLines[i];
+                }
+            }
+
+            //Phase 3: Parse all message bodies
+            var bodyWords = new Word[lineParseCount][];
+            Parallel.For(0, lineParseCount, i =>
+            {
+                if (headLinesValid[i])
+                    bodyWords[i] = ConvertToWordsSingleLine(ExtractLettersSingleLine(i, imageCache, false, headLines[i].MessageBounds.Right + 1));
+            });
+
+            var fullWords = new Word[lineParseCount][];
+            for (int i = 0; i < lineParseCount; i++)
+            {
+                fullWords[i] = headWords[i].Concat(bodyWords[i]).ToArray();
+
+                var enhancedMessage = GetEnhancedMessageSingleLine(fullWords[i]);
+                headLines[i].RawMessage = fullWords[i].Select(word => word.ToString()).Aggregate(new StringBuilder(), (acc, str) => acc.Append(str)).ToString();
+                headLines[i].EnhancedMessage = enhancedMessage.EnhancedString.ToString().Trim();
+                headLines[i].ClickPoints = enhancedMessage.ClickPoints;
+                var letters = headWords[i].Select(w => w.Letters).SelectMany(l => l).Concat(bodyWords[i].Select(w => w.Letters).SelectMany(l => l)).ToArray();
+                headLines[i].MessageBounds = GetLineRect(letters);
+            }
+
+            //Phase 4: Wrangle all the wraps
             var results = new List<ChatMessageLineResult>();
             ChatMessageLineResult last = null;
             for (int i = 0; i < lineParseCount; i++)
             {
-                //Get only the start to see if we have already parsed this line in a previous image
-                var headLetters = ExtractLettersSingleLine(i, imageCache, true, 0);
-                var headWords = ConvertToWordsSingleLine(headLetters);
-
-                var line = GetUsernameAndTimestampSingleLine(headWords);
-                bool inCache = IsLineInCache(line);
-
-                //If this line is in the cache then skip
-                if (inCache && useCache)
-                {
-                    last = null;
-                    continue;
-                }
-                else
-                    _timeUserCache.Enqueue(line.GetKey());
-
-                //Skip any line that is a continuation when the last message is unkown
-                if(last == null && 
-                    (headLetters.Length == 0 || !headLetters[0].ExtractedGlyph.FirstPixelColor.IsTimestamp()))
-                {
-                    continue;
-                }
-
-                var right = 0;
-                if (headWords.Length >= 1)
-                    right = headWords.Last().Letters.Last().ExtractedGlyph.Right + 1;
-                var remainingLetters = ExtractLettersSingleLine(i, imageCache, false, right);
-                var remainingWords = ConvertToWordsSingleLine(remainingLetters);
-                var fullWords = headWords.Concat(remainingWords).ToArray();
-
-                var enhancedMessage = GetEnhancedMessageSingleLine(fullWords);
-                line.RawMessage = fullWords.Select(word => word.ToString()).Aggregate(new StringBuilder(), (acc, str) => acc.Append(str)).ToString();
-                line.EnhancedMessage = enhancedMessage.EnhancedString.ToString().Trim();
-                line.ClickPoints = enhancedMessage.ClickPoints;
-                line.MessageBounds = GetLineRect(headLetters.Concat(remainingLetters).ToArray());
-
 
                 //Append to last message if wrapped line
-                if (!fullWords.First().WordColor.IsTimestamp() && last != null)
+                if (!fullWords[i].First().WordColor.IsTimestamp() && last != null)
                 {
-                    if (isScrolledUp && i == LineScanner.LineOffsets.Length - 1 && line != null && line.LineType == LineType.Continuation && results.Count > 0)
+                    if (isScrolledUp && i == LineScanner.LineOffsets.Length - 1 && headLines[i] != null && headLines[i].LineType == LineType.Continuation && results.Count > 0)
                     {
                         //_logger.Log("Last line in chat box is contiuation. Removing last real message to prevent partial cut off.");
                         var tempLast = results.Last();
                         results.Remove(tempLast);
                     }
                     else
-                        last.Append(line, LineScanner.Lineheight, LineScanner.LineOffsets[i]);
+                        last.Append(headLines[i], LineScanner.Lineheight, LineScanner.LineOffsets[i]);
                 }
                 else
                 {
-                    if (isScrolledUp && i == LineScanner.LineOffsets.Length - 1 && line != null && line.LineType == LineType.NewMessage)
+                    if (isScrolledUp && i == LineScanner.LineOffsets.Length - 1 && headLines[i] != null && headLines[i].LineType == LineType.NewMessage)
                     {
                         //_logger.Log("Last line in chat box is a new message. Possible contiuation off screen, not adding.");
                         continue;
                     }
-                    line.LineType = LineType.NewMessage;
-                    last = line;
-                    results.Add(line);
+                    last = headLines[i];
+                    results.Add(headLines[i]);
                 }
             }
 
@@ -183,8 +194,8 @@ namespace RelativeChatParser
             {
                 var firstLetter = lineLetters.First();
                 var lastLetter = lineLetters.Last();
-                var top = lineLetters.Min(l => l.ExtractedGlyph.Top);
-                var height = lineLetters.Max(l => l.ExtractedGlyph.Bottom) - top;
+                var top = lineLetters.Min(l => l.ExtractedGlyph != null ? l.ExtractedGlyph.Top : int.MaxValue);
+                var height = lineLetters.Max(l => l.ExtractedGlyph != null ? l.ExtractedGlyph.Bottom : int.MinValue) - top;
                 rect = new Rectangle(firstLetter.ExtractedGlyph.Left, top,
                     lastLetter.ExtractedGlyph.Right + 1 - firstLetter.ExtractedGlyph.Left,
                     height);
@@ -208,16 +219,37 @@ namespace RelativeChatParser
         private static ChatMessageLineResult GetUsernameAndTimestampSingleLine(Word[] lineWords)
         {
             var result = new ChatMessageLineResult();
+            if (lineWords.Length > 0 && lineWords[0].ToString().Length > 0)
+            {
+                var firstGlyph = lineWords[0].Letters[0].ExtractedGlyph;
+                var lastGlyph = lineWords.Last().Letters.Last().ExtractedGlyph;
+                var width = lastGlyph.Right - firstGlyph.Left;
+                var height = Math.Max(lastGlyph.Height, firstGlyph.Height);
+                var top = Math.Min(lastGlyph.Top, firstGlyph.Top);
+                result.MessageBounds = new Rectangle(firstGlyph.Left, top, width, height);
+            }
+            else
+                result.MessageBounds = Rectangle.Empty;
+
             if (lineWords.Length >= 3)
             {
                 if (!lineWords[0].WordColor.IsTimestamp())
-                    return null;
-
-                result.Timestamp = lineWords[0].ToString();
-                if (lineWords[1].ToString().Trim().Length == 0)
-                    result.Username = lineWords[2].ToString();
+                {
+                    result.LineType = LineType.Continuation;
+                }
                 else
-                    result.Username = lineWords[1].ToString();
+                {
+                    result.LineType = LineType.NewMessage;
+                    result.Timestamp = lineWords[0].ToString();
+                    if (lineWords[1].ToString().Trim().Length == 0)
+                        result.Username = lineWords[2].ToString();
+                    else
+                        result.Username = lineWords[1].ToString();
+                }
+            }
+            else
+            {
+                result.LineType = LineType.Continuation;
             }
 
             return result;

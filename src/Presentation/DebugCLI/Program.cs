@@ -131,7 +131,7 @@ namespace DebugCLI
                     //{
                     //    Console.WriteLine($"{line.Timestamp}\t{line.Username}");
                     //}
-                    Console.WriteLine(line.EnhancedMessage);
+                    Console.WriteLine($"{line.Timestamp} {line.Username}: {line.EnhancedMessage}");
                 }
 
                 var lines2 = cp.ParseChatImage(b, true, true, 27);
