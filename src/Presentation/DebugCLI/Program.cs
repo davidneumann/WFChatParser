@@ -114,9 +114,9 @@ namespace DebugCLI
 
         private static void RelativeCacheShim()
         {
-            var cp = new RelativePixelParser();
+            var cp = new RelativePixelParser(new DummyLogger());
             var sw = new Stopwatch();
-            const string input = @"637306259186735111.png";
+            const string input = @"637306257778889321.png";
             Console.WriteLine($"Parsing {input}");
             ImageCleaner.SaveSoftMask(input, "debug_screen.png");
             using (var b = new Bitmap(input))
@@ -161,7 +161,7 @@ namespace DebugCLI
         private static void RelativeParserWithSpacesShim()
         {
             var ignored = RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs;
-            var rp = new RelativePixelParser();
+            var rp = new RelativePixelParser(new DummyLogger());
             using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\132378502626565768.png"))
             {
                 var chatLines = rp.ParseChatImage(b, true, false, 27);
@@ -430,7 +430,7 @@ namespace DebugCLI
 
             var input = @"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\garbage.png";
             ImageCleaner.SaveSoftMask(input, "current.png");
-            var cp = new RelativePixelParser();
+            var cp = new RelativePixelParser(new DummyLogger());
             var lines = cp.ParseChatImage(new Bitmap(input), false, false, 27);
             foreach (var line in lines)
             {
@@ -441,7 +441,7 @@ namespace DebugCLI
         private static void RelativeParserTest()
         {
             var ignore = RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs;
-            var parser = new RelativeChatParser.RelativePixelParser();
+            var parser = new RelativeChatParser.RelativePixelParser(new DummyLogger());
             var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps";
             var allFiles = Directory.GetFiles(inputDir);
             var sw = new Stopwatch();

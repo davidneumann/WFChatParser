@@ -142,7 +142,7 @@ namespace ChatLoggerCLI
                     _dataSender,
                     gc,
                     logger,
-                    new RelativePixelParserFactory());
+                    new RelativePixelParserFactory(logger));
 
                 var drive = DriveInfo.GetDrives().First(d => d.Name == Path.GetPathRoot(Environment.CurrentDirectory));
                 logger.Log("Starting bot on drive: " + Path.GetPathRoot(Environment.CurrentDirectory) + ". Available space: " + drive.AvailableFreeSpace + " bytes");

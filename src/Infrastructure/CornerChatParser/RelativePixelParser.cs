@@ -3,6 +3,7 @@ using Application.ChatMessages.Model;
 using Application.Data;
 using Application.Interfaces;
 using Application.LineParseResult;
+using Application.Logger;
 using RelativeChatParser.Database;
 using RelativeChatParser.Extraction;
 using RelativeChatParser.Models;
@@ -20,7 +21,7 @@ namespace RelativeChatParser
 {
     public class RelativePixelParser : IChatParser
     {
-        private static int _debugCounter = 0;
+        private readonly ILogger _logger;
         private static readonly FuzzyGlyph NullGlyph;
         private Queue<string> _timeUserCache = new Queue<string>();
         private static List<Regex> _blacklistedRegex = new List<Regex>();
@@ -41,6 +42,11 @@ namespace RelativeChatParser
                     _blacklistedRegex.Add(new Regex(line, RegexOptions.Compiled));
                 }
             }
+        }
+
+        public RelativePixelParser(ILogger logger)
+        {
+            _logger = logger;
         }
 
         public void InvalidateCache(string key)
@@ -92,8 +98,11 @@ namespace RelativeChatParser
         {
             lineParseCount = Math.Min(lineParseCount, LineScanner.LineOffsets.Length);
             var imageCache = new ImageCache(image);
-            while (_timeUserCache.Count > 50)
-                _timeUserCache.Dequeue();
+            while (_timeUserCache.Count > 75)
+            {
+                var removed = _timeUserCache.Dequeue();
+                _logger.Log($"Removed {removed} from parser cache");
+            }
 
             //Phase 1: Get all usernames and timestamps in parallel
             var headWords = ConvertToWords(lineParseCount, ExtractLetters(image, lineParseCount, imageCache, true));
@@ -118,6 +127,7 @@ namespace RelativeChatParser
                 {
                     headLinesValid[i] = true;
                     lastValidHeadLine = headLines[i];
+                    _logger.Log($"Adding {headLines[i].GetKey()} to parser cache");
                 }
             }
 
