@@ -34,7 +34,7 @@ namespace RelativeChatParser.Training
                     foreach (var g in glyphs)
                     {
                         var e = RelativePixelGlyphIdentifier.IdentifyGlyph(g);
-                        if (e.Length != 1)
+                        if (e.Length != 1 || (e.Length == 1 && e[0].ReferenceMaxWidth + 1 < g.Width) || (e.Length == 1 && e[0].ReferenceMinWidth - 1 > g.Width))
                         {
                             var overlap = new Overlap()
                             {

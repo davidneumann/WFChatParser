@@ -2386,6 +2386,12 @@ namespace DebugCLI
             var c = new GameCapture(new DummyLogger());
             var ss = new ScreenStateHandler();
 
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\reward_1.png"))
+            {
+                var state = ss.GetScreenState(b);
+                Console.WriteLine($"Is reward: {ss.GetScreenState(b) == ScreenState.DailyRewardScreenItem} should be true.");
+            }
+
             using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\chinese_login.png"))
             {
                 var state = ss.GetScreenState(b);
@@ -3085,7 +3091,7 @@ namespace DebugCLI
 
         private static string GetSupportedCharacters()
         {
-            return "! # $ % & ' ( ) * + - . / 0 1 2 3 4 5 6 7 8 9 : ; < = > ? @ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z \\ ] ^ _ a b c d e f g h i j k l m n o p q r s t u v w x y z { | } ,".Replace(" ", "");
+            return "~ ! # $ % & ' ( ) * + - . / 0 1 2 3 4 5 6 7 8 9 : ; < = > ? @ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z \\ ] ^ _ a b c d e f g h i j k l m n o p q r s t u v w x y z { | } ,".Replace(" ", "");
         }
 
         private static void SaveSlice(int sliceNumber, IEnumerable<string> sliceContents, string sliceType)

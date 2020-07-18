@@ -21,11 +21,14 @@ namespace RelativeChatParser.Recognition
         public static double _debugWorstScore = float.MinValue;
         public static FuzzyGlyph[] IdentifyGlyph(ExtractedGlyph extracted, bool allowOverlaps = false)
         {
-            //if (extracted.Left >= 148 && extracted.Top >= 868)
+#if DEBUG
+            //if (extracted.Left >= 503 && extracted.Top >= 1665
+            //    && extracted.Left <= 533 && extracted.Top <= 1694)
             //{
             //    extracted.Save("bad_glyph.png");
             //    System.Diagnostics.Debugger.Break();
             //}
+#endif
 
             //var candidates = GlyphDatabase.Instance.AllGlyphs.Where(IsValidCandidate(extracted));
             var candidates = GlyphDatabase.Instance.GetGlyphByTargetSize(extracted.Width, extracted.Height).Where(g => g.IsOverlap == allowOverlaps).ToArray();
