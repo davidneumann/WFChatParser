@@ -138,6 +138,7 @@ namespace Application.Actionables.ChatBots
             {
                 await Task.Delay(17);
                 _mouse.Click(0, 0);
+                _logger.Log("Trying to give focus to warframe window");
             }
 
             //Try doing a parse

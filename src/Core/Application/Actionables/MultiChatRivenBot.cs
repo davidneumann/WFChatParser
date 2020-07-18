@@ -203,9 +203,11 @@ namespace Application.Actionables
 
                 for (int i = 0; i < _bots.Length; i++)
                 {
+                    _logger.Log($"Looking at bot {i} of {_bots.Length}");
                     var bot = _bots[i];
                     if (bot.IsRequestingControl)
                     {
+                        _logger.Log($"bot {i} is requesting control");
                         controlSw.Restart();
                         try
                         {

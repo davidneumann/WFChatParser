@@ -106,7 +106,9 @@ namespace RelativeChatParser
             }
 
             //Phase 1: Get all usernames and timestamps in parallel
+            _logger.Log("Parsing head words");
             var headWords = ConvertToWords(lineParseCount, ExtractLetters(image, lineParseCount, imageCache, true));
+            _logger.Log("Converting to head lines");
             var headLines = GetUsernameAndTimestamp(lineParseCount, headWords);
 
 
