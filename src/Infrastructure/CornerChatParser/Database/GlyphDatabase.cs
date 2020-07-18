@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using RelativeChatParser.Recognition;
 using System.Drawing;
+using WebSocketSharp;
 
 namespace RelativeChatParser.Database
 {
@@ -135,6 +136,10 @@ namespace RelativeChatParser.Database
 
         internal int GetSpace(string character1, string character2)
         {
+            if (character1.Length > 1)
+                character1 = character1.Last().ToString();
+            if (character2.Length > 1)
+                character2 = character2[0].ToString();
             if (_spaceCache.ContainsKey(character1) && _spaceCache[character1].ContainsKey(character2))
                 return _spaceCache[character1][character2];
             return GetDefaultSpace();

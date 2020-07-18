@@ -377,7 +377,7 @@ namespace RelativeChatParser
             Word currentWord = new Word();
             foreach (var letter in lineLetters)
             {
-                if (letter.FuzzyGlyph == null)
+                 if (letter.FuzzyGlyph == null)
                 {
                     var last = currentWord.Letters.LastOrDefault();
                     if (last != null)
