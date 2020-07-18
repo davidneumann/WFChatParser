@@ -204,7 +204,7 @@ namespace RelativeChatParser
         private static Letter[] ExtractLettersSingleLine(int i, ImageCache imageCache, bool abortAfterUsername, int startX = 0)
         {
             return LineScanner.ExtractGlyphsFromLine(imageCache, i, abortAfterUsername, startX)
-                /*.AsParallel()*/.Select(extracted =>
+                .AsParallel().Select(extracted =>
                 {
                     var fuzzies = RelativePixelGlyphIdentifier.IdentifyGlyph(extracted);
                     return fuzzies.Select(f => new Letter(f, extracted));
@@ -354,7 +354,7 @@ namespace RelativeChatParser
                     allLetters[i] = letters;
                 }
             });
-            //}
+        //}
             return allLetters;
         }
 

@@ -21,7 +21,7 @@ namespace RelativeChatParser.Recognition
         public static double _debugWorstScore = float.MinValue;
         public static FuzzyGlyph[] IdentifyGlyph(ExtractedGlyph extracted, bool allowOverlaps = false)
         {
-            //if (extracted.Left >= 633 && extracted.Top >= 1904)
+            //if (extracted.Left >= 148 && extracted.Top >= 868)
             //{
             //    extracted.Save("bad_glyph.png");
             //    System.Diagnostics.Debugger.Break();
@@ -49,11 +49,13 @@ namespace RelativeChatParser.Recognition
                     candidates = candidates.Where(g => g.Character != "l").ToArray();
                 else if (height >= 25)
                     candidates = candidates.Where(g => g.Character != "I").ToArray();
-                candidates = candidates.Where(g =>
+                var likelyMatches = candidates.Where(g =>
                 {
                     return extracted.Height >= g.ReferenceMinHeight && extracted.Height <= g.ReferenceMaxHeight
                         && extracted.PixelsFromTopOfLine + 1 >= g.ReferenceGapFromLineTop;
                 }).ToArray();
+                if (likelyMatches.Length > 0)
+                    candidates = likelyMatches;
                 useBrights = false;
             }
             //if (candidates.Any(g => g.Character == "]" || g.Character == "j"))
@@ -109,7 +111,7 @@ namespace RelativeChatParser.Recognition
             if (current == null)
             {
 #if DEBUG
-                extracted.Save("overlap.png");
+                extracted.Save($"overlap_{Guid.NewGuid().ToString()}_{extracted.Left},{extracted.Top}.png");
 #endif
                 //todo: fix tree code not handling way bigger DB
                 //System.Diagnostics.Debugger.Break();

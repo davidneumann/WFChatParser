@@ -116,7 +116,7 @@ namespace DebugCLI
         {
             var cp = new RelativePixelParser();
             var sw = new Stopwatch();
-            const string input = @"637305489012225060.png";
+            const string input = @"637306161949736654.png";
             Console.WriteLine($"Parsing {input}");
             ImageCleaner.SaveSoftMask(input, "debug_screen.png");
             using (var b = new Bitmap(input))
