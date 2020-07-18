@@ -116,6 +116,7 @@ namespace RelativeChatParser.Recognition
 #if DEBUG
                 extracted.Save($"overlap_{Guid.NewGuid().ToString()}_{extracted.Left},{extracted.Top}.png");
 #endif
+                return overlaps.ToArray();
                 //todo: fix tree code not handling way bigger DB
                 //System.Diagnostics.Debugger.Break();
                 //Console.WriteLine($"Probably an overlap at {extracted.Left}, {extracted.Top}.");

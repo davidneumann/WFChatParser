@@ -114,9 +114,9 @@ namespace DebugCLI
 
         private static void RelativeCacheShim()
         {
-            var cp = new RelativePixelParser(new DummyLogger());
+            var cp = new RelativePixelParser(new DummyLogger(true));
             var sw = new Stopwatch();
-            const string input = @"637306257778889321.png";
+            const string input = @"screen_parsechat.png";
             Console.WriteLine($"Parsing {input}");
             ImageCleaner.SaveSoftMask(input, "debug_screen.png");
             using (var b = new Bitmap(input))
@@ -3134,16 +3134,20 @@ namespace DebugCLI
 
     internal class DummyLogger : ILogger
     {
-        public void Log(string message)
-        {
-            //Console.WriteLine(message);
-        }
-    }
+        private bool _output;
 
-    internal class FakeLogger : ILogger
-    {
+        public DummyLogger(bool sendToConsole)
+        {
+            _output = sendToConsole;
+        }
+        public DummyLogger()
+        {
+            _output = false;
+        }
         public void Log(string message)
         {
+            if(_output)
+                Console.WriteLine(message);
         }
     }
 
