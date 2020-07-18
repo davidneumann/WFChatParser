@@ -4,6 +4,7 @@ using Application.Data;
 using Application.Interfaces;
 using Application.LineParseResult;
 using Application.Logger;
+using ImageMagick;
 using RelativeChatParser.Database;
 using RelativeChatParser.Extraction;
 using RelativeChatParser.Models;
@@ -127,7 +128,6 @@ namespace RelativeChatParser
                 {
                     headLinesValid[i] = true;
                     lastValidHeadLine = headLines[i];
-                    _logger.Log($"Adding {headLines[i].GetKey()} to parser cache");
                 }
             }
 
@@ -195,6 +195,14 @@ namespace RelativeChatParser
                 }
             }
 
+            foreach (var result in results)
+            {
+                if(result != null && !string.IsNullOrEmpty(result.Username) && !string.IsNullOrEmpty(result.Timestamp))
+                {
+                    _timeUserCache.Enqueue(result.GetKey());
+                    _logger.Log($"Adding {result.GetKey()} to parser cache");
+                }
+            }
             return results.ToArray();
         }
 
