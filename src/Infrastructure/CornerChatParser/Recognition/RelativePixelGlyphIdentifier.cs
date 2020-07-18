@@ -22,8 +22,8 @@ namespace RelativeChatParser.Recognition
         public static FuzzyGlyph[] IdentifyGlyph(ExtractedGlyph extracted, bool allowOverlaps = false)
         {
 #if DEBUG
-            //if (extracted.Left >= 503 && extracted.Top >= 1665
-            //    && extracted.Left <= 533 && extracted.Top <= 1694)
+            //if (extracted.Left >= 217 && extracted.Top >= 970
+            //    && extracted.Left <= 226 && extracted.Top <= 996)
             //{
             //    extracted.Save("bad_glyph.png");
             //    System.Diagnostics.Debugger.Break();
@@ -282,7 +282,7 @@ namespace RelativeChatParser.Recognition
             //In theory the best match is what ever chains the most
             BestMatch current = null;
             var bests = new List<BestMatch>();
-            foreach (var glyph in GlyphDatabase.Instance.GlyphsBySizeDescending())
+            foreach (var glyph in GlyphDatabase.Instance.CharsThatCanOverlapByDescSize().Where(g => g.ReferenceMaxHeight <= extracted.Height + 1 && g.ReferenceGapFromLineTop >= extracted.PixelsFromTopOfLine - 2))
             {
                 // Can't be bigger
                 if (glyph.ReferenceMinWidth > extracted.Width)

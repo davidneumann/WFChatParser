@@ -21,6 +21,8 @@ namespace RelativeChatParser.Database
         private Dictionary<string, Dictionary<string, int>> _spaceCache = new Dictionary<string, Dictionary<string, int>>();
         private ConcurrentDictionary<(int, int), FuzzyGlyph[]> _targetSizeCache = new ConcurrentDictionary<(int, int), FuzzyGlyph[]>();
 
+        private FuzzyGlyph[] _cachedSingleCharOverlaps;
+        
         public const float BrightMinV = 0.85f;
 
         private static GlyphDatabase _instance = null;
@@ -87,6 +89,10 @@ namespace RelativeChatParser.Database
             _cachedDescSize = AllGlyphs.Count;
             _cachedDesdSizeItems = AllGlyphs.OrderByDescending(g => g.ReferenceMaxWidth).ToArray();
 
+            var pureGlyphs = AllGlyphs.Where(g => !g.IsOverlap).ToArray();
+            var charsThatCanOverlap = AllGlyphs.Where(g => g.IsOverlap).SelectMany(g => g.Character.ToCharArray()).Distinct().ToArray();
+            _cachedSingleCharOverlaps = pureGlyphs.Where(g => charsThatCanOverlap.Contains(g.Character[0])).ToArray();
+
             _targetSizeCache.Clear();
             foreach (var glyph in AllGlyphs)
             {
@@ -112,6 +118,10 @@ namespace RelativeChatParser.Database
         public FuzzyGlyph[] GlyphsBySizeDescending()
         {
             return _cachedDesdSizeItems;
+        }
+        public FuzzyGlyph[] CharsThatCanOverlapByDescSize()
+        {
+            return _cachedSingleCharOverlaps;
         }
 
         internal int GetDefaultSpace()

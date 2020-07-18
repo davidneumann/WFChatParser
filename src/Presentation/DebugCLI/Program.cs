@@ -106,17 +106,17 @@ namespace DebugCLI
             //GenerateRelativeParserCharacterTrainingData();
             //RelativeParserGlyphTrainer();
             //RelativeParserSpaceTrainer();
-            //OverlapExtractingShim();
+            OverlapExtractingShim();
             //RelativeParserTest();
 
-            RelativeCacheShim();
+            //RelativeCacheShim();
         }
 
         private static void RelativeCacheShim()
         {
             var cp = new RelativePixelParser(new DummyLogger(true));
             var sw = new Stopwatch();
-            const string input = @"screen_parsechat.png";
+            const string input = @"637306367274895272.png";
             Console.WriteLine($"Parsing {input}");
             ImageCleaner.SaveSoftMask(input, "debug_screen.png");
             using (var b = new Bitmap(input))
