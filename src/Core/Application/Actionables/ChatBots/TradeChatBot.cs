@@ -554,6 +554,14 @@ namespace Application.Actionables.ChatBots
             return true;
         }
 
+        private static string[] _debugBadNames = new string[] {
+"O4rK4z",
+"UndeadWarTuroip",
+"-Posher-",
+"Cre",
+"alightoing13",
+"MrNoobioater"
+        };
         private ChatMessageModel MakeChatModel(LineParseResult.ChatMessageLineResult line)
         {
             var badNameRegex = new Regex("[^-A-Za-z0-9._]");
@@ -576,6 +584,9 @@ namespace Application.Actionables.ChatBots
 
                 if (username.Trim().Contains(' '))
                     debugReason += $"Name contains a space: {username}\n";
+
+                if (_debugBadNames.Contains(username.Trim()))
+                    debugReason += $"Known bad name detected: {username}";
             }
             catch { debugReason += "Bade name: " + username + "\n"; }
             var cm = new ChatMessageModel()
