@@ -106,17 +106,17 @@ namespace DebugCLI
             //GenerateRelativeParserCharacterTrainingData();
             //RelativeParserGlyphTrainer();
             //RelativeParserSpaceTrainer();
-            OverlapExtractingShim();
+            //OverlapExtractingShim();
             //RelativeParserTest();
 
-            //RelativeCacheShim();
+            RelativeCacheShim();
         }
 
         private static void RelativeCacheShim()
         {
             var cp = new RelativePixelParser(new DummyLogger(true));
             var sw = new Stopwatch();
-            const string input = @"637306367274895272.png";
+            const string input = @"637310387044483403.png";
             Console.WriteLine($"Parsing {input}");
             ImageCleaner.SaveSoftMask(input, "debug_screen.png");
             using (var b = new Bitmap(input))
@@ -509,8 +509,8 @@ namespace DebugCLI
             sw.Stop();
             Console.WriteLine(inputDir);
             Console.WriteLine($"Parsed {filesDone} files in {sw.Elapsed.TotalSeconds}s. {sw.Elapsed.TotalSeconds / filesDone} seconds/file.");
-            Console.WriteLine($"Error count: {errorCount} out of {characterCount}. {((float)errorCount / characterCount)*100f}%");
-            foreach(var error in errorsByCharacter.OrderByDescending(kvp => kvp.Value))
+            Console.WriteLine($"Error count: {errorCount} out of {characterCount}. {((float)errorCount / characterCount) * 100f}%");
+            foreach (var error in errorsByCharacter.OrderByDescending(kvp => kvp.Value))
             {
                 Console.WriteLine($"{error.Key}: {error.Value,3}");
             }
@@ -3146,7 +3146,7 @@ namespace DebugCLI
         }
         public void Log(string message)
         {
-            if(_output)
+            if (_output)
                 Console.WriteLine(message);
         }
     }

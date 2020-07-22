@@ -11,14 +11,13 @@ using System.Linq;
 using System.Text;
 using WebSocketSharp;
 using System.Drawing.Imaging;
+using System.Security.Cryptography;
 
 namespace RelativeChatParser.Recognition
 {
     public static class RelativePixelGlyphIdentifier
     {
-        private static int _debugOverlapCount;
-        public const int MissedDistancePenalty = 10000;
-        public static double _debugWorstScore = float.MinValue;
+        public const int MissedDistancePenalty = 1000;
         public static FuzzyGlyph[] IdentifyGlyph(ExtractedGlyph extracted, bool allowOverlaps = false)
         {
 #if DEBUG
@@ -35,7 +34,34 @@ namespace RelativeChatParser.Recognition
             //Also remove anything that doesn't look to be aligned correctly
             candidates = candidates.Where(g => extracted.PixelsFromTopOfLine >= g.ReferenceGapFromLineTop - 2
                                             && extracted.PixelsFromTopOfLine <= g.ReferenceGapFromLineTop + 2).ToArray();
+            bool useBrights = FilterCandidates(extracted, ref candidates);
 
+            BestMatch current = null;
+            foreach (var candidate in candidates)
+            {
+                double distances = ScoreCandidate(extracted, useBrights, candidate);
+
+                if (distances < MissedDistancePenalty && (current == null || current.distanceSum > distances))
+                    current = new BestMatch(distances, candidate);
+            }
+
+            if (current == null && !allowOverlaps)
+                return IdentifyGlyph(extracted, !allowOverlaps);
+
+            //Try to break apart an overlap
+            if (current == null)
+            {
+#if DEBUG
+                extracted.Save($"overlap_{Guid.NewGuid().ToString()}_{extracted.Left},{extracted.Top}.png");
+#endif
+                return ExtractOverlap(extracted);
+            }
+
+            return current != null ? new[] { current.match } : new FuzzyGlyph[0];
+        }
+
+        private static bool FilterCandidates(ExtractedGlyph extracted, ref FuzzyGlyph[] candidates)
+        {
             var useBrights = true;
             //if (allowOverlaps)
             //    useBrights = false;
@@ -61,84 +87,111 @@ namespace RelativeChatParser.Recognition
                     candidates = likelyMatches;
                 useBrights = false;
             }
-            //if (candidates.Any(g => g.Character == "]" || g.Character == "j"))
-            //    candidates = candidates.Where(g => extracted.PixelsFromTopOfLine + 1 >= g.ReferenceGapFromLineTop).ToArray();
 
-            BestMatch current = null;
-            foreach (var candidate in candidates)
+            return useBrights;
+        }
+
+        private static double ScoreCandidate(ExtractedGlyph extracted, bool useBrights, FuzzyGlyph candidate)
+        {
+            double distances = 0;
+
+            var extractedPixels = useBrights ? extracted.RelativeBrights : extracted.RelativePixelLocations;
+            var candiatePixels = useBrights ? candidate.RelativeBrights : candidate.RelativePixelLocations;
+
+            //Match whichever has more pixels agianst the smlaler one
+            if (extractedPixels.Length > candiatePixels.Length)
             {
-                var extractedPixels = useBrights ? extracted.RelativeBrights : extracted.RelativePixelLocations;
-                var candiatePixels = useBrights ? candidate.RelativeBrights : candidate.RelativePixelLocations;
-                //var strict = candidate.Character == "!" || candidate.Character == "i" || candidate.Character == "j" || extracted.Width <= 4 || candidate.Character == "O" || candidate.Character == "Q";
-                //double distances = ScoreGlyph(extracted, candidate, strict);
-                double distances = 0;
-                //Match whichever has more pixels agianst the smlaler one
-                //if(extracted.RelativePixelLocations.Where(g => g.Z >= 0.85f).Count() > candidate.RelativePixelLocations.Where(g => g.Z >= 0.85f).Count())
-                if (extractedPixels.Length > candiatePixels.Length)
+                distances += GetMinDistanceSum(extractedPixels, candiatePixels);
+                var eDistance = GetMinDistanceSum(extracted.RelativeEmptyLocations, candidate.RelativeEmptyLocations);
+                if (eDistance >= MissedDistancePenalty)
                 {
-                    distances += GetMinDistanceSum(extractedPixels, candiatePixels);
-                    var eDistance = GetMinDistanceSum(extracted.RelativeEmptyLocations, candidate.RelativeEmptyLocations);
-                    if (eDistance >= MissedDistancePenalty)
+                    eDistance = GetMinDistanceSum(extracted.CombinedLocations, candidate.RelativeCombinedLocations) * 15f;
+                }
+                distances += eDistance;
+            }
+            else
+            {
+                distances += GetMinDistanceSum(candiatePixels, extractedPixels);
+                var eDistance = GetMinDistanceSum(candidate.RelativeEmptyLocations, extracted.RelativeEmptyLocations);
+                if (eDistance >= MissedDistancePenalty)
+                {
+                    eDistance = GetMinDistanceSum(candidate.RelativeCombinedLocations, extracted.CombinedLocations) * 15f;
+                }
+                distances += eDistance;
+            }
+
+            return distances;
+        }
+
+        private static FuzzyGlyph[] ExtractOverlap(ExtractedGlyph extracted)
+        {
+            var candidates = GlyphDatabase.Instance.CharsThatCanOverlapByDescSize()
+                .Where(g => g.ReferenceMaxHeight <= extracted.Height + 1 && g.ReferenceGapFromLineTop >= extracted.PixelsFromTopOfLine - 1 && g.ReferenceMinWidth <= extracted.Width + 1).ToArray();
+
+
+            var matches = new List<BestMatch>();
+            //var origExtractedEmpties = extracted.RelativeEmptyLocations;
+            //var origRelativePixelLocations = extracted.RelativePixelLocations;
+            //var origRelativeBrights = extracted.RelativeBrights;
+            //var origRelativeEmptyLocations = extracted.RelativeEmptyLocations;
+            //var origRelativeCombinedLocations = extracted.CombinedLocations;
+            var origExtracted = extracted.Clone();
+
+            while (extracted != null && extracted.RelativeBrights.Length > 0)
+            {
+                var useBrights = FilterCandidates(extracted, ref candidates);
+
+                BestMatch best = null;
+                foreach (var candidate in candidates)
+                {
+                    var extractedClone = extracted.Clone();
+                    extractedClone.RelativePixelLocations = extractedClone.RelativePixelLocations.Where(p => p.X < candidate.ReferenceMaxWidth).ToArray();
+                    extractedClone.RelativeBrights = extractedClone.RelativeBrights.Where(p => p.X < candidate.ReferenceMaxWidth).ToArray();
+                    extractedClone.RelativeEmptyLocations = extractedClone.RelativeEmptyLocations.Where(p => p.X < candidate.ReferenceMaxWidth).ToArray();
+                    extractedClone.CombinedLocations = extractedClone.CombinedLocations.Where(p => p.X < candidate.ReferenceMaxWidth).ToArray();
+
+                    //The candidate needs to have its details moved down to account for misaligned top things. Think of matching a _ to a _J
+                    var vOffset = (int)(Math.Round(candidate.ReferenceGapFromLineTop)) - extractedClone.PixelsFromTopOfLine;
+                    var adjustedCandidate = candidate;
+                    if(vOffset > 0)
                     {
-                        eDistance = GetMinDistanceSum(extracted.CombinedLocations, candidate.RelativeCombinedLocations) * 15f;
+                        adjustedCandidate = candidate.Clone();
+                        adjustedCandidate.RelativePixelLocations = candidate.RelativePixelLocations.Select(p => new Point3(p.X, p.Y + vOffset, p.Z)).ToArray();
+                        adjustedCandidate.RelativeBrights = candidate.RelativeBrights.Select(p => new Point3(p.X, p.Y + vOffset, p.Z)).ToArray();
+                        adjustedCandidate.RelativeEmptyLocations = candidate.RelativeEmptyLocations.Select(p => new Point(p.X, p.Y + vOffset)).ToArray();
+                        adjustedCandidate.RelativeCombinedLocations = candidate.RelativeCombinedLocations.Select(p => new Point(p.X, p.Y + vOffset)).ToArray();
+                        var test = GlyphDatabase.Instance.AllGlyphs.First(g => g.Character == candidate.Character);
                     }
-                    distances += eDistance;
-                }
-                else
-                {
-                    distances += GetMinDistanceSum(candiatePixels, extractedPixels);
-                    var eDistance = GetMinDistanceSum(candidate.RelativeEmptyLocations, extracted.RelativeEmptyLocations);
-                    if (eDistance >= MissedDistancePenalty)
+                    extractedClone.RelativeEmptyLocations = extractedClone.RelativeEmptyLocations.Where(e => e.X < candidate.ReferenceMaxWidth).ToArray();
+
+                    var distances = ScoreCandidate(extractedClone, useBrights, adjustedCandidate) / candidate.ReferenceMaxWidth;
+
+                    if (best == null || best.distanceSum > distances)
                     {
-                        eDistance = GetMinDistanceSum(candidate.RelativeCombinedLocations, extracted.CombinedLocations) * 15f;
+                        best = new BestMatch(distances, candidate);
+                        best.vOffset = vOffset;
                     }
-                    distances += eDistance;
                 }
 
-                if (distances < MissedDistancePenalty && (current == null || current.distanceSum > distances))
-                    current = new BestMatch(distances, candidate);
-            }
+                //var guid = Guid.NewGuid();
+                //if (origExtracted.Left == 136 && origExtracted.Top == 1119)
+                //    System.Diagnostics.Debugger.Break();
 
-            if (current == null && !allowOverlaps)
-                return IdentifyGlyph(extracted, !allowOverlaps);
-
-            //if (current.distanceSum > 1000)
-            //    Console.WriteLine("Possible error");
-
-            List<FuzzyGlyph> overlaps = new List<FuzzyGlyph>();
-            if (current != null && current.distanceSum > _debugWorstScore)
-            {
-                //Console.WriteLine($"New worst score seen {current.distanceSum} at {extracted.Left},{extracted.Top}");
-                _debugWorstScore = current.distanceSum;
-            }
-            if (current == null)
-            {
-#if DEBUG
-                extracted.Save($"overlap_{Guid.NewGuid().ToString()}_{extracted.Left},{extracted.Top}.png");
-#endif
-                return overlaps.ToArray();
-                //todo: fix tree code not handling way bigger DB
-                //System.Diagnostics.Debugger.Break();
-                //Console.WriteLine($"Probably an overlap at {extracted.Left}, {extracted.Top}.");
-                var tree = TreeMaker(extracted, new BestMatchNode(new BestMatch(0, null)));
-                //Console.WriteLine("Guess\tBranchScore");
-                //foreach (var child in tree.Children)
-                //{
-                //    Console.WriteLine($"{child.BestMatch.match.Character}\t{child.BestMatch.distanceSum}");
-                //}
-                var (branch, score, bestTree) = GetBestBranch(tree, new FuzzyGlyph[0]);
-                var flat = branch.Aggregate("", (acc, glyph) => acc + glyph.Character);
-                foreach (var g in branch)
+                //Subract what was seen
+                if (best != null)
                 {
-                    overlaps.Add(g);
+                    //origExtracted.Save($"debug_remove_{guid}_before.png");
+                    extracted = extracted.Subtract(best.match, best.vOffset);
+                    //if(extracted != null)
+                    //    extracted.Save($"debug_remove_{guid}_after.png");
+                    matches.Add(best);
                 }
-                return overlaps.ToArray();
-                //Console.WriteLine(flat);
-            }
-            //else
-            //    Console.Write(current.match.Character);
 
-            return current != null ? new[] { current.match } : overlaps.ToArray();
+                if (best == null || extracted == null)
+                    break;
+            }
+
+            return matches.Select(m => m.match).ToArray();
         }
 
         private static Func<FuzzyGlyph, bool> IsValidCandidate(ExtractedGlyph extracted)
@@ -370,6 +423,7 @@ namespace RelativeChatParser.Recognition
         {
             public double distanceSum;
             public FuzzyGlyph match;
+            public float vOffset = 0f;
 
             public BestMatch(double distance, FuzzyGlyph candidate)
             {

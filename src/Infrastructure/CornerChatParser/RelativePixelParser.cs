@@ -30,10 +30,7 @@ namespace RelativeChatParser
 
         static RelativePixelParser()
         {
-            NullGlyph = new FuzzyGlyph()
-            {
-                Character = "",
-            };
+            NullGlyph = new FuzzyGlyph() { Character = "" };
 
             //Load blacklists
             if (File.Exists(Path.Combine(DataHelper.OcrDataPathEnglish, @"MessageBlacklists.txt")))
