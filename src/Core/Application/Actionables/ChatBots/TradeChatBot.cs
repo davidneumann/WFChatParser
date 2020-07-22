@@ -430,9 +430,9 @@ namespace Application.Actionables.ChatBots
                             crop = cropper.CropToRiven(b);
 
                             _mouse.Click(3816, 2013);
-                            await Task.Delay(17);
+                            await Task.Delay(33);
                             _mouse.MoveTo(0, 0);
-                            await Task.Delay(17);
+                            await Task.Delay(33);
                             break;
                         }
                         else if (_screenStateHandler.GetScreenState(b) == ScreenState.GlyphWindow && _screenStateHandler.IsChatOpen(b))
