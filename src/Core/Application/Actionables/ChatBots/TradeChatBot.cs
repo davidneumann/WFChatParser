@@ -641,7 +641,8 @@ namespace Application.Actionables.ChatBots
                 var state = _screenStateHandler.GetScreenState(screen);
                 if (state == Enums.ScreenState.LoadingScreen || state == Enums.ScreenState.LoginScreen || state == Enums.ScreenState.DailyRewardScreenItem || state == Enums.ScreenState.DailyRewardScreenPlat)
                 {
-                    _logger.Log("On a login related screen. Restarting");
+                    var filepath = Path.Combine("debug", DateTime.Now.Ticks + ".png");
+                    _logger.Log($"On a login related screen, {state.ToString()}. Restarting. See {filepath}.");
                     await _dataSender.AsyncSendDebugMessage("Failed to move past login screen");
                     _currentState = BotStates.CloseWarframe;
                     _requestingControl = true;
