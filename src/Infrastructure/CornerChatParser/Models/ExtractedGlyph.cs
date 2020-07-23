@@ -109,15 +109,16 @@ namespace RelativeChatParser.Models
             return result;
         }
 
-        internal void Save(string filename)
+        internal void Save(string filename, bool brightsOnly = false)
         {
+            var pixels = brightsOnly ? RelativeBrights : RelativePixelLocations;
             using (var b = new Bitmap(Width, Height))
             {
                 for (int x = 0; x < b.Width; x++)
                 {
                     for (int y = 0; y < b.Height; y++)
                     {
-                        var pixel = RelativePixelLocations.FirstOrDefault(p => p.X == x && p.Y == y);
+                        var pixel = pixels.FirstOrDefault(p => p.X == x && p.Y == y);
                         if (pixel != null)
                         {
                             var v = (int)(pixel.Z * byte.MaxValue);
