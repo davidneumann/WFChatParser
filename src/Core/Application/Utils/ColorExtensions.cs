@@ -74,6 +74,66 @@ namespace Application.Utils
             return hsv;
         }
 
+        //Credit David H - (https://stackoverflow.com/a/6930407)
+        public static Color ToColor(this Hsv hsv)
+        {
+            double hh, p, q, t, ff;
+            long i;
+            double r = 0;
+            double g = 0;
+            double b = 0;
+            if (hsv.Saturation <= 0.0)
+            {
+                var v = (int)(hsv.Value * 255);
+                return Color.FromArgb(v, v, v);
+            }
+            hh = hsv.Hue;
+            if (hh >= 360.0) hh = 0.0;
+            hh /= 60.0;
+            i = (long)hh;
+            ff = hh - i;
+            p = hsv.Value * (1.0 - hsv.Saturation);
+            q = hsv.Value * (1.0 - (hsv.Saturation * ff));
+            t = hsv.Value * (1.0 - (hsv.Saturation * (1.0 - ff)));
+
+            switch (i)
+            {
+                case 0:
+                    r = hsv.Value;
+                    g = t;
+                    b = p;
+                    break;
+                case 1:
+                    r = q;
+                    g = hsv.Value;
+                    b = p;
+                    break;
+                case 2:
+                    r = p;
+                    g = hsv.Value;
+                    b = t;
+                    break;
+
+                case 3:
+                    r = p;
+                    g = q;
+                    b = hsv.Value;
+                    break;
+                case 4:
+                    r = t;
+                    g = p;
+                    b = hsv.Value;
+                    break;
+                case 5:
+                default:
+                    r = hsv.Value;
+                    g = p;
+                    b = q;
+                    break;
+            }
+            return Color.FromArgb((int)(r * 255), (int)(g * 255), (int)(b * 255));
+        }
+
         public static Hsv ToHsv(this Color color)
         {
             return LookupTable[color.R, color.G, color.B];
