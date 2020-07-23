@@ -202,7 +202,7 @@ namespace RelativeChatParser.Recognition
                 }
 
                 //var guid = Guid.NewGuid();
-                //if (origExtracted.Left == 136 && origExtracted.Top == 1119)
+                //if (origExtracted.Left == 2983 && origExtracted.Top == 820)
                 //    System.Diagnostics.Debugger.Break();
 
                 //Subract what was seen

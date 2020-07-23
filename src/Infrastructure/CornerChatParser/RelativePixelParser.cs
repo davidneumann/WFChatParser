@@ -134,12 +134,15 @@ namespace RelativeChatParser
             }
 
             //Phase 3: Parse all message bodies
+            _logger.Log("Getting full message bodies");
             var bodyWords = new Word[lineParseCount][];
             Parallel.For(0, lineParseCount, i =>
+            //for (int i = 0; i < lineParseCount; i++)
             {
                 if (headLinesValid[i])
                     bodyWords[i] = ConvertToWordsSingleLine(ExtractLettersSingleLine(i, imageCache, false, headLines[i].MessageBounds.Right + 1));
             });
+        //}
 
             var fullWords = new Word[lineParseCount][];
             for (int i = 0; i < lineParseCount; i++)

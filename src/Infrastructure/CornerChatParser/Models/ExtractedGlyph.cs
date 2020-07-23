@@ -60,7 +60,8 @@ namespace RelativeChatParser.Models
                 return null;
 
             //Wipe out anything to the left of the remaining leftmost bright. Allow an allowance of 1 column
-            var localXMin = Math.Max(0,  survivingBrights.Min(p => p.X) - 1);
+            //At least advance 1 pixel
+            var localXMin = Math.Max(1, Math.Max(glyph.ReferenceMinWidth - 1,  survivingBrights.Min(p => p.X) - 1));
 
             // Only keep points beyond the new true min x
             var survivingPixels = this.RelativePixelLocations.Where(p => p.X >= localXMin).ToArray();

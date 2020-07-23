@@ -68,7 +68,7 @@ namespace Application.Actionables
                 if (c.IsCancellationRequested)
                     break;
                 if (_rivenWorkQueue.Count > 0)
-                    _logger.Log("Worker thread taking new message from queue of " + _rivenWorkQueue.Count + " items");
+                    _logger.Log("RivenQueue: " + "Worker thread taking new message from queue of " + _rivenWorkQueue.Count + " items");
 
                 RivenParseTaskWorkItem item = null;
                 if (!_rivenWorkQueue.TryDequeue(out item) || item == null)
@@ -76,7 +76,7 @@ namespace Application.Actionables
                     Thread.Sleep(250);
                     continue;
                 }
-                _logger.Log("Worker queue working on: " + item.Message.Author + ":" + item.Message.EnhancedMessage);
+                _logger.Log("RivenQueue: " + "Worker queue working on: " + item.Message.Author + ":" + item.Message.EnhancedMessage);
                 var fullTimeSw = new Stopwatch();
                 fullTimeSw.Start();
                 var success = true;
@@ -86,16 +86,17 @@ namespace Application.Actionables
                     cropSW.Start();
                     using (var croppedCopy = new Bitmap(r.CroppedRivenBitmap))
                     {
-                        _logger.Log(item.Message.Author + "'s riven image cropped in: " + cropSW.ElapsedMilliseconds + " ms.");
+                        _logger.Log("RivenQueue: " + item.Message.Author + "'s riven image cropped in: " + cropSW.ElapsedMilliseconds + " ms.");
                         cropSW.Stop();
                         var cleanSW = new Stopwatch();
                         cleanSW.Start();
                         using (var cleaned = _rivenCleaner.CleanRiven(croppedCopy))
                         {
-                            _logger.Log(item.Message.Author + "'s riven image cleaned in: " + cleanSW.ElapsedMilliseconds + " ms.");
+                            _logger.Log("RivenQueue: " + item.Message.Author + "'s riven image cleaned in: " + cleanSW.ElapsedMilliseconds + " ms.");
                             cleanSW.Stop();
 
                             var riven = parser.ParseRivenTextFromImage(cleaned, r.RivenName);
+                            _logger.Log("RivenQueue: " + $"{item.Message.Author}'s riven now has id: {riven.ImageId}.");
 
                             riven.Polarity = parser.ParseRivenPolarityFromColorImage(croppedCopy);
                             riven.Rank = parser.ParseRivenRankFromColorImage(croppedCopy);
@@ -122,7 +123,7 @@ namespace Application.Actionables
                                 var saveSW = new Stopwatch();
                                 saveSW.Start();
                                 croppedCopy.Save(Path.Combine(outputDir, riven.ImageId.ToString() + ".png"));
-                                _logger.Log(item.Message.Author + "'s riven image saved to disk in: " + saveSW.ElapsedMilliseconds + " ms.");
+                                _logger.Log("RivenQueue: " + item.Message.Author + "'s riven image " + riven.ImageId + " saved to disk in: " + saveSW.ElapsedMilliseconds + " ms.");
                                 saveSW.Stop();
                             }
                             catch { }
@@ -134,7 +135,7 @@ namespace Application.Actionables
                 {
                     item.MessageCache.Enqueue(item.Message.Author + item.Message.EnhancedMessage);
                     item.MessageCacheDetails[item.Message.Author + item.Message.EnhancedMessage] = item.Message;
-                    _logger.Log("Riven parsed and added " + item.Message.Author + "'s message to cache in: " + fullTimeSw.ElapsedMilliseconds + " ms.");
+                    _logger.Log("RivenQueue: " + "Riven parsed and added " + item.Message.Author + "'s message to cache in: " + fullTimeSw.ElapsedMilliseconds + " ms.");
                 }
                 else
                 {
@@ -180,13 +181,13 @@ namespace Application.Actionables
                 var possibleBadState = true;
                 foreach (var bot in _bots)
                 {
-                    if(bot != null && bot.LastMessage != null && DateTime.UtcNow.Subtract(bot.LastMessage).TotalMinutes < 15)
+                    if (bot != null && bot.LastMessage != null && DateTime.UtcNow.Subtract(bot.LastMessage).TotalMinutes < 15)
                     {
                         possibleBadState = false;
                         break;
                     }
                 }
-                if(possibleBadState)
+                if (possibleBadState)
                 {
                     try
                     {
