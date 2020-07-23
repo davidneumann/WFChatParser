@@ -92,7 +92,7 @@ namespace RelativeChatParser
             return false;
         }
 
-        public ChatMessageLineResult[] ParseChatImage(Bitmap image, bool useCache, bool isScrolledUp, int lineParseCount)
+        public ChatMessageLineResult[] ParseChatImage(Bitmap image, bool useCache, bool isScrolledUp, int lineParseCount, bool debugMode = false)
         {
             lineParseCount = Math.Min(lineParseCount, LineScanner.LineOffsets.Length);
             var imageCache = new ImageCache(image);
@@ -128,6 +128,9 @@ namespace RelativeChatParser
                     headLinesValid[i] = true;
                     lastValidHeadLine = headLines[i];
                 }
+
+                if (debugMode)
+                    headLinesValid[i] = true;
             }
 
             //Phase 3: Parse all message bodies
@@ -165,13 +168,16 @@ namespace RelativeChatParser
                     continue;
                 }
 
+                if (!isScrolledUp && fullWords[i].Length == 0)
+                    continue;
+
                 //Append to last message if wrapped line
                 if (headLines[i] != null && headLines[i].RawMessage != null && headLines[i].RawMessage.Length > 0 && _kickRegex.Match(headLines[i].RawMessage).Success)
                 {
                     continue;
                 }
 
-                if (!fullWords[i].First().WordColor.IsTimestamp() && last != null)
+                if (!fullWords[i].First().WordColor.IsTimestamp() && last != null && !debugMode)
                 {
                     if (isScrolledUp && i == LineScanner.LineOffsets.Length - 1 && headLines[i] != null && headLines[i].LineType == LineType.Continuation && results.Count > 0)
                     {
@@ -194,14 +200,18 @@ namespace RelativeChatParser
                 }
             }
 
-            foreach (var result in results)
+            if (useCache)
             {
-                if(result != null && !string.IsNullOrEmpty(result.Username) && !string.IsNullOrEmpty(result.Timestamp))
+                foreach (var result in results)
                 {
-                    _timeUserCache.Enqueue(result.GetKey());
-                    _logger.Log($"Adding {result.GetKey()} to parser cache");
+                    if (result != null && !string.IsNullOrEmpty(result.Username) && !string.IsNullOrEmpty(result.Timestamp))
+                    {
+                        _timeUserCache.Enqueue(result.GetKey());
+                        _logger.Log($"Adding {result.GetKey()} to parser cache");
+                    }
                 }
             }
+
             return results.ToArray();
         }
 
@@ -440,6 +450,11 @@ namespace RelativeChatParser
             if (currentWord.Letters.Count > 0)
                 lineWords.Add(currentWord);
             return lineWords.ToArray();
+        }
+
+        public ChatMessageLineResult[] ParseChatImage(Bitmap image, bool useCache, bool isScrolledUp, int lineParseCount)
+        {
+            return ParseChatImage(image, useCache, isScrolledUp, lineParseCount, false);
         }
 
         private class EnhancedMessage

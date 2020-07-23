@@ -18,15 +18,18 @@ namespace RelativeChatParser.Recognition
     public static class RelativePixelGlyphIdentifier
     {
         public const int MissedDistancePenalty = 1000;
+#if DEBUG
+        private const bool _stopOnCords = false;
+#endif
         public static FuzzyGlyph[] IdentifyGlyph(ExtractedGlyph extracted, bool allowOverlaps = false)
         {
 #if DEBUG
-            //if (extracted.Left >= 217 && extracted.Top >= 970
-            //    && extracted.Left <= 226 && extracted.Top <= 996)
-            //{
-            //    extracted.Save("bad_glyph.png");
-            //    System.Diagnostics.Debugger.Break();
-            //}
+            if (extracted.Left >= 202 && extracted.Top >= 1468
+                && extracted.Left <= 221 && extracted.Top <= 1494
+                && _stopOnCords)
+            {
+                System.Diagnostics.Debugger.Break();
+            }
 #endif
 
             //var candidates = GlyphDatabase.Instance.AllGlyphs.Where(IsValidCandidate(extracted));
@@ -36,9 +39,30 @@ namespace RelativeChatParser.Recognition
                                             && extracted.PixelsFromTopOfLine <= g.ReferenceGapFromLineTop + 2).ToArray();
             bool useBrights = FilterCandidates(extracted, ref candidates);
 
+#if DEBUG
+            if (extracted.Left >= 202 && extracted.Top >= 1468
+                && extracted.Left <= 221 && extracted.Top <= 1494
+                && _stopOnCords)
+            {
+                extracted.Save("bad_glyph.png", useBrights);
+            }
+#endif
+
             BestMatch current = null;
             foreach (var candidate in candidates)
             {
+#if DEBUG
+                if (extracted.Left >= 202 && extracted.Top >= 1468
+                    && extracted.Left <= 221 && extracted.Top <= 1494
+                    && _stopOnCords)
+                {
+                    var name = candidate.Character;
+                    if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+                        name = Guid.NewGuid().ToString();
+                    candidate.SaveVisualization("bad_glyph_candidate_" + name + ".png", useBrights);
+                    //System.Diagnostics.Debugger.Break();
+                }
+#endif
                 double distances = ScoreCandidate(extracted, useBrights, candidate);
 
                 if (distances < MissedDistancePenalty && (current == null || current.distanceSum > distances))
@@ -87,6 +111,10 @@ namespace RelativeChatParser.Recognition
                     candidates = likelyMatches;
                 useBrights = false;
             }
+            
+            // Some characters don't match well with only brights
+            if (candidates.Any(c => c.Character == "n" || c.Character == "o" || c.Character == "u" || c.Character == "D" || c.Character == "O" || c.Character == "6"))
+                useBrights = false;
 
             return useBrights;
         }
@@ -102,7 +130,7 @@ namespace RelativeChatParser.Recognition
             if (extractedPixels.Length > candiatePixels.Length)
             {
                 distances += GetMinDistanceSum(extractedPixels, candiatePixels);
-                var eDistance = GetMinDistanceSum(extracted.RelativeEmptyLocations, candidate.RelativeEmptyLocations);
+                var eDistance = GetMinDistanceSum(extracted.RelativeEmptyLocations, candidate.RelativeEmptyLocations) * 2f;
                 if (eDistance >= MissedDistancePenalty)
                 {
                     eDistance = GetMinDistanceSum(extracted.CombinedLocations, candidate.RelativeCombinedLocations) * 15f;
@@ -112,7 +140,7 @@ namespace RelativeChatParser.Recognition
             else
             {
                 distances += GetMinDistanceSum(candiatePixels, extractedPixels);
-                var eDistance = GetMinDistanceSum(candidate.RelativeEmptyLocations, extracted.RelativeEmptyLocations);
+                var eDistance = GetMinDistanceSum(candidate.RelativeEmptyLocations, extracted.RelativeEmptyLocations) * 2f;
                 if (eDistance >= MissedDistancePenalty)
                 {
                     eDistance = GetMinDistanceSum(candidate.RelativeCombinedLocations, extracted.CombinedLocations) * 15f;

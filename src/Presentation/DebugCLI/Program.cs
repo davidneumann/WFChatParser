@@ -442,7 +442,7 @@ namespace DebugCLI
         {
             var ignore = RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs;
             var parser = new RelativeChatParser.RelativePixelParser(new DummyLogger());
-            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps";
+            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Spaces";
             var allFiles = Directory.GetFiles(inputDir);
             var sw = new Stopwatch();
             sw.Start();
@@ -458,7 +458,7 @@ namespace DebugCLI
                 var inputImg = input + ".png";
                 ImageCleaner.SaveSoftMask(inputImg, "current.png");
                 var b = new Bitmap(inputImg);
-                var chatLines = parser.ParseChatImage(b, false, false, 27).Select(line => line.RawMessage.Replace(" ", "")).ToArray();
+                var chatLines = parser.ParseChatImage(b, false, false, 27, true).Select(line => line.RawMessage.Replace(" ", "")).ToArray();
                 //Console.WriteLine();
 
                 var expectedLines = File.ReadAllLines(inputTxt).Select(line => line.Replace(" ", "").Trim()).ToArray();
@@ -561,40 +561,7 @@ namespace DebugCLI
             Directory.CreateDirectory(glyphVisualizerDir);
             foreach (var glyph in finalGlyphs)
             {
-                var b = new Bitmap(glyph.ReferenceMaxWidth, glyph.ReferenceMaxHeight);
-                var pixelColor = Color.White;
-                var emptyColor = Color.Black;
-                var missingColor = Color.Magenta;
-                var bothColor = Color.CornflowerBlue;
-                for (int x = 0; x < b.Width; x++)
-                {
-                    for (int y = 0; y < b.Height; y++)
-                    {
-                        bool isPixel = glyph.RelativePixelLocations.Any(p => p.X == x && p.Y == y);
-                        bool isEmpty = glyph.RelativeEmptyLocations.Any(p => p.X == x && p.Y == y);
-                        if (isPixel)
-                        {
-                            var pixel = glyph.RelativePixelLocations.First(p => p.X == x && p.Y == y);
-                            var v = (int)(pixel.Z * byte.MaxValue);
-                            if (isPixel && !isEmpty)
-                            {
-                                var c = Color.FromArgb(v, v, v);
-                                b.SetPixel(x, y, c);
-                            }
-                            else if (isEmpty && isPixel)
-                            {
-                                var c = Color.FromArgb(0, 0, v);
-                                b.SetPixel(x, y, c);
-                            }
-                        }
-                        else if (isEmpty && !isPixel)
-                            b.SetPixel(x, y, emptyColor);
-                        else
-                            b.SetPixel(x, y, missingColor);
-                    }
-                }
-
-                b.Save(Path.Combine(glyphVisualizerDir, (int)glyph.Character[0] + ".png"));
+                glyph.SaveVisualization(Path.Combine(glyphVisualizerDir, (int)glyph.Character[0] + ".png"), false);
             }
             //var imageCount = 0;
             //foreach (var glyph in finalGlyphs)
