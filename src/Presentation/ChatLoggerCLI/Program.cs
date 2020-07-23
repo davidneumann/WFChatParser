@@ -64,6 +64,7 @@ namespace ChatLoggerCLI
             _ = Task.Run(_dataSender.ConnectAsync);
 
             var logger = new Application.Logger.Logger(_dataSender, _cancellationSource.Token);
+            _dataSender._logger = logger;
 
             try
             {

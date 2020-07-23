@@ -49,6 +49,20 @@ namespace Application.Actionables.ChatBots
         private ConcurrentDictionary<string, ChatMessageModel> _messageCacheDetails = new ConcurrentDictionary<string, ChatMessageModel>();
         private int _failedPostLoginScreens;
 
+
+        public const string _debugBadNamesFilename = "badnames.txt";
+        static TradeChatBot()
+        {
+            var badNames = new FileInfo(_debugBadNamesFilename);
+            if(badNames.Exists)
+            {
+                foreach (var line in File.ReadAllLines(_debugBadNamesFilename))
+                {
+                    _debugBadNames.Add(line);
+                }
+            }
+        }
+
         public TradeChatBot(ConcurrentQueue<RivenParseTaskWorkItem> workQueue,
             IRivenParser rivenCropper,
             CancellationToken cancellationToken,
@@ -554,21 +568,22 @@ namespace Application.Actionables.ChatBots
             return true;
         }
 
-        private static string[] _debugBadNames = new string[] {
+        public static HashSet<string> _debugBadNames = new HashSet<string>(new string[] {
 "O4rK4z",
 "UndeadWarTuroip",
 "-Posher-",
 "Cre",
 "alightoing13",
 "MrNoobioater"
-        };
+        });
+
         private ChatMessageModel MakeChatModel(LineParseResult.ChatMessageLineResult line)
         {
             var badNameRegex = new Regex("[^-A-Za-z0-9._]");
             var m = line.RawMessage;
             string debugReason = string.Empty;
             var timestamp = m.Substring(0, 7).Trim();
-            var username = line.Username;
+            var username = line.Username.Trim();
             try
             {
                 if (username.Contains(" ") || username.Contains(@"\/") || username.Contains("]") || username.Contains("[") || badNameRegex.Match(username).Success)
@@ -579,14 +594,17 @@ namespace Application.Actionables.ChatBots
                 if (!Regex.Match(line.RawMessage, @"^(\[\d\d:\d\d\])\s*((?:\[DE\])?[-A-Za-z0-9._]+)[:]\s*(.+)").Success)
                     debugReason += "Invalid username or timestamp!" + "\t\r\n" + line.RawMessage + "\n";
 
-                if (username.Trim().Length < 3)
+                if (username.Length < 3)
                     debugReason += $"Name is less than 3 characters: {username}\n";
 
-                if (username.Trim().Contains(' '))
+                if (username.Contains(' '))
                     debugReason += $"Name contains a space: {username}\n";
 
-                if (_debugBadNames.Contains(username.Trim()))
+                if (_debugBadNames.Contains(username.ToLower()))
                     debugReason += $"Known bad name detected: {username}";
+
+                if (username.Contains(".__"))
+                    debugReason += $"Possible bad name due to .__";
             }
             catch { debugReason += "Bade name: " + username + "\n"; }
             var cm = new ChatMessageModel()

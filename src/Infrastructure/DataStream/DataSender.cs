@@ -10,8 +10,10 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Application.Actionables.ChatBots;
 using Application.ChatMessages.Model;
 using Application.Interfaces;
+using Application.Logger;
 using Application.LogParser;
 using ImageMagick;
 using Newtonsoft.Json;
@@ -45,6 +47,8 @@ namespace DataStream
 
         public event EventHandler RequestToKill;
         public event EventHandler<SaveEventArgs> RequestSaveAll;
+
+        public ILogger _logger;
 
         public ClientWebsocketDataSender(Uri uri, IEnumerable<string> connectMessages,
             string messagePrefix,
@@ -287,6 +291,9 @@ namespace DataStream
 
         private void Receive(string message)
         {
+            if (_logger != null)
+                _logger.Log($"Datasender received: {message}");
+
             if (message.Substring(message.LastIndexOf(":") + 1).Trim() == "KILL")
             {
                 try { AsyncSendDebugMessage("Kill acknowledged. Requesting a stop.").Wait(); }
@@ -313,6 +320,29 @@ namespace DataStream
             {
                 var name = message.Substring(message.IndexOf(":SAVE") + 5).Trim();
                 RequestSaveAll?.Invoke(this, new SaveEventArgs(name));
+            }
+            else if (message.Substring(message.LastIndexOf(":") + 1).Trim().StartsWith("BADNAME"))
+            {
+                var name = message.Substring(message.IndexOf("BADNAME") + 7).Trim();
+                try
+                {
+                    lock (TradeChatBot._debugBadNames)
+                    {
+                        var orig = TradeChatBot._debugBadNames.Count;
+                        TradeChatBot._debugBadNames.Add(name.ToLower());
+                        File.WriteAllLines(TradeChatBot._debugBadNamesFilename, TradeChatBot._debugBadNames);
+                        AsyncSendDebugMessage($"Added {name} to bad names. Old count {orig}. New count {TradeChatBot._debugBadNames.Count}");
+                    }
+                }
+                catch (Exception e)
+                {  
+                    if(_logger != null)
+                    {
+                        Console.WriteLine(e.ToString());
+                        _logger.Log(e.ToString());
+                        AsyncSendDebugMessage(e.ToString());
+                    }
+                }
             }
         }
 
