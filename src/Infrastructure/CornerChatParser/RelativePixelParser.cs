@@ -11,6 +11,7 @@ using RelativeChatParser.Models;
 using RelativeChatParser.Recognition;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -27,6 +28,10 @@ namespace RelativeChatParser
         private Queue<string> _timeUserCache = new Queue<string>();
         private static List<Regex> _blacklistedRegex = new List<Regex>();
         private static readonly Regex _kickRegex =  new Regex(@"\w was kicked.", RegexOptions.Compiled);
+
+        private static object _debugObjectLock = new object();
+        private static ulong _debugGlyphsParsed = 0;
+        private static ulong _debugTotalMs = 0;
 
         static RelativePixelParser()
         {
@@ -94,6 +99,8 @@ namespace RelativeChatParser
 
         public ChatMessageLineResult[] ParseChatImage(Bitmap image, bool useCache, bool isScrolledUp, int lineParseCount, bool debugMode = false)
         {
+            var sw = new Stopwatch();
+            sw.Start();
             lineParseCount = Math.Min(lineParseCount, LineScanner.LineOffsets.Length);
             var imageCache = new ImageCache(image);
             while (_timeUserCache.Count > 75)
@@ -136,11 +143,14 @@ namespace RelativeChatParser
             //Phase 3: Parse all message bodies
             _logger.Log("Getting full message bodies");
             var bodyWords = new Word[lineParseCount][];
+            var glyphCountLock = new object();
             Parallel.For(0, lineParseCount, i =>
             //for (int i = 0; i < lineParseCount; i++)
             {
                 if (headLinesValid[i])
+                {
                     bodyWords[i] = ConvertToWordsSingleLine(ExtractLettersSingleLine(i, imageCache, false, headLines[i].MessageBounds.Right + 1));
+                }
             });
         //}
 
@@ -210,10 +220,38 @@ namespace RelativeChatParser
                     if (result != null && !string.IsNullOrEmpty(result.Username) && !string.IsNullOrEmpty(result.Timestamp))
                     {
                         _timeUserCache.Enqueue(result.GetKey());
-                        _logger.Log($"Adding {result.GetKey()} to parser cache");
+                        //_logger.Log($"Adding {result.GetKey()} to parser cache");
                     }
                 }
             }
+
+            try
+            {
+                sw.Stop();
+                var glyphCount = 0;
+                for (int i = 0; i < fullWords.Length; i++)
+                {
+                    if (fullWords[i] != null)
+                    {
+                        glyphCount += fullWords[i].Sum(word => !string.IsNullOrEmpty(word.ToString().Trim()) ? word.Letters.Count : 0);
+                    }
+                }
+                var ms = sw.ElapsedMilliseconds;
+                var msPGlyph = glyphCount == 0 ? 0 : ms / glyphCount;
+                var glyphsPSecond = glyphCount / sw.Elapsed.TotalSeconds;
+                _logger.Log($"Parsed {glyphCount} glyphs in {ms}ms. {msPGlyph} ms/glyph. {glyphsPSecond} glphs/second.");
+                lock (_debugObjectLock)
+                {
+                    _debugGlyphsParsed += (ulong)glyphCount;
+                    if(ms >= 0)
+                        _debugTotalMs += (ulong)ms;
+                    var totalMsPGlyph = _debugGlyphsParsed == 0 ? 0 : _debugTotalMs / _debugGlyphsParsed;
+                    glyphsPSecond = _debugGlyphsParsed / (_debugTotalMs / 1000f);
+                    _logger.Log($"Total Parsed {_debugGlyphsParsed} glyphs in {_debugTotalMs}ms. {totalMsPGlyph} ms/glyph. {glyphsPSecond} glphs/second.");
+                }
+            }
+            catch (Exception e)
+            { }
 
             return results.ToArray();
         }

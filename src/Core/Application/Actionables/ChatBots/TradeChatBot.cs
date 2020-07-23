@@ -595,18 +595,18 @@ namespace Application.Actionables.ChatBots
                     debugReason += "Invalid username or timestamp!" + "\t\r\n" + line.RawMessage + "\n";
 
                 if (username.Length < 3)
-                    debugReason += $"Name is less than 3 characters: {username}\n";
+                    debugReason += $"Name is less than 3 characters: `{username}`\n";
 
                 if (username.Contains(' '))
-                    debugReason += $"Name contains a space: {username}\n";
+                    debugReason += $"Name contains a space: `{username}`\n";
 
                 if (_debugBadNames.Contains(username.ToLower()))
-                    debugReason += $"Known bad name detected: {username}";
+                    debugReason += $"Known bad name detected: `{username}`\n";
 
                 if (username.Contains(".__"))
-                    debugReason += $"Possible bad name {username} due to .__";
+                    debugReason += $"Possible bad name `{username}` due to .__\n";
             }
-            catch { debugReason += "Bade name: " + username + "\n"; }
+            catch { debugReason += "Bade name: `" + username + "`\n"; }
             var cm = new ChatMessageModel()
             {
                 Raw = m,
