@@ -604,7 +604,7 @@ namespace Application.Actionables.ChatBots
                     debugReason += $"Known bad name detected: {username}";
 
                 if (username.Contains(".__"))
-                    debugReason += $"Possible bad name due to .__";
+                    debugReason += $"Possible bad name {username} due to .__";
             }
             catch { debugReason += "Bade name: " + username + "\n"; }
             var cm = new ChatMessageModel()

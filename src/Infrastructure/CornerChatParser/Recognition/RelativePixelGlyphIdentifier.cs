@@ -24,12 +24,14 @@ namespace RelativeChatParser.Recognition
         public static FuzzyGlyph[] IdentifyGlyph(ExtractedGlyph extracted, bool allowOverlaps = false)
         {
 #if DEBUG
-            if (extracted.Left >= 202 && extracted.Top >= 1468
-                && extracted.Left <= 221 && extracted.Top <= 1494
-                && _stopOnCords)
-            {
-                System.Diagnostics.Debugger.Break();
-            }
+            var debugLeft = 187;
+            var debugTop = 941;
+            var debugRight = 236;
+            var debugBottom = 947;
+            //if (ShouldDoDebugGlyphStuff(extracted, debugLeft, debugTop, debugRight, debugBottom))
+            //{
+            //    System.Diagnostics.Debugger.Break();
+            //}
 #endif
 
             //var candidates = GlyphDatabase.Instance.AllGlyphs.Where(IsValidCandidate(extracted));
@@ -40,8 +42,8 @@ namespace RelativeChatParser.Recognition
             bool useBrights = FilterCandidates(extracted, ref candidates);
 
 #if DEBUG
-            if (extracted.Left >= 202 && extracted.Top >= 1468
-                && extracted.Left <= 221 && extracted.Top <= 1494
+            if (extracted.Left >= debugLeft && extracted.Top >= debugTop
+                && extracted.Left <= debugRight && extracted.Top <= debugBottom
                 && _stopOnCords)
             {
                 extracted.Save("bad_glyph.png", useBrights);
@@ -52,8 +54,8 @@ namespace RelativeChatParser.Recognition
             foreach (var candidate in candidates)
             {
 #if DEBUG
-                if (extracted.Left >= 202 && extracted.Top >= 1468
-                    && extracted.Left <= 221 && extracted.Top <= 1494
+                if (extracted.Left >= debugLeft && extracted.Top >= debugTop
+                    && extracted.Left <= debugRight && extracted.Top <= debugBottom
                     && _stopOnCords)
                 {
                     var name = candidate.Character;
@@ -77,12 +79,23 @@ namespace RelativeChatParser.Recognition
             {
 #if DEBUG
                 extracted.Save($"overlap_{Guid.NewGuid().ToString()}_{extracted.Left},{extracted.Top}.png");
+                if (ShouldDoDebugGlyphStuff(extracted, debugLeft, debugTop, debugRight, debugBottom))
+                    System.Diagnostics.Debugger.Break();
 #endif
                 return ExtractOverlap(extracted);
             }
 
             return current != null ? new[] { current.match } : new FuzzyGlyph[0];
         }
+
+#if DEBUG
+        private static bool ShouldDoDebugGlyphStuff(ExtractedGlyph extracted, int debugLeft, int debugTop, int debugRight, int debugBottom)
+        {
+            return extracted.Left >= debugLeft && extracted.Top >= debugTop
+                            && extracted.Left <= debugRight && extracted.Top <= debugBottom
+                            && _stopOnCords;
+        }
+#endif
 
         private static bool FilterCandidates(ExtractedGlyph extracted, ref FuzzyGlyph[] candidates)
         {
@@ -111,7 +124,10 @@ namespace RelativeChatParser.Recognition
                     candidates = likelyMatches;
                 useBrights = false;
             }
-            
+
+            if (candidates.Any(c => c.Character == "." || c.Character == "_"))
+                useBrights = false;
+
             // Some characters don't match well with only brights
             if (candidates.Any(c => c.Character == "n" || c.Character == "o" || c.Character == "u" || c.Character == "D" || c.Character == "O" || c.Character == "6"))
                 useBrights = false;
@@ -153,9 +169,17 @@ namespace RelativeChatParser.Recognition
 
         private static FuzzyGlyph[] ExtractOverlap(ExtractedGlyph extracted)
         {
+            //todo: Determine if this should be inside the while loop below.
             var candidates = GlyphDatabase.Instance.CharsThatCanOverlapByDescSize()
                 .Where(g => g.ReferenceMaxHeight <= extracted.Height + 1 && g.ReferenceGapFromLineTop >= extracted.PixelsFromTopOfLine - 1 && g.ReferenceMinWidth <= extracted.Width + 1).ToArray();
 
+            var maxHeight = 0;
+            var maxWidth = 0;
+            foreach (var c in candidates)
+            {
+                maxHeight = Math.Max(maxHeight, c.ReferenceMaxHeight);
+                maxWidth = Math.Max(maxWidth, c.ReferenceMaxWidth);
+            }
 
             var matches = new List<BestMatch>();
             //var origExtractedEmpties = extracted.RelativeEmptyLocations;
@@ -165,34 +189,47 @@ namespace RelativeChatParser.Recognition
             //var origRelativeCombinedLocations = extracted.CombinedLocations;
             var origExtracted = extracted.Clone();
 
+#if DEBUG
+            var guid = Guid.NewGuid().ToString();
+#endif
+
             while (extracted != null && extracted.RelativeBrights.Length > 0)
             {
                 var useBrights = FilterCandidates(extracted, ref candidates);
+#if DEBUG
+                extracted.Save($"extracted_source_{guid}.png");
+#endif
 
                 BestMatch best = null;
                 foreach (var candidate in candidates)
                 {
+                    int right = candidate.ReferenceMaxWidth;
+                    if (maxHeight <= 4)
+                        right = maxWidth;
+
                     var extractedClone = extracted.Clone();
-                    extractedClone.RelativePixelLocations = extractedClone.RelativePixelLocations.Where(p => p.X < candidate.ReferenceMaxWidth).ToArray();
-                    extractedClone.RelativeBrights = extractedClone.RelativeBrights.Where(p => p.X < candidate.ReferenceMaxWidth).ToArray();
-                    extractedClone.RelativeEmptyLocations = extractedClone.RelativeEmptyLocations.Where(p => p.X < candidate.ReferenceMaxWidth).ToArray();
-                    extractedClone.CombinedLocations = extractedClone.CombinedLocations.Where(p => p.X < candidate.ReferenceMaxWidth).ToArray();
+                    extractedClone.RelativePixelLocations = extractedClone.RelativePixelLocations.Where(p => p.X < right).ToArray();
+                    extractedClone.RelativeBrights = extractedClone.RelativeBrights.Where(p => p.X < right).ToArray();
+                    extractedClone.RelativeEmptyLocations = extractedClone.RelativeEmptyLocations.Where(p => p.X < right).ToArray();
+                    extractedClone.CombinedLocations = extractedClone.CombinedLocations.Where(p => p.X < right).ToArray();
 
                     //The candidate needs to have its details moved down to account for misaligned top things. Think of matching a _ to a _J
                     var vOffset = (int)(Math.Round(candidate.ReferenceGapFromLineTop)) - extractedClone.PixelsFromTopOfLine;
                     var adjustedCandidate = candidate;
-                    if(vOffset > 0)
+                    if (vOffset != 0)
                     {
                         adjustedCandidate = candidate.Clone();
                         adjustedCandidate.RelativePixelLocations = candidate.RelativePixelLocations.Select(p => new Point3(p.X, p.Y + vOffset, p.Z)).ToArray();
                         adjustedCandidate.RelativeBrights = candidate.RelativeBrights.Select(p => new Point3(p.X, p.Y + vOffset, p.Z)).ToArray();
                         adjustedCandidate.RelativeEmptyLocations = candidate.RelativeEmptyLocations.Select(p => new Point(p.X, p.Y + vOffset)).ToArray();
                         adjustedCandidate.RelativeCombinedLocations = candidate.RelativeCombinedLocations.Select(p => new Point(p.X, p.Y + vOffset)).ToArray();
-                        var test = GlyphDatabase.Instance.AllGlyphs.First(g => g.Character == candidate.Character);
                     }
-                    extractedClone.RelativeEmptyLocations = extractedClone.RelativeEmptyLocations.Where(e => e.X < candidate.ReferenceMaxWidth).ToArray();
+                    extractedClone.RelativeEmptyLocations = extractedClone.RelativeEmptyLocations.Where(e => e.X < right).ToArray();
 
-                    var distances = ScoreCandidate(extractedClone, useBrights, adjustedCandidate) / candidate.ReferenceMaxWidth;
+#if DEBUG
+                    adjustedCandidate.SaveVisualization($"extracted_candidate_{candidate.Character}_{guid}.png", useBrights);
+#endif
+                    var distances = ScoreCandidate(extractedClone, useBrights, adjustedCandidate) / right;
 
                     if (best == null || best.distanceSum > distances)
                     {
