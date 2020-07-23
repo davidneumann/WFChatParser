@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Linq;
 using System.Numerics;
 
 namespace RelativeChatParser.Models
@@ -52,6 +53,45 @@ namespace RelativeChatParser.Models
             clone.RelativeCombinedLocations = (Point[])RelativeCombinedLocations.Clone();
 
             return clone;
+        }
+
+        public void SaveVisualization(string fileName, bool brightsOnly)
+        {
+            var b = new Bitmap(ReferenceMaxWidth, ReferenceMaxHeight);
+            var pixelColor = Color.White;
+            var emptyColor = Color.Black;
+            var missingColor = Color.Magenta;
+            var bothColor = Color.CornflowerBlue;
+            var pixels = brightsOnly ? RelativeBrights : RelativePixelLocations;
+            for (int x = 0; x < b.Width; x++)
+            {
+                for (int y = 0; y < b.Height; y++)
+                {
+                    bool isPixel = pixels.Any(p => p.X == x && p.Y == y);
+                    bool isEmpty = RelativeEmptyLocations.Any(p => p.X == x && p.Y == y);
+                    if (isPixel)
+                    {
+                        var pixel = pixels.First(p => p.X == x && p.Y == y);
+                        var v = (int)(pixel.Z * byte.MaxValue);
+                        if (isPixel && !isEmpty)
+                        {
+                            var c = Color.FromArgb(v, v, v);
+                            b.SetPixel(x, y, c);
+                        }
+                        else if (isEmpty && isPixel)
+                        {
+                            var c = Color.FromArgb(0, 0, v);
+                            b.SetPixel(x, y, c);
+                        }
+                    }
+                    else if (isEmpty && !isPixel)
+                        b.SetPixel(x, y, emptyColor);
+                    else
+                        b.SetPixel(x, y, missingColor);
+                }
+            }
+
+            b.Save(fileName);
         }
     }
 
