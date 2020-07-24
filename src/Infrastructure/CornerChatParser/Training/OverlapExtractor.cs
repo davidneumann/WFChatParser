@@ -1,5 +1,6 @@
 ﻿using Application.ChatLineExtractor;
 using Application.LineParseResult;
+using Application.Utils;
 using RelativeChatParser.Extraction;
 using RelativeChatParser.Models;
 using RelativeChatParser.Recognition;
@@ -21,6 +22,22 @@ namespace RelativeChatParser.Training
             var overlaps = new ConcurrentBag<Overlap>();
             using (var b = new Bitmap(imagePath))
             {
+                //Boost all the Vs in the chatbox
+                for (int x = LineScanner.ChatLeftX; x < LineScanner.ChatWidth + LineScanner.ChatLeftX; x++)
+                {
+                    for (int y = LineScanner.LineOffsets[0]; y < LineScanner.LineOffsets.Max() + LineScanner.Lineheight; y++)
+                    {
+                        var hsv = b.GetPixel(x, y).ToHsv();
+                        if (hsv.Value > 0.35)
+                        {
+                            hsv.Value = Math.Min(1f, hsv.Value * 2f);
+                            var c = hsv.ToColor();
+                            b.SetPixel(x, y, c);
+                        }
+                    }
+                }
+                b.Save("debug_boosted.png");
+
                 var ic = new ImageCache(b);
                 ic.DebugFilename = imagePath;
                 var expectedLines = File.ReadAllLines(textPath).Select(line => line.Replace(" ","").Trim()).ToArray();

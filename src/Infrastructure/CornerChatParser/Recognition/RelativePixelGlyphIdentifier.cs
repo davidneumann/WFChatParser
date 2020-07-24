@@ -24,14 +24,14 @@ namespace RelativeChatParser.Recognition
         public static FuzzyGlyph[] IdentifyGlyph(ExtractedGlyph extracted, bool allowOverlaps = false)
         {
 #if DEBUG
-            var debugLeft = 187;
-            var debugTop = 941;
-            var debugRight = 236;
-            var debugBottom = 947;
-            //if (ShouldDoDebugGlyphStuff(extracted, debugLeft, debugTop, debugRight, debugBottom))
-            //{
-            //    System.Diagnostics.Debugger.Break();
-            //}
+            var debugLeft = 134;
+            var debugTop = 1413;
+            var debugRight = 155;
+            var debugBottom = 1448;
+            if (ShouldDoDebugGlyphStuff(extracted, debugLeft, debugTop, debugRight, debugBottom))
+            {
+                System.Diagnostics.Debugger.Break();
+            }
 #endif
 
             //var candidates = GlyphDatabase.Instance.AllGlyphs.Where(IsValidCandidate(extracted));
@@ -39,12 +39,12 @@ namespace RelativeChatParser.Recognition
             //Also remove anything that doesn't look to be aligned correctly
             candidates = candidates.Where(g => extracted.PixelsFromTopOfLine >= g.ReferenceGapFromLineTop - 2
                                             && extracted.PixelsFromTopOfLine <= g.ReferenceGapFromLineTop + 2).ToArray();
+            if (!allowOverlaps && candidates.Length == 0)
+                return IdentifyGlyph(extracted, true);
             bool useBrights = FilterCandidates(extracted, ref candidates);
 
 #if DEBUG
-            if (extracted.Left >= debugLeft && extracted.Top >= debugTop
-                && extracted.Left <= debugRight && extracted.Top <= debugBottom
-                && _stopOnCords)
+            if (ShouldDoDebugGlyphStuff(extracted, debugLeft, debugTop, debugRight, debugBottom))
             {
                 extracted.Save("bad_glyph.png", useBrights);
             }
@@ -54,9 +54,7 @@ namespace RelativeChatParser.Recognition
             foreach (var candidate in candidates)
             {
 #if DEBUG
-                if (extracted.Left >= debugLeft && extracted.Top >= debugTop
-                    && extracted.Left <= debugRight && extracted.Top <= debugBottom
-                    && _stopOnCords)
+                if (ShouldDoDebugGlyphStuff(extracted, debugLeft, debugTop, debugRight, debugBottom))
                 {
                     var name = candidate.Character;
                     if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
@@ -84,6 +82,11 @@ namespace RelativeChatParser.Recognition
 #endif
                 return ExtractOverlap(extracted);
             }
+
+#if DEBUG
+            if (ShouldDoDebugGlyphStuff(extracted, debugLeft, debugTop, debugRight, debugBottom))
+                System.Diagnostics.Debugger.Break();
+#endif
 
             return current != null ? new[] { current.match } : new FuzzyGlyph[0];
         }
@@ -129,7 +132,7 @@ namespace RelativeChatParser.Recognition
                 useBrights = false;
 
             // Some characters don't match well with only brights
-            if (candidates.Any(c => c.Character == "n" || c.Character == "o" || c.Character == "u" || c.Character == "D" || c.Character == "O" || c.Character == "6"))
+            if (candidates.Any(c => c.Character == "n" || c.Character == "o" || c.Character == "u" || c.Character == "D" || c.Character == "O" || c.Character == "6" || c.Character.Length > 1))
                 useBrights = false;
 
             return useBrights;

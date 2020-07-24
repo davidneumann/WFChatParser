@@ -98,8 +98,9 @@ namespace DebugCLI
             //NewTrainingVerifier();
             //CornerGlyphShim();
             //ParseImageTest();
-            //LineExtractorTest();
             //GetCrednetials();
+
+            //LineExtractorTest();
 
             //RelativeParserWithSpacesShim();
 
@@ -107,16 +108,16 @@ namespace DebugCLI
             //RelativeParserGlyphTrainer();
             //RelativeParserSpaceTrainer();
             //OverlapExtractingShim();
-            //RelativeParserTest();
+            RelativeParserTest();
 
-            RelativeCacheShim();
+            //RelativeCacheShim();
         }
 
         private static void RelativeCacheShim()
         {
             var cp = new RelativePixelParser(new DummyLogger(true));
             var sw = new Stopwatch();
-            const string input = @"637310893487617343.png";
+            const string input = @"637311257709603031.png";
             Console.WriteLine($"Parsing {input}");
             ImageCleaner.SaveSoftMask(input, "debug_screen.png");
             using (var b = new Bitmap(input))
@@ -305,21 +306,28 @@ namespace DebugCLI
 
         private static void LineExtractorTest(Dictionary<int, int> knownCounts = null)
         {
+            var maxCount = 0;
+            if (knownCounts != null)
+                maxCount = knownCounts.Max(c => c.Value);
             Console.WriteLine("Known counts null: " + (knownCounts == null));
             var lineCounts = new Dictionary<int, int>();
             var count = 0;
             var heightTotal = 0;
+            foreach (var file in Directory.GetFiles("debug_lines"))
+            {
+                File.Delete(file);
+            }
             foreach (var file in Directory.GetFiles("tests"))
             {
                 Console.WriteLine("Looking at " + file);
                 Bitmap b = new Bitmap(file);
                 var ic = new ImageCache(b);
                 //foreach (var offset in LineScanner.LineOffsets)
-                var offset = 708;
-                while (offset < 2120)
+                var offset = 765;
+                while (offset < 2093)
                 {
                     var firstY = 0;
-                    for (int y = offset; y < offset + 15; y++)
+                    for (int y = offset; y < offset + LineScanner.Lineheight; y++)
                     {
                         if (firstY > offset)
                             break;
@@ -333,16 +341,16 @@ namespace DebugCLI
                         }
                     }
                     Console.WriteLine("First y: " + firstY);
-                    offset = firstY + 14;
+                    offset = firstY + (int)(LineScanner.Lineheight * 1.2f);
                     if (!lineCounts.ContainsKey(firstY))
                         lineCounts[firstY] = 0;
                     lineCounts[firstY]++;
-                    if (knownCounts != null && knownCounts[firstY] < 50)
+                    if (knownCounts != null && knownCounts[firstY] < maxCount / 2)
                     {
-                        var rect = new Rectangle(4, firstY, 1723, 14);
+                        var rect = new Rectangle(4, firstY, LineScanner.ChatWidth, LineScanner.Lineheight);
                         using (var clone = b.Clone(rect, b.PixelFormat))
                         {
-                            clone.Save(Path.Combine("debug_lines", (count++) + ".png"));
+                            clone.Save(Path.Combine("debug_lines", (maxCount++) + ".png"));
                         }
                         heightTotal += rect.Height;
                     }
@@ -369,6 +377,13 @@ namespace DebugCLI
                 if (Console.CursorLeft + lineCountsStrings[i].Length >= Console.BufferWidth)
                     Console.WriteLine();
                 Console.Write(lineCountsStrings[i]);
+            }
+
+            Console.WriteLine("\n\n");
+            foreach (var line in lineCounts.OrderBy(o => o.Key))
+            {
+                if (line.Value >= count / 2)
+                    Console.WriteLine($"{line.Key,4} {line.Value,4}");
             }
 
             if (heightTotal > 0)
@@ -442,7 +457,7 @@ namespace DebugCLI
         {
             var ignore = RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs;
             var parser = new RelativeChatParser.RelativePixelParser(new DummyLogger());
-            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Spaces";
+            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps";
             var allFiles = Directory.GetFiles(inputDir);
             var sw = new Stopwatch();
             sw.Start();
