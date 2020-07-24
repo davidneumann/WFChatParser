@@ -1,5 +1,6 @@
 ﻿using Application.ChatLineExtractor;
 using RelativeChatParser.Database;
+using RelativeChatParser.Recognition;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -35,8 +36,8 @@ namespace RelativeChatParser.Models
 
         public ExtractedGlyph Clone()
         {
-            var clone = (ExtractedGlyph) (this.MemberwiseClone());
-            clone.RelativePixelLocations = (Point3[]) this.RelativePixelLocations.Clone();
+            var clone = (ExtractedGlyph)(this.MemberwiseClone());
+            clone.RelativePixelLocations = (Point3[])this.RelativePixelLocations.Clone();
             clone.RelativeEmptyLocations = (Point[])this.RelativeEmptyLocations.Clone();
             clone.CombinedLocations = (Point[])this.CombinedLocations.Clone();
             return clone;
@@ -54,14 +55,22 @@ namespace RelativeChatParser.Models
                 return null;
 
             //Wipe out any brights that match any location on the known glyph
-            var survivingBrights = RelativeBrights.Where(p => !glyph.RelativePixelLocations.Any(p2 => p2.X == p.X && p2.Y + vOffset == p.Y)).ToArray();
+            const float maxDistance = 2.83f;
+            //var survivingBrights = RelativeBrights.Where(p => !glyph.RelativePixelLocations.Any(p2 => p2.X == p.X && p2.Y + vOffset == p.Y)).ToArray();
+            var survivingBrights = RelativeBrights.Where(p1 => !glyph.RelativeBrights.Any(p2 =>
+            {
+                var p3 = new Point3(p2.X, (int)Math.Round(p2.Y + vOffset), p2.Z);
+                return p1.Distance(p3, 2) <= maxDistance;
+            })).ToArray();
 
             if (survivingBrights.Length == 0)
                 return null;
 
-            //Wipe out anything to the left of the remaining leftmost bright. Allow an allowance of 1 column
-            //At least advance 1 pixel
-            var localXMin = Math.Max(1, Math.Max(glyph.ReferenceMinWidth - 1,  survivingBrights.Min(p => p.X) - 1));
+            var localXMin = Math.Max(1, Math.Min(glyph.ReferenceMaxWidth, survivingBrights.Min(p => p.X) - 1));
+
+            ////Wipe out anything to the left of the remaining leftmost bright. Allow an allowance of 1 column
+            ////At least advance 1 pixel
+            //var localXMin = Math.Max(1, Math.Max(glyph.ReferenceMinWidth - 1,  survivingBrights.Min(p => p.X) - 1));
 
             // Only keep points beyond the new true min x
             var survivingPixels = this.RelativePixelLocations.Where(p => p.X >= localXMin).ToArray();
@@ -79,14 +88,15 @@ namespace RelativeChatParser.Models
             var top = survivingLocalTop + this.LineOffset + this.PixelsFromTopOfLine;
             var right = survivingPixels.Max(p => p.X) + 1 + this.Left;
             var bottom = survivingPixels.Max(p => p.Y) + 1 + this.LineOffset + this.PixelsFromTopOfLine;
+            var localBottom = survivingPixels.Max(p => p.Y);
             var width = right - left;
             var height = bottom - top;
 
-            var relEmpties = this.RelativeEmptyLocations.Where(p => p.X >= left && p.Y >= survivingLocalTop && p.X < right && p.Y < bottom)
-                                                        .Select(p => new Point(p.X - left, p.Y - top)).ToArray();
+            var relEmpties = this.RelativeEmptyLocations.Where(p => p.X >= localXMin && p.Y >= survivingLocalTop && p.Y <= localBottom)
+                                                        .Select(p => new Point(p.X - localXMin, p.Y - survivingLocalTop)).ToArray();
 
             //With empties and rels we can make combined
-            var combined =  relPixels.Select(p => new Point(p.X, p.Y)).Union(relEmpties).ToArray();
+            var combined = relPixels.Select(p => new Point(p.X, p.Y)).Union(relEmpties).ToArray();
             var brights = relPixels.Where(p => p.Z >= GlyphDatabase.BrightMinV).ToArray();
 
             var result = new ExtractedGlyph()
