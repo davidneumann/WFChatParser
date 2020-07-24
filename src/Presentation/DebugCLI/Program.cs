@@ -108,16 +108,16 @@ namespace DebugCLI
             //RelativeParserGlyphTrainer();
             //RelativeParserSpaceTrainer();
             //OverlapExtractingShim();
-            RelativeParserTest();
+            //RelativeParserTest();
 
-            //RelativeCacheShim();
+            RelativeCacheShim();
         }
 
         private static void RelativeCacheShim()
         {
             var cp = new RelativePixelParser(new DummyLogger(true));
             var sw = new Stopwatch();
-            const string input = @"637311257709603031.png";
+            const string input = @"bad_overlaps\637310922171482108.png";
             Console.WriteLine($"Parsing {input}");
             ImageCleaner.SaveSoftMask(input, "debug_screen.png");
             using (var b = new Bitmap(input))

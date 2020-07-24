@@ -172,18 +172,6 @@ namespace RelativeChatParser.Recognition
 
         private static FuzzyGlyph[] ExtractOverlap(ExtractedGlyph extracted)
         {
-            //todo: Determine if this should be inside the while loop below.
-            var candidates = GlyphDatabase.Instance.CharsThatCanOverlapByDescSize()
-                .Where(g => g.ReferenceMaxHeight <= extracted.Height + 1 && g.ReferenceGapFromLineTop >= extracted.PixelsFromTopOfLine - 1 && g.ReferenceMinWidth <= extracted.Width + 1).ToArray();
-
-            var maxHeight = 0;
-            var maxWidth = 0;
-            foreach (var c in candidates)
-            {
-                maxHeight = Math.Max(maxHeight, c.ReferenceMaxHeight);
-                maxWidth = Math.Max(maxWidth, c.ReferenceMaxWidth);
-            }
-
             var matches = new List<BestMatch>();
             //var origExtractedEmpties = extracted.RelativeEmptyLocations;
             //var origRelativePixelLocations = extracted.RelativePixelLocations;
@@ -198,16 +186,28 @@ namespace RelativeChatParser.Recognition
 
             while (extracted != null && extracted.RelativeBrights.Length > 0)
             {
-                var useBrights = FilterCandidates(extracted, ref candidates);
 #if DEBUG
                 extracted.Save($"extracted_source_{guid}.png");
 #endif
+                //todo: Determine if this should be inside the while loop below.
+                var candidates = GlyphDatabase.Instance.CharsThatCanOverlapByDescSize()
+                    .Where(g => g.ReferenceMaxHeight <= extracted.Height + 1 && g.ReferenceGapFromLineTop >= extracted.PixelsFromTopOfLine - 1 && g.ReferenceMinWidth <= extracted.Width + 1).ToArray();
+
+                var useBrights = FilterCandidates(extracted, ref candidates);
+
+                var maxHeight = 0;
+                var maxWidth = 0;
+                foreach (var c in candidates)
+                {
+                    maxHeight = Math.Max(maxHeight, c.ReferenceMaxHeight);
+                    maxWidth = Math.Max(maxWidth, c.ReferenceMaxWidth);
+                }
 
                 BestMatch best = null;
                 foreach (var candidate in candidates)
                 {
                     int right = candidate.ReferenceMaxWidth;
-                    if (maxHeight <= 4)
+                    if (maxHeight <= 4 || candidate.ReferenceMaxWidth <= 4)
                         right = maxWidth;
 
                     var extractedClone = extracted.Clone();
@@ -230,7 +230,11 @@ namespace RelativeChatParser.Recognition
                     extractedClone.RelativeEmptyLocations = extractedClone.RelativeEmptyLocations.Where(e => e.X < right).ToArray();
 
 #if DEBUG
-                    adjustedCandidate.SaveVisualization($"extracted_candidate_{candidate.Character}_{guid}.png", useBrights);
+                    try
+                    {
+                        adjustedCandidate.SaveVisualization($"extracted_candidate_{candidate.Character}_{guid}.png", useBrights);
+                    }
+                    catch{ }
 #endif
                     var distances = ScoreCandidate(extractedClone, useBrights, adjustedCandidate) / right;
 
