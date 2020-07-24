@@ -146,8 +146,10 @@ namespace WarframeDriver
             //Console.WriteLine("Checked login item thing in: " + sw.ElapsedMilliseconds + "ms.");
             //return averageHue >= 40 && averageHue <= 50;
 
-            var lightPixels = new Point[] { new Point(2711, 1873), new Point(2764, 1878), new Point(2790, 1873), new Point(2886, 1883), new Point(3027, 1886) };
-            var darkPixels = new Point[] { new Point(2691, 1885), new Point(2809, 1889), new Point(2917, 1878), new Point(3106, 1891), new Point(3201, 1884) };
+            var lightPixels = new Point[] { new Point(2711, 1873), new Point(2764, 1878), new Point(2790, 1873), new Point(2886, 1883), new Point(3027, 1886),
+                                            new Point(3160, 1897), new Point(3123, 1888), new Point(3124, 1873), new Point(3058, 1896), new Point(2790, 1897) };
+            var darkPixels = new Point[] { new Point(2691, 1885), new Point(2809, 1889), new Point(2917, 1878), new Point(3106, 1891), new Point(3201, 1884),
+                                           new Point(3030, 1878), new Point(2926, 1884), new Point(2820, 1876), new Point(2752, 1892), new Point(2716, 1877) };
             return lightPixels.Select(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value).Average() > 0.65f
                     && darkPixels.Select(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value).Average() < 0.4f;
         }
