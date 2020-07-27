@@ -117,7 +117,7 @@ namespace DebugCLI
         {
             var cp = new RelativePixelParser(new DummyLogger(true));
             var sw = new Stopwatch();
-            const string input = @"bad_overlaps\637310922171482108.png";
+            const string input = @"bad_overlaps\637306367274895272.png";
             Console.WriteLine($"Parsing {input}");
             ImageCleaner.SaveSoftMask(input, "debug_screen.png");
             using (var b = new Bitmap(input))

@@ -182,16 +182,19 @@ namespace RelativeChatParser.Recognition
 
 #if DEBUG
             var guid = Guid.NewGuid().ToString();
+            var eCount = 0;
 #endif
 
             while (extracted != null && extracted.RelativeBrights.Length > 0)
             {
 #if DEBUG
-                extracted.Save($"extracted_source_{guid}.png");
+                extracted.Save($"extracted_source_{eCount++}_{guid}.png");
 #endif
-                //todo: Determine if this should be inside the while loop below.
+                var widthAllowance = 1;
+                if (extracted.Height <= 4)
+                    widthAllowance = 2;
                 var candidates = GlyphDatabase.Instance.CharsThatCanOverlapByDescSize()
-                    .Where(g => g.ReferenceMaxHeight <= extracted.Height + 1 && g.ReferenceGapFromLineTop >= extracted.PixelsFromTopOfLine - 1 && g.ReferenceMinWidth <= extracted.Width + 1).ToArray();
+                    .Where(g => g.ReferenceMaxHeight <= extracted.Height + 1 && g.ReferenceGapFromLineTop >= extracted.PixelsFromTopOfLine - 1 && g.ReferenceMinWidth <= extracted.Width + widthAllowance).ToArray();
 
                 var useBrights = FilterCandidates(extracted, ref candidates);
 
