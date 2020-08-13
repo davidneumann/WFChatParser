@@ -18,11 +18,13 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Tesseract;
 
 namespace RelativeChatParser
 {
     public class RelativePixelParser : IChatParser
     {
+        private readonly IDataSender _sender;
         private readonly ILogger _logger;
         private static readonly FuzzyGlyph NullGlyph;
         private Queue<string> _timeUserCache = new Queue<string>();
@@ -33,6 +35,9 @@ namespace RelativeChatParser
         private static ulong _debugGlyphsParsed = 0;
         private static ulong _debugTotalMs = 0;
 
+        private string _debugId = Guid.NewGuid().ToString();
+
+        private Bitmap _lastBitmap = null;
         static RelativePixelParser()
         {
             NullGlyph = new FuzzyGlyph() { Character = "" };
@@ -136,7 +141,7 @@ namespace RelativeChatParser
             ChatMessageLineResult lastValidHeadLine = null;
             for (int i = 0; i < lineParseCount; i++)
             {
-                if (useCache && IsLineInCache(headLines[i]))
+                if ((useCache && IsLineInCache(headLines[i])) || headLines[0].LineType == LineType.Unknown)
                 {
                     headLinesValid[i] = false;
                     lastValidHeadLine = null;
@@ -202,6 +207,25 @@ namespace RelativeChatParser
                 //Append to last message if wrapped line
                 if (headLines[i] != null && headLines[i].RawMessage != null && headLines[i].RawMessage.Length > 0 && _kickRegex.Match(headLines[i].RawMessage).Success)
                 {
+                    continue;
+                }
+
+                if(fullWords[i].Length == 0)
+                {
+                    var guid = Guid.NewGuid();
+                    try
+                    {
+                        _sender.AsyncSendDebugMessage($"Unexpected fullwords length of 0 at index {i}.");
+                        var path = Path.Combine("debug", guid + ".png");
+                        image.Save(path);
+                        _sender.AsyncSendDebugMessage($"@DavidN#0001 See {path} for fullwords error.");
+                        _sender.AsyncSendDebugMessage($"<@!140159905565769728>");
+                    }
+                    catch
+                    {
+
+                    }
+                    last = null;
                     continue;
                 }
 
@@ -338,26 +362,21 @@ namespace RelativeChatParser
             else
                 result.MessageBounds = Rectangle.Empty;
 
-            if (lineWords.Length >= 3)
+            if (lineWords.Length >= 3 && lineWords[0].WordColor.IsTimestamp())
             {
-                if (!lineWords[0].WordColor.IsTimestamp())
-                {
-                    result.LineType = LineType.Continuation;
-                }
+                result.LineType = LineType.NewMessage;
+                result.Timestamp = lineWords[0].ToString();
+                if (lineWords[1].ToString().Trim().Length == 0)
+                    result.Username = lineWords[2].ToString();
                 else
-                {
-                    result.LineType = LineType.NewMessage;
-                    result.Timestamp = lineWords[0].ToString();
-                    if (lineWords[1].ToString().Trim().Length == 0)
-                        result.Username = lineWords[2].ToString();
-                    else
-                        result.Username = lineWords[1].ToString();
-                }
+                    result.Username = lineWords[1].ToString();
             }
-            else
+            else if (lineWords.Length > 0 && (lineWords[0].WordColor == ChatColor.ItemLink || lineWords[0].WordColor == ChatColor.Text))
             {
                 result.LineType = LineType.Continuation;
             }
+            else
+                result.LineType = LineType.Unknown;
 
             return result;
         }

@@ -115,9 +115,10 @@ namespace DebugCLI
 
         private static void RelativeCacheShim()
         {
-            var cp = new RelativePixelParser(new DummyLogger(true));
+            var cp = new RelativePixelParser(new DummyLogger(true), new DummySender());
             var sw = new Stopwatch();
-            const string input = @"bad_overlaps\637306367274895272.png";
+            //const string input = @"bad_overlaps\637306367274895272.png";
+            const string input = @"10d43853-5bcb-497b-bd56-2a32b4277a6e.png";
             Console.WriteLine($"Parsing {input}");
             ImageCleaner.SaveSoftMask(input, "debug_screen.png");
             using (var b = new Bitmap(input))
@@ -162,7 +163,7 @@ namespace DebugCLI
         private static void RelativeParserWithSpacesShim()
         {
             var ignored = RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs;
-            var rp = new RelativePixelParser(new DummyLogger());
+            var rp = new RelativePixelParser(new DummyLogger(true), new DummySender());
             using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\132378502626565768.png"))
             {
                 var chatLines = rp.ParseChatImage(b, true, false, 27);
@@ -445,7 +446,7 @@ namespace DebugCLI
 
             var input = @"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\garbage.png";
             ImageCleaner.SaveSoftMask(input, "current.png");
-            var cp = new RelativePixelParser(new DummyLogger());
+            var cp = new RelativePixelParser(new DummyLogger(true), new DummySender());
             var lines = cp.ParseChatImage(new Bitmap(input), false, false, 27);
             foreach (var line in lines)
             {
@@ -456,7 +457,7 @@ namespace DebugCLI
         private static void RelativeParserTest()
         {
             var ignore = RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs;
-            var parser = new RelativeChatParser.RelativePixelParser(new DummyLogger());
+            var parser = new RelativeChatParser.RelativePixelParser(new DummyLogger(), new DummySender());
             var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps";
             var allFiles = Directory.GetFiles(inputDir);
             var sw = new Stopwatch();
