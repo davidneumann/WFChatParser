@@ -10,14 +10,16 @@ namespace RelativeChatParser
     public class RelativePixelParserFactory : IChatParserFactory
     {
         private ILogger _logger;
+        private readonly IDataSender _sender;
 
-        public RelativePixelParserFactory(ILogger logger)
+        public RelativePixelParserFactory(ILogger logger, IDataSender sender)
         {
             _logger = logger;
+            this._sender = sender;
         }
         public IChatParser CreateChatParser(ClientLanguage clientLanguage)
         {
-            return new RelativePixelParser(_logger);
+            return new RelativePixelParser(_logger, _sender);
         }
     }
 }

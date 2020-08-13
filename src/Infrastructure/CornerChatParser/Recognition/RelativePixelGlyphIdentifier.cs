@@ -12,6 +12,7 @@ using System.Text;
 using WebSocketSharp;
 using System.Drawing.Imaging;
 using System.Security.Cryptography;
+using System.Runtime.CompilerServices;
 
 namespace RelativeChatParser.Recognition
 {
@@ -21,6 +22,16 @@ namespace RelativeChatParser.Recognition
 #if DEBUG
         private const bool _stopOnCords = false;
 #endif
+        public static string overlapDir = Path.Combine("debug", "overlaps");
+
+        public static event EventHandler SaveRequested;
+
+        static RelativePixelGlyphIdentifier()
+        {
+            if (!Directory.Exists(overlapDir))
+                Directory.CreateDirectory(overlapDir);
+        }
+
         public static FuzzyGlyph[] IdentifyGlyph(ExtractedGlyph extracted, bool allowOverlaps = false)
         {
 #if DEBUG
@@ -80,6 +91,11 @@ namespace RelativeChatParser.Recognition
                 if (ShouldDoDebugGlyphStuff(extracted, debugLeft, debugTop, debugRight, debugBottom))
                     System.Diagnostics.Debugger.Break();
 #endif
+                //RequestToKill?.Invoke(this, EventArgs.Empty);
+                var time = DateTime.Now.Ticks;
+                extracted.Save(Path.Combine(overlapDir, $"{time}_{Guid.NewGuid()}.png"));
+                SaveRequested?.Invoke(null, EventArgs.Empty);
+
                 return ExtractOverlap(extracted);
             }
 

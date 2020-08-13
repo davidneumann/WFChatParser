@@ -47,9 +47,24 @@ namespace RelativeChatParser
             }
         }
 
-        public RelativePixelParser(ILogger logger)
+        private void RelativePixelGlyphIdentifier_SaveRequested(object sender, EventArgs e)
         {
+            if(_lastBitmap != null)
+            {
+                try
+                {
+                    _lastBitmap.Save(Path.Combine(RelativePixelGlyphIdentifier.overlapDir, $"{DateTime.Now.Ticks}_{_debugId}.png"));
+                }
+                catch { }
+            }
+        }
+
+        public RelativePixelParser(ILogger logger, IDataSender sender)
+        {
+            _sender = sender;
             _logger = logger;
+
+            RelativePixelGlyphIdentifier.SaveRequested += RelativePixelGlyphIdentifier_SaveRequested;
         }
 
         public void InvalidateCache(string key)
