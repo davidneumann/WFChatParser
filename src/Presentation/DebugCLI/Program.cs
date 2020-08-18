@@ -230,6 +230,8 @@ namespace DebugCLI
             db.AllGlyphs = fuzzies.Keys.ToList();
             db.AllSpaces.Clear();
             db.Init();
+            var sw = new Stopwatch();
+            sw.Start();
 
             var oldCount = 0;
             while (history.Count != oldCount)
@@ -240,8 +242,9 @@ namespace DebugCLI
                 foreach (var glyph in history.Keys.ToArray())
                 {
                     Console.Write($"\r{++checkedCount} of {history.Count}: {fuzzies[glyph]}");
-                    db.AllGlyphs.Remove(glyph);
-                    db.Init();
+                    //db.AllGlyphs.Remove(glyph);
+                    db.DenyList.Add(glyph);
+                    //db.Init();
 
                     var extracted = new ExtractedGlyph()
                     {
@@ -258,8 +261,9 @@ namespace DebugCLI
                     var match = RelativePixelGlyphIdentifier.IdentifyGlyph(extracted, false);
                     if (match.Length != 1)
                     {
-                        db.AllGlyphs.Add(glyph);
-                        db.Init();
+                        //db.AllGlyphs.Add(glyph);
+                        db.DenyList.Remove(glyph);
+                        //db.Init();
                         continue;
                     }
 
@@ -267,7 +271,7 @@ namespace DebugCLI
 
                     if (score <= RelativePixelGlyphIdentifier.MissedDistancePenalty)
                     {
-                        db.AllGlyphs.Remove(match[0]);
+                        //db.AllGlyphs.Remove(match[0]);
 
                         var oldInputs = history[match[0]];
                         if (history.ContainsKey(glyph))
@@ -277,18 +281,24 @@ namespace DebugCLI
                         }
                         var combined = GlyphTrainer.CombineExtractedGlyphs(' ', oldInputs);
                         history.Remove(match[0]);
+                        db.DenyList.Add(match[0]);
                         history[combined] = oldInputs;
                         fuzzies[combined] = fuzzies[glyph] + "\n" + fuzzies[match[0]];
-                        db.AllGlyphs = history.Keys.ToList();
-                        db.Init();
+                        db.AddGlyph(combined);
+                        //db.AllGlyphs = history.Keys.ToList();
+                        //db.Init();
                     }
                     else
                     {
-                        db.AllGlyphs.Add(glyph);
-                        db.Init();
+                        //db.AllGlyphs.Add(glyph);
+                        db.DenyList.Remove(glyph);
+                        //db.Init();
                     }
                 }
             }
+
+            sw.Stop();
+            Console.WriteLine($"\nFinished in {sw.Elapsed.TotalSeconds}s.");
 
             var dir = new DirectoryInfo("grouped");
             if(dir.Exists)

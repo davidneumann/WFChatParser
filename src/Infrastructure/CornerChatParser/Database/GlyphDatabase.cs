@@ -16,6 +16,8 @@ namespace RelativeChatParser.Database
 {
     public class GlyphDatabase
     {
+        public HashSet<FuzzyGlyph> DenyList = new HashSet<FuzzyGlyph>();
+
         private int _cachedDescSize = 0;
         private FuzzyGlyph[] _cachedDesdSizeItems;
         private Dictionary<string, Dictionary<string, int>> _spaceCache = new Dictionary<string, Dictionary<string, int>>();
@@ -118,13 +120,39 @@ namespace RelativeChatParser.Database
             }
         }
 
+        public void AddGlyph(FuzzyGlyph newGlyph)
+        {
+            AllGlyphs.Add(newGlyph);
+            newGlyph.RelativeBrights = newGlyph.RelativePixelLocations.Where(p =>
+            {
+                return p.Z >= BrightMinV;
+            }).ToArray();
+
+            newGlyph.RelativeCombinedLocations = newGlyph.RelativePixelLocations.Select(p => new Point(p.X, p.Y)).Union(newGlyph.RelativeEmptyLocations).ToArray();
+
+            _targetSizeCache.Clear();
+            foreach (var glyph in AllGlyphs)
+            {
+                for (int width = Math.Max(1, glyph.ReferenceMinWidth - 1); width <= glyph.ReferenceMinWidth + 1; width++)
+                {
+                    for (int height = Math.Max(1, glyph.ReferenceMinHeight); height <= glyph.ReferenceMinHeight + 1; height++)
+                    {
+                        GetGlyphByTargetSize(width, height);
+                    }
+                }
+            }
+            
+            _cachedDescSize = AllGlyphs.Count;
+            _cachedDesdSizeItems = AllGlyphs.OrderByDescending(g => g.ReferenceMaxWidth).ToArray();
+        }
+
         public FuzzyGlyph[] GlyphsBySizeDescending()
         {
             return _cachedDesdSizeItems;
         }
         public FuzzyGlyph[] CharsThatCanOverlapByDescSize()
         {
-            return _cachedSingleCharOverlaps;
+            return _cachedSingleCharOverlaps.Where(g => !DenyList.Contains(g)).ToArray();
         }
 
         internal int GetDefaultSpace()
@@ -135,7 +163,7 @@ namespace RelativeChatParser.Database
         public FuzzyGlyph[] GetGlyphByTargetSize(int width, int height)
         {
             if (_targetSizeCache.ContainsKey((width, height)))
-                return _targetSizeCache[(width, height)];
+                return _targetSizeCache[(width, height)].Where(g => !DenyList.Contains(g)).ToArray();
 
             var results = AllGlyphs
                 .Where(g => width >= g.ReferenceMinWidth - 1 && width <= g.ReferenceMaxWidth + 1
@@ -144,7 +172,7 @@ namespace RelativeChatParser.Database
             _targetSizeCache[(width, height)] = results;
 
             //_targetSizeCache[(width, height)] = AllGlyphs.Where(g => g.ReferenceMinWidth == width && g.ReferenceMinHeight == height).ToArray();
-            return _targetSizeCache[(width, height)];
+            return _targetSizeCache[(width, height)].Where(g => !DenyList.Contains(g)).ToArray();
         }
 
         internal int GetSpace(string character1, string character2)
