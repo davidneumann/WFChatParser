@@ -91,7 +91,10 @@ namespace RelativeChatParser.Database
 
             var pureGlyphs = AllGlyphs.Where(g => !g.IsOverlap).ToArray();
             var charsThatCanOverlap = AllGlyphs.Where(g => g.IsOverlap).SelectMany(g => g.Character.ToCharArray()).Distinct().ToArray();
-            _cachedSingleCharOverlaps = pureGlyphs.Where(g => charsThatCanOverlap.Contains(g.Character[0])).ToArray();
+            if (charsThatCanOverlap.Length > 0)
+                _cachedSingleCharOverlaps = pureGlyphs.Where(g => charsThatCanOverlap.Contains(g.Character[0])).ToArray();
+            else
+                _cachedSingleCharOverlaps = new FuzzyGlyph[0];
 
             _targetSizeCache.Clear();
             foreach (var glyph in AllGlyphs)

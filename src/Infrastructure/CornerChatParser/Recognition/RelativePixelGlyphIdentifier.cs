@@ -154,7 +154,7 @@ namespace RelativeChatParser.Recognition
             return useBrights;
         }
 
-        private static double ScoreCandidate(ExtractedGlyph extracted, bool useBrights, FuzzyGlyph candidate)
+        public static double ScoreCandidate(ExtractedGlyph extracted, bool useBrights, FuzzyGlyph candidate)
         {
             double distances = 0;
 

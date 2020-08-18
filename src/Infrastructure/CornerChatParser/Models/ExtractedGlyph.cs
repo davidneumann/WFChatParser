@@ -30,9 +30,9 @@ namespace RelativeChatParser.Models
         public float AspectRatio;
         public string FromFile;
         public ChatColor FirstPixelColor;
-        internal Point[] CombinedLocations;
+        public Point[] CombinedLocations;
 
-        public Point3[] RelativeBrights { get; internal set; }
+        public Point3[] RelativeBrights { get; set; }
 
         public ExtractedGlyph Clone()
         {
