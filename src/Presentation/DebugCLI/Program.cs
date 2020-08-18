@@ -98,7 +98,7 @@ namespace DebugCLI
             //NewTrainingVerifier();
             //CornerGlyphShim();
             //ParseImageTest();
-            //GetCrednetials();
+            GetCrednetials();
 
             //LineExtractorTest();
 
