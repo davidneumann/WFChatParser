@@ -11,14 +11,11 @@ using System.Text;
 using RelativeChatParser.Recognition;
 using System.Drawing;
 using WebSocketSharp;
-using System.Diagnostics;
 
 namespace RelativeChatParser.Database
 {
     public class GlyphDatabase
     {
-        public HashSet<FuzzyGlyph> DenyList = new HashSet<FuzzyGlyph>();
-
         private int _cachedDescSize = 0;
         private FuzzyGlyph[] _cachedDesdSizeItems;
         private Dictionary<string, Dictionary<string, int>> _spaceCache = new Dictionary<string, Dictionary<string, int>>();
@@ -94,10 +91,7 @@ namespace RelativeChatParser.Database
 
             var pureGlyphs = AllGlyphs.Where(g => !g.IsOverlap).ToArray();
             var charsThatCanOverlap = AllGlyphs.Where(g => g.IsOverlap).SelectMany(g => g.Character.ToCharArray()).Distinct().ToArray();
-            if (charsThatCanOverlap.Length > 0)
-                _cachedSingleCharOverlaps = pureGlyphs.Where(g => charsThatCanOverlap.Contains(g.Character[0])).ToArray();
-            else
-                _cachedSingleCharOverlaps = new FuzzyGlyph[0];
+            _cachedSingleCharOverlaps = pureGlyphs.Where(g => charsThatCanOverlap.Contains(g.Character[0])).ToArray();
 
             _targetSizeCache.Clear();
             foreach (var glyph in AllGlyphs)
@@ -121,46 +115,13 @@ namespace RelativeChatParser.Database
             }
         }
 
-        public void AddGlyph(FuzzyGlyph newGlyph)
-        {
-            //var sw = new Stopwatch();
-            //sw.Start();
-
-            AllGlyphs.Add(newGlyph);
-            newGlyph.RelativeBrights = newGlyph.RelativePixelLocations.Where(p =>
-            {
-                return p.Z >= BrightMinV;
-            }).ToArray();
-
-            newGlyph.RelativeCombinedLocations = newGlyph.RelativePixelLocations.Select(p => new Point(p.X, p.Y)).Union(newGlyph.RelativeEmptyLocations).ToArray();
-
-            //_targetSizeCache.Clear();
-            for (int width = Math.Max(1, newGlyph.ReferenceMinWidth - 1); width <= newGlyph.ReferenceMinWidth + 1; width++)
-            {
-                for (int height = Math.Max(1, newGlyph.ReferenceMinHeight); height <= newGlyph.ReferenceMinHeight + 1; height++)
-                {
-                    if (_targetSizeCache.ContainsKey((width, height)))
-                    {
-                        _targetSizeCache.TryRemove((width, height), out _);
-                    }
-                    GetGlyphByTargetSize(width, height);
-                }
-            }
-            
-            _cachedDescSize = AllGlyphs.Count;
-            _cachedDesdSizeItems = AllGlyphs.OrderByDescending(g => g.ReferenceMaxWidth).ToArray();
-
-            //sw.Stop();
-            //Console.WriteLine($"Executed addglyph in {sw.Elapsed.TotalSeconds}s.");
-        }
-
         public FuzzyGlyph[] GlyphsBySizeDescending()
         {
             return _cachedDesdSizeItems;
         }
         public FuzzyGlyph[] CharsThatCanOverlapByDescSize()
         {
-            return _cachedSingleCharOverlaps.Where(g => !DenyList.Contains(g)).ToArray();
+            return _cachedSingleCharOverlaps;
         }
 
         internal int GetDefaultSpace()
@@ -171,7 +132,7 @@ namespace RelativeChatParser.Database
         public FuzzyGlyph[] GetGlyphByTargetSize(int width, int height)
         {
             if (_targetSizeCache.ContainsKey((width, height)))
-                return _targetSizeCache[(width, height)].Where(g => !DenyList.Contains(g)).ToArray();
+                return _targetSizeCache[(width, height)];
 
             var results = AllGlyphs
                 .Where(g => width >= g.ReferenceMinWidth - 1 && width <= g.ReferenceMaxWidth + 1
@@ -180,7 +141,7 @@ namespace RelativeChatParser.Database
             _targetSizeCache[(width, height)] = results;
 
             //_targetSizeCache[(width, height)] = AllGlyphs.Where(g => g.ReferenceMinWidth == width && g.ReferenceMinHeight == height).ToArray();
-            return _targetSizeCache[(width, height)].Where(g => !DenyList.Contains(g)).ToArray();
+            return _targetSizeCache[(width, height)];
         }
 
         internal int GetSpace(string character1, string character2)
