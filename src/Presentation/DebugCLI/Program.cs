@@ -119,18 +119,27 @@ namespace DebugCLI
 
         private static void OverlappGrouperShim()
         {
-            var inputs = Directory.GetFiles(@"overlaps").Take(50).ToArray();
+            var inputs = Directory.GetFiles(@"overlaps");//.Take(2000).ToArray();
             var list = new List<(int, int)>();
             var totalCount = inputs.Length;
             var count = 0;
 
-            var fuzzies = new Dictionary<FuzzyGlyph, string>();
-            var history = new Dictionary<FuzzyGlyph, List<ExtractedGlyph>>();
+            //var fuzzies = new Dictionary<FuzzyGlyph, string>();
+            //var history = new Dictionary<FuzzyGlyph, List<ExtractedGlyph>>();
+            //var groups = new List<(FuzzyGlyph, List<ExtractedGlyph>)>(inputs.Length);
+            var superFastHistory = new Dictionary<FuzzyGlyph, List<ExtractedGlyph>>();
             foreach (var input in inputs)
             {
                 count++;
                 if (!input.EndsWith(".png"))
+                {
+                    var y = Console.CursorTop;
+                    Console.CursorTop++;
+                    Console.CursorLeft = 0;
+                    Console.WriteLine($"Unexpected file {input}");
+                    Console.CursorTop = y;
                     continue;
+                }
 
                 Console.Write($"\r{count} of {totalCount}: {input}");
 
@@ -160,7 +169,7 @@ namespace DebugCLI
                     var fuzzy = new FuzzyGlyph()
                     {
                         AspectRatio = b.Width / (float)b.Height,
-                        Character = string.Empty,
+                        Character = input,
                         IsOverlap = false,
                         ReferenceGapFromLineTop = 0,
                         ReferenceMaxHeight = b.Height + 2,
@@ -171,7 +180,7 @@ namespace DebugCLI
                         RelativeEmptyLocations = empies.ToArray(),
                         RelativePixelLocations = pixels.ToArray()
                     };
-                    fuzzies.Add(fuzzy, input);
+                    //fuzzies.Add(fuzzy, input);
 
 
                     var extracted = new ExtractedGlyph()
@@ -185,131 +194,221 @@ namespace DebugCLI
                         Width = b.Width,
                         Height = b.Height
                     };
-                    history[fuzzy] = new List<ExtractedGlyph>();
-                    history[fuzzy].Add(extracted);
-                }
-            }
+                    //history[fuzzy] = new List<ExtractedGlyph>();
+                    //history[fuzzy].Add(extracted);
 
-            var uniques = new HashSet<(int, int)>(list);
-            var counts = new Dictionary<(int, int), int>();
-            foreach (var unique in uniques)
-            {
-                counts[unique] = list.Where(i => i == unique).Count();
-            }
+                    //groups.Add((fuzzy, new List<ExtractedGlyph>(new[] { extracted })));
 
-            var sorted = counts.OrderByDescending(i => i.Value).Select(i => ($"({i.Key.Item1},{i.Key.Item2})", i.Value.ToString()));
-
-            Console.WriteLine("\n");
-            var resultLines = new List<string>();
-            var maxValueWidth = sorted.Max(i => i.Item2.Length);
-            var maxDimenWidth = sorted.Max(i => i.Item1.Length);
-            var combinedWidth = maxDimenWidth + 2 + maxValueWidth + 3;
-            foreach (var item in sorted)
-            {
-                resultLines.Add($"{item.Item1.PadLeft(maxDimenWidth, ' ')}: {item.Item2.PadLeft(maxValueWidth, ' ')}");
-            }
-
-            var columns = Console.BufferWidth / combinedWidth;
-            var rows = (int)Math.Ceiling(sorted.Count() / (float)columns);
-            for (int x = 0; x < columns; x++)
-            {
-                for (int y = 0; y < rows; y++)
-                {
-                    var index = x * rows + y;
-                    if (index >= resultLines.Count)
-                        break;
-                    var str = resultLines[index] + " | ";
-                    Console.SetCursorPosition(combinedWidth * x, y + 2);
-                    Console.Write(str);
-                }
-            }
-            Console.SetCursorPosition(0, 4 + rows);
-
-
-            var db = GlyphDatabase.Instance;
-            db.AllGlyphs = fuzzies.Keys.ToList();
-            db.AllSpaces.Clear();
-            db.Init();
-            var sw = new Stopwatch();
-            sw.Start();
-
-            var oldCount = 0;
-            while (history.Count != oldCount)
-            {
-                oldCount = history.Count;
-
-                var checkedCount = 0;
-                foreach (var glyph in history.Keys.ToArray())
-                {
-                    Console.Write($"\r{++checkedCount} of {history.Count}: {fuzzies[glyph]}");
-                    //db.AllGlyphs.Remove(glyph);
-                    db.DenyList.Add(glyph);
-                    //db.Init();
-
-                    var extracted = new ExtractedGlyph()
+                    var didMatch = false;
+                    foreach (var superFast in superFastHistory)
                     {
-                        AspectRatio = glyph.AspectRatio,
-                        PixelsFromTopOfLine = 0,
-                        RelativeBrights = glyph.RelativeBrights,
-                        RelativeEmptyLocations = glyph.RelativeEmptyLocations,
-                        RelativePixelLocations = glyph.RelativePixelLocations,
-                        CombinedLocations = glyph.RelativeCombinedLocations,
-                        Width = (glyph.ReferenceMaxWidth + glyph.ReferenceMinWidth) / 2,
-                        Height = (glyph.ReferenceMaxHeight + glyph.ReferenceMinHeight) / 2
-                    };
-
-                    var match = RelativePixelGlyphIdentifier.IdentifyGlyph(extracted, false);
-                    if (match.Length != 1)
-                    {
-                        //db.AllGlyphs.Add(glyph);
-                        db.DenyList.Remove(glyph);
-                        //db.Init();
-                        continue;
-                    }
-
-                    var score = RelativePixelGlyphIdentifier.ScoreCandidate(extracted, false, match[0]);
-
-                    if (score <= RelativePixelGlyphIdentifier.MissedDistancePenalty)
-                    {
-                        //db.AllGlyphs.Remove(match[0]);
-
-                        var oldInputs = history[match[0]];
-                        if (history.ContainsKey(glyph))
+                        var score = RelativePixelGlyphIdentifier.ScoreCandidate(extracted, false, superFast.Key);
+                        if(score < RelativePixelGlyphIdentifier.MissedDistancePenalty)
                         {
-                            oldInputs.AddRange(history[glyph]);
-                            history.Remove(glyph);
+                            superFast.Value.Add(extracted);
+                            var files = superFast.Key.Character + "\n" + fuzzy.Character;
+                            var newGlyph = GlyphTrainer.CombineExtractedGlyphs(' ', superFast.Value);
+                            newGlyph.RelativeCombinedLocations = newGlyph.RelativePixelLocations.Select(p => new Point(p.X, p.Y)).Union(newGlyph.RelativeEmptyLocations).ToArray();
+                            newGlyph.Character = files;
+                            superFastHistory.Remove(superFast.Key);
+                            superFastHistory[newGlyph] = superFast.Value;
+                            didMatch = true;
+                            break;
                         }
-                        var combined = GlyphTrainer.CombineExtractedGlyphs(' ', oldInputs);
-                        history.Remove(match[0]);
-                        db.DenyList.Add(match[0]);
-                        history[combined] = oldInputs;
-                        fuzzies[combined] = fuzzies[glyph] + "\n" + fuzzies[match[0]];
-                        db.AddGlyph(combined);
-                        //db.AllGlyphs = history.Keys.ToList();
-                        //db.Init();
                     }
-                    else
-                    {
-                        //db.AllGlyphs.Add(glyph);
-                        db.DenyList.Remove(glyph);
-                        //db.Init();
-                    }
+                    if (!didMatch)
+                        superFastHistory.Add(fuzzy, new List<ExtractedGlyph>(new[] { extracted }));
                 }
             }
 
-            sw.Stop();
-            Console.WriteLine($"\nFinished in {sw.Elapsed.TotalSeconds}s.");
+            //var uniques = new HashSet<(int, int)>(list);
+            //var counts = new Dictionary<(int, int), int>();
+            //foreach (var unique in uniques)
+            //{
+            //    counts[unique] = list.Where(i => i == unique).Count();
+            //}
+
+            //var sorted = counts.OrderByDescending(i => i.Value).Select(i => ($"({i.Key.Item1},{i.Key.Item2})", i.Value.ToString()));
+
+            //Console.WriteLine("\n");
+            //var resultLines = new List<string>();
+            //var maxValueWidth = sorted.Max(i => i.Item2.Length);
+            //var maxDimenWidth = sorted.Max(i => i.Item1.Length);
+            //var combinedWidth = maxDimenWidth + 2 + maxValueWidth + 3;
+            //foreach (var item in sorted)
+            //{
+            //    resultLines.Add($"{item.Item1.PadLeft(maxDimenWidth, ' ')}: {item.Item2.PadLeft(maxValueWidth, ' ')}");
+            //}
+
+            //var topOfTable = Console.CursorTop;
+            //var columns = Console.BufferWidth / combinedWidth;
+            //var rows = (int)Math.Ceiling(sorted.Count() / (float)columns);
+            //for (int x = 0; x < columns; x++)
+            //{
+            //    for (int y = 0; y < rows; y++)
+            //    {
+            //        var index = x * rows + y;
+            //        if (index >= resultLines.Count)
+            //            break;
+            //        var str = resultLines[index] + " | ";
+            //        Console.SetCursorPosition(combinedWidth * x, y + topOfTable);
+            //        Console.Write(str);
+            //    }
+            //}
+            //Console.SetCursorPosition(0, 4 + rows);
+
+            //var newSW = new Stopwatch();
+            //newSW.Start();
+            //for (int x1 = 0; x1 < groups.Count; x1++)
+            //{
+            //    if (groups[x1].Item1 == null)
+            //        continue;
+
+            //    Console.WriteLine($"{x1} of {groups.Count}: Finding matches with {groups[x1].Item1.Character}");
+            //    for (int x2 = x1+1; x2 < groups.Count; x2++)
+            //    {
+            //        if (groups[x2].Item1 == null)
+            //            continue;
+
+            //        Console.Write($"\rChecking against {groups[x2].Item1.Character}     ");
+            //        Console.CursorLeft -= 5;
+            //        var score = RelativePixelGlyphIdentifier.ScoreCandidate(groups[x2].Item2[0], false, groups[x1].Item1);
+            //        if (score < RelativePixelGlyphIdentifier.MissedDistancePenalty)
+            //        {
+            //            Console.Write(" hit!");
+            //            groups[x1].Item2.Add(groups[x2].Item2[0]);
+            //            var files = groups[x1].Item1.Character + "\n" + groups[x2].Item1.Character;
+            //            var newGlyph = GlyphTrainer.CombineExtractedGlyphs(' ', groups[x1].Item2);
+            //            newGlyph.RelativeCombinedLocations = newGlyph.RelativePixelLocations.Select(p => new Point(p.X, p.Y)).Union(newGlyph.RelativeEmptyLocations).ToArray();
+            //            newGlyph.Character = files;
+            //            groups[x1] = (newGlyph, groups[x1].Item2);
+            //            groups[x2] = (null, null);
+            //        }
+            //    }
+            //    Console.WriteLine();
+            //}
+            //newSW.Stop();
+            //Console.WriteLine($"Combined in {newSW.Elapsed.TotalSeconds}s.");
+
+            //var db = GlyphDatabase.Instance;
+            //db.AllGlyphs = fuzzies.Keys.ToList();
+            //db.AllSpaces.Clear();
+            //db.Init();
+            //var sw = new Stopwatch();
+            //sw.Start();
+
+            //var oldCount = 0;
+            //var iterationCount = 0;
+            //var origCount = history.Count;
+            //while (history.Count != oldCount)
+            //{
+            //    iterationCount++;
+            //    oldCount = history.Count;
+
+            //    var checkedCount = 0;
+            //    var historyCount = history.Count;
+            //    foreach (var glyph in history.Keys.ToArray())
+            //    {
+            //        Console.Write($"\r[{iterationCount,3}] {++checkedCount} of {historyCount}. Started with {origCount}");//: {fuzzies[glyph]}");
+            //        if (!history.ContainsKey(glyph))
+            //            continue;
+            //        //db.AllGlyphs.Remove(glyph);
+            //        db.DenyList.Add(glyph);
+            //        //db.Init();
+
+            //        var extracted = new ExtractedGlyph()
+            //        {
+            //            AspectRatio = glyph.AspectRatio,
+            //            PixelsFromTopOfLine = 0,
+            //            RelativeBrights = glyph.RelativeBrights,
+            //            RelativeEmptyLocations = glyph.RelativeEmptyLocations,
+            //            RelativePixelLocations = glyph.RelativePixelLocations,
+            //            CombinedLocations = glyph.RelativeCombinedLocations,
+            //            Width = (glyph.ReferenceMaxWidth + glyph.ReferenceMinWidth) / 2,
+            //            Height = (glyph.ReferenceMaxHeight + glyph.ReferenceMinHeight) / 2
+            //        };
+
+            //        var match = RelativePixelGlyphIdentifier.IdentifyGlyph(extracted, false, fastMatch:true);
+            //        //Console.WriteLine("Match found");
+            //        if (match == null || match.Length != 1 || !history.ContainsKey(match[0]))
+            //        {
+            //            //db.AllGlyphs.Add(glyph);
+            //            db.DenyList.Remove(glyph);
+            //            //db.Init();
+            //            continue;
+            //        }
+
+            //        var score = RelativePixelGlyphIdentifier.ScoreCandidate(extracted, false, match[0]);
+
+            //        if (score < RelativePixelGlyphIdentifier.MissedDistancePenalty)
+            //        {
+            //            //db.AllGlyphs.Remove(match[0]);
+
+            //            var oldInputs = history[match[0]];
+            //            if (history.ContainsKey(glyph))
+            //            {
+            //                oldInputs.AddRange(history[glyph]);
+            //                history.Remove(glyph);
+            //            }
+            //            var combined = GlyphTrainer.CombineExtractedGlyphs(' ', oldInputs);
+            //            history.Remove(match[0]);
+            //            db.DenyList.Add(match[0]);
+            //            history[combined] = oldInputs;
+            //            fuzzies[combined] = fuzzies[glyph] + "\n" + fuzzies[match[0]];
+            //            db.AddGlyph(combined);
+            //            //db.AllGlyphs = history.Keys.ToList();
+            //            //db.Init();
+            //        }
+            //        else
+            //        {
+            //            //db.AllGlyphs.Add(glyph);
+            //            db.DenyList.Remove(glyph);
+            //            //db.Init();
+            //        }
+            //    }
+            //}
+
+            //sw.Stop();
+            //Console.WriteLine($"\nFinished in {sw.Elapsed.TotalSeconds}s.");
 
             var dir = new DirectoryInfo("grouped");
             if(dir.Exists)
             {
                 dir.Delete(true);
                 Thread.Sleep(500);
-                dir.Create();
             }
+            dir.Create();
+            Thread.Sleep(500);
+
+            var db = new GlyphDatabase();
+            //db.AllGlyphs.Clear();
+            //db.AllGlyphs = history.Keys.ToList();
+            db.AllGlyphs = superFastHistory.Keys.ToList();
+            db.Init();
+            File.WriteAllText(Path.Combine(dir.FullName, "groupsDB.json"), JsonConvert.SerializeObject(RelativeChatParser.Database.GlyphDatabase.Instance));
+
+            //var groupCount = 0;
+            //foreach (var item in history.Keys)
+            //{
+            //    var subDir = new DirectoryInfo(Path.Combine(dir.FullName, groupCount.ToString()));
+            //    if (!subDir.Exists)
+            //    {
+            //        subDir.Create();
+            //        Thread.Sleep(500);
+            //    }
+
+            //    var files = new HashSet<string>(fuzzies[item].Split('\n'));
+            //    foreach (var file in files)
+            //    {
+            //        var fi = new FileInfo(file);
+            //        File.Copy(fi.FullName, Path.Combine(subDir.FullName, fi.Name));
+            //    }
+            //    item.SaveVisualization(Path.Combine(subDir.FullName, "combined.png"), false);
+            //    groupCount++;
+            //}
 
             var groupCount = 0;
-            foreach (var item in history.Keys)
+            foreach (var item in superFastHistory.Keys)
             {
                 var subDir = new DirectoryInfo(Path.Combine(dir.FullName, groupCount.ToString()));
                 if (!subDir.Exists)
@@ -318,7 +417,7 @@ namespace DebugCLI
                     Thread.Sleep(500);
                 }
 
-                var files = new HashSet<string>(fuzzies[item].Split('\n'));
+                var files = new HashSet<string>(item.Character.Split('\n'));
                 foreach (var file in files)
                 {
                     var fi = new FileInfo(file);

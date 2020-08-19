@@ -32,7 +32,7 @@ namespace RelativeChatParser.Recognition
                 Directory.CreateDirectory(overlapDir);
         }
 
-        public static FuzzyGlyph[] IdentifyGlyph(ExtractedGlyph extracted, bool allowOverlaps = false)
+        public static FuzzyGlyph[] IdentifyGlyph(ExtractedGlyph extracted, bool allowOverlaps = false, bool fastMatch = false)
         {
 #if DEBUG
             var debugLeft = 134;
@@ -46,10 +46,13 @@ namespace RelativeChatParser.Recognition
 #endif
 
             //var candidates = GlyphDatabase.Instance.AllGlyphs.Where(IsValidCandidate(extracted));
+            //Console.WriteLine("Getting candidates");
             var candidates = GlyphDatabase.Instance.GetGlyphByTargetSize(extracted.Width, extracted.Height).Where(g => g.IsOverlap == allowOverlaps).ToArray();
             //Also remove anything that doesn't look to be aligned correctly
             candidates = candidates.Where(g => extracted.PixelsFromTopOfLine >= g.ReferenceGapFromLineTop - 2
                                             && extracted.PixelsFromTopOfLine <= g.ReferenceGapFromLineTop + 2).ToArray();
+
+            //Console.WriteLine($"{candidates.Length}");
             if (!allowOverlaps && candidates.Length == 0)
                 return IdentifyGlyph(extracted, true);
             bool useBrights = FilterCandidates(extracted, ref candidates);
@@ -77,7 +80,12 @@ namespace RelativeChatParser.Recognition
                 double distances = ScoreCandidate(extracted, useBrights, candidate);
 
                 if (distances < MissedDistancePenalty && (current == null || current.distanceSum > distances))
+                {
+                    //Console.WriteLine($"New lowest {distances}.");
                     current = new BestMatch(distances, candidate);
+                    if (fastMatch && distances <= 10)
+                        return new[] { current.match };
+                }
             }
 
             if (current == null && !allowOverlaps)
