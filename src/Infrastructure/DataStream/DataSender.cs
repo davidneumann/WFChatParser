@@ -241,6 +241,9 @@ namespace DataStream
             if (!string.IsNullOrEmpty(_rawMessagePrefix))
                 Send(_rawMessagePrefix + message.Raw);
 
+            if (_logger != null)
+                _logger.Log(JsonConvert.SerializeObject(message, Formatting.None, _jsonSettings));
+
             return Task.CompletedTask;
         }
 

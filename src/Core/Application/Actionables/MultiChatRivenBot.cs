@@ -86,7 +86,7 @@ namespace Application.Actionables
                     cropSW.Start();
                     using (var croppedCopy = new Bitmap(r.CroppedRivenBitmap))
                     {
-                        _logger.Log("RivenQueue: " + item.Message.Author + "'s riven image cropped in: " + cropSW.ElapsedMilliseconds + " ms.");
+                        _logger.Log($"RivenQueue: {item.Message.Author}'s riven {r.RivenName} image cropped in: " + cropSW.ElapsedMilliseconds + " ms.");
                         cropSW.Stop();
                         var cleanSW = new Stopwatch();
                         cleanSW.Start();
@@ -135,7 +135,7 @@ namespace Application.Actionables
                 {
                     item.MessageCache.Enqueue(item.Message.Author + item.Message.EnhancedMessage);
                     item.MessageCacheDetails[item.Message.Author + item.Message.EnhancedMessage] = item.Message;
-                    _logger.Log("RivenQueue: " + "Riven parsed and added " + item.Message.Author + "'s message to cache in: " + fullTimeSw.ElapsedMilliseconds + " ms.");
+                    _logger.Log($"RivenQueue: Riven parsed and added {item.Message.Author}'s message {item.Message.Raw} to cache in: " + fullTimeSw.ElapsedMilliseconds + " ms.");
                 }
                 else
                 {
