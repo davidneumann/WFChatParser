@@ -16,5 +16,6 @@ namespace Application.Interfaces
         Task AsyncSendRivenImage(Guid imageID, string rivenBase64);
         Task AsyncSendLogLine(LogMessage message);
         Task AsyncSendLogMessage(string message);
+        Task AsyncSendProfileData(Profile profile);
     }
 }
