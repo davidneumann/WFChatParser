@@ -1,7 +1,9 @@
-﻿namespace Application.Actionables.ProfileBots.Models
+﻿using System.Collections.Generic;
+
+namespace Application.Actionables.ProfileBots.Models
 {
     public class ProfileStats
     {
-        //todo: Add all the items. Dear god this list is gonna be long
+        public Dictionary<string, List<ProfileStatLineItem>> StatGroups { get; set; } = new Dictionary<string, List<ProfileStatLineItem>>();
     }
 }
