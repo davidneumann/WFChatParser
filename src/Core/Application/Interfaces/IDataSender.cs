@@ -1,4 +1,5 @@
-﻿using Application.ChatMessages.Model;
+﻿using Application.Actionables.ProfileBots.Models;
+using Application.ChatMessages.Model;
 using Application.LogParser;
 using System;
 using System.Drawing;
