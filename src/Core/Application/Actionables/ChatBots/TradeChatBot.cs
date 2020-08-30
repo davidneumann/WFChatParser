@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Application.Actionables.States;
 using Application.ChatBoxParsing;
 using Application.ChatMessages.Model;
 using Application.Enums;
@@ -19,36 +20,19 @@ using static Application.ChatRivenBot;
 
 namespace Application.Actionables.ChatBots
 {
-    public partial class TradeChatBot : IActionable
+    public partial class TradeChatBot : BaseWarframeBot, IActionable
     {
-        public bool IsRequestingControl => _requestingControl;
-        private bool _requestingControl = true;
-
-        private Task _controlTask = null;
-
         private ConcurrentQueue<RivenParseTaskWorkItem> _workQueue;
         private IRivenParser _rivenCropper;
-        private CancellationToken _cancellationToken;
-        private WarframeClientInformation _warframeCredentials;
-        private BotStates _currentState = BotStates.StartWarframe;
+        private TradeBotState _currentState = TradeBotState.WaitingForBaseBot;
 
-        private IMouse _mouse;
-        private IKeyboard _keyboard;
-        private IScreenStateHandler _screenStateHandler;
-        private ILogger _logger;
-        private IGameCapture _gameCapture;
-        private Process _warframeProcess;
         private bool firstParse = true;
-        private IDataSender _dataSender;
         private IChatParser _chatParser;
-        private DateTime _lastMessage = DateTime.UtcNow.AddMinutes(10);
 
         public DateTime LastMessage { get { return _lastMessage; } }
 
         private ConcurrentQueue<string> _messageCache = new ConcurrentQueue<string>();
         private ConcurrentDictionary<string, ChatMessageModel> _messageCacheDetails = new ConcurrentDictionary<string, ChatMessageModel>();
-        private int _failedPostLoginScreens;
-
 
         public const string _debugBadNamesFilename = "badnames.txt";
         static TradeChatBot()
@@ -74,22 +58,15 @@ namespace Application.Actionables.ChatBots
             IGameCapture gameCapture,
             IDataSender dataSender,
             IChatParser chatParser)
+            : base(cancellationToken, warframeCredentials, mouse, keyboard, screenStateHandler, logger, gameCapture, dataSender)
         {
             _workQueue = workQueue;
             _rivenCropper = rivenCropper;
-            _cancellationToken = cancellationToken;
-            _warframeCredentials = warframeCredentials;
-            _mouse = mouse;
-            _keyboard = keyboard;
-            _screenStateHandler = screenStateHandler;
-            _logger = logger;
-            _gameCapture = gameCapture;
-            _warframeCredentials = warframeCredentials;
-            _dataSender = dataSender;
             _chatParser = chatParser;
+            _logger.Log("Trade chat bot created");
         }
 
-        public Task TakeControl()
+        public override Task TakeControl()
         {
             _logger.Log(_warframeCredentials.StartInfo.UserName + ":" + _warframeCredentials.Region + " taking control");
             _logger.Log("Cache size: " + _messageCache.Count + ". Cache detail size: " + _messageCacheDetails.Count);
@@ -102,36 +79,30 @@ namespace Application.Actionables.ChatBots
             }
 
             if (_warframeProcess == null || _warframeProcess.HasExited)
-                _currentState = BotStates.StartWarframe;
+            {
+                _currentState = TradeBotState.WaitingForBaseBot;
+                _baseState = BaseBotState.StartWarframe;
+            }
 
             _requestingControl = false;
 
+            if (_baseState != BaseBotState.Running)
+                return BaseTakeControl();
+            else if (_baseState == BaseBotState.Running && _currentState == TradeBotState.WaitingForBaseBot)
+                _currentState = TradeBotState.NavigateToChat;
+
             switch (_currentState)
             {
-                case BotStates.StartWarframe:
-                    _logger.Log("Starting warframe");
-                    return StartWarframe();
-                case BotStates.WaitForLoadScreen:
-                    _logger.Log("Waiting for load screen");
-                    return WaitForLoadingScreen();
-                case BotStates.LogIn:
-                    _logger.Log("Running log in logic");
-                    return LogIn();
-                case BotStates.ClaimReward:
-                    _logger.Log("Claiming reward");
-                    return ClaimDailyRewardTask();
-                case BotStates.CloseWarframe:
-                    _logger.Log("Closing Warframe");
-                    return CloseWarframe();
-                case BotStates.NavigateToChat:
+                case TradeBotState.NavigateToChat:
                     _logger.Log("Navigating to chat");
                     return NavigateToChat();
-                case BotStates.ParseChat:
+                case TradeBotState.ParseChat:
                     _logger.Log("Parsing chat");
                     return ParseChat();
                 default:
                     break;
             }
+
             return Task.Delay(5000);
         }
 
@@ -143,7 +114,7 @@ namespace Application.Actionables.ChatBots
             if (DateTime.Now.Subtract(_lastMessage).TotalMinutes > 5)
             {
                 _logger.Log("Possible chat connection lost, closing WF");
-                _currentState = BotStates.CloseWarframe;
+                _baseState = BaseBotState.CloseWarframe;
                 _requestingControl = true;
                 return;
             }
@@ -180,7 +151,7 @@ namespace Application.Actionables.ChatBots
                 if (state != Enums.ScreenState.GlyphWindow)
                 {
                     _logger.Log("Going to glyph screen.");
-                    _currentState = BotStates.NavigateToChat;
+                    _currentState = TradeBotState.NavigateToChat;
                     _requestingControl = true;
                     return;
                 }
@@ -192,7 +163,7 @@ namespace Application.Actionables.ChatBots
                         var _ = Task.Run(async () =>
                         {
                             await Task.Delay(2000);
-                            _currentState = BotStates.ParseChat;
+                            _currentState = TradeBotState.ParseChat;
                             _requestingControl = true;
                         });
                         return;
@@ -211,7 +182,7 @@ namespace Application.Actionables.ChatBots
                             await Task.Delay(100);
                             firstParse = false;
 
-                            _currentState = BotStates.ParseChat;
+                            _currentState = TradeBotState.ParseChat;
                             _requestingControl = true;
                             return;
                         }
@@ -329,7 +300,7 @@ namespace Application.Actionables.ChatBots
                     var path = SaveScreenToDebug(screen);
                     await _dataSender.AsyncSendDebugMessage("Bad state detected! Restarting!!. See: " + path);
                     //We have no idea what state we are in. Kill the game and pray the next iteration has better luck.
-                    _currentState = BotStates.CloseWarframe;
+                    _baseState = BaseBotState.CloseWarframe;
                     _requestingControl = true;
                     return;
                 }
@@ -359,7 +330,7 @@ namespace Application.Actionables.ChatBots
             _mouse.MoveTo(0, 0);
             await Task.Delay(17);
 
-            _currentState = BotStates.ParseChat;
+            _currentState = TradeBotState.ParseChat;
             _requestingControl = true;
         }
 
@@ -627,7 +598,7 @@ namespace Application.Actionables.ChatBots
         {
             if (_warframeProcess == null || _warframeProcess.HasExited)
             {
-                _currentState = BotStates.StartWarframe;
+                _baseState = BaseBotState.StartWarframe;
                 _requestingControl = true;
                 return;
             }
@@ -646,7 +617,7 @@ namespace Application.Actionables.ChatBots
                     screen.Save(filepath);
                     await _dataSender.AsyncSendDebugMessage("Failed to move past login screen");
                     await _dataSender.AsyncSendDebugMessage($"On a login related screen, { state.ToString()}. Restarting.See { filepath}.");
-                    _currentState = BotStates.CloseWarframe;
+                    _baseState = BaseBotState.CloseWarframe;
                     _requestingControl = true;
                     return;
                 }
@@ -678,7 +649,7 @@ namespace Application.Actionables.ChatBots
             }
 
             //_lastMessage = DateTime.Now;
-            _currentState = BotStates.ParseChat;
+            _currentState = TradeBotState.ParseChat;
             _requestingControl = true;
         }
 
@@ -848,318 +819,6 @@ namespace Application.Actionables.ChatBots
             {
                 //_dataSender.AsyncSendDebugMessage("Failed to save screen: " + e.ToString());
                 return null;
-            }
-        }
-
-        private Task CloseWarframe()
-        {
-            _logger.Log("Closing warframe");
-            return Task.Run(() =>
-            {
-                if (_warframeProcess != null)
-                {
-                    try
-                    {
-                        _warframeProcess.Kill();
-                    }
-                    catch
-                    { }
-                    _warframeProcess = null;
-                }
-
-                _currentState = BotStates.StartWarframe;
-                _requestingControl = true;
-            });
-        }
-
-        private async Task StartWarframe()
-        {
-            _requestingControl = false;
-            var existingWarframes = System.Diagnostics.Process.GetProcessesByName("Warframe.x64").ToArray();
-
-            var launcher = new System.Diagnostics.Process()
-            {
-                StartInfo = _warframeCredentials.StartInfo
-            };
-            launcher.Start();
-            await Task.Delay(5000);
-
-            //Check if there was already a launcher running
-            if (launcher.HasExited)
-            {
-                System.Diagnostics.Process.GetProcesses().Where(p => p.ProcessName.ToLower().Contains("launcher")).ToList().ForEach(p =>
-                {
-                    try { p.Kill(); } catch { }
-                });
-
-                _currentState = BotStates.StartWarframe;
-                _requestingControl = true;
-                return;
-            }
-
-            ////If not start launcher, click play until WF starts
-            var start = DateTime.Now;
-            while (true)
-            {
-
-                //Yield to other tasks after 4 minutes of waiting
-                if (DateTime.Now.Subtract(start).TotalMinutes > 4f)
-                {
-                    _currentState = BotStates.StartWarframe;
-                    _requestingControl = true;
-                    return;
-                }
-
-                _screenStateHandler.GiveWindowFocus(launcher.MainWindowHandle);
-                var launcherRect = _screenStateHandler.GetWindowRectangle(launcher.MainWindowHandle);
-                _mouse.Click(launcherRect.Left + (int)((launcherRect.Right - launcherRect.Left) * 0.7339181286549708f),
-                    launcherRect.Top + (int)((launcherRect.Bottom - launcherRect.Top) * 0.9252336448598131f));
-                await Task.Delay(17);
-                _keyboard.SendSpace();
-                await Task.Delay(1000);
-                if (launcher.HasExited)
-                {
-                    await Task.Delay(10000);
-                    break;
-                }
-            }
-
-            foreach (var warframe in System.Diagnostics.Process.GetProcessesByName("Warframe.x64").ToArray())
-            {
-                if (!existingWarframes.Any(eWF => eWF.MainWindowHandle == warframe.MainWindowHandle))
-                    _warframeProcess = warframe;
-            }
-
-            //Give 15 minutes on a fresh login to allow slow chats to fill up before killing them.
-            _lastMessage = DateTime.UtcNow.AddMinutes(15);
-            _currentState = BotStates.WaitForLoadScreen;
-            _requestingControl = true;
-        }
-
-        private async Task WaitForLoadingScreen()
-        {
-            _requestingControl = false;
-
-            _logger.Log("Waiting for login screen");
-            var startTime = DateTime.Now;
-            //We may have missed the loading screen. If we started WF then wait even longer to get to the login screen
-            var atLogin = false;
-            while (DateTime.Now.Subtract(startTime).TotalMinutes < 1)
-            {
-                _screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle);
-                _mouse.MoveTo(0, 0);
-                await Task.Delay(17);
-                using (var screen = _gameCapture.GetFullImage())
-                {
-                    screen.Save("screen.png");
-                    if (_screenStateHandler.GetScreenState(screen) != Enums.ScreenState.LoginScreen)
-                    {
-                        await Task.Delay(1000);
-                    }
-                    else
-                    {
-                        atLogin = true;
-                        break;
-                    }
-                }
-            }
-
-            if (atLogin)
-            {
-                _currentState = BotStates.LogIn;
-            }
-            else
-                _currentState = BotStates.CloseWarframe;
-            _requestingControl = true;
-        }
-
-        private async Task LogIn()
-        {
-            _screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle);
-            await Task.Delay(100);
-            _mouse.Click(0, 0);
-
-            using (var screen = _gameCapture.GetFullImage())
-            {
-                screen.Save("screen.png");
-                if (_screenStateHandler.GetScreenState(screen) == Enums.ScreenState.LoginScreen)
-                {
-                    _logger.Log("Logging in");
-                    ////Username
-                    //_mouse.Click(3041, 1145);
-                    //await Task.Delay(17);
-                    //_keyboard.SendPaste(_warframeCredentials.Username);
-                    //await Task.Delay(17);
-
-                    //Password
-                    _screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle);
-                    await Task.Delay(25);
-                    _mouse.Click(2936, 1235);
-                    await Task.Delay(250);
-                    _mouse.Click(2936, 1235);
-                    await Task.Delay(250);
-                    _keyboard.SendPaste(_warframeCredentials.Password);
-                    await Task.Delay(17);
-
-                    //Login
-                    _screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle);
-                    _mouse.Click(2945, 1333);
-
-                    //Give plenty of time for the screen to transition
-                    var startTime = DateTime.Now;
-                    while (DateTime.Now.Subtract(startTime).TotalSeconds < 15)
-                    {
-                        using (var newScreen = _gameCapture.GetFullImage())
-                        {
-                            if (_screenStateHandler.GetScreenState(newScreen) == ScreenState.LoginScreen)
-                                await Task.Delay(1000);
-                            else
-                                break;
-                        }
-                    }
-                    _logger.Log("Waiting 5 seconds for screen transition");
-                    await Task.Delay(5000);
-                    _logger.Log("Waiting done");
-                }
-                else
-                {
-                    _logger.Log("Login screen not detected. Restarting warframe.");
-                    _currentState = BotStates.CloseWarframe;
-                    _requestingControl = true;
-                    return;
-                }
-            }
-
-            _screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle);
-            await Task.Delay(100);
-            using (var screen = _gameCapture.GetFullImage())
-            {
-                ScreenState state = _screenStateHandler.GetScreenState(screen);
-                if (state == ScreenState.LoginScreen)
-                {
-                    _logger.Log("Login screen still detected. Restarting warframe.");
-                    _currentState = BotStates.CloseWarframe;
-                    _requestingControl = true;
-                    return;
-                }
-                else if (state == ScreenState.DailyRewardScreenItem || state == ScreenState.DailyRewardScreenPlat)
-                {
-                    _logger.Log("Claiming daily reward.");
-                    await ClaimDailyReward();
-                    _requestingControl = false;
-                }
-                else if (_failedPostLoginScreens < 3)
-                {
-                    _failedPostLoginScreens++;
-                }
-                else if (_failedPostLoginScreens == 3)
-                {
-                    //We are stuck on some unkown reward screen or new feature screen.
-                    //Time to click wildly
-
-                    //Click blidnly at a continue button
-                    _logger.Log("Attempting to click continue button");
-                    _mouse.Click((int)(screen.Width - screen.Width * 0.06298828125),
-                        (int)(screen.Height - screen.Height * 0.0685185185185185));
-
-                    //Wait and then check to see if that worked
-                    await Task.Delay(1000);
-                    
-                    //If we are still not controlling the warframe then more blind clicking.
-                    //NEVER EVER MOVE THE MOUSE WHILE CONTROLLING THE WARFRAME!
-                    using (var newScreen = _gameCapture.GetFullImage())
-                    {
-                        ScreenState newState = _screenStateHandler.GetScreenState(screen);
-                        if (newState != ScreenState.ControllingWarframe)
-                        {
-                            //Click blindly on a possible reward location
-                            _mouse.Click((int)(screen.Width - screen.Width * 0.28173828125),
-                                (int)(screen.Height - screen.Height * 0.2555555555555556));
-                            await Task.Delay(1000);
-                        }
-                    }
-                }
-
-
-                _logger.Log("Waiting in the background for 45 seconds");
-                var _ = Task.Run(async () =>
-                {
-                    await Task.Delay(45 * 1000);
-                    _logger.Log("Done waiting 45 seconds");
-
-                    _currentState = BotStates.NavigateToChat;
-                    _requestingControl = true;
-                });
-            }
-        }
-
-        private async Task ClaimDailyReward()
-        {
-            if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
-            {
-                await Task.Delay(17);
-                _mouse.Click(0, 0);
-            }
-
-            using (var screen = _gameCapture.GetFullImage())
-            {
-                screen.Save("screen.png");
-                var state = _screenStateHandler.GetScreenState(screen);
-                if (state == Enums.ScreenState.DailyRewardScreenItem)
-                {
-                    _logger.Log("Claiming random middle reward");
-                    _mouse.Click(2908, 1592);
-                }
-                else if (state == Enums.ScreenState.DailyRewardScreenPlat)
-                {
-                    _logger.Log("Claiming unkown plat discount");
-                    _mouse.Click(3325, 1951);
-                }
-            }
-
-            await Task.Delay(17);
-
-            CloseUnknownWindow();
-
-            await Task.Delay(1000);
-        }
-
-        private void CloseUnknownWindow()
-        {
-            //Close any annoying windows it opened
-            using (var screen = _gameCapture.GetFullImage())
-            {
-                if (_screenStateHandler.IsExitable(screen))
-                {
-                    _mouse.Click(3816, 2013);
-                    Thread.Sleep(30);
-                }
-            }
-        }
-
-        private Task ClaimDailyRewardTask()
-        {
-            return Task.Run(async () =>
-            {
-                await ClaimDailyReward();
-                _currentState = BotStates.NavigateToChat;
-                _requestingControl = true;
-            });
-        }
-
-        public void ShutDown()
-        {
-            if (_warframeProcess != null && !_warframeProcess.HasExited)
-            {
-                try
-                {
-                    CloseWarframe().Wait();
-                }
-                catch
-                {
-                    _warframeProcess.Close();
-                    _warframeProcess = null;
-                }
             }
         }
     }
