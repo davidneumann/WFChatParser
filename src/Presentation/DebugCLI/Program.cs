@@ -3442,7 +3442,7 @@ namespace DebugCLI
         {
             _output = false;
         }
-        public void Log(string message)
+        public void Log(string message, bool writeToConsole = true)
         {
             if (_output)
                 Console.WriteLine(message);

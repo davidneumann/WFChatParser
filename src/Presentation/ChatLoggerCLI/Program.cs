@@ -61,10 +61,11 @@ namespace ChatLoggerCLI
                 config["DataSender:RivenImageMessagePrefix"],
                 config["DataSender:LogMessagePrefix"],
                 config["DataSender:LogLineMessagePrefix"]);
-            _ = Task.Run(_dataSender.ConnectAsync);
 
             var logger = new Application.Logger.Logger(_dataSender, _cancellationSource.Token);
             _dataSender._logger = logger;
+
+            _ = Task.Run(_dataSender.ConnectAsync);
 
             try
             {
@@ -134,7 +135,7 @@ namespace ChatLoggerCLI
 
                 var gc = new GameCapture(logger);
                 var obs = GetObsSettings(config["Credentials:Key"], config["Credentials:Salt"]);
-                logger.Log("Starting bot. Expected " + warframeCredentials.Length + " clients");
+                logger.Log($"Starting bot {DateTime.Now}. Expected " + warframeCredentials.Length + " clients");
                 var bot = new MultiChatRivenBot(warframeCredentials, new MouseHelper(),
                     new KeyboardHelper(),
                     new ScreenStateHandler(),

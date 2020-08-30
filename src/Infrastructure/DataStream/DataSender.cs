@@ -87,6 +87,9 @@ namespace DataStream
 
         public async Task ConnectAsync()
         {
+            if (_logger != null)
+                _logger.Log($"Connecting to {_uri}", writeToConsole: false);
+
             // TODO Use cancellation tokens?
             await ActualConnect();
             _ = Task.Run(ReceiveData);
@@ -179,6 +182,10 @@ namespace DataStream
                 }
                 catch (Exception e)
                 {
+                    if(_logger != null)
+                    {
+                        _logger.Log($"{e}", writeToConsole: false);
+                    }
                     // TODO What to do here?
                 }
 

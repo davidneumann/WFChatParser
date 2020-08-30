@@ -54,13 +54,16 @@ namespace Application.Logger
             }
         }
 
-        public void Log(string message)
+        public void Log(string message, bool writeToConsole = true)
         {
             message = $"[{DateTime.Now.ToString("HH:mm:ss.f")}] {message}";
-            var consoleMessage = message;
-            if (consoleMessage.Length > Console.BufferWidth)
-                consoleMessage = consoleMessage.Substring(0, Console.BufferWidth - 1);
-            Console.WriteLine(consoleMessage);
+            if (writeToConsole)
+            {
+                var consoleMessage = message;
+                if (consoleMessage.Length > Console.BufferWidth)
+                    consoleMessage = consoleMessage.Substring(0, Console.BufferWidth - 1);
+                Console.WriteLine(consoleMessage);
+            }
             _messages.Enqueue(message);
         }
     }
