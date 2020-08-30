@@ -10,12 +10,12 @@ namespace Application.Logger
 {
     public class Logger : ILogger
     {
-        private IDataSender _dataSender;
+        private IDataTxRx _dataSender;
         private StreamWriter _streamWriter;
         private CancellationToken _token;
         private ConcurrentQueue<string> _messages = new ConcurrentQueue<string>();
 
-        public Logger(IDataSender dataSender, CancellationToken c)
+        public Logger(IDataTxRx dataSender, CancellationToken c)
         {
             _dataSender = dataSender;
             _streamWriter = new System.IO.StreamWriter("log.txt", false);

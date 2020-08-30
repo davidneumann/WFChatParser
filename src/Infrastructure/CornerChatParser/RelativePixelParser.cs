@@ -24,7 +24,7 @@ namespace RelativeChatParser
 {
     public class RelativePixelParser : IChatParser
     {
-        private readonly IDataSender _sender;
+        private readonly IDataTxRx _sender;
         private readonly ILogger _logger;
         private static readonly FuzzyGlyph NullGlyph;
         private Queue<string> _timeUserCache = new Queue<string>();
@@ -64,7 +64,7 @@ namespace RelativeChatParser
             }
         }
 
-        public RelativePixelParser(ILogger logger, IDataSender sender)
+        public RelativePixelParser(ILogger logger, IDataTxRx sender)
         {
             _sender = sender;
             _logger = logger;

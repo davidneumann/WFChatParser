@@ -19,8 +19,4 @@
     <ProjectReference Include="..\..\Infrastructure\Tesseract\src\Tesseract\Tesseract.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Actionables\ProfileBots\" />
-  </ItemGroup>
-
 </Project>

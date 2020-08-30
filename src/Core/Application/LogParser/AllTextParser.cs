@@ -7,10 +7,10 @@ namespace Application.LogParser
 {
     public class AllTextParser
     {
-        private IDataSender _dataSender;
+        private IDataTxRx _dataSender;
         private WarframeLogParser _warframeLogParser;
 
-        public AllTextParser(IDataSender dataSender, WarframeLogParser warframeLogParser)
+        public AllTextParser(IDataTxRx dataSender, WarframeLogParser warframeLogParser)
         {
             _dataSender = dataSender;
             _warframeLogParser = warframeLogParser;

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Application.Interfaces
 {
-    public interface IDataSender
+    public interface IDataTxRx
     {
         Task AsyncSendChatMessage(ChatMessageModel message);
         Task AsyncSendDebugMessage(string message);
@@ -17,6 +17,8 @@ namespace Application.Interfaces
         Task AsyncSendRivenImage(Guid imageID, string rivenBase64);
         Task AsyncSendLogLine(LogMessage message);
         Task AsyncSendLogMessage(string message);
+
+        event EventHandler<string> ProfileParseRequest;
         Task AsyncSendProfileData(Profile profile);
     }
 }

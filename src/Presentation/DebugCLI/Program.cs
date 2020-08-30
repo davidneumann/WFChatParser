@@ -50,6 +50,7 @@ using WebSocketSharp;
 using RelativeChatParser.Database;
 using RelativeChatParser.Recognition;
 using ImageMagick;
+using Application.Actionables.ProfileBots.Models;
 
 namespace DebugCLI
 {
@@ -3449,8 +3450,10 @@ namespace DebugCLI
         }
     }
 
-    class DummySender : IDataSender
+    class DummySender : IDataTxRx
     {
+        public event EventHandler<string> ProfileParseRequest;
+
         public async Task AsyncSendChatMessage(ChatMessageModel message)
         {
         }
@@ -3464,6 +3467,10 @@ namespace DebugCLI
         }
 
         public async Task AsyncSendLogMessage(string message)
+        {
+        }
+
+        public async Task AsyncSendProfileData(Profile profile)
         {
         }
 

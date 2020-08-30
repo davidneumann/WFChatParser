@@ -23,7 +23,7 @@ namespace Application.Actionables
         protected CancellationToken _cancellationToken;
         protected WarframeClientInformation _warframeCredentials;
         protected IMouse _mouse;
-        protected IDataSender _dataSender;
+        protected IDataTxRx _dataSender;
         protected Process _warframeProcess;
         protected DateTime _lastMessage = DateTime.UtcNow.AddMinutes(10);
 
@@ -41,7 +41,7 @@ namespace Application.Actionables
             IScreenStateHandler screenStateHandler,
             ILogger logger,
             IGameCapture gameCapture,
-            IDataSender dataSender)
+            IDataTxRx dataSender)
         {
             _cancellationToken = cancellationToken;
             _warframeCredentials = warframeCredentials;

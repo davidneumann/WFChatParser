@@ -23,7 +23,7 @@ namespace Application
 {
     public class ChatWatcher
     {
-        private IDataSender _dataSender;
+        private IDataTxRx _dataSender;
         private IChatParser _chatParser;
         private IGameCapture _gameCapture;
         private IMouse _mouseMover;
@@ -37,7 +37,7 @@ namespace Application
         private Riven _UILastRiven = null;
         private RedTextParser _redTextParser;
 
-        public ChatWatcher(IDataSender dataSender, IChatParser chatParser, IGameCapture gameCapture, IMouse mouseMover, IRivenCleaner rivenCleaner, IRivenParser rivenParser,
+        public ChatWatcher(IDataTxRx dataSender, IChatParser chatParser, IGameCapture gameCapture, IMouse mouseMover, IRivenCleaner rivenCleaner, IRivenParser rivenParser,
             IScreenStateHandler screenStateHandler,
             RedTextParser redTextParser)
         {

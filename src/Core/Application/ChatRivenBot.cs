@@ -32,7 +32,7 @@ namespace Application
         private readonly IGameCapture _gameCapture;
         private readonly IKeyboard _keyboard;
         private readonly IChatParser _chatParser;
-        private readonly IDataSender _dataSender;
+        private readonly IDataTxRx _dataSender;
         private readonly IRivenCleaner _rivenCleaner;
         private readonly IRivenParserFactory _rivenParserFactory;
         private readonly ObsSettings _obsSettings;
@@ -52,7 +52,7 @@ namespace Application
             string password,
             IKeyboard keyboard,
             IChatParser chatParser,
-            IDataSender dataSender,
+            IDataTxRx dataSender,
             IRivenCleaner rivenCleaner,
             IRivenParserFactory rivenParserFactory,
             RedTextParser redTextParser)

@@ -23,7 +23,7 @@ namespace Application.Actionables.ChatWatcher
             IScreenStateHandler screenStateHandler,
             ILogger logger,
             IGameCapture gameCapture,
-            IDataSender dataSender,
+            IDataTxRx dataSender,
             IChatParser chatParser) : base(cancellationToken, warframeCredentials, mouse, keyboard, screenStateHandler, logger, gameCapture, dataSender)
         {
             _chatParser = chatParser;

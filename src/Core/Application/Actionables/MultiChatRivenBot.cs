@@ -27,7 +27,7 @@ namespace Application.Actionables
         private IScreenStateHandler _screenStateHandler;
         private IRivenParserFactory _rivenParserFactory;
         private IRivenCleaner _rivenCleaner;
-        private IDataSender _dataSender;
+        private IDataTxRx _dataSender;
         private List<Thread> _rivenQueueWorkers = new List<Thread>();
         private ConcurrentQueue<RivenParseTaskWorkItem> _rivenWorkQueue = new ConcurrentQueue<RivenParseTaskWorkItem>();
         private ILogger _logger;
@@ -41,7 +41,7 @@ namespace Application.Actionables
             IScreenStateHandler screenStateHandler,
             IRivenParserFactory rivenParserFactory,
             IRivenCleaner rivenCleaner,
-            IDataSender dataSender,
+            IDataTxRx dataSender,
             IGameCapture gameCapture,
             ILogger logger,
             IChatParserFactory chatParserFactory)

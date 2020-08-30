@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Application.Actionables.ChatBots;
+using Application.Actionables.ProfileBots.Models;
 using Application.ChatMessages.Model;
 using Application.Interfaces;
 using Application.Logger;
@@ -22,7 +23,7 @@ using Newtonsoft.Json.Serialization;
 
 namespace DataStream
 {
-    public class ClientWebsocketDataSender : IDisposable, IDataSender
+    public class ClientWebsocketDataSender : IDisposable, IDataTxRx
     {
         private ClientWebSocket _websocket;
         private readonly Uri _uri;
@@ -47,6 +48,7 @@ namespace DataStream
 
         public event EventHandler RequestToKill;
         public event EventHandler<SaveEventArgs> RequestSaveAll;
+        public event EventHandler<string> ProfileParseRequest;
 
         public ILogger _logger;
 
@@ -361,6 +363,11 @@ namespace DataStream
             if (_logLineMessagePrefix != null)
                 Send(_logLineMessagePrefix + JsonConvert.SerializeObject(message, _jsonSettings));
             return Task.CompletedTask;
+        }
+
+        public Task AsyncSendProfileData(Profile profile)
+        {
+            throw new NotImplementedException();
         }
     }
     public class SaveEventArgs : EventArgs
