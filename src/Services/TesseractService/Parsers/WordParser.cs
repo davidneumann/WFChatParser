@@ -4,7 +4,7 @@ using System.Drawing;
 using System.Text;
 using Tesseract;
 
-namespace ImageOCR
+namespace TesseractService.Parsers
 {
     public class WordParser
     {

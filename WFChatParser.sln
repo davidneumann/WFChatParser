@@ -33,6 +33,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RelativeChatParser", "src\I
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ChatLoggerUtil", "src\Presentation\ChatLoggerUtil\ChatLoggerUtil.csproj", "{B0468020-45F6-4230-86E5-562AB5F7518A}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Services", "Services", "{48E541B7-208B-423A-9592-4BEE9792F62B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TesseractService", "src\Services\TesseractService\TesseractService.csproj", "{EA1CBE9E-C2A2-4C32-8A5C-179E5A3387E5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -187,6 +191,18 @@ Global
 		{B0468020-45F6-4230-86E5-562AB5F7518A}.Release|x64.Build.0 = Release|Any CPU
 		{B0468020-45F6-4230-86E5-562AB5F7518A}.Release|x86.ActiveCfg = Release|Any CPU
 		{B0468020-45F6-4230-86E5-562AB5F7518A}.Release|x86.Build.0 = Release|Any CPU
+		{EA1CBE9E-C2A2-4C32-8A5C-179E5A3387E5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EA1CBE9E-C2A2-4C32-8A5C-179E5A3387E5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EA1CBE9E-C2A2-4C32-8A5C-179E5A3387E5}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{EA1CBE9E-C2A2-4C32-8A5C-179E5A3387E5}.Debug|x64.Build.0 = Debug|Any CPU
+		{EA1CBE9E-C2A2-4C32-8A5C-179E5A3387E5}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{EA1CBE9E-C2A2-4C32-8A5C-179E5A3387E5}.Debug|x86.Build.0 = Debug|Any CPU
+		{EA1CBE9E-C2A2-4C32-8A5C-179E5A3387E5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EA1CBE9E-C2A2-4C32-8A5C-179E5A3387E5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EA1CBE9E-C2A2-4C32-8A5C-179E5A3387E5}.Release|x64.ActiveCfg = Release|Any CPU
+		{EA1CBE9E-C2A2-4C32-8A5C-179E5A3387E5}.Release|x64.Build.0 = Release|Any CPU
+		{EA1CBE9E-C2A2-4C32-8A5C-179E5A3387E5}.Release|x86.ActiveCfg = Release|Any CPU
+		{EA1CBE9E-C2A2-4C32-8A5C-179E5A3387E5}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -203,6 +219,7 @@ Global
 		{51830611-08EE-407F-8FDE-3819DA9F3362} = {908B3390-0AB4-4FFF-A227-F8CD22A58484}
 		{CE7A63AC-7DEF-4B53-BD0C-07B41328A83E} = {DD1985B9-7A0F-4B8A-AC9C-2C0675DF083E}
 		{B0468020-45F6-4230-86E5-562AB5F7518A} = {908B3390-0AB4-4FFF-A227-F8CD22A58484}
+		{EA1CBE9E-C2A2-4C32-8A5C-179E5A3387E5} = {48E541B7-208B-423A-9592-4BEE9792F62B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A72EE6CA-91B9-4DBD-A082-55E80822506F}

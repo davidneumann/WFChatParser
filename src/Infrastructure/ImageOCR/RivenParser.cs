@@ -14,6 +14,7 @@ using Tesseract;
 using Application.Utils;
 using Application.Data;
 using Application.Enums;
+using TesseractService.Parsers;
 
 namespace ImageOCR
 {

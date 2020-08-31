@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Tesseract;
 
-namespace ImageOCR
+namespace TesseractService.Parsers
 {
     public class LineParser
     {
