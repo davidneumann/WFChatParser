@@ -3,6 +3,7 @@ using Application.Actionables.States;
 using Application.Enums;
 using Application.Interfaces;
 using Application.Logger;
+using Application.Utils;
 using ImageMagick;
 using System;
 using System.Collections.Concurrent;
@@ -266,8 +267,11 @@ namespace Application.Actionables.ProfileBots
         private Task ParseProfile()
         {
             _logger.Log($"Starting to parse profile {_currentProfileName}.");
-            throw new NotImplementedException();
+            
 
+            ExtractImages(null);
+
+            throw new NotImplementedException();
             ParseProfileTab();
             ParseEquipmentTab();
             //Make sure to send the data _dataSender!
@@ -275,6 +279,112 @@ namespace Application.Actionables.ProfileBots
             // Stop trying to parse more names
             if (_profileRequestQueue.Count <= 0)
                 _requestingControl = false;
+        }
+
+        private Bitmap ExtractRect(Rectangle rect, Bitmap source)
+        {
+            Bitmap result;
+
+            using (var bitmap = new Bitmap(rect.Width, rect.Height))
+            {
+                for (int x = rect.Left; x < rect.Right; x++)
+                {
+                    for (int y = rect.Top; y < rect.Bottom; y++)
+                    {
+                        var p = source.GetPixel(x, y);
+                        var hsv = p.ToHsv();
+                        var c = 255;
+                        if (hsv.Value >= 0.95f)
+                        {
+                            var v = 1 - hsv.Value;
+                            c = (int)(v * byte.MaxValue);
+                        }
+                        bitmap.SetPixel(x - rect.Left, y - rect.Top, Color.FromArgb(c, c, c));
+                    }
+                }
+
+                var scale = 48f / bitmap.Height;
+                result = new Bitmap(bitmap, new Size((int)(bitmap.Width * scale), (int)(bitmap.Height * scale)));
+            }
+
+            return result;
+        }
+
+        private Rectangle TrimRect(Rectangle searchSpace, Bitmap bitmap)
+        {
+            var left = searchSpace.Right;
+            var right = searchSpace.Left;
+            var top = searchSpace.Bottom;
+            var bottom = searchSpace.Top;
+
+            for (int x = searchSpace.Left; x < searchSpace.Right; x++)
+            {
+                for (int y = searchSpace.Top; y < searchSpace.Bottom; y++)
+                {
+                    var p = bitmap.GetPixel(x, y);
+                    var hsv = p.ToHsv();
+                    if (hsv.Value >= 0.95f)
+                    {
+                        if (y < top)
+                            top = y;
+                        if (y > bottom)
+                            bottom = y;
+                        if (x < left)
+                            left = x;
+                        if (x > right)
+                            right = x;
+                    }
+                }
+            }
+
+            return new Rectangle(left, top, right - left, bottom - top);
+        }
+
+        public void ExtractImages(Bitmap bitmap)
+        {
+            //using (var bitmap = _gameCapture.GetFullImage())
+            {
+                //MR
+                var mr = ExtractRect(TrimRect(new Rectangle(3149, 479, 117, 92), bitmap), bitmap);
+                mr.Save("profile_mr.png");
+
+                //TotalXP
+                var totalXp = ExtractRect(TrimRect(new Rectangle(3135, 641, 149, 34), bitmap), bitmap);
+                totalXp.Save("profile_total.png");
+
+                var remainingXp = ExtractRect(TrimRect(new Rectangle(3402, 710, 141, 42), bitmap), bitmap);
+                remainingXp.Save("profile_remaining.png");
+
+                var clanName = ExtractRect(TrimRect(new Rectangle(3011, 1075, 385, 59), bitmap), bitmap);
+                clanName.Save("profile_clan.png");
+
+                using (var combined = new Bitmap(mr.Width + totalXp.Width + remainingXp.Width + clanName.Width,
+                                                 mr.Height + totalXp.Height + remainingXp.Height + clanName.Height))
+                {
+                    var sources = new Bitmap[] { mr, totalXp, remainingXp, clanName };
+                    var source = sources[0];
+                    var sourceI = 0;
+                    var top = 0;
+                    for (int y = 0; y < combined.Height; y++)
+                    {
+                        for (int x = 0; x < combined.Width; x++)
+                        {
+                            if (x >= source.Width)
+                                break;
+                            combined.SetPixel(x, y, source.GetPixel(x, y - top));
+                        }
+                        if(y - top + 1 >= source.Height && y < combined.Height - 1)
+                        {
+                            top += source.Height;
+                            sourceI++;
+                            source = sources[sourceI];
+                        }
+                    }
+                    combined.Save("profile_combined.png");
+                }
+            }
+
+            throw new NotImplementedException();
         }
 
         private void ParseProfileTab()
