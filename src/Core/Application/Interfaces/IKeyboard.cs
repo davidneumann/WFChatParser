@@ -9,5 +9,7 @@ namespace Application.Interfaces
         void SendEscape();
         void SendPaste(string text);
         void SendSpace();
+        void SendEnter();
+        void SendF6();
     }
 }

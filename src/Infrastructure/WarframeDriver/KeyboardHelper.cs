@@ -51,5 +51,17 @@ namespace WarframeDriver
             keybd_event(0x20, 0, KEYEVENTF_KEYUP, 0);
             System.Threading.Thread.Sleep(66);
         }
+
+        public void SendEnter()
+        {
+            Keyboard.SendScancode(Keyboard.ScanCodeShort.RETURN);
+            System.Threading.Thread.Sleep(66);
+        }
+
+        public void SendF6()
+        {
+            Keyboard.SendScancode(Keyboard.ScanCodeShort.F6);
+            Thread.Sleep(66);
+        }
     }
 }

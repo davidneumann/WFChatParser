@@ -51,6 +51,8 @@ using RelativeChatParser.Database;
 using RelativeChatParser.Recognition;
 using ImageMagick;
 using Application.Actionables.ProfileBots.Models;
+using Application.Actionables.ProfileBots;
+using Application.Actionables.ChatBots;
 
 namespace DebugCLI
 {
@@ -115,7 +117,47 @@ namespace DebugCLI
             //RelativeCacheShim();
 
 
-            OverlappGrouperShim();
+            //OverlappGrouperShim();
+
+            ProfileShim();
+        }
+
+        private static void ProfileShim()
+        {
+            var cT = new CancellationTokenSource();
+            var fileCreds = File.ReadAllLines("creds.txt");
+            var startInfo = new ProcessStartInfo();
+            startInfo.UserName = fileCreds[2];
+            var password = fileCreds[3];
+            System.Security.SecureString ssPwd = new System.Security.SecureString();
+            for (int x = 0; x < password.Length; x++)
+            {
+                ssPwd.AppendChar(password[x]);
+            }
+            startInfo.Password = ssPwd;
+            var info = new FileInfo(@"C:\Program Files (x86)\Steam\steamapps\common\Warframe\Tools\Launcher.exe");
+            startInfo.FileName = info.FullName;
+            startInfo.Arguments = @"-cluster:public -registry:Steam";
+            startInfo.UseShellExecute = false;
+            startInfo.WorkingDirectory = info.Directory.FullName;
+            var creds = new WarframeClientInformation()
+            {
+                Username = fileCreds[0],
+                Password = fileCreds[1],
+                Region = "debugRegion",
+                StartInfo = startInfo
+            };
+            var logger = new DummyLogger(true);
+            var bot = new ProfileBot(cT.Token, creds, new MouseHelper(), new KeyboardHelper(), new ScreenStateHandler(), logger, new GameCapture(logger), new DummySender());
+            bot.AddProfileRequest("ayeigui");
+
+            while(true)
+            {
+                if (bot.IsRequestingControl)
+                    bot.TakeControl().Wait();
+                else
+                    Thread.Sleep(100);
+            }
         }
 
         private static void OverlappGrouperShim()

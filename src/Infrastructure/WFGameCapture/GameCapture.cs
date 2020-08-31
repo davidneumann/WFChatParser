@@ -53,7 +53,7 @@ namespace WFGameCapture
             var output1 = output.QueryInterface<Output1>();
             var bounds = output.Description.DesktopBounds;
             DisplayBounds = Rectangle.FromLTRB(bounds.Left, bounds.Top, bounds.Right, bounds.Bottom);
-
+             
             _duplicateOutput = output1.DuplicateOutput(Device);
 
             GetOutputAsBitmap(100).Dispose();

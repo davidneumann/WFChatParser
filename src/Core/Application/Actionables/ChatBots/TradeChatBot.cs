@@ -808,18 +808,5 @@ namespace Application.Actionables.ChatBots
                 }
             }
         }
-
-        private string SaveScreenToDebug(Bitmap screen)
-        {
-            if (!System.IO.Directory.Exists("debug"))
-                System.IO.Directory.CreateDirectory("debug");
-            var filePath = System.IO.Path.Combine("debug", DateTime.Now.ToFileTime() + ".png");
-            try { screen.Save(filePath, System.Drawing.Imaging.ImageFormat.Png); return filePath; }
-            catch (Exception e)
-            {
-                //_dataSender.AsyncSendDebugMessage("Failed to save screen: " + e.ToString());
-                return null;
-            }
-        }
     }
 }

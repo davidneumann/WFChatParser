@@ -12,7 +12,64 @@ namespace ChatLoggerUtil
     {
         static void Main(string[] args)
         {
-            GetCrednetials(false);
+            GetCrednetials(true);
+            //SaveCredentials();
+        }
+
+        private static void SaveCredentials()
+        {
+            IConfiguration config = new ConfigurationBuilder()
+                    .AddJsonFile("appsettings.json", true, true)
+                    .AddJsonFile("appsettings.development.json", true, true)
+                    .AddJsonFile("appsettings.production.json", true, true)
+                    .Build();
+
+            var key = config["Credentials:Key"];
+            var salt = config["Credentials:Salt"];
+
+            Console.Write("Target (ex, WFBot:Bot3): ");
+            var target = Console.ReadLine();
+            Console.Write("Username: ");
+            var username = Console.ReadLine();
+            Console.Write("\r\nPassword: ");
+            var password = Console.ReadLine();
+
+
+            string encryptedPassword = null;
+            using (MemoryStream ms = new MemoryStream())
+            {
+                PasswordDeriveBytes pdb = new PasswordDeriveBytes(key, Encoding.UTF8.GetBytes(salt));
+                Aes aes = new AesManaged();
+                aes.Key = pdb.GetBytes(aes.KeySize / 8);
+                aes.IV = pdb.GetBytes(aes.BlockSize / 8);
+                using (CryptoStream cs = new CryptoStream(ms,
+                  aes.CreateEncryptor(), CryptoStreamMode.Write))
+                {
+                    var pass = Encoding.UTF8.GetBytes(password);
+                    cs.Write(pass, 0, pass.Length);
+                    cs.Close();
+                }
+                encryptedPassword = Convert.ToBase64String(ms.ToArray());
+            }
+
+            string encryptedUsername = null;
+            using (MemoryStream ms = new MemoryStream())
+            {
+                PasswordDeriveBytes pdb = new PasswordDeriveBytes(key, Encoding.UTF8.GetBytes(salt));
+                Aes aes = new AesManaged();
+                aes.Key = pdb.GetBytes(aes.KeySize / 8);
+                aes.IV = pdb.GetBytes(aes.BlockSize / 8);
+                using (CryptoStream cs = new CryptoStream(ms,
+                  aes.CreateEncryptor(), CryptoStreamMode.Write))
+                {
+                    var pass = Encoding.UTF8.GetBytes(username);
+                    cs.Write(pass, 0, pass.Length);
+                    cs.Close();
+                }
+                encryptedUsername = Convert.ToBase64String(ms.ToArray());
+            }
+
+            CredentialManager.SaveCredentials(target, new System.Net.NetworkCredential(encryptedUsername, encryptedPassword));
         }
 
         private static void GetCrednetials(bool outputPasswords)
@@ -30,9 +87,10 @@ namespace ChatLoggerUtil
             {
                 var section = config.GetSection(i.Path);
 
-                var Password = outputPasswords ? GetPassword(config["Credentials:Key"], config["Credentials:Salt"], section.GetSection("WarframeCredentialsTarget").Value) : string.Empty;
-                var Username = GetUsername(config["Credentials:Key"], config["Credentials:Salt"], section.GetSection("WarframeCredentialsTarget").Value);
-                Console.WriteLine($"{Username} : {Password}");
+                string target = section.GetSection("WarframeCredentialsTarget").Value;
+                var Password = outputPasswords ? GetPassword(config["Credentials:Key"], config["Credentials:Salt"], target) : string.Empty;
+                var Username = GetUsername(config["Credentials:Key"], config["Credentials:Salt"], target);
+                Console.WriteLine($"{target} {Username} : {Password}");
             }
         }
 

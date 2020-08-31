@@ -15,6 +15,7 @@ namespace Application.Enums
         ControllingWarframe,
         MainMenu,
         ProfileMenu,
-        GlyphWindow
+        GlyphWindow,
+        ProfileScreen
     }
 }

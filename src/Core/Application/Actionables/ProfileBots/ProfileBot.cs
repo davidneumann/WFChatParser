@@ -1,11 +1,13 @@
 ﻿using Application.Actionables.ChatBots;
 using Application.Actionables.States;
+using Application.Enums;
 using Application.Interfaces;
 using Application.Logger;
 using ImageMagick;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,6 +18,7 @@ namespace Application.Actionables.ProfileBots
     {
         private ConcurrentQueue<string> _profileRequestQueue = new ConcurrentQueue<string>();
         private ProfileBotState _currentState;
+        private string _currentProfileName;
 
         public ProfileBot(
             CancellationToken cancellationToken,
@@ -46,7 +49,7 @@ namespace Application.Actionables.ProfileBots
         {
             _logger.Log(_warframeCredentials.StartInfo.UserName + ":" + _warframeCredentials.Region + " taking control");
             _logger.Log($"Profile queue size: {_profileRequestQueue.Count}.");
-            
+
             if (_warframeProcess == null || _warframeProcess.HasExited)
             {
                 _currentState = ProfileBotState.WaitingForBaseBot;
@@ -78,7 +81,7 @@ namespace Application.Actionables.ProfileBots
             return Task.CompletedTask;
         }
 
-        private Task OpenProfile()
+        private async Task OpenProfile()
         {
             /*
              * Open the menu to safely expose the chat interface
@@ -93,7 +96,19 @@ namespace Application.Actionables.ProfileBots
              * Click exit
             */
 
-            throw new NotImplementedException();
+            if (_warframeProcess == null || _warframeProcess.HasExited)
+            {
+                _baseState = BaseBotState.StartWarframe;
+                _currentState = ProfileBotState.WaitingForBaseBot;
+                _requestingControl = true;
+                return;
+            }
+
+            if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
+            {
+                await Task.Delay(17);
+                _mouse.Click(0, 0);
+            }
 
             OpenMenu();
             OpenChat();
@@ -101,48 +116,156 @@ namespace Application.Actionables.ProfileBots
             CloseChat();
 
             _currentState = ProfileBotState.WaitingForProfile;
-            return Task.CompletedTask;
+            _requestingControl = true;
+            return;
         }
 
         private void OpenMenu()
         {
-            // Verify that we are in warframe mode
-            // Hit escape to open menu
-            // Verify menu is open
-            throw new NotImplementedException();
+            //Ensure we are controlling a warframe
+            var tries = 0;
+            while (true)
+            {
+                if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
+                {
+                    Thread.Sleep(17);
+                    _mouse.Click(0, 0);
+                }
+                using (var screen = _gameCapture.GetFullImage())
+                {
+                    var state = _screenStateHandler.GetScreenState(screen);
+                    if (state != Enums.ScreenState.ControllingWarframe)
+                    {
+                        _keyboard.SendEscape();
+                        Thread.Sleep(600);
+                    }
+                    else
+                        break;
+                }
+                tries++;
+                if (tries > 25)
+                {
+                    _logger.Log("Failed to navigate to glyph screen");
+                    throw new NavigationException(ScreenState.ControllingWarframe);
+                }
+            }
+            //Send escape to open main menu
+            _keyboard.SendEscape();
+            Thread.Sleep(1000); //Give menu time to animate
+
+            //Check if on Main Menu
+            _screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle);
+            using (var screen = _gameCapture.GetFullImage())
+            {
+                var state = _screenStateHandler.GetScreenState(screen);
+                if (state == Enums.ScreenState.MainMenu)
+                {
+                    return;
+                }
+                else
+                {
+                    var path = SaveScreenToDebug(screen);
+                    _dataSender.AsyncSendDebugMessage("Failed to navigate to main menu. See: " + path).Wait();
+                    throw new NavigationException(ScreenState.MainMenu);
+                }
+            }
         }
+
         private void OpenChat()
         {
-            // Verify chat is in expected place
-            // Click clan icon to open chat
-            // Verify SEND MESSAGE TO CLAN is showing
-            throw new NotImplementedException();
+            using (var screen = _gameCapture.GetFullImage())
+            {
+                if (_screenStateHandler.IsChatCollapsed(screen))
+                {
+                    _logger.Log("Expanding chat");
+                    //Click and drag to move chat into place
+                    _mouse.ClickAndDrag(new Point(91, 2122), new Point(0, 2160), 1000);
+                    Thread.Sleep(100);
+                }
+                else if (!_screenStateHandler.IsChatOpen(screen))
+                    throw new ChatMissingException();
+            }
         }
         private void PasteProfile()
         {
+            _logger.Log("Pasting profile command.");
             // Take a name from the queue. If somehow it's empty abort, set status to WaitingForBaseBot, set requesting control to false
+            if (!_profileRequestQueue.TryDequeue(out _currentProfileName))
+            {
+                return;
+            }
 
             // Paste /profile {name}
+            _mouse.Click(80, 2120);
+            Thread.Sleep(250);
+            _keyboard.SendPaste($"/profile {_currentProfileName}");
+
             // Hit enter
-            throw new NotImplementedException();
+            Thread.Sleep(33);
+            _keyboard.SendEnter();
+            Thread.Sleep(33);
         }
 
         private void CloseChat()
         {
+            _logger.Log("Closing chat.");
             // Delay 2 frames
+            Thread.Sleep(66);
+
             // Hit escape
-            throw new NotImplementedException();
+            _keyboard.SendEscape();
+
+            _mouse.MoveTo(0, 0);
         }
 
         private Task VerifyProfileOpen()
         {
+            _logger.Log("Verifying that profile is fully visible.");
             // Verify the pixels for Profile are in the right spots
             // Check LOTS of pixels as this stpuid thing animates in
-            throw new NotImplementedException();
+            for (int tries = 0; tries < 15; tries++)
+            {
+                using (var screen = _gameCapture.GetFullImage())
+                {
+                    if (_screenStateHandler.GetScreenState(screen) == ScreenState.ProfileScreen)
+                    {
+                        _currentState = ProfileBotState.ParsingProfile;
+                        _requestingControl = true;
+
+                        //Save warframe picture
+                        _logger.Log("Saving warframe screenshot");
+                        _keyboard.SendF6();
+                        using (var crop = new Bitmap(2647, 1819))
+                        {
+                            for (int x = 0; x < crop.Width; x++)
+                            {
+                                for (int y = 0; y < crop.Height; y++)
+                                {
+                                    crop.SetPixel(x, y, screen.GetPixel(x, y + 280));
+                                }
+                            }
+                            crop.Save("extracted_warframe.png");
+                        }
+
+                        return Task.CompletedTask;
+                    }
+                    else
+                    {
+                        _logger.Log("Still waiting for profile screen to load");
+                        Thread.Sleep(250);
+                    }
+                }
+            }
+
+            _profileRequestQueue.Enqueue(_currentProfileName);
+            _currentState = ProfileBotState.WaitingForBaseBot;
+            _requestingControl = true;
+            throw new Exception("Failed to load profile screen");
         }
 
         private Task ParseProfile()
         {
+            _logger.Log($"Starting to parse profile {_currentProfileName}.");
             throw new NotImplementedException();
 
             ParseProfileTab();
