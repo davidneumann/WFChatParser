@@ -1,5 +1,6 @@
 ﻿using Application.Data;
 using Application.Enums;
+using Application.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -10,7 +11,7 @@ using Tesseract;
 
 namespace TesseractService.Parsers
 {
-    public class LineParser
+    public class LineParser : ILineParser
     {
         private TesseractEngine _engine = null;
         private ClientLanguage _language;

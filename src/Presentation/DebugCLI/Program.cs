@@ -53,6 +53,7 @@ using ImageMagick;
 using Application.Actionables.ProfileBots.Models;
 using Application.Actionables.ProfileBots;
 using Application.Actionables.ChatBots;
+using TesseractService.Parsers;
 
 namespace DebugCLI
 {
@@ -148,7 +149,7 @@ namespace DebugCLI
                 StartInfo = startInfo
             };
             var logger = new DummyLogger(true);
-            var bot = new ProfileBot(cT.Token, creds, new MouseHelper(), new KeyboardHelper(), new ScreenStateHandler(), logger, new GameCapture(logger), new DummySender());
+            var bot = new ProfileBot(cT.Token, creds, new MouseHelper(), new KeyboardHelper(), new ScreenStateHandler(), logger, new GameCapture(logger), new DummySender(), new LineParser(ClientLanguage.English));
             bot.AddProfileRequest("ayeigui");
 
             bot.ExtractImages(new Bitmap(@"profile2.png"));
