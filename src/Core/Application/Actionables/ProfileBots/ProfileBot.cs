@@ -8,7 +8,9 @@ using ImageMagick;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Data;
 using System.Drawing;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,6 +19,7 @@ namespace Application.Actionables.ProfileBots
 {
     public class ProfileBot : BaseWarframeBot, IActionable
     {
+        private const float minV = 0.43f;
         private ConcurrentQueue<string> _profileRequestQueue = new ConcurrentQueue<string>();
         private ProfileBotState _currentState;
         private string _currentProfileName;
@@ -297,7 +300,7 @@ namespace Application.Actionables.ProfileBots
                         var p = source.GetPixel(x, y);
                         var hsv = p.ToHsv();
                         var c = 255;
-                        if (hsv.Value >= 0.95f)
+                        if (IsWhite(hsv))
                         {
                             var v = 1 - hsv.Value;
                             c = (int)(v * byte.MaxValue);
@@ -350,7 +353,7 @@ namespace Application.Actionables.ProfileBots
                 {
                     var p = bitmap.GetPixel(x, y);
                     var hsv = p.ToHsv();
-                    if (hsv.Value >= 0.95f)
+                    if (IsWhite(hsv))
                     {
                         if (y < top)
                             top = y;
@@ -367,10 +370,101 @@ namespace Application.Actionables.ProfileBots
             return new Rectangle(left, top, right - left, bottom - top);
         }
 
+        private static bool IsWhite(Hsv hsv)
+        {
+            return hsv.Value >= minV && hsv.Saturation <= 0.1f;
+        }
+
+        private int[] LocateWhiteLineTops(Bitmap bitmap)
+        {
+            var result = new List<int>();
+
+            var x = 2675; // Far left of each box + a little bit of safety
+            var last = bitmap.GetPixel(x, 289).ToHsv();
+            for (int y = 290; y < 1977; y++) // 1977 is top of the buttons at the bottom
+            {
+                var p = bitmap.GetPixel(x, y).ToHsv();
+
+                if(p.Value >= 0.98f && p.Hue <= 0.01f && p.Saturation <= 0.01f && last.Value < 0.98f)
+                {
+                    var nextP = bitmap.GetPixel(x, y + 1).ToHsv();
+                    if(nextP.Value >= 0.98f && p.Hue <= 0.01f && p.Saturation <= 0.01f)
+                    {
+                        result.Add(y);
+                        y += 5;
+                    }
+                }
+
+                last = p;
+            }
+
+            return result.ToArray();
+        }
+
+        private (int, int) LocateHeaderSides(Bitmap bitmap, int y)
+        {
+            var left = 3213;
+            var right = 3213;
+            for (int x = 2670; x < 3213; x++)
+            {
+                var hsv = bitmap.GetPixel(x, y).ToHsv();
+                if(!IsWhite(hsv))
+                {
+                    left = x + 2;
+                    break;
+                }
+            }
+            for (int x = 3748; x > 3213; x--)
+            {
+                var hsv = bitmap.GetPixel(x, y).ToHsv();
+                if (!IsWhite(hsv))
+                {
+                    right = x - 2;
+                    break;
+                }
+            }
+
+            return (left, right);
+        }
+
         public void ExtractImages(Bitmap bitmap)
         {
             //using (var bitmap = _gameCapture.GetFullImage())
             {
+                var ys = LocateWhiteLineTops(bitmap);
+                var headers = new List<Bitmap>();
+                using (var debug = new Bitmap(bitmap))
+                {
+                    var g = Graphics.FromImage(debug);
+                    for (int i = 0; i < ys.Length; i++)
+                    {
+                        g.FillRectangle(Brushes.Red, new Rectangle(2670, ys[i] - 13, 300, 26));
+                        if(i % 2 == 0)
+                        {
+                            var (left, right) = LocateHeaderSides(bitmap, ys[i]);
+                            var rect = new Rectangle(left, ys[i] - 28, right - left, 38);
+                            var trimmed = TrimRect(rect, bitmap);
+                            headers.Add(ExtractBitmapFromRect(trimmed, bitmap));
+                        }
+                    }
+                    debug.Save("profile_debug.png");
+                }
+                for (int i = 0; i < headers.Count; i++)
+                {
+                    headers[i].Save($"header_{i}.png");
+                    Console.WriteLine($"Header {i}: {_lineParser.ParseLine(headers[i])}");
+                }
+                using (var debug_headers = new Bitmap(headers.Max(h => h.Width), headers.Sum(h => h.Height)))
+                {
+                    var g = Graphics.FromImage(debug_headers);
+                    var top = 0;
+                    for (int i = 0; i < headers.Count; i++)
+                    {
+                        g.DrawImage(headers[i], 0, top);
+                        top += headers[i].Height;
+                    }
+                    debug_headers.Save("profile_headers.png");
+                }
                 //MR
                 var mr = ExtractBitmapFromRect(TrimRect(new Rectangle(3149, 479, 117, 92), bitmap), bitmap);
                 mr.Save("profile_mr.png");
