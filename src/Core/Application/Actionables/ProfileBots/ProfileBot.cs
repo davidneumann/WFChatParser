@@ -639,14 +639,6 @@ namespace Application.Actionables.ProfileBots
                             break;
                         for (int x = 0; x < 6; x++)
                         {
-                            var tileB = new Bitmap(curRect.Width, curRect.Height);
-                            using (var g = Graphics.FromImage(tileB))
-                            {
-                                g.DrawImage(bitmap, new Rectangle(0, 0, tileB.Width, tileB.Height), curRect, GraphicsUnit.Pixel);
-                            }
-                            tileB.Save("equipment_" + debugC++ + ".png");
-                            tiles.Add(tileB);
-
                             //For white check point: Right - 8, Bottom - 20
                             //White is v >= 0.961
                             if (bitmap.GetPixel(curRect.Right - 8, curRect.Bottom - 20).ToHsv().Value < 0.80f)
@@ -654,6 +646,14 @@ namespace Application.Actionables.ProfileBots
                                 badDetected = true;
                                 break;
                             }
+
+                            var tileB = new Bitmap(curRect.Width, curRect.Height);
+                            using (var g = Graphics.FromImage(tileB))
+                            {
+                                g.DrawImage(bitmap, new Rectangle(0, 0, tileB.Width, tileB.Height), curRect, GraphicsUnit.Pixel);
+                            }
+                            tileB.Save("equipment_" + debugC++ + ".png");
+                            tiles.Add(tileB);
 
                             // Gap of 40 pixels between items
                             curRect = new Rectangle(curRect.Right + 40, curRect.Top, curRect.Width, curRect.Height);
@@ -674,42 +674,45 @@ namespace Application.Actionables.ProfileBots
                     _mouse.ScrollDown();
                     Thread.Sleep(66);
                     _mouse.MoveTo(0, 0);
-                    Thread.Sleep(600);
+                    Thread.Sleep(150);
 
                 }
             }
 
 
-            _logger.Log($"Attempting to save {tiles.Count} tiles.");
-            int rows = (int)Math.Ceiling(tiles.Count / 6f);
-            _logger.Log($"Image will have {rows} rows.");
-            using (var debug = new Bitmap(topLeftRect.Width * 6 + 12, rows * topLeftRect.Height + rows * 2))
+            if (tiles.Count > 0)
             {
-                var g = Graphics.FromImage(debug);
-                g.FillRectangle(Brushes.Red, 0, 0, debug.Width, debug.Height);
-                var top = 1;
-                var left = 1;
-                for (int i = 0; i < tiles.Count; i++)
+                _logger.Log($"Attempting to save {tiles.Count} tiles.");
+                int rows = (int)Math.Ceiling(tiles.Count / 6f);
+                _logger.Log($"Image will have {rows} rows.");
+                using (var debug = new Bitmap(topLeftRect.Width * 6 + 12, rows * topLeftRect.Height + rows * 2))
                 {
-                    var tile = tiles[i];
-
-                    g.DrawImage(tile, left, top);
-
-                    if (i % 6 == 0 && i > 0)
+                    var g = Graphics.FromImage(debug);
+                    g.FillRectangle(Brushes.Red, 0, 0, debug.Width, debug.Height);
+                    var top = 1;
+                    var left = 1;
+                    for (int i = 0; i < tiles.Count; i++)
                     {
-                        left = 1;
-                        top += topLeftRect.Height + 2;
+                        var tile = tiles[i];
+
+                        g.DrawImage(tile, left, top);
+
+                        if (i % 6 == 0 && i > 0)
+                        {
+                            left = 1;
+                            top += topLeftRect.Height + 2;
+                        }
+                        else
+                        {
+                            left += topLeftRect.Width + 2;
+                        }
                     }
-                    else
-                    {
-                        left += topLeftRect.Width + 2;
-                    }
+
+                    debug.Save("profile_equipment.png");
                 }
-
-                debug.Save("profile_equipment.png");
             }
 
-            //throw new NotImplementedException();
+            throw new NotImplementedException();
         }
 
         private Point GetEquipmentTabLocation()
