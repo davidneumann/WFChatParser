@@ -152,13 +152,6 @@ namespace DebugCLI
             var bot = new ProfileBot(cT.Token, creds, new MouseHelper(), new KeyboardHelper(), new ScreenStateHandler(), logger, new GameCapture(logger), new DummySender(), new LineParser(ClientLanguage.English));
             bot.AddProfileRequest("ayeigui");
 
-            Console.WriteLine("Magnus");
-            try { bot.ExtractImages(new Bitmap(@"profile_magnus.png")); } catch { }
-            Console.WriteLine("\nDavidRivenBot2");
-            try { bot.ExtractImages(new Bitmap(@"profile_bot.png")); } catch { }
-            Console.WriteLine("\nAyeigui");
-            try { bot.ExtractImages(new Bitmap(@"profile2.png")); } catch { }
-
             while (true)
             {
                 if (bot.IsRequestingControl)

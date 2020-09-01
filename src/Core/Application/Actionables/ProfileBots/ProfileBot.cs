@@ -1,4 +1,5 @@
 ﻿using Application.Actionables.ChatBots;
+using Application.Actionables.ProfileBots.Models;
 using Application.Actionables.States;
 using Application.Enums;
 using Application.Interfaces;
@@ -27,6 +28,7 @@ namespace Application.Actionables.ProfileBots
         private string _currentProfileName;
         private ILineParser _lineParser;
 
+        private string _debugFolder = Path.Combine("debug", "profiles");
         public ProfileBot(
             CancellationToken cancellationToken,
             WarframeClientInformation warframeCredentials,
@@ -41,6 +43,8 @@ namespace Application.Actionables.ProfileBots
         {
             _dataSender.ProfileParseRequest += _dataSender_ProfileParseRequest;
             _lineParser = lineParser;
+            if (!Directory.Exists(_debugFolder))
+                Directory.CreateDirectory(_debugFolder);
         }
 
         private void _dataSender_ProfileParseRequest(object sender, string e)
@@ -272,17 +276,15 @@ namespace Application.Actionables.ProfileBots
             throw new Exception("Failed to load profile screen");
         }
 
-        private Task ParseProfile()
+        private async Task ParseProfile()
         {
             _logger.Log($"Starting to parse profile {_currentProfileName}.");
 
-
-            ExtractImages(null);
-
+            var profile = ParseProfileTab();
             throw new NotImplementedException();
-            ParseProfileTab();
             ParseEquipmentTab();
-            //Make sure to send the data _dataSender!
+
+            await _dataSender.AsyncSendProfileData(profile);
 
             // Stop trying to parse more names
             if (_profileRequestQueue.Count <= 0)
@@ -433,6 +435,10 @@ namespace Application.Actionables.ProfileBots
 
         private void DebugSaveImages(IEnumerable<Bitmap> images, string filename)
         {
+            var fi = new FileInfo(filename);
+            if (!fi.Directory.Exists)
+                fi.Directory.Create();
+
             var top = 0;
             var arr = images.ToArray();
             using (var output = new Bitmap(arr.Max(i => i.Width), arr.Sum(i => i.Height)))
@@ -447,92 +453,6 @@ namespace Application.Actionables.ProfileBots
                 }
                 output.Save(filename);
             }
-        }
-
-        public void ExtractImages(Bitmap bitmap)
-        {
-            //using (var bitmap = _gameCapture.GetFullImage())
-            {
-                //Header extraction POC
-                List<Header> headers = ExtractHeaders(bitmap);
-
-
-                //Rect from header POC
-                var debugImages = new List<Bitmap>();
-                foreach (var header in headers)
-                {
-                    Console.WriteLine($"={header.Text}=");
-                    switch (header.Value)
-                    {
-                        case HeaderOption.Accolades:
-                            var names = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 230, 1065, 38), bitmap);
-                            var descriptions = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 267, 1065, 45), bitmap);
-                            Console.WriteLine($"Names: {_lineParser.ParseLine(names)}\nDescriptions: {_lineParser.ParseLine(descriptions)}");
-                            debugImages.Add(names);
-                            debugImages.Add(descriptions);
-                            break;
-                        case HeaderOption.MasteryRank:
-                            var eMr = ExtractBitmapFromRect(new Rectangle(3155, header.Anchor + 162, 100, 65), bitmap, strictWhites: true);
-                            var title = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 232, 1065, 40), bitmap);
-                            var totalXp = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 302, 1065, 38), bitmap);
-                            var remaingXp = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 374, 1065, 47), bitmap);
-                            Console.WriteLine($"Mr: {_lineParser.ParseLine(eMr)}\nMr Title: {_lineParser.ParseLine(title)}\nTotal xp: {_lineParser.ParseLine(totalXp)}\nRemaining Xp: {_lineParser.ParseLine(remaingXp).Split(' ').Last()}");
-                            debugImages.Add(eMr);
-                            debugImages.Add(title);
-                            debugImages.Add(totalXp);
-                            debugImages.Add(remaingXp);
-                            break;
-                        case HeaderOption.Clan:
-                            var eClan = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 228, 1065, 54), bitmap);
-                            Console.WriteLine($"Name: {_lineParser.ParseLine(eClan)}");
-                            debugImages.Add(eClan);
-                            break;
-                        case HeaderOption.MarkedForDeathBy:
-                            var markedBy = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 185, 1065, 35), bitmap);
-                            Console.WriteLine($"Marked by: {_lineParser.ParseLine(markedBy)}");
-                            debugImages.Add(markedBy);
-                            break;
-                        case HeaderOption.Unknown:
-                        default:
-                            _logger.Log("Unknown header detected!");
-                            try
-                            {
-                                string filename = Path.Combine("debug", DateTime.Now.Ticks + ".png");
-                                bitmap.Save(filename);
-                                _dataSender.AsyncSendDebugMessage($"Unkown profile header detected. See {filename}");
-                            }
-                            catch { }
-                            break;
-                    }
-                }
-                DebugSaveImages(debugImages, "profile_combined.png");
-
-
-
-
-                ////Orig Tess POC with Ayeigui's profile
-                ////MR
-                //var mr = ExtractBitmapFromRect(TrimRect(new Rectangle(3149, 479, 117, 92), bitmap), bitmap);
-                //mr.Save("profile_mr.png");
-                //Console.WriteLine($"Mr: {_lineParser.ParseLine(mr)}");
-
-                ////TotalXP
-                //var totalXp = ExtractBitmapFromRect(TrimRect(new Rectangle(3135, 641, 149, 34), bitmap), bitmap);
-                //totalXp.Save("profile_total.png");
-                //Console.WriteLine($"Total Xp: {_lineParser.ParseLine(totalXp)}");
-
-                //var remainingXp = ExtractBitmapFromRect(TrimRect(new Rectangle(3402, 710, 141, 42), bitmap), bitmap);
-                //remainingXp.Save("profile_remaining.png");
-                //Console.WriteLine($"Remaining Xp: {_lineParser.ParseLine(remainingXp)}");
-
-                //var clanName = ExtractBitmapFromRect(TrimRect(new Rectangle(3011, 1075, 385, 59), bitmap), bitmap);
-                //clanName.Save("profile_clan.png");
-                //Console.WriteLine($"Clan name: {_lineParser.ParseLine(clanName)}");
-
-                //DebugSaveImages(new Bitmap[] { mr, totalXp, remainingXp, clanName }, "profile_combined.png");
-            }
-
-            throw new NotImplementedException();
         }
 
         private List<Header> ExtractHeaders(Bitmap bitmap)
@@ -565,14 +485,86 @@ namespace Application.Actionables.ProfileBots
             return headers;
         }
 
-        private void ParseProfileTab()
+        private Profile ParseProfileTab()
         {
-            // Set name
-            // Verify accoldaes are there and parse them
-            // Parse MR box. MR, total XP, XP to level
-            // Parse clan name
+            var result = new Profile();
+            result.Name = _currentProfileName;
+            using (var bitmap = _gameCapture.GetFullImage())
+            {
+                //Header extraction POC
+                List<Header> headers = ExtractHeaders(bitmap);
 
-            throw new NotImplementedException();
+                //Rect from header POC
+                var debugImages = new List<Bitmap>();
+                var sb = new StringBuilder();
+                sb.AppendLine(_currentProfileName);
+                foreach (var header in headers)
+                {
+                    switch (header.Value)
+                    {
+                        case HeaderOption.Accolades:
+                            var names = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 230, 1065, 38), bitmap);
+                            var descriptions = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 267, 1065, 45), bitmap);
+                            string namesText = _lineParser.ParseLine(names);
+                            string descriptionsText = _lineParser.ParseLine(descriptions);
+                            sb.AppendLine($"Names: {namesText}\nDescriptions: {descriptionsText}");
+                            debugImages.Add(names);
+                            debugImages.Add(descriptions);
+                            result.Accolades = new List<Accolades>();
+                            result.Accolades.Add(new Accolades() { Name = namesText, Description = descriptionsText });
+                            break;
+                        case HeaderOption.MasteryRank:
+                            var mr = ExtractBitmapFromRect(new Rectangle(3155, header.Anchor + 162, 100, 65), bitmap, strictWhites: true);
+                            var title = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 232, 1065, 40), bitmap);
+                            var totalXp = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 302, 1065, 38), bitmap);
+                            var remaingXp = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 374, 1065, 47), bitmap);
+                            string mrText = _lineParser.ParseLine(mr);
+                            string mrTitleText = _lineParser.ParseLine(title);
+                            string totalXpText = _lineParser.ParseLine(totalXp);
+                            string remainingXpText = _lineParser.ParseLine(remaingXp);
+                            sb.AppendLine($"Mr: {mrText}\nMr Title: {mrTitleText}\nTotal xp: {totalXpText}\nRemaining Xp: {remainingXpText.Split(' ').Last()}");
+                            debugImages.Add(mr);
+                            debugImages.Add(title);
+                            debugImages.Add(totalXp);
+                            debugImages.Add(remaingXp);
+                            result.MasteryRank = mrText;
+                            result.MasteryRankTitle = mrTitleText;
+                            result.TotalXp = totalXpText;
+                            result.XpToLevel = remainingXpText;
+                            break;
+                        case HeaderOption.Clan:
+                            var clan = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 228, 1065, 54), bitmap);
+                            string clanText = _lineParser.ParseLine(clan);
+                            sb.AppendLine($"Name: {clanText}");
+                            debugImages.Add(clan);
+                            result.ClanName = clanText;
+                            break;
+                        case HeaderOption.MarkedForDeathBy:
+                            var markedBy = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 185, 1065, 35), bitmap);
+                            string markedByText = _lineParser.ParseLine(markedBy);
+                            sb.AppendLine($"Marked by: {markedByText}");
+                            debugImages.Add(markedBy);
+                            result.MarkedBy = markedByText;
+                            break;
+                        case HeaderOption.Unknown:
+                        default:
+                            _logger.Log("Unknown header detected!");
+                            try
+                            {
+                                string filename = Path.Combine("debug", DateTime.Now.Ticks + ".png");
+                                bitmap.Save(filename);
+                                _dataSender.AsyncSendDebugMessage($"Unkown profile header detected. See {filename}");
+                            }
+                            catch { }
+                            break;
+                    }
+                }
+                DebugSaveImages(debugImages, Path.Combine(_debugFolder, _currentProfileName, "profile_combined.png"));
+                File.WriteAllText(Path.Combine(_debugFolder, _currentProfileName, "profile_combined.txt"), sb.ToString());
+                bitmap.Save(Path.Combine(_debugFolder, _currentProfileName, "profile_screen.png"));
+            }
+
+            return result;
         }
 
         private void ParseEquipmentTab()
