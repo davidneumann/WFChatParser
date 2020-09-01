@@ -10,14 +10,16 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Application.Actionables.ProfileBots
 {
-    public class ProfileBot : BaseWarframeBot, IActionable
+    public partial class ProfileBot : BaseWarframeBot, IActionable
     {
         private const float minV = 0.43f;
         private ConcurrentQueue<string> _profileRequestQueue = new ConcurrentQueue<string>();
@@ -287,9 +289,11 @@ namespace Application.Actionables.ProfileBots
                 _requestingControl = false;
         }
 
-        private Bitmap ExtractBitmapFromRect(Rectangle rect, Bitmap source, int padding = 4)
+        private Bitmap ExtractBitmapFromRect(Rectangle rect, Bitmap source, int padding = 4, bool trimRect = true, bool strictWhites = false)
         {
             Bitmap result;
+            if (trimRect)
+                rect = TrimRect(rect, source);
 
             using (var bitmap = new Bitmap(rect.Width, rect.Height))
             {
@@ -300,7 +304,7 @@ namespace Application.Actionables.ProfileBots
                         var p = source.GetPixel(x, y);
                         var hsv = p.ToHsv();
                         var c = 255;
-                        if (IsWhite(hsv))
+                        if ((!strictWhites && IsWhite(hsv)) || (strictWhites && hsv.Value >= 0.99f && hsv.Saturation <= 0.01f && hsv.Hue <= 0.01f))
                         {
                             var v = 1 - hsv.Value;
                             c = (int)(v * byte.MaxValue);
@@ -385,10 +389,10 @@ namespace Application.Actionables.ProfileBots
             {
                 var p = bitmap.GetPixel(x, y).ToHsv();
 
-                if(p.Value >= 0.98f && p.Hue <= 0.01f && p.Saturation <= 0.01f && last.Value < 0.98f)
+                if (p.Value >= 0.98f && p.Hue <= 0.01f && p.Saturation <= 0.01f && last.Value < 0.98f)
                 {
                     var nextP = bitmap.GetPixel(x, y + 1).ToHsv();
-                    if(nextP.Value >= 0.98f && p.Hue <= 0.01f && p.Saturation <= 0.01f)
+                    if (nextP.Value >= 0.98f && p.Hue <= 0.01f && p.Saturation <= 0.01f)
                     {
                         result.Add(y);
                         y += 5;
@@ -408,7 +412,7 @@ namespace Application.Actionables.ProfileBots
             for (int x = 2670; x < 3213; x++)
             {
                 var hsv = bitmap.GetPixel(x, y).ToHsv();
-                if(!IsWhite(hsv))
+                if (!IsWhite(hsv))
                 {
                     left = x + 2;
                     break;
@@ -427,96 +431,138 @@ namespace Application.Actionables.ProfileBots
             return (left, right);
         }
 
+        private void DebugSaveImages(IEnumerable<Bitmap> images, string filename)
+        {
+            var top = 0;
+            var arr = images.ToArray();
+            using (var output = new Bitmap(arr.Max(i => i.Width), arr.Sum(i => i.Height)))
+            {
+                using (var g = Graphics.FromImage(output))
+                {
+                    foreach (var image in images)
+                    {
+                        g.DrawImage(image, 0, top);
+                        top += image.Height;
+                    }
+                }
+                output.Save(filename);
+            }
+        }
+
         public void ExtractImages(Bitmap bitmap)
         {
             //using (var bitmap = _gameCapture.GetFullImage())
             {
-                var ys = LocateWhiteLineTops(bitmap);
-                var headers = new List<Bitmap>();
-                using (var debug = new Bitmap(bitmap))
+                //Header extraction POC
+                List<Header> headers = ExtractHeaders(bitmap);
+
+
+                //Rect from header POC
+                var debugImages = new List<Bitmap>();
+                foreach (var header in headers)
                 {
-                    var g = Graphics.FromImage(debug);
-                    for (int i = 0; i < ys.Length; i++)
+                    Console.WriteLine($"={header.Text}=");
+                    switch (header.Value)
                     {
-                        g.FillRectangle(Brushes.Red, new Rectangle(2670, ys[i] - 13, 300, 26));
-                        if(i % 2 == 0)
-                        {
-                            var (left, right) = LocateHeaderSides(bitmap, ys[i]);
-                            var rect = new Rectangle(left, ys[i] - 28, right - left, 38);
-                            var trimmed = TrimRect(rect, bitmap);
-                            headers.Add(ExtractBitmapFromRect(trimmed, bitmap));
-                        }
+                        case HeaderOption.Accolades:
+                            var names = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 230, 1065, 38), bitmap);
+                            var descriptions = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 267, 1065, 45), bitmap);
+                            Console.WriteLine($"Names: {_lineParser.ParseLine(names)}\nDescriptions: {_lineParser.ParseLine(descriptions)}");
+                            debugImages.Add(names);
+                            debugImages.Add(descriptions);
+                            break;
+                        case HeaderOption.MasteryRank:
+                            var eMr = ExtractBitmapFromRect(new Rectangle(3155, header.Anchor + 162, 100, 65), bitmap, strictWhites: true);
+                            var title = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 232, 1065, 40), bitmap);
+                            var totalXp = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 302, 1065, 38), bitmap);
+                            var remaingXp = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 374, 1065, 47), bitmap);
+                            Console.WriteLine($"Mr: {_lineParser.ParseLine(eMr)}\nMr Title: {_lineParser.ParseLine(title)}\nTotal xp: {_lineParser.ParseLine(totalXp)}\nRemaining Xp: {_lineParser.ParseLine(remaingXp).Split(' ').Last()}");
+                            debugImages.Add(eMr);
+                            debugImages.Add(title);
+                            debugImages.Add(totalXp);
+                            debugImages.Add(remaingXp);
+                            break;
+                        case HeaderOption.Clan:
+                            var eClan = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 228, 1065, 54), bitmap);
+                            Console.WriteLine($"Name: {_lineParser.ParseLine(eClan)}");
+                            debugImages.Add(eClan);
+                            break;
+                        case HeaderOption.MarkedForDeathBy:
+                            var markedBy = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 185, 1065, 35), bitmap);
+                            Console.WriteLine($"Marked by: {_lineParser.ParseLine(markedBy)}");
+                            debugImages.Add(markedBy);
+                            break;
+                        case HeaderOption.Unknown:
+                        default:
+                            _logger.Log("Unknown header detected!");
+                            try
+                            {
+                                string filename = Path.Combine("debug", DateTime.Now.Ticks + ".png");
+                                bitmap.Save(filename);
+                                _dataSender.AsyncSendDebugMessage($"Unkown profile header detected. See {filename}");
+                            }
+                            catch { }
+                            break;
                     }
-                    debug.Save("profile_debug.png");
                 }
-                for (int i = 0; i < headers.Count; i++)
-                {
-                    headers[i].Save($"header_{i}.png");
-                    Console.WriteLine($"Header {i}: {_lineParser.ParseLine(headers[i])}");
-                }
-                using (var debug_headers = new Bitmap(headers.Max(h => h.Width), headers.Sum(h => h.Height)))
-                {
-                    var g = Graphics.FromImage(debug_headers);
-                    var top = 0;
-                    for (int i = 0; i < headers.Count; i++)
-                    {
-                        g.DrawImage(headers[i], 0, top);
-                        top += headers[i].Height;
-                    }
-                    debug_headers.Save("profile_headers.png");
-                }
-                //MR
-                var mr = ExtractBitmapFromRect(TrimRect(new Rectangle(3149, 479, 117, 92), bitmap), bitmap);
-                mr.Save("profile_mr.png");
-                Console.WriteLine($"Mr: {_lineParser.ParseLine(mr)}");
+                DebugSaveImages(debugImages, "profile_combined.png");
 
-                //TotalXP
-                var totalXp = ExtractBitmapFromRect(TrimRect(new Rectangle(3135, 641, 149, 34), bitmap), bitmap);
-                totalXp.Save("profile_total.png");
-                Console.WriteLine($"Total Xp: {_lineParser.ParseLine(totalXp)}");
 
-                var remainingXp = ExtractBitmapFromRect(TrimRect(new Rectangle(3402, 710, 141, 42), bitmap), bitmap);
-                remainingXp.Save("profile_remaining.png");
-                Console.WriteLine($"Remaining Xp: {_lineParser.ParseLine(remainingXp)}");
 
-                var clanName = ExtractBitmapFromRect(TrimRect(new Rectangle(3011, 1075, 385, 59), bitmap), bitmap);
-                clanName.Save("profile_clan.png");
-                Console.WriteLine($"Clan name: {_lineParser.ParseLine(clanName)}");
 
-                using (var combined = new Bitmap((int)Math.Max(Math.Max(Math.Max(mr.Width, totalXp.Width), remainingXp.Width), clanName.Width),
-                                                 mr.Height + totalXp.Height + remainingXp.Height + clanName.Height))
-                {
-                    var g = Graphics.FromImage(combined);
-                    var top = 0;
-                    var sources = new Bitmap[] { mr, totalXp, remainingXp, clanName };
-                    for (int i = 0; i < sources.Length; i++)
-                    {
-                        g.DrawImage(sources[i], 0, top);
-                        top += sources[i].Height;
-                    }
-                    //var source = sources[0];
-                    //var sourceI = 0;
-                    //var top = 0;
-                    //for (int y = 0; y < combined.Height; y++)
-                    //{
-                    //    for (int x = 0; x < combined.Width; x++)
-                    //    {
-                    //        if (x >= source.Width)
-                    //            break;
-                    //        combined.SetPixel(x, y, source.GetPixel(x, y - top));
-                    //    }
-                    //    if(y - top + 1 >= source.Height && y < combined.Height - 1)
-                    //    {
-                    //        top += source.Height;
-                    //        sourceI++;
-                    //        source = sources[sourceI];
-                    //    }
-                    //}
-                    combined.Save("profile_combined.png");
-                }
+                ////Orig Tess POC with Ayeigui's profile
+                ////MR
+                //var mr = ExtractBitmapFromRect(TrimRect(new Rectangle(3149, 479, 117, 92), bitmap), bitmap);
+                //mr.Save("profile_mr.png");
+                //Console.WriteLine($"Mr: {_lineParser.ParseLine(mr)}");
+
+                ////TotalXP
+                //var totalXp = ExtractBitmapFromRect(TrimRect(new Rectangle(3135, 641, 149, 34), bitmap), bitmap);
+                //totalXp.Save("profile_total.png");
+                //Console.WriteLine($"Total Xp: {_lineParser.ParseLine(totalXp)}");
+
+                //var remainingXp = ExtractBitmapFromRect(TrimRect(new Rectangle(3402, 710, 141, 42), bitmap), bitmap);
+                //remainingXp.Save("profile_remaining.png");
+                //Console.WriteLine($"Remaining Xp: {_lineParser.ParseLine(remainingXp)}");
+
+                //var clanName = ExtractBitmapFromRect(TrimRect(new Rectangle(3011, 1075, 385, 59), bitmap), bitmap);
+                //clanName.Save("profile_clan.png");
+                //Console.WriteLine($"Clan name: {_lineParser.ParseLine(clanName)}");
+
+                //DebugSaveImages(new Bitmap[] { mr, totalXp, remainingXp, clanName }, "profile_combined.png");
             }
 
             throw new NotImplementedException();
+        }
+
+        private List<Header> ExtractHeaders(Bitmap bitmap)
+        {
+            var headers = new List<Header>();
+            var ys = LocateWhiteLineTops(bitmap);
+            using (var debug = new Bitmap(bitmap))
+            {
+                var g = Graphics.FromImage(debug);
+                for (int i = 0; i < ys.Length; i++)
+                {
+                    g.FillRectangle(Brushes.Red, new Rectangle(2670, ys[i] - 13, 300, 26));
+                    if (i % 2 == 0)
+                    {
+                        var (left, right) = LocateHeaderSides(bitmap, ys[i]);
+                        var rect = new Rectangle(left, ys[i] - 28, right - left, 38);
+                        var trimmed = TrimRect(rect, bitmap);
+                        Bitmap image = ExtractBitmapFromRect(trimmed, bitmap);
+                        headers.Add(new Header(image, ys[i], _lineParser.ParseLine(image)));
+                    }
+                }
+                //debug.Save("profile_debug.png");
+            }
+            //for (int i = 0; i < headers.Count; i++)
+            //{
+            //    headers[i].Bitmap.Save($"header_{i}.png");
+            //    Console.WriteLine($"Header {i}: {headers[i].Text}");
+            //}
+            DebugSaveImages(headers.Select(h => h.Bitmap), "profile_headers.png");
+            return headers;
         }
 
         private void ParseProfileTab()
