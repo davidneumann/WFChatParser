@@ -234,7 +234,22 @@ namespace Application.Actionables.ProfileBots
 
                         //Save warframe picture
                         _logger.Log("Saving warframe screenshot");
-                        //_keyboard.SendF6();
+                        _keyboard.SendF6();
+
+                        var _ = Task.Run(() =>
+                        {
+                            Thread.Sleep(2500);
+                            if (!Directory.Exists(Path.Combine(_debugFolder, _currentProfileName)))
+                                Directory.CreateDirectory(Path.Combine(_debugFolder, _currentProfileName));
+                            var newestImage = (new DirectoryInfo(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures) + @"\Warframe"))
+                                            .GetFiles().OrderByDescending(f => f.LastWriteTime).First();
+
+                            string destFilename = Path.Combine(_debugFolder, _currentProfileName, "screenshot" + newestImage.Extension);
+                            if (File.Exists(destFilename))
+                                File.Delete(destFilename);
+                            File.Move(newestImage.FullName, destFilename);
+                        });
+
                         //using (var crop = new Bitmap(2647, 1819))
                         //{
                         //    for (int x = 0; x < crop.Width; x++)
@@ -246,6 +261,8 @@ namespace Application.Actionables.ProfileBots
                         //    }
                         //    crop.Save("extracted_warframe.png");
                         //}
+
+                        Thread.Sleep(500);
 
                         return Task.CompletedTask;
                     }
