@@ -11,6 +11,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -234,6 +235,7 @@ namespace Application.Actionables.ProfileBots
 
                         //Save warframe picture
                         _logger.Log("Saving warframe screenshot");
+                        Thread.Sleep(750);
                         _keyboard.SendF6();
 
                         var _ = Task.Run(() =>
@@ -248,6 +250,28 @@ namespace Application.Actionables.ProfileBots
                             if (File.Exists(destFilename))
                                 File.Delete(destFilename);
                             File.Move(newestImage.FullName, destFilename);
+
+                            Thread.Sleep(250);
+
+                            using (var source = new Bitmap(destFilename))
+                            {
+                                ImageCodecInfo jpgEncoder = ImageCodecInfo.GetImageDecoders().First(e => e.FormatID == ImageFormat.Jpeg.Guid);
+
+                                // Create an Encoder object based on the GUID  
+                                // for the Quality parameter category.  
+                                System.Drawing.Imaging.Encoder myEncoder =
+                                    System.Drawing.Imaging.Encoder.Quality;
+
+                                // Create an EncoderParameters object.  
+                                // An EncoderParameters object has an array of EncoderParameter  
+                                // objects. In this case, there is only one  
+                                // EncoderParameter object in the array.  
+                                EncoderParameters myEncoderParameters = new EncoderParameters(1);
+
+                                var myEncoderParameter = new EncoderParameter(myEncoder, 65L);
+                                myEncoderParameters.Param[0] = myEncoderParameter;
+                                source.Save($"{destFilename}_small.jpg", jpgEncoder, myEncoderParameters);
+                            }
                         });
 
                         //using (var crop = new Bitmap(2647, 1819))
@@ -286,7 +310,7 @@ namespace Application.Actionables.ProfileBots
 
             //var profile = ParseProfileTab();
             ParseEquipmentTab();
-            throw new NotImplementedException();
+            //throw new NotImplementedException();
 
             //await _dataSender.AsyncSendProfileData(profile);
 
@@ -685,7 +709,7 @@ namespace Application.Actionables.ProfileBots
                 debug.Save("profile_equipment.png");
             }
 
-            throw new NotImplementedException();
+            //throw new NotImplementedException();
         }
 
         private Point GetEquipmentTabLocation()

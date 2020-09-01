@@ -150,7 +150,11 @@ namespace DebugCLI
             };
             var logger = new DummyLogger(true);
             var bot = new ProfileBot(cT.Token, creds, new MouseHelper(), new KeyboardHelper(), new ScreenStateHandler(), logger, new GameCapture(logger), new DummySender(), new LineParser(ClientLanguage.English));
-            bot.AddProfileRequest("ayeigui");
+            try { bot.AddProfileRequest("ayeigui"); } catch { }
+            try { bot.AddProfileRequest("gigapatches"); } catch { }
+            try { bot.AddProfileRequest("semlar"); } catch { }
+            try { bot.AddProfileRequest("unreality101"); } catch { }
+            try { bot.AddProfileRequest("magnus"); } catch { }
 
             while (true)
             {
@@ -247,7 +251,7 @@ namespace DebugCLI
                     foreach (var superFast in superFastHistory)
                     {
                         var score = RelativePixelGlyphIdentifier.ScoreCandidate(extracted, false, superFast.Key);
-                        if(score < RelativePixelGlyphIdentifier.MissedDistancePenalty)
+                        if (score < RelativePixelGlyphIdentifier.MissedDistancePenalty)
                         {
                             superFast.Value.Add(extracted);
                             var files = superFast.Key.Character + "\n" + fuzzy.Character;
@@ -416,7 +420,7 @@ namespace DebugCLI
             //Console.WriteLine($"\nFinished in {sw.Elapsed.TotalSeconds}s.");
 
             var dir = new DirectoryInfo("grouped");
-            if(dir.Exists)
+            if (dir.Exists)
             {
                 dir.Delete(true);
                 Thread.Sleep(500);
