@@ -96,19 +96,6 @@ namespace Application.Actionables.ProfileBots
 
         private async Task OpenProfile()
         {
-            /*
-             * Open the menu to safely expose the chat interface
-             * Open the chat window and in a safe tab paste in /profile {name}
-             * Needs to be able to close the chat on the profile page after verifying it opened (check header text to verify? Click minimize icon in chat window to close?)
-             * Click the Equipment header
-             * Click the sort by box and select Progress
-             * Extract 2 rows of icons (6 icons per row)
-             * Check if the last icon on the bottom row is mostly white or mostly grey. If grey abort.
-             * If not grey then scroll down 2 times
-             * Save all these images to a folder
-             * Click exit
-            */
-
             if (_warframeProcess == null || _warframeProcess.HasExited)
             {
                 _baseState = BaseBotState.StartWarframe;
@@ -247,18 +234,18 @@ namespace Application.Actionables.ProfileBots
 
                         //Save warframe picture
                         _logger.Log("Saving warframe screenshot");
-                        _keyboard.SendF6();
-                        using (var crop = new Bitmap(2647, 1819))
-                        {
-                            for (int x = 0; x < crop.Width; x++)
-                            {
-                                for (int y = 0; y < crop.Height; y++)
-                                {
-                                    crop.SetPixel(x, y, screen.GetPixel(x, y + 280));
-                                }
-                            }
-                            crop.Save("extracted_warframe.png");
-                        }
+                        //_keyboard.SendF6();
+                        //using (var crop = new Bitmap(2647, 1819))
+                        //{
+                        //    for (int x = 0; x < crop.Width; x++)
+                        //    {
+                        //        for (int y = 0; y < crop.Height; y++)
+                        //        {
+                        //            crop.SetPixel(x, y, screen.GetPixel(x, y + 280));
+                        //        }
+                        //    }
+                        //    crop.Save("extracted_warframe.png");
+                        //}
 
                         return Task.CompletedTask;
                     }
@@ -280,11 +267,11 @@ namespace Application.Actionables.ProfileBots
         {
             _logger.Log($"Starting to parse profile {_currentProfileName}.");
 
-            var profile = ParseProfileTab();
-            throw new NotImplementedException();
+            //var profile = ParseProfileTab();
             ParseEquipmentTab();
+            throw new NotImplementedException();
 
-            await _dataSender.AsyncSendProfileData(profile);
+            //await _dataSender.AsyncSendProfileData(profile);
 
             // Stop trying to parse more names
             if (_profileRequestQueue.Count <= 0)
@@ -569,9 +556,150 @@ namespace Application.Actionables.ProfileBots
 
         private void ParseEquipmentTab()
         {
-            // Click sort by dropdown and choose Progress
-            // Some sort of do while that parses all rows
+            Point clickPoint = GetEquipmentTabLocation();
+            _logger.Log($"Attempting to opening equipment tab. Clicking at {clickPoint.X},{clickPoint.Y}.");
+
+            //Click Equipment tab
+            _mouse.MoveTo(clickPoint.X, clickPoint.Y);
+            Thread.Sleep(66);
+            _mouse.Click(clickPoint.X, clickPoint.Y);
+            Thread.Sleep(33);
+            Thread.Sleep(1500); // Wait for animation
+
+            //Click sort dropdown
+            _mouse.Click(3050, 835);
+            Thread.Sleep(66);
+
+            //Click sort by progress
+            _mouse.Click(3081, 990);
+            Thread.Sleep(16);
+            //Move mouse out of the way
+            _mouse.MoveTo(3723, 961);
+            //Wait for animation
+            Thread.Sleep(1500);
+
+
+
+            var topLeftRect = new Rectangle(323, 915, 530, 365);
+            var tiles = new List<Bitmap>();
+            var debugC = 0;
+            while (true)
+            {
+                var badDetected = false;
+
+                using (var bitmap = _gameCapture.GetFullImage())
+                {
+                    //Read two rows
+                    var curRect = topLeftRect;
+
+                    for (int y = 0; y < 2; y++)
+                    {
+                        if (badDetected)
+                            break;
+                        for (int x = 0; x < 6; x++)
+                        {
+                            var tileB = new Bitmap(curRect.Width, curRect.Height);
+                            using (var g = Graphics.FromImage(tileB))
+                            {
+                                g.DrawImage(bitmap, new Rectangle(0, 0, tileB.Width, tileB.Height), curRect, GraphicsUnit.Pixel);
+                            }
+                            tileB.Save("equipment_" + debugC++ + ".png");
+                            tiles.Add(tileB);
+
+                            //For white check point: Right - 8, Bottom - 20
+                            //White is v >= 0.961
+                            if (bitmap.GetPixel(curRect.Right - 8, curRect.Bottom - 20).ToHsv().Value < 0.80f)
+                            {
+                                badDetected = true;
+                                break;
+                            }
+
+                            // Gap of 40 pixels between items
+                            curRect = new Rectangle(curRect.Right + 40, curRect.Top, curRect.Width, curRect.Height);
+                        }
+
+                        // Gap of 39 pixels between items
+                        curRect = new Rectangle(topLeftRect.Left, topLeftRect.Bottom + 39, topLeftRect.Width, topLeftRect.Height);
+                    }
+
+                    if (badDetected)
+                        break;
+
+                    //Scroll twice
+                    _mouse.Click(3148, 1029);
+                    Thread.Sleep(66);
+                    _mouse.ScrollDown();
+                    Thread.Sleep(66);
+                    _mouse.ScrollDown();
+                    Thread.Sleep(66);
+                    _mouse.MoveTo(0, 0);
+                    Thread.Sleep(600);
+
+                }
+            }
+
+
+            _logger.Log($"Attempting to save {tiles.Count} tiles.");
+            int rows = (int)Math.Ceiling(tiles.Count / 6f);
+            _logger.Log($"Image will have {rows} rows.");
+            using (var debug = new Bitmap(topLeftRect.Width * 6 + 12, rows * topLeftRect.Height + rows * 2))
+            {
+                var g = Graphics.FromImage(debug);
+                g.FillRectangle(Brushes.Red, 0, 0, debug.Width, debug.Height);
+                var top = 1;
+                var left = 1;
+                for (int i = 0; i < tiles.Count; i++)
+                {
+                    var tile = tiles[i];
+
+                    g.DrawImage(tile, left, top);
+
+                    if (i % 6 == 0 && i > 0)
+                    {
+                        left = 1;
+                        top += topLeftRect.Height + 2;
+                    }
+                    else
+                    {
+                        left += topLeftRect.Width + 2;
+                    }
+                }
+
+                debug.Save("profile_equipment.png");
+            }
+
             throw new NotImplementedException();
+        }
+
+        private Point GetEquipmentTabLocation()
+        {
+            var clickPoint = Point.Empty;
+            //We need to find the equipment tab. It's 162 pixels to the right and 44 pixels up from the bar under Profile
+            var hsvs = new float[30];
+            using (var bitmap = _gameCapture.GetFullImage())
+            {
+                for (int x = 716; x < 1982; x++)
+                {
+                    for (int i = 0; i < hsvs.Length; i++)
+                    {
+                        hsvs[i] = bitmap.GetPixel(x, 276).ToHsv().Value;
+                    }
+
+                    if (hsvs.Average(v => v) >= 0.93f)
+                    {
+                        //Bar is 217 pixels wide and we just detected the leftmost edge
+                        clickPoint = new Point(x + 217 + 162, 276 - 44);
+                        break;
+                    }
+
+                    for (int i = 0; i < hsvs.Length; i++)
+                    {
+                        hsvs[i] = 0f;
+                    }
+                }
+            }
+
+            return clickPoint;
         }
     }
 }
