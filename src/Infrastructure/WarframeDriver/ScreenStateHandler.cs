@@ -41,63 +41,77 @@ namespace WarframeDriver
 
         private bool IsProfileScreen(Bitmap bitmap)
         {
-            var lightPixels = new Point[] { 
-                // P
-                new Point(1313, 219), new Point(1313, 238), new Point(1313, 251), new Point(1319, 219), new Point(1320, 237), new Point(1330, 228),
-                // R
-                new Point(1342, 219), new Point(1342, 236), new Point(1342, 250), new Point(1347, 219), new Point(1348, 236), new Point(1358, 227), new Point(1354, 236), new Point(1358, 251),
-                // O
-                new Point(1372, 222), new Point(1387, 222), new Point(1372, 249), new Point(1387, 249),
-                // F
-                new Point(1414, 236), new Point(1416, 219), new Point(1401, 227), 
-                // I
-                new Point(1427, 221), new Point(1427, 250), 
-                // L
-                new Point(1439, 220), new Point(1440, 251), new Point(1454, 252), 
-                // E
-                new Point(1465, 219), new Point(1479, 219), new Point(1465, 1465), new Point(1476, 235), new Point(1474, 252)
-            };
+            //Check if top white bar is present
+            Func<Hsv , bool> isWhite = (p) => { return p.Value >= 0.98f && p.Hue <= 0.01f && p.Saturation <= 0.01f; };
 
-            var emptyPixels = new Point[]
+            for (int x = 2675; x < 2789; x += 2)
             {
-                //P
-                new Point(1308, 221), new Point(1308, 246), new Point(1321, 228), new Point(1326, 247),
-                //R
-                new Point(1348, 225), new Point(1350, 232), new Point(1350, 252), new Point(1361, 237),
-                //O
-                new Point(1369, 218), new Point(1390, 219), new Point(1368, 252), new Point(1392, 253), new Point(1380, 236),
-                //F
-                new Point(1418, 228), new Point(1416, 249)
-                //I
-                //L
-                //E
-            };
+                var notBars = new Hsv[] { bitmap.GetPixel(x, 336).ToHsv(), bitmap.GetPixel(x, 339).ToHsv() };
+                var bars = new Hsv[] { bitmap.GetPixel(x, 337).ToHsv(), bitmap.GetPixel(x, 338).ToHsv() };
 
-            var validLights = lightPixels.Count(p => { 
-                var hsv = bitmap.GetPixel(p.X, p.Y).ToHsv(); 
-                return hsv.Saturation <= 0.01f && hsv.Hue <= 0.01f && hsv.Value >= 0.93f; 
-            });
-
-            var validEmpties = emptyPixels.Count(p =>
-            {
-                var hsv = bitmap.GetPixel(p.X, p.Y).ToHsv();
-                return hsv.Saturation >= 0.01f && hsv.Hue >= 0.01f && hsv.Value <= 0.93f;
-            });
-
-            var totalV = 0f;
-            var totalVCount = 0;
-            for (int x = 1265; x < 1265 + 570; x+=3)
-            {
-                for (int y = 771; y < 771 + 690; y+= 3)
-                {
-                    totalV += bitmap.GetPixel(x, y).ToHsv().Value;
-                    totalVCount++;
-                }
+                if (notBars.Any(p => isWhite(p)) || bars.Any(p => !isWhite(p)))
+                    return false;
             }
 
-            return (totalV / (float)totalVCount) > 0.1f // Verify that we are not at the black loading screen
-                && (float)validLights > (float)lightPixels.Length * 0.7f 
-                && (float)validEmpties > (float)emptyPixels.Length * 0.7f;
+            return true;
+
+            //var lightPixels = new Point[] { 
+            //    // P
+            //    new Point(1313-1292, 219), new Point(1313-1292, 238), new Point(1313-1292, 251), new Point(1319-1292, 219), new Point(1320-1292, 237), new Point(1330-1292, 228),
+            //    // R
+            //    new Point(1342-1292, 219), new Point(1342-1292, 236), new Point(1342-1292, 250), new Point(1347-1292, 219), new Point(1348-1292, 236), new Point(1358-1292, 227), new Point(1354-1292, 236), new Point(1358-1292, 251),
+            //    // O
+            //    new Point(1372-1292, 222), new Point(1387-1292, 222), new Point(1372-1292, 249), new Point(1387-1292, 249),
+            //    // F
+            //    new Point(1414-1292, 236), new Point(1416-1292, 219), new Point(1401-1292, 227), 
+            //    // I
+            //    new Point(1427-1292, 221), new Point(1427-1292, 250), 
+            //    // L
+            //    new Point(1439-1292, 220), new Point(1440-1292, 251), new Point(1454-1292, 252), 
+            //    // E
+            //    new Point(1465-1292, 219), new Point(1479-1292, 219), new Point(1465-1292, 1465), new Point(1476-1292, 235), new Point(1474-1292, 252)
+            //};
+
+            //var emptyPixels = new Point[]
+            //{
+            //    //P
+            //    new Point(1308, 221), new Point(1308, 246), new Point(1321, 228), new Point(1326, 247),
+            //    //R
+            //    new Point(1348, 225), new Point(1350, 232), new Point(1350, 252), new Point(1361, 237),
+            //    //O
+            //    new Point(1369, 218), new Point(1390, 219), new Point(1368, 252), new Point(1392, 253), new Point(1380, 236),
+            //    //F
+            //    new Point(1418, 228), new Point(1416, 249)
+            //    //I
+            //    //L
+            //    //E
+            //};
+
+            //var validLights = lightPixels.Count(p => { 
+            //    var hsv = bitmap.GetPixel(p.X, p.Y).ToHsv(); 
+            //    return hsv.Saturation <= 0.01f && hsv.Hue <= 0.01f && hsv.Value >= 0.93f; 
+            //});
+
+            //var validEmpties = emptyPixels.Count(p =>
+            //{
+            //    var hsv = bitmap.GetPixel(p.X, p.Y).ToHsv();
+            //    return hsv.Saturation >= 0.01f && hsv.Hue >= 0.01f && hsv.Value <= 0.93f;
+            //});
+
+            //var totalV = 0f;
+            //var totalVCount = 0;
+            //for (int x = 1265; x < 1265 + 570; x+=3)
+            //{
+            //    for (int y = 771; y < 771 + 690; y+= 3)
+            //    {
+            //        totalV += bitmap.GetPixel(x, y).ToHsv().Value;
+            //        totalVCount++;
+            //    }
+            //}
+
+            //return (totalV / (float)totalVCount) > 0.1f // Verify that we are not at the black loading screen
+            //    && (float)validLights > (float)lightPixels.Length * 0.7f 
+            //    && (float)validEmpties > (float)emptyPixels.Length * 0.7f;
         }
 
         private bool IsGlyphScreen(Bitmap bitmap)

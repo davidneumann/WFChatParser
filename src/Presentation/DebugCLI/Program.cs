@@ -125,6 +125,8 @@ namespace DebugCLI
 
         private static void ProfileShim()
         {
+            //var ssh = new ScreenStateHandler();
+            //var debug = ssh.GetScreenState(new Bitmap(@"profile.png"));
             var cT = new CancellationTokenSource();
             var fileCreds = File.ReadAllLines("creds.txt");
             var startInfo = new ProcessStartInfo();
@@ -150,11 +152,11 @@ namespace DebugCLI
             };
             var logger = new DummyLogger(true);
             var bot = new ProfileBot(cT.Token, creds, new MouseHelper(), new KeyboardHelper(), new ScreenStateHandler(), logger, new GameCapture(logger), new DummySender(), new LineParser(ClientLanguage.English));
+            try { bot.AddProfileRequest("magnus"); } catch { }
             try { bot.AddProfileRequest("ayeigui"); } catch { }
             try { bot.AddProfileRequest("gigapatches"); } catch { }
             try { bot.AddProfileRequest("semlar"); } catch { }
             try { bot.AddProfileRequest("unreality101"); } catch { }
-            try { bot.AddProfileRequest("magnus"); } catch { }
 
             while (true)
             {
@@ -3507,6 +3509,7 @@ namespace DebugCLI
 
         public async Task AsyncSendDebugMessage(string message)
         {
+            Console.WriteLine(message);
         }
 
         public async Task AsyncSendLogLine(LogMessage message)

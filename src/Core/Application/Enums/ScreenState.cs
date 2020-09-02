@@ -16,6 +16,6 @@ namespace Application.Enums
         MainMenu,
         ProfileMenu,
         GlyphWindow,
-        ProfileScreen
+        ProfileScreen,
     }
 }

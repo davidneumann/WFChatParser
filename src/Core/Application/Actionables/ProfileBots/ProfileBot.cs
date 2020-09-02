@@ -2,6 +2,7 @@
 using Application.Actionables.ProfileBots.Models;
 using Application.Actionables.States;
 using Application.Enums;
+using Application.Extensions;
 using Application.Interfaces;
 using Application.Logger;
 using Application.Utils;
@@ -296,12 +297,19 @@ namespace Application.Actionables.ProfileBots
                         Thread.Sleep(250);
                     }
                 }
+
             }
 
+            string filename = Path.Combine("debug", DateTime.Now.Ticks + ".png");
+            using (var debug = _gameCapture.GetFullImage())
+            {
+                debug.Save(filename);
+            }
             _profileRequestQueue.Enqueue(_currentProfileName);
             _currentState = ProfileBotState.WaitingForBaseBot;
             _requestingControl = true;
-            throw new Exception("Failed to load profile screen");
+            _dataSender.AsyncSendDebugMessage($"Failed to load profile screen. See {filename}.");
+            return Task.CompletedTask;
         }
 
         private async Task ParseProfile()
@@ -708,7 +716,7 @@ namespace Application.Actionables.ProfileBots
                         }
                     }
 
-                    debug.Save("profile_equipment.png");
+                    debug.Save(Path.Combine(_debugFolder, _currentProfileName, "profile_equipment.jpg"), 90L);
                 }
             }
 
