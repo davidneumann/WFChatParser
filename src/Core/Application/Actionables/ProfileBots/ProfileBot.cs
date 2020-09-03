@@ -106,11 +106,7 @@ namespace Application.Actionables.ProfileBots
                 return;
             }
 
-            if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
-            {
-                await Task.Delay(17);
-                _mouse.Click(0, 0);
-            }
+            await GiveWarframeFocus();
 
             OpenMenu();
             OpenChat();
@@ -120,6 +116,16 @@ namespace Application.Actionables.ProfileBots
             _currentState = ProfileBotState.WaitingForProfile;
             _requestingControl = true;
             return;
+        }
+
+        private async Task GiveWarframeFocus()
+        {
+            if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
+            {
+                await Task.Delay(17);
+                _mouse.Click(0, 0);
+                await Task.Delay(17);
+            }
         }
 
         private void OpenMenu()
@@ -238,6 +244,7 @@ namespace Application.Actionables.ProfileBots
                         _logger.Log("Saving warframe screenshot");
                         Thread.Sleep(750);
                         _keyboard.SendF6();
+                        Thread.Sleep(750); //Let things truly finish animating
 
                         var _ = Task.Run(() =>
                         {
@@ -603,6 +610,57 @@ namespace Application.Actionables.ProfileBots
             return result;
         }
 
+        private static Hsv AverageHsv(IEnumerable<Hsv> hsvs)
+        {
+            var hue = 0f;
+            var saturation = 0f;
+            var value = 0f;
+            var count = 0;
+            foreach (var hsv in hsvs)
+            {
+                hue += hsv.Hue;
+                saturation += hsv.Saturation;
+                value += hsv.Value;
+                count++;
+            }
+
+            return new Hsv() { Hue = hue / count, Saturation = saturation / count, Value = value / count };
+        }
+        public static int[] LocateEquipmentRows(Bitmap bitmap)
+        {
+            var results = new int[2];
+            var resultI = 0;
+            bool isBlue(Hsv p) => p.Hue >= 195 && p.Hue <= 210 && p.Value >= 0.85f;
+            bool localIsWhite(Hsv p) => p.Value >= 0.88f && p.Saturation <= 0.1f;
+            bool isGray(Hsv p) => p.Saturation <= 0.3f && p.Value <= 0.4f && p.Hue >= 195 && p.Hue <= 210;
+
+            var width = 503;
+            var xStart = 337;
+            var currentRows = new Hsv[width];
+            var up4s = new Hsv[width];
+            var up2s = new Hsv[width];
+            for (int y = 1155; y < 1858; y++)
+            {
+                if (resultI >= 2)
+                    break;
+
+                for (int x = xStart; x < xStart + width; x++)
+                {
+
+                    currentRows[x - xStart] = bitmap.GetPixel(x, y).ToHsv();
+                    up4s[x - xStart] = bitmap.GetPixel(x, y - 4).ToHsv();
+                    up2s[x - xStart] = bitmap.GetPixel(x, y - 2).ToHsv();
+                }
+
+                if (isBlue(AverageHsv(currentRows)) && localIsWhite(AverageHsv(up4s)) && isGray(AverageHsv(up2s)))
+                {
+                    results[resultI++] = y - 353;
+                }
+            }
+
+            return results;
+        }
+
         private void ParseEquipmentTab()
         {
             Point clickPoint = GetEquipmentTabLocation();
@@ -631,27 +689,39 @@ namespace Application.Actionables.ProfileBots
 
             var topLeftRect = new Rectangle(323, 915, 530, 365);
             var tiles = new List<Bitmap>();
-            var debugC = 0;
+            //var blue = bitmap.GetPixel(curRect.Left + 16, curRect.Bottom - 11).ToHsv();
+            Func<Hsv, bool> isBlue = (p) => { return p.Hue >= 190 && p.Hue <= 218 && p.Value >= 0.85 && p.Saturation >= 0.72f; };
+            //if (!(blue.Hue >= 190 && blue.Hue <= 218 && blue.Value >= 0.85 && blue.Saturation >= 0.72f))
+            var onlyOneLine = false;
             while (true)
             {
-                var badDetected = false;
+                var unownedDetected = false;
+
+                GiveWarframeFocus().Wait();
 
                 using (var bitmap = _gameCapture.GetFullImage())
                 {
                     //Read two rows
-                    var curRect = topLeftRect;
+                    var ys = LocateEquipmentRows(bitmap);
+                    //The rows are not going to be in the right place. Scan down from a y of 1142 and detect blue
 
                     for (int y = 0; y < 2; y++)
                     {
-                        if (badDetected)
+                        //Skip the top row if only one line scrolled down
+                        var curRect = new Rectangle(topLeftRect.Left, !onlyOneLine ? ys[y] : ys[1], topLeftRect.Width, topLeftRect.Height);
+
+                        if (unownedDetected)
                             break;
+
                         for (int x = 0; x < 6; x++)
                         {
                             //For white check point: Right - 8, Bottom - 20
                             //White is v >= 0.961
-                            if (bitmap.GetPixel(curRect.Right - 8, curRect.Bottom - 20).ToHsv().Value < 0.80f)
+                            if (IsTileUnowned(bitmap, curRect))
                             {
-                                badDetected = true;
+                                _logger.Log("Unowned equipment detected");
+                                //bitmap.Save("equipment_unowned_screen.png");
+                                unownedDetected = true;
                                 break;
                             }
 
@@ -660,31 +730,44 @@ namespace Application.Actionables.ProfileBots
                             {
                                 g.DrawImage(bitmap, new Rectangle(0, 0, tileB.Width, tileB.Height), curRect, GraphicsUnit.Pixel);
                             }
-                            tileB.Save("equipment_" + debugC++ + ".png");
+                            //tileB.Save("equipment_" + debugC++ + ".png");
                             tiles.Add(tileB);
+
+                            var blue = bitmap.GetPixel(curRect.Left + 16, curRect.Bottom - 11).ToHsv();
+                            if (!(blue.Hue >= 190 && blue.Hue <= 218 && blue.Value >= 0.85 && blue.Saturation >= 0.72f))
+                            {
+                                string guid = Guid.NewGuid().ToString();
+                                tileB.Save($"bad\\equipment_bad_{guid}_item.png");
+                                bitmap.Save($"bad\\equipment_bad_{guid}_screen.png");
+                                _logger.Log("Bad equipment item detected");
+                            }
 
                             // Gap of 40 pixels between items
                             curRect = new Rectangle(curRect.Right + 40, curRect.Top, curRect.Width, curRect.Height);
                         }
-
-                        // Gap of 39 pixels between items
-                        curRect = new Rectangle(topLeftRect.Left, topLeftRect.Bottom + 39, topLeftRect.Width, topLeftRect.Height);
                     }
-
-                    if (badDetected)
-                        break;
-
-                    //Scroll twice
-                    _mouse.Click(3148, 1029);
-                    Thread.Sleep(66);
-                    _mouse.ScrollDown();
-                    Thread.Sleep(66);
-                    _mouse.ScrollDown();
-                    Thread.Sleep(66);
-                    _mouse.MoveTo(0, 0);
-                    Thread.Sleep(150);
-
                 }
+
+                if (unownedDetected)
+                    break;
+
+                //GiveWarframeFocus().Wait();
+
+                //Scroll twice
+                var timer = new System.Diagnostics.Stopwatch();
+                timer.Start();
+                _mouse.Click(3148, 1029);
+                Thread.Sleep(66);
+                _mouse.ScrollDown();
+                Thread.Sleep(33);
+                if (IsEquipmentScrolledDown())
+                    onlyOneLine = true;
+                _mouse.ScrollDown();
+                Thread.Sleep(33);
+                if (!onlyOneLine && IsEquipmentScrolledDown())
+                    onlyOneLine = true;
+                _mouse.MoveTo(0, 0);
+                Thread.Sleep(Math.Max(0, 250 - (int)timer.ElapsedMilliseconds)); //Let rows animate in partially
             }
 
 
@@ -701,11 +784,9 @@ namespace Application.Actionables.ProfileBots
                     var left = 1;
                     for (int i = 0; i < tiles.Count; i++)
                     {
-                        var tile = tiles[i];
+                        g.DrawImage(tiles[i], left, top);
 
-                        g.DrawImage(tile, left, top);
-
-                        if (i % 6 == 0 && i > 0)
+                        if ((i + 1) % 6 == 0)
                         {
                             left = 1;
                             top += topLeftRect.Height + 2;
@@ -721,6 +802,31 @@ namespace Application.Actionables.ProfileBots
             }
 
             throw new NotImplementedException();
+        }
+
+        private bool IsEquipmentScrolledDown()
+        {
+            using (var bitmap = _gameCapture.GetFullImage())
+            {
+                return bitmap.GetPixel(3755, 1925).ToHsv().Value >= 0.85f;
+            }
+        }
+
+        private bool IsTileUnowned(Bitmap bitmap, Rectangle curRect)
+        {
+            var checkSize = 9;
+            var value = 0f;
+            var count = 0;
+            for (int y = 0; y < checkSize; y++)
+            {
+                for (int x = 0; x < checkSize; x++)
+                {
+                    var p = bitmap.GetPixel(curRect.Right - 8 - checkSize / 2, curRect.Bottom - 20 - checkSize / 2).ToHsv();
+                    value += p.Value;
+                    count++;
+                }
+            }
+            return value / count < 0.8f;
         }
 
         private Point GetEquipmentTabLocation()
