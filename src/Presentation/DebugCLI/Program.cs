@@ -125,8 +125,6 @@ namespace DebugCLI
 
         private static void ProfileShim()
         {
-            //var ssh = new ScreenStateHandler();
-            //var debug = ssh.GetScreenState(new Bitmap(@"profile.png"));
             var cT = new CancellationTokenSource();
             var fileCreds = File.ReadAllLines("creds.txt");
             var startInfo = new ProcessStartInfo();

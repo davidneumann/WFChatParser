@@ -53,8 +53,6 @@ namespace WarframeDriver
                     return false;
             }
 
-            return true;
-
             //var lightPixels = new Point[] { 
             //    // P
             //    new Point(1313-1292, 219), new Point(1313-1292, 238), new Point(1313-1292, 251), new Point(1319-1292, 219), new Point(1320-1292, 237), new Point(1330-1292, 228),
@@ -98,20 +96,20 @@ namespace WarframeDriver
             //    return hsv.Saturation >= 0.01f && hsv.Hue >= 0.01f && hsv.Value <= 0.93f;
             //});
 
-            //var totalV = 0f;
-            //var totalVCount = 0;
-            //for (int x = 1265; x < 1265 + 570; x+=3)
-            //{
-            //    for (int y = 771; y < 771 + 690; y+= 3)
-            //    {
-            //        totalV += bitmap.GetPixel(x, y).ToHsv().Value;
-            //        totalVCount++;
-            //    }
-            //}
+            var totalV = 0f;
+            var totalVCount = 0;
+            for (int x = 1265; x < 1265 + 570; x += 3)
+            {
+                for (int y = 771; y < 771 + 690; y += 3)
+                {
+                    totalV += bitmap.GetPixel(x, y).ToHsv().Value;
+                    totalVCount++;
+                }
+            }
 
-            //return (totalV / (float)totalVCount) > 0.1f // Verify that we are not at the black loading screen
-            //    && (float)validLights > (float)lightPixels.Length * 0.7f 
-            //    && (float)validEmpties > (float)emptyPixels.Length * 0.7f;
+            return (totalV / (float)totalVCount) > 0.1f; // Verify that we are not at the black loading screen
+                //&& (float)validLights > (float)lightPixels.Length * 0.7f
+                //&& (float)validEmpties > (float)emptyPixels.Length * 0.7f;
         }
 
         private bool IsGlyphScreen(Bitmap bitmap)

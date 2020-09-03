@@ -244,6 +244,7 @@ namespace Application.Actionables.ProfileBots
                         _logger.Log("Saving warframe screenshot");
                         Thread.Sleep(750);
                         _keyboard.SendF6();
+                        screen.Save("profile_detected.png");
                         Thread.Sleep(750); //Let things truly finish animating
 
                         var _ = Task.Run(() =>
