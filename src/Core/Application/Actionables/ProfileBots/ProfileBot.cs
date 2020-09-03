@@ -244,7 +244,6 @@ namespace Application.Actionables.ProfileBots
                         _logger.Log("Saving warframe screenshot");
                         Thread.Sleep(750);
                         _keyboard.SendF6();
-                        screen.Save("profile_detected.png");
                         Thread.Sleep(750); //Let things truly finish animating
 
                         var _ = Task.Run(() =>
@@ -359,29 +358,37 @@ namespace Application.Actionables.ProfileBots
                     }
                 }
 
-                var scale = 48f / bitmap.Height;
-                //var width = (int)(bitmap.Width * scale);
-                //var height = (int)(bitmap.Height * scale);
-                //result = new Bitmap(width + padding * 2, height + padding * 2);
-                //var g = Graphics.FromImage(result);
-                //g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-                //g.FillRectangle(Brushes.White, 0, 0, result.Width, result.Height);
-                //g.DrawImage(bitmap, padding, padding, width, height);
+                result = PrepareBitmapForTess(bitmap, padding);
+            }
 
-                using (var scaled = new Bitmap(bitmap, new Size((int)(bitmap.Width * scale), (int)(bitmap.Height * scale))))
+            return result;
+        }
+
+        private static Bitmap PrepareBitmapForTess(Bitmap bitmap, int padding = 4)
+        {
+            Bitmap result;
+            var scale = 48f / bitmap.Height;
+            //var width = (int)(bitmap.Width * scale);
+            //var height = (int)(bitmap.Height * scale);
+            //result = new Bitmap(width + padding * 2, height + padding * 2);
+            //var g = Graphics.FromImage(result);
+            //g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+            //g.FillRectangle(Brushes.White, 0, 0, result.Width, result.Height);
+            //g.DrawImage(bitmap, padding, padding, width, height);
+
+            using (var scaled = new Bitmap(bitmap, new Size((int)(bitmap.Width * scale), (int)(bitmap.Height * scale))))
+            {
+                result = new Bitmap(scaled.Width + padding * 2, scaled.Height + padding * 2);
+                for (int x = 0; x < result.Width; x++)
                 {
-                    result = new Bitmap(scaled.Width + padding * 2, scaled.Height + padding * 2);
-                    for (int x = 0; x < result.Width; x++)
+                    for (int y = 0; y < result.Height; y++)
                     {
-                        for (int y = 0; y < result.Height; y++)
+                        if (y < padding || x < padding || x >= scaled.Width + padding || y >= scaled.Height + padding)
+                            result.SetPixel(x, y, Color.White);
+                        else
                         {
-                            if (y < padding || x < padding || x >= scaled.Width + padding || y >= scaled.Height + padding)
-                                result.SetPixel(x, y, Color.White);
-                            else
-                            {
-                                var c = scaled.GetPixel(x - padding, y - padding);
-                                result.SetPixel(x, y, Color.FromArgb(255, c.R, c.G, c.B));
-                            }
+                            var c = scaled.GetPixel(x - padding, y - padding);
+                            result.SetPixel(x, y, Color.FromArgb(255, c.R, c.G, c.B));
                         }
                     }
                 }
@@ -390,7 +397,7 @@ namespace Application.Actionables.ProfileBots
             return result;
         }
 
-        private Rectangle TrimRect(Rectangle searchSpace, Bitmap bitmap)
+        private Rectangle TrimRect(Rectangle searchSpace, Bitmap bitmap, bool trimDark = true)
         {
             var left = searchSpace.Right;
             var right = searchSpace.Left;
@@ -403,7 +410,8 @@ namespace Application.Actionables.ProfileBots
                 {
                     var p = bitmap.GetPixel(x, y);
                     var hsv = p.ToHsv();
-                    if (IsWhite(hsv))
+                    if (trimDark && IsWhite(hsv)
+                        || !trimDark && hsv.Value <= 0.5f)
                     {
                         if (y < top)
                             top = y;
@@ -414,10 +422,11 @@ namespace Application.Actionables.ProfileBots
                         if (x > right)
                             right = x;
                     }
+
                 }
             }
 
-            return new Rectangle(left, top, right - left, bottom - top);
+            return new Rectangle(left, top, right - left, bottom - top + 1);
         }
 
         private static bool IsWhite(Hsv hsv)
@@ -627,11 +636,10 @@ namespace Application.Actionables.ProfileBots
 
             return new Hsv() { Hue = hue / count, Saturation = saturation / count, Value = value / count };
         }
-        public static int[] LocateEquipmentRows(Bitmap bitmap)
+        private static int[] LocateEquipmentRows(Bitmap bitmap)
         {
             var results = new int[2];
             var resultI = 0;
-            bool isBlue(Hsv p) => p.Hue >= 195 && p.Hue <= 210 && p.Value >= 0.85f;
             bool localIsWhite(Hsv p) => p.Value >= 0.88f && p.Saturation <= 0.1f;
             bool isGray(Hsv p) => p.Saturation <= 0.3f && p.Value <= 0.4f && p.Hue >= 195 && p.Hue <= 210;
 
@@ -653,13 +661,159 @@ namespace Application.Actionables.ProfileBots
                     up2s[x - xStart] = bitmap.GetPixel(x, y - 2).ToHsv();
                 }
 
-                if (isBlue(AverageHsv(currentRows)) && localIsWhite(AverageHsv(up4s)) && isGray(AverageHsv(up2s)))
+                if (IsHsvBlueBar(AverageHsv(currentRows)) && localIsWhite(AverageHsv(up4s)) && isGray(AverageHsv(up2s)))
                 {
                     results[resultI++] = y - 353;
                 }
             }
 
             return results;
+        }
+
+        private static bool IsHsvBlueBar(Hsv p) => p.Hue >= 195 && p.Hue <= 210 && p.Value >= 0.85f;
+
+        private Rectangle[] LocateTextLines(Bitmap bitmap)
+        {
+            var rects = new List<Rectangle>();
+
+            //Approach 1: Fast but uses hard coded values
+            ////=Unique locations=
+            ////4x305: 577
+            ////4x260: 577
+            ////4x215: 1
+
+            //var knownLocations = new Point[]
+            //{
+            //    new Point(15, 215),
+            //    new Point(15, 260),
+            //    new Point(15, 305)
+            //};
+            //foreach (var point in knownLocations)
+            //{
+            //    //Use left and right padding to ensure we have a white background
+            //    var valid = true;
+            //    const int validSize = 6;
+            //    for (int x = 1; x < 1 + validSize; x++)
+            //    {
+            //        if (bitmap.GetPixel(x, point.Y).ToHsv().Value < 0.88f)
+            //        {
+            //            valid = false;
+            //            break;
+            //        }
+            //    }
+            //    if (!valid)
+            //        continue;
+            //    for (int x = bitmap.Width - 1; x > bitmap.Width - 1 - validSize; x--)
+            //    {
+            //        if (bitmap.GetPixel(x, point.Y).ToHsv().Value < 0.88f)
+            //        {
+            //            valid = false;
+            //            break;
+            //        }
+            //    }
+            //    if (!valid)
+            //        continue;
+
+            //    var pixelFound = false;
+            //    for (int y = point.Y; y < point.Y + 25; y+=2)
+            //    {
+            //        if (pixelFound)
+            //            break;
+            //        for (int x = point.X; x < point.X + 6; x++)
+            //        {
+            //            if(bitmap.GetPixel(x, y).ToHsv().Value <= 0.26f)
+            //            {
+            //                pixelFound = true;
+            //                break;
+            //            }
+            //        }
+            //    }
+            //    if (pixelFound)
+            //        rects.Add(new Rectangle(1, point.Y - 2, bitmap.Width - 2, 32));
+            //}
+
+            //Approach 2: slow but adapts to unknown situations
+            var onLine = false;
+            var startY = 0;
+            for (int y = 340; y >= 0; y--)
+            {
+                //Use left and right padding to ensure we have a white background
+                var valid = true;
+                const int validSize = 6;
+                for (int x = 1; x < 1 + validSize; x++)
+                {
+                    if (bitmap.GetPixel(x, y).ToHsv().Value < 0.88f)
+                    {
+                        valid = false;
+                    }
+                }
+                for (int x = bitmap.Width - 1; x > bitmap.Width - 1 - validSize; x--)
+                {
+                    if (bitmap.GetPixel(x, y).ToHsv().Value < 0.88f)
+                    {
+                        valid = false;
+                    }
+                }
+                if (!valid)
+                    break;
+
+                var anyFound = false;
+                for (int x = 5; x < bitmap.Width - 5; x++)
+                {
+                    if (bitmap.GetPixel(x, y).ToHsv().Value < 0.26f)
+                    {
+                        if (!onLine)
+                        {
+                            onLine = true;
+                            startY = y;
+                        }
+                        anyFound = true;
+                        break;
+                    }
+                }
+                if (onLine && !anyFound)
+                {
+                    onLine = false;
+                    rects.Add(new Rectangle(4, y - 2, bitmap.Width - 8, startY - y + 5));
+                }
+            }
+
+            return rects.Select(r => TrimRect(r, bitmap, false)).ToArray();
+        }
+
+        private EquipmentItem ExtractEquipmentDetails(Bitmap bitmap)
+        {
+            var lines = LocateTextLines(bitmap);
+            var texts = new List<string>();
+            foreach (var line in lines)
+            {
+                using (var clean = new Bitmap(line.Width, line.Height))
+                {
+                    using (var g = Graphics.FromImage(clean))
+                    {
+                        g.DrawImage(bitmap, new Rectangle(0, 0, line.Width, line.Height), line, GraphicsUnit.Pixel);
+                    }
+
+                    using (var prepped = PrepareBitmapForTess(clean))
+                    {
+                        texts.Add(_lineParser.ParseLine(prepped));
+                    }
+                }
+            }
+
+            var sb = new StringBuilder();
+            foreach (var text in texts.Skip(1).Reverse())
+            {
+                sb.Append(text + " ");
+            }
+
+            var result = new EquipmentItem()
+            {
+                Rank = texts[0],
+                Name = sb.ToString().Trim()
+            };
+
+            return result;
         }
 
         private void ParseEquipmentTab()
@@ -694,6 +848,7 @@ namespace Application.Actionables.ProfileBots
             Func<Hsv, bool> isBlue = (p) => { return p.Hue >= 190 && p.Hue <= 218 && p.Value >= 0.85 && p.Saturation >= 0.72f; };
             //if (!(blue.Hue >= 190 && blue.Hue <= 218 && blue.Value >= 0.85 && blue.Saturation >= 0.72f))
             var onlyOneLine = false;
+            var debugC = 0;
             while (true)
             {
                 var unownedDetected = false;
@@ -731,7 +886,7 @@ namespace Application.Actionables.ProfileBots
                             {
                                 g.DrawImage(bitmap, new Rectangle(0, 0, tileB.Width, tileB.Height), curRect, GraphicsUnit.Pixel);
                             }
-                            //tileB.Save("equipment_" + debugC++ + ".png");
+                            tileB.Save("equipment_" + debugC++ + ".png");
                             tiles.Add(tileB);
 
                             var blue = bitmap.GetPixel(curRect.Left + 16, curRect.Bottom - 11).ToHsv();

@@ -3,7 +3,7 @@
     public class EquipmentItem
     {
         public string Name { get; set; }
-        public bool IsRanked { get; set; }
-        public byte Rank { get; set; } = 0;
+        //public bool IsRanked { get; set; } //This does not matter as you can tell it from the rank
+        public string Rank { get; set; }
     }
 }
