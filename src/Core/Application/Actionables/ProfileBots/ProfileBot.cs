@@ -28,9 +28,11 @@ namespace Application.Actionables.ProfileBots
         private ConcurrentQueue<string> _profileRequestQueue = new ConcurrentQueue<string>();
         private ProfileBotState _currentState;
         private string _currentProfileName;
-        private ILineParser _lineParser;
 
         private string _debugFolder = Path.Combine("debug", "profiles");
+        private ILineParserFactory _lineParserFactory;
+        private ILineParser _profileTabParser;
+
         public ProfileBot(
             CancellationToken cancellationToken,
             WarframeClientInformation warframeCredentials,
@@ -40,11 +42,12 @@ namespace Application.Actionables.ProfileBots
             ILogger logger,
             IGameCapture gameCapture,
             IDataTxRx dataSender,
-            ILineParser lineParser)
+            ILineParserFactory lineParserFactory)
             : base(cancellationToken, warframeCredentials, mouse, keyboard, screenStateHandler, logger, gameCapture, dataSender)
         {
             _dataSender.ProfileParseRequest += _dataSender_ProfileParseRequest;
-            _lineParser = lineParser;
+            _lineParserFactory = lineParserFactory;
+            _profileTabParser = _lineParserFactory.CreateParser(ClientLanguage.English);
             if (!Directory.Exists(_debugFolder))
                 Directory.CreateDirectory(_debugFolder);
         }
@@ -132,7 +135,8 @@ namespace Application.Actionables.ProfileBots
         {
             //Ensure we are controlling a warframe
             var tries = 0;
-            while (true)
+            var loopSafeguard = 0;
+            while (loopSafeguard++ < 100)
             {
                 if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
                 {
@@ -229,8 +233,7 @@ namespace Application.Actionables.ProfileBots
         private Task VerifyProfileOpen()
         {
             _logger.Log("Verifying that profile is fully visible.");
-            // Verify the pixels for Profile are in the right spots
-            // Check LOTS of pixels as this stpuid thing animates in
+            //Give it a few attempts incase the loading is almost done
             for (int tries = 0; tries < 15; tries++)
             {
                 using (var screen = _gameCapture.GetFullImage())
@@ -282,18 +285,6 @@ namespace Application.Actionables.ProfileBots
                             }
                         });
 
-                        //using (var crop = new Bitmap(2647, 1819))
-                        //{
-                        //    for (int x = 0; x < crop.Width; x++)
-                        //    {
-                        //        for (int y = 0; y < crop.Height; y++)
-                        //        {
-                        //            crop.SetPixel(x, y, screen.GetPixel(x, y + 280));
-                        //        }
-                        //    }
-                        //    crop.Save("extracted_warframe.png");
-                        //}
-
                         Thread.Sleep(500);
 
                         return Task.CompletedTask;
@@ -321,20 +312,47 @@ namespace Application.Actionables.ProfileBots
 
         private async Task ParseProfile()
         {
+            var sw = new System.Diagnostics.Stopwatch();
+            sw.Start();
             _logger.Log($"Starting to parse profile {_currentProfileName}.");
 
-            //var profile = ParseProfileTab();
-            ParseEquipmentTab();
-            //throw new NotImplementedException();
+            var profile = ParseProfileTab();
+            _logger.Log("Getting equipment tiles");
+            var tiles = GetEquipmentTileBitmaps();
 
-            //await _dataSender.AsyncSendProfileData(profile);
+            //Close profile
+            _logger.Log("Closing profile");
+            _keyboard.SendEscape();
 
-            // Stop trying to parse more names
+            var _ = Task.Run(() =>
+            {
+                _logger.Log("Parsing equipment tiles");
+                var equipment = new EquipmentItem[tiles.Length];
+                using (var lineParser = _lineParserFactory.CreateParser(ClientLanguage.English))
+                {
+                    for (int i = 0; i < tiles.Length; i++)
+                    {
+                        equipment[i] = ParseEquipmentTile(tiles[i], lineParser);
+                        tiles[i].Dispose();
+                    }
+                }
+                profile.Equipment.AddRange(equipment);
+                sw.Stop();
+                _logger.Log($"{profile.Name}'s profile fully parsed in {sw.Elapsed.TotalSeconds}s.");
+
+                _dataSender.AsyncSendProfileData(profile).Wait();
+            });
+
+            // Go back to idling if no more names ot parse otherwise let the next loop take over
             if (_profileRequestQueue.Count <= 0)
                 _requestingControl = false;
+            else
+                _requestingControl = true;
+
+            _currentState = ProfileBotState.WaitingForBaseBot;
         }
 
-        private Bitmap ExtractBitmapFromRect(Rectangle rect, Bitmap source, int padding = 4, bool trimRect = true, bool strictWhites = false)
+        private Bitmap ExtractWhiteBitmapFromRect(Rectangle rect, Bitmap source, int padding = 4, bool trimRect = true, bool strictWhites = false)
         {
             Bitmap result;
             if (trimRect)
@@ -368,13 +386,6 @@ namespace Application.Actionables.ProfileBots
         {
             Bitmap result;
             var scale = 48f / bitmap.Height;
-            //var width = (int)(bitmap.Width * scale);
-            //var height = (int)(bitmap.Height * scale);
-            //result = new Bitmap(width + padding * 2, height + padding * 2);
-            //var g = Graphics.FromImage(result);
-            //g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-            //g.FillRectangle(Brushes.White, 0, 0, result.Width, result.Height);
-            //g.DrawImage(bitmap, padding, padding, width, height);
 
             using (var scaled = new Bitmap(bitmap, new Size((int)(bitmap.Width * scale), (int)(bitmap.Height * scale))))
             {
@@ -523,18 +534,16 @@ namespace Application.Actionables.ProfileBots
                         var (left, right) = LocateHeaderSides(bitmap, ys[i]);
                         var rect = new Rectangle(left, ys[i] - 28, right - left, 38);
                         var trimmed = TrimRect(rect, bitmap);
-                        Bitmap image = ExtractBitmapFromRect(trimmed, bitmap);
-                        headers.Add(new Header(image, ys[i], _lineParser.ParseLine(image)));
+                        var image = ExtractWhiteBitmapFromRect(trimmed, bitmap);
+                        headers.Add(new Header(image, ys[i], _profileTabParser.ParseLine(image)));
                     }
                 }
-                //debug.Save("profile_debug.png");
             }
-            //for (int i = 0; i < headers.Count; i++)
-            //{
-            //    headers[i].Bitmap.Save($"header_{i}.png");
-            //    Console.WriteLine($"Header {i}: {headers[i].Text}");
-            //}
+#if DEBUG
             DebugSaveImages(headers.Select(h => h.Bitmap), "profile_headers.png");
+#endif
+            headers.ForEach(h => h.Bitmap.Dispose());
+
             return headers;
         }
 
@@ -548,7 +557,9 @@ namespace Application.Actionables.ProfileBots
                 List<Header> headers = ExtractHeaders(bitmap);
 
                 //Rect from header POC
+#if DEBUG
                 var debugImages = new List<Bitmap>();
+#endif
                 var sb = new StringBuilder();
                 sb.AppendLine(_currentProfileName);
                 foreach (var header in headers)
@@ -556,48 +567,64 @@ namespace Application.Actionables.ProfileBots
                     switch (header.Value)
                     {
                         case HeaderOption.Accolades:
-                            var names = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 230, 1065, 38), bitmap);
-                            var descriptions = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 267, 1065, 45), bitmap);
-                            string namesText = _lineParser.ParseLine(names);
-                            string descriptionsText = _lineParser.ParseLine(descriptions);
+                            var names = ExtractWhiteBitmapFromRect(new Rectangle(2675, header.Anchor + 230, 1065, 38), bitmap);
+                            var descriptions = ExtractWhiteBitmapFromRect(new Rectangle(2675, header.Anchor + 267, 1065, 45), bitmap);
+                            string namesText = _profileTabParser.ParseLine(names);
+                            string descriptionsText = _profileTabParser.ParseLine(descriptions);
                             sb.AppendLine($"Names: {namesText}\nDescriptions: {descriptionsText}");
-                            debugImages.Add(names);
-                            debugImages.Add(descriptions);
+#if DEBUG
+                            debugImages.Add(names.Clone(new Rectangle(0, 0, names.Width, names.Height), names.PixelFormat));
+                            debugImages.Add(descriptions.Clone(new Rectangle(0, 0, descriptions.Width, descriptions.Height), names.PixelFormat));
+#endif
                             result.Accolades = new List<Accolades>();
                             result.Accolades.Add(new Accolades() { Name = namesText, Description = descriptionsText });
+                            names.Dispose();
+                            descriptions.Dispose();
                             break;
                         case HeaderOption.MasteryRank:
-                            var mr = ExtractBitmapFromRect(new Rectangle(3155, header.Anchor + 162, 100, 65), bitmap, strictWhites: true);
-                            var title = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 232, 1065, 40), bitmap);
-                            var totalXp = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 302, 1065, 38), bitmap);
-                            var remaingXp = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 374, 1065, 47), bitmap);
-                            string mrText = _lineParser.ParseLine(mr);
-                            string mrTitleText = _lineParser.ParseLine(title);
-                            string totalXpText = _lineParser.ParseLine(totalXp);
-                            string remainingXpText = _lineParser.ParseLine(remaingXp);
+                            var mr = ExtractWhiteBitmapFromRect(new Rectangle(3155, header.Anchor + 162, 100, 65), bitmap, strictWhites: true);
+                            var title = ExtractWhiteBitmapFromRect(new Rectangle(2675, header.Anchor + 232, 1065, 40), bitmap);
+                            var totalXp = ExtractWhiteBitmapFromRect(new Rectangle(2675, header.Anchor + 302, 1065, 38), bitmap);
+                            var remaingXp = ExtractWhiteBitmapFromRect(new Rectangle(2675, header.Anchor + 374, 1065, 47), bitmap);
+                            string mrText = _profileTabParser.ParseLine(mr);
+                            string mrTitleText = _profileTabParser.ParseLine(title);
+                            string totalXpText = _profileTabParser.ParseLine(totalXp);
+                            string remainingXpText = _profileTabParser.ParseLine(remaingXp);
                             sb.AppendLine($"Mr: {mrText}\nMr Title: {mrTitleText}\nTotal xp: {totalXpText}\nRemaining Xp: {remainingXpText.Split(' ').Last()}");
-                            debugImages.Add(mr);
-                            debugImages.Add(title);
-                            debugImages.Add(totalXp);
-                            debugImages.Add(remaingXp);
+#if DEBUG
+                            debugImages.Add(mr.Clone(new Rectangle(0, 0, mr.Width, mr.Height), mr.PixelFormat));
+                            debugImages.Add(title.Clone(new Rectangle(0, 0, title.Width, title.Height), title.PixelFormat));
+                            debugImages.Add(totalXp.Clone(new Rectangle(0, 0, totalXp.Width, totalXp.Height), totalXp.PixelFormat));
+                            debugImages.Add(remaingXp.Clone(new Rectangle(0, 0, remaingXp.Width, remaingXp.Height), remaingXp.PixelFormat));
+#endif
                             result.MasteryRank = mrText;
                             result.MasteryRankTitle = mrTitleText;
                             result.TotalXp = totalXpText;
                             result.XpToLevel = remainingXpText;
+                            mr.Dispose();
+                            title.Dispose();
+                            totalXp.Dispose();
+                            remaingXp.Dispose();
                             break;
                         case HeaderOption.Clan:
-                            var clan = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 228, 1065, 54), bitmap);
-                            string clanText = _lineParser.ParseLine(clan);
+                            var clan = ExtractWhiteBitmapFromRect(new Rectangle(2675, header.Anchor + 228, 1065, 54), bitmap);
+                            string clanText = _profileTabParser.ParseLine(clan);
                             sb.AppendLine($"Name: {clanText}");
-                            debugImages.Add(clan);
+#if DEBUG
+                            debugImages.Add(clan.Clone(new Rectangle(0, 0, clan.Width, clan.Height), clan.PixelFormat));
+#endif
                             result.ClanName = clanText;
+                            clan.Dispose();
                             break;
                         case HeaderOption.MarkedForDeathBy:
-                            var markedBy = ExtractBitmapFromRect(new Rectangle(2675, header.Anchor + 185, 1065, 35), bitmap);
-                            string markedByText = _lineParser.ParseLine(markedBy);
+                            var markedBy = ExtractWhiteBitmapFromRect(new Rectangle(2675, header.Anchor + 185, 1065, 35), bitmap);
+                            string markedByText = _profileTabParser.ParseLine(markedBy);
                             sb.AppendLine($"Marked by: {markedByText}");
-                            debugImages.Add(markedBy);
+#if DEBUG
+                            debugImages.Add(markedBy.Clone(new Rectangle(0, 0, markedBy.Width, markedBy.Height), markedBy.PixelFormat));
+#endif
                             result.MarkedBy = markedByText;
+                            markedBy.Dispose();
                             break;
                         case HeaderOption.Unknown:
                         default:
@@ -612,9 +639,13 @@ namespace Application.Actionables.ProfileBots
                             break;
                     }
                 }
+#if DEBUG
                 DebugSaveImages(debugImages, Path.Combine(_debugFolder, _currentProfileName, "profile_combined.png"));
+#endif
                 File.WriteAllText(Path.Combine(_debugFolder, _currentProfileName, "profile_combined.txt"), sb.ToString());
+#if DEBUG
                 bitmap.Save(Path.Combine(_debugFolder, _currentProfileName, "profile_screen.png"));
+#endif
             }
 
             return result;
@@ -781,7 +812,7 @@ namespace Application.Actionables.ProfileBots
             return rects.Select(r => TrimRect(r, bitmap, false)).ToArray();
         }
 
-        private EquipmentItem ExtractEquipmentDetails(Bitmap bitmap)
+        private EquipmentItem ParseEquipmentTile(Bitmap bitmap, ILineParser parser)
         {
             var lines = LocateTextLines(bitmap);
             var texts = new List<string>();
@@ -789,14 +820,21 @@ namespace Application.Actionables.ProfileBots
             {
                 using (var clean = new Bitmap(line.Width, line.Height))
                 {
-                    using (var g = Graphics.FromImage(clean))
+                    for (int x = 0; x < clean.Width; x++)
                     {
-                        g.DrawImage(bitmap, new Rectangle(0, 0, line.Width, line.Height), line, GraphicsUnit.Pixel);
+                        for (int y = 0; y < clean.Height; y++)
+                        {
+                            clean.SetPixel(x, y, bitmap.GetPixel(line.Left + x, line.Top + y));
+                        }
                     }
+                    //using (var g = Graphics.FromImage(clean))
+                    //{
+                    //    g.DrawImage(bitmap, new Rectangle(0, 0, line.Width, line.Height), line, GraphicsUnit.Pixel);
+                    //}
 
                     using (var prepped = PrepareBitmapForTess(clean))
                     {
-                        texts.Add(_lineParser.ParseLine(prepped));
+                        texts.Add(parser.ParseLine(prepped));
                     }
                 }
             }
@@ -816,7 +854,7 @@ namespace Application.Actionables.ProfileBots
             return result;
         }
 
-        private void ParseEquipmentTab()
+        private Bitmap[] GetEquipmentTileBitmaps()
         {
             Point clickPoint = GetEquipmentTabLocation();
             _logger.Log($"Attempting to opening equipment tab. Clicking at {clickPoint.X},{clickPoint.Y}.");
@@ -841,94 +879,13 @@ namespace Application.Actionables.ProfileBots
             Thread.Sleep(1500);
 
 
-
             var topLeftRect = new Rectangle(323, 915, 530, 365);
-            var tiles = new List<Bitmap>();
-            //var blue = bitmap.GetPixel(curRect.Left + 16, curRect.Bottom - 11).ToHsv();
-            Func<Hsv, bool> isBlue = (p) => { return p.Hue >= 190 && p.Hue <= 218 && p.Value >= 0.85 && p.Saturation >= 0.72f; };
-            //if (!(blue.Hue >= 190 && blue.Hue <= 218 && blue.Value >= 0.85 && blue.Saturation >= 0.72f))
-            var onlyOneLine = false;
-            var debugC = 0;
-            while (true)
-            {
-                var unownedDetected = false;
-
-                GiveWarframeFocus().Wait();
-
-                using (var bitmap = _gameCapture.GetFullImage())
-                {
-                    //Read two rows
-                    var ys = LocateEquipmentRows(bitmap);
-                    //The rows are not going to be in the right place. Scan down from a y of 1142 and detect blue
-
-                    for (int y = 0; y < 2; y++)
-                    {
-                        //Skip the top row if only one line scrolled down
-                        var curRect = new Rectangle(topLeftRect.Left, !onlyOneLine ? ys[y] : ys[1], topLeftRect.Width, topLeftRect.Height);
-
-                        if (unownedDetected)
-                            break;
-
-                        for (int x = 0; x < 6; x++)
-                        {
-                            //For white check point: Right - 8, Bottom - 20
-                            //White is v >= 0.961
-                            if (IsTileUnowned(bitmap, curRect))
-                            {
-                                _logger.Log("Unowned equipment detected");
-                                //bitmap.Save("equipment_unowned_screen.png");
-                                unownedDetected = true;
-                                break;
-                            }
-
-                            var tileB = new Bitmap(curRect.Width, curRect.Height);
-                            using (var g = Graphics.FromImage(tileB))
-                            {
-                                g.DrawImage(bitmap, new Rectangle(0, 0, tileB.Width, tileB.Height), curRect, GraphicsUnit.Pixel);
-                            }
-                            tileB.Save("equipment_" + debugC++ + ".png");
-                            tiles.Add(tileB);
-
-                            var blue = bitmap.GetPixel(curRect.Left + 16, curRect.Bottom - 11).ToHsv();
-                            if (!(blue.Hue >= 190 && blue.Hue <= 218 && blue.Value >= 0.85 && blue.Saturation >= 0.72f))
-                            {
-                                string guid = Guid.NewGuid().ToString();
-                                tileB.Save($"bad\\equipment_bad_{guid}_item.png");
-                                bitmap.Save($"bad\\equipment_bad_{guid}_screen.png");
-                                _logger.Log("Bad equipment item detected");
-                            }
-
-                            // Gap of 40 pixels between items
-                            curRect = new Rectangle(curRect.Right + 40, curRect.Top, curRect.Width, curRect.Height);
-                        }
-                    }
-                }
-
-                if (unownedDetected)
-                    break;
-
-                //GiveWarframeFocus().Wait();
-
-                //Scroll twice
-                var timer = new System.Diagnostics.Stopwatch();
-                timer.Start();
-                _mouse.Click(3148, 1029);
-                Thread.Sleep(66);
-                _mouse.ScrollDown();
-                Thread.Sleep(33);
-                if (IsEquipmentScrolledDown())
-                    onlyOneLine = true;
-                _mouse.ScrollDown();
-                Thread.Sleep(33);
-                if (!onlyOneLine && IsEquipmentScrolledDown())
-                    onlyOneLine = true;
-                _mouse.MoveTo(0, 0);
-                Thread.Sleep(Math.Max(0, 250 - (int)timer.ElapsedMilliseconds)); //Let rows animate in partially
-            }
-
+            List<Bitmap> tiles = ExtractTiles(ref topLeftRect);
 
             if (tiles.Count > 0)
             {
+
+#if DEBUG
                 _logger.Log($"Attempting to save {tiles.Count} tiles.");
                 int rows = (int)Math.Ceiling(tiles.Count / 6f);
                 _logger.Log($"Image will have {rows} rows.");
@@ -954,10 +911,102 @@ namespace Application.Actionables.ProfileBots
                     }
 
                     debug.Save(Path.Combine(_debugFolder, _currentProfileName, "profile_equipment.jpg"), 90L);
+                    _logger.Log("Profile equipment image saved");
                 }
+#endif
             }
 
-            throw new NotImplementedException();
+            if (tiles.Count == 0)
+                return null;
+            return tiles.ToArray();
+        }
+
+        private List<Bitmap> ExtractTiles(ref Rectangle topLeftRect)
+        {
+            var tiles = new List<Bitmap>();
+            var onlyOneLine = false;
+            var loopSafeguard = 0;
+            while (loopSafeguard++ < 1500)
+            {
+                var unownedDetected = false;
+
+                GiveWarframeFocus().Wait();
+
+                using (var bitmap = _gameCapture.GetFullImage())
+                {
+                    //Read two rows
+                    var ys = LocateEquipmentRows(bitmap);
+                    //The rows are not going to be in the right place. Scan down from a y of 1142 and detect blue
+
+                    for (int y = 0; y < 2; y++)
+                    {
+                        //Skip the top row if only one line scrolled down
+                        var curRect = new Rectangle(topLeftRect.Left, !onlyOneLine ? ys[y] : ys[1], topLeftRect.Width, topLeftRect.Height);
+
+                        if (unownedDetected)
+                            break;
+
+                        for (int x = 0; x < 6; x++)
+                        {
+                            //For white check point: Right - 8, Bottom - 20
+                            //White is v >= 0.961
+                            if (IsTileUnowned(bitmap, curRect))
+                            {
+                                //_logger.Log("Unowned equipment detected");
+                                //bitmap.Save("equipment_unowned_screen.png");
+                                unownedDetected = true;
+                                break;
+                            }
+
+                            var tile = new Bitmap(curRect.Width, curRect.Height);
+                            using (var g = Graphics.FromImage(tile))
+                            {
+                                g.DrawImage(bitmap, new Rectangle(0, 0, tile.Width, tile.Height), curRect, GraphicsUnit.Pixel);
+                            }
+                            tiles.Add(tile);
+
+                            var p = bitmap.GetPixel(curRect.Left + 16, curRect.Bottom - 11).ToHsv();
+                            if (!(p.Hue >= 190 && p.Hue <= 218 && p.Value >= 0.85 && p.Saturation >= 0.72f))
+                            {
+                                string guid = Guid.NewGuid().ToString();
+                                tile.Save($"debug\\bad\\equipment_bad_{guid}_item.png");
+                                bitmap.Save($"debug\\bad\\equipment_bad_{guid}_screen.png");
+                                _dataSender.AsyncSendDebugMessage($"Bad equipment tile detected. See debug\\bad\\{guid}").Wait();
+                                _logger.Log("Bad equipment item detected");
+                            }
+
+                            // Gap of 40 pixels between items
+                            curRect = new Rectangle(curRect.Right + 40, curRect.Top, curRect.Width, curRect.Height);
+                        }
+                    }
+                }
+
+                if (unownedDetected)
+                    break;
+
+                //Scroll twice
+                var timer = new System.Diagnostics.Stopwatch();
+                timer.Start();
+                _mouse.Click(0, 0);
+                Thread.Sleep(33);
+                _mouse.MoveTo(606, 1036);
+                Thread.Sleep(33);
+                _mouse.Click(3148, 1029);
+                Thread.Sleep(66);
+                _mouse.ScrollDown();
+                Thread.Sleep(33);
+                if (IsEquipmentScrolledDown())
+                    onlyOneLine = true;
+                _mouse.ScrollDown();
+                Thread.Sleep(33);
+                if (!onlyOneLine && IsEquipmentScrolledDown())
+                    onlyOneLine = true;
+                _mouse.MoveTo(0, 0);
+                Thread.Sleep(Math.Max(0, 250 - (int)timer.ElapsedMilliseconds)); //Let rows animate in partially
+                timer.Stop();
+            }
+
+            return tiles;
         }
 
         private bool IsEquipmentScrolledDown()

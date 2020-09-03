@@ -13,7 +13,7 @@ namespace Application.Actionables.ProfileBots.Models
         public string XpToLevel { get; set; }
         public string ClanName { get; set; }
 
-        public List<EquipmentItem> Equipment { get; set; }
+        public List<EquipmentItem> Equipment { get; set; } = new List<EquipmentItem>();
         public ProfileStats ProfileStats { get; set; }
         public string MasteryRankTitle { get; set; }
         public string MarkedBy { get; set; }

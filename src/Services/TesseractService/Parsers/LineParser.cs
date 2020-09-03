@@ -27,6 +27,11 @@ namespace TesseractService.Parsers
             _engine.DefaultPageSegMode = PageSegMode.SingleLine;
         }
 
+        public void Dispose()
+        {
+            _engine.Dispose();
+        }
+
         public string ParseLine(Bitmap bitmap)
         {
             var sb = new StringBuilder();

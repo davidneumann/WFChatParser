@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Application.Interfaces
 {
-    public interface ILineParser
+    public interface ILineParser : IDisposable
     {
         string ParseLine(Bitmap bitmap);
     }

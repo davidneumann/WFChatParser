@@ -54,6 +54,7 @@ using Application.Actionables.ProfileBots.Models;
 using Application.Actionables.ProfileBots;
 using Application.Actionables.ChatBots;
 using TesseractService.Parsers;
+using TesseractService.Factories;
 
 namespace DebugCLI
 {
@@ -149,14 +150,15 @@ namespace DebugCLI
                 StartInfo = startInfo
             };
             var logger = new DummyLogger(true);
-            var bot = new ProfileBot(cT.Token, creds, new MouseHelper(), new KeyboardHelper(), new ScreenStateHandler(), logger, new GameCapture(logger), new DummySender(), new LineParser(ClientLanguage.English));
-            try { bot.AddProfileRequest("magnus"); } catch { }
-            try { bot.AddProfileRequest("ayeigui"); } catch { }
-            try { bot.AddProfileRequest("gigapatches"); } catch { }
-            try { bot.AddProfileRequest("semlar"); } catch { }
-            try { bot.AddProfileRequest("unreality101"); } catch { }
+            var bot = new ProfileBot(cT.Token, creds, new MouseHelper(), new KeyboardHelper(), new ScreenStateHandler(), logger, new GameCapture(logger), new DummySender(), new LineParserFactory());
+            bot.AddProfileRequest("magnus");
+            bot.AddProfileRequest("magnus");
+            //bot.AddProfileRequest("ayeigui");
+            //bot.AddProfileRequest("gigapatches");
+            //bot.AddProfileRequest("semlar");
+            //bot.AddProfileRequest("unreality101");
 
-            while (true)
+             while (true)
             {
                 if (bot.IsRequestingControl)
                     bot.TakeControl().Wait();
@@ -3520,6 +3522,9 @@ namespace DebugCLI
 
         public async Task AsyncSendProfileData(Profile profile)
         {
+            string json = JsonConvert.SerializeObject(profile);
+            Console.WriteLine(json);
+            File.WriteAllText(Path.Combine("debug", "profiles", profile.Name, $"{profile.Name}.json"), json);
         }
 
         public async Task AsyncSendRedtext(string rawMessage)
