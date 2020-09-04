@@ -1,6 +1,7 @@
 ﻿using Application.Actionables.ProfileBots.Models;
 using Application.ChatMessages.Model;
 using Application.LogParser;
+using Application.Models;
 using System;
 using System.Drawing;
 using System.IO;
@@ -18,7 +19,7 @@ namespace Application.Interfaces
         Task AsyncSendLogLine(LogMessage message);
         Task AsyncSendLogMessage(string message);
 
-        event EventHandler<string> ProfileParseRequest;
-        Task AsyncSendProfileData(Profile profile);
+        event EventHandler<ProfileRequest> ProfileParseRequest;
+        Task AsyncSendProfileData(Profile profile, string target, string command);
     }
 }

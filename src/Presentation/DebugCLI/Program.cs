@@ -55,6 +55,7 @@ using Application.Actionables.ProfileBots;
 using Application.Actionables.ChatBots;
 using TesseractService.Parsers;
 using TesseractService.Factories;
+using Application.Models;
 
 namespace DebugCLI
 {
@@ -151,12 +152,12 @@ namespace DebugCLI
             };
             var logger = new DummyLogger(true);
             var bot = new ProfileBot(cT.Token, creds, new MouseHelper(), new KeyboardHelper(), new ScreenStateHandler(), logger, new GameCapture(logger), new DummySender(), new LineParserFactory());
-            bot.AddProfileRequest("DavidRivenBot");
-            bot.AddProfileRequest("magnus");
-            bot.AddProfileRequest("ayeigui");
-            bot.AddProfileRequest("gigapatches");
-            bot.AddProfileRequest("semlar");
-            bot.AddProfileRequest("unreality101");
+            bot.AddProfileRequest(new ProfileRequest("DavidRivenBot","", ""));
+            bot.AddProfileRequest(new ProfileRequest("magnus","", ""));
+            bot.AddProfileRequest(new ProfileRequest("ayeigui","", ""));
+            bot.AddProfileRequest(new ProfileRequest("gigapatches","", ""));
+            bot.AddProfileRequest(new ProfileRequest("semlar","", ""));
+            bot.AddProfileRequest(new ProfileRequest("unreality101","", ""));
 
             while (true)
             {
@@ -3501,7 +3502,7 @@ namespace DebugCLI
 
     class DummySender : IDataTxRx
     {
-        public event EventHandler<string> ProfileParseRequest;
+        public event EventHandler<ProfileRequest> ProfileParseRequest;
 
         public async Task AsyncSendChatMessage(ChatMessageModel message)
         {
@@ -3520,7 +3521,7 @@ namespace DebugCLI
         {
         }
 
-        public async Task AsyncSendProfileData(Profile profile)
+        public async Task AsyncSendProfileData(Profile profile, string target, string command)
         {
             string json = JsonConvert.SerializeObject(profile);
             Console.WriteLine(json);

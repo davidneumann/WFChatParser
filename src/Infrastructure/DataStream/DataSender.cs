@@ -16,6 +16,7 @@ using Application.ChatMessages.Model;
 using Application.Interfaces;
 using Application.Logger;
 using Application.LogParser;
+using Application.Models;
 using ImageMagick;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -48,7 +49,7 @@ namespace DataStream
 
         public event EventHandler RequestToKill;
         public event EventHandler<SaveEventArgs> RequestSaveAll;
-        public event EventHandler<string> ProfileParseRequest;
+        public event EventHandler<ProfileRequest> ProfileParseRequest;
 
         public ILogger _logger;
 
@@ -306,11 +307,13 @@ namespace DataStream
             if (_logger != null)
                 _logger.Log($"Datasender received: {message}");
 
-            var split = message.Split(new string[] { " :" }, StringSplitOptions.RemoveEmptyEntries); // :5f5196d9fdd47d3d8df5fede GET RIVENBOT9000 TEST :KILL
+            var split = message.Split(new string[] { " :" }, StringSplitOptions.RemoveEmptyEntries); //:5f5196d9fdd47d3d8df5fede GET RIVENBOT9000 TEST :KILL
             var data = split[0].Split(' ');
-            var sender = data[0]; //5f5196d9fdd47d3d8df5fede
+            var sender = data[0]; //:5f5196d9fdd47d3d8df5fede
+            if (sender.StartsWith(":")) //Only trim 1 ;
+                sender = sender.Substring(1);
             var code = data[1]; //GET
-            var command = data[2];
+            var command = data[2]; //KILL
             var payload = string.Empty;
             if (split.Length > 1)
                 payload = split[1];
@@ -363,6 +366,10 @@ namespace DataStream
                         }
                     }
                     break;
+                case "BASIC":
+                case "FULL":
+                    ProfileParseRequest?.Invoke(this, new ProfileRequest(payload, sender, command));
+                    break;
                 default:
                     break;
             }
@@ -375,9 +382,10 @@ namespace DataStream
             return Task.CompletedTask;
         }
 
-        public Task AsyncSendProfileData(Profile profile)
+        public Task AsyncSendProfileData(Profile profile, string target, string command)
         {
-            throw new NotImplementedException();
+            Send($":PROFILEBOT POST {target} {command} :{JsonConvert.SerializeObject(profile, _jsonSettings)}");
+            return Task.CompletedTask;
         }
     }
     public class SaveEventArgs : EventArgs

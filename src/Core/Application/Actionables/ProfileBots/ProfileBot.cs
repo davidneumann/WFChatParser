@@ -5,6 +5,7 @@ using Application.Enums;
 using Application.Extensions;
 using Application.Interfaces;
 using Application.Logger;
+using Application.Models;
 using Application.Utils;
 using ImageMagick;
 using System;
@@ -25,9 +26,9 @@ namespace Application.Actionables.ProfileBots
     public partial class ProfileBot : BaseWarframeBot, IActionable
     {
         private const float minV = 0.43f;
-        private ConcurrentQueue<string> _profileRequestQueue = new ConcurrentQueue<string>();
+        private ConcurrentQueue<ProfileRequest> _profileRequestQueue = new ConcurrentQueue<ProfileRequest>();
         private ProfileBotState _currentState;
-        private string _currentProfileName;
+        private ProfileRequest _currentProfileRequest;
 
         private string _debugFolder = Path.Combine("debug", "profiles");
         private ILineParserFactory _lineParserFactory;
@@ -52,14 +53,14 @@ namespace Application.Actionables.ProfileBots
                 Directory.CreateDirectory(_debugFolder);
         }
 
-        private void _dataSender_ProfileParseRequest(object sender, string e)
+        private void _dataSender_ProfileParseRequest(object sender, ProfileRequest profileRequest)
         {
-            AddProfileRequest(e);
+            AddProfileRequest(profileRequest);
         }
 
-        public void AddProfileRequest(string name)
+        public void AddProfileRequest(ProfileRequest request)
         {
-            _profileRequestQueue.Enqueue(name);
+            _profileRequestQueue.Enqueue(request);
             _requestingControl = true;
         }
 
@@ -210,7 +211,7 @@ namespace Application.Actionables.ProfileBots
         {
             _logger.Log("Pasting profile command.");
             // Take a name from the queue. If somehow it's empty abort, set status to WaitingForBaseBot, set requesting control to false
-            if (!_profileRequestQueue.TryDequeue(out _currentProfileName))
+            if (!_profileRequestQueue.TryDequeue(out _currentProfileRequest))
             {
                 return;
             }
@@ -218,7 +219,7 @@ namespace Application.Actionables.ProfileBots
             // Paste /profile {name}
             _mouse.Click(80, 2120);
             Thread.Sleep(250);
-            _keyboard.SendPaste($"/profile {_currentProfileName}");
+            _keyboard.SendPaste($"/profile {_currentProfileRequest}");
 
             // Hit enter
             Thread.Sleep(33);
@@ -260,12 +261,12 @@ namespace Application.Actionables.ProfileBots
                         var _ = Task.Run(() =>
                         {
                             Thread.Sleep(2500);
-                            if (!Directory.Exists(Path.Combine(_debugFolder, _currentProfileName)))
-                                Directory.CreateDirectory(Path.Combine(_debugFolder, _currentProfileName));
+                            if (!Directory.Exists(Path.Combine(_debugFolder, _currentProfileRequest.Username)))
+                                Directory.CreateDirectory(Path.Combine(_debugFolder, _currentProfileRequest.Username));
                             var newestImage = (new DirectoryInfo(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures) + @"\Warframe"))
                                             .GetFiles().OrderByDescending(f => f.LastWriteTime).First();
 
-                            string destFilename = Path.Combine(_debugFolder, _currentProfileName, "screenshot" + newestImage.Extension);
+                            string destFilename = Path.Combine(_debugFolder, _currentProfileRequest.Username, "screenshot" + newestImage.Extension);
                             if (File.Exists(destFilename))
                                 File.Delete(destFilename);
                             File.Move(newestImage.FullName, destFilename);
@@ -311,7 +312,7 @@ namespace Application.Actionables.ProfileBots
             {
                 debug.Save(filename);
             }
-            _profileRequestQueue.Enqueue(_currentProfileName);
+            _profileRequestQueue.Enqueue(_currentProfileRequest);
             _currentState = ProfileBotState.WaitingForBaseBot;
             _requestingControl = true;
             _dataSender.AsyncSendDebugMessage($"Failed to load profile screen. See {filename}.");
@@ -322,17 +323,21 @@ namespace Application.Actionables.ProfileBots
         {
             var sw = new System.Diagnostics.Stopwatch();
             sw.Start();
-            _logger.Log($"Starting to parse profile {_currentProfileName}.");
+            _logger.Log($"Starting to parse profile {_currentProfileRequest}.");
 
             var profile = ParseProfileTab();
-            //_logger.Log("Getting equipment tiles");
-            //var tiles = GetEquipmentTileBitmaps();
             var tiles = new Bitmap[0];
+            if(_currentProfileRequest.Command == "FULL")
+            {
+                _logger.Log("Getting equipment tiles");
+                tiles = GetEquipmentTileBitmaps();
+            }
 
             //Close profile
             _logger.Log("Closing profile");
             _keyboard.SendEscape();
 
+            var request = _currentProfileRequest;
             var _ = Task.Run(() =>
             {
                 _logger.Log("Parsing equipment tiles");
@@ -349,8 +354,10 @@ namespace Application.Actionables.ProfileBots
                 sw.Stop();
                 _logger.Log($"{profile.Name}'s profile fully parsed in {sw.Elapsed.TotalSeconds}s.");
 
-                _dataSender.AsyncSendProfileData(profile).Wait();
+                _dataSender.AsyncSendProfileData(profile, request.Target, request.Command).Wait();
             });
+
+            _currentProfileRequest = null;
 
             // Go back to idling if no more names ot parse otherwise let the next loop take over
             if (_profileRequestQueue.Count <= 0)
@@ -561,7 +568,7 @@ namespace Application.Actionables.ProfileBots
         private Profile ParseProfileTab()
         {
             var result = new Profile();
-            result.Name = _currentProfileName;
+            result.Name = _currentProfileRequest.Username;
             using (var bitmap = _gameCapture.GetFullImage())
             {
                 //Header extraction POC
@@ -572,7 +579,7 @@ namespace Application.Actionables.ProfileBots
                 var debugImages = new List<Bitmap>();
 #endif
                 var sb = new StringBuilder();
-                sb.AppendLine(_currentProfileName);
+                sb.AppendLine(_currentProfileRequest.Username);
                 foreach (var header in headers)
                 {
                     switch (header.Value)
@@ -651,11 +658,11 @@ namespace Application.Actionables.ProfileBots
                     }
                 }
 #if DEBUG
-                DebugSaveImages(debugImages, Path.Combine(_debugFolder, _currentProfileName, "profile_combined.png"));
+                DebugSaveImages(debugImages, Path.Combine(_debugFolder, _currentProfileRequest.Username, "profile_combined.png"));
 #endif
-                File.WriteAllText(Path.Combine(_debugFolder, _currentProfileName, "profile_combined.txt"), sb.ToString());
+                File.WriteAllText(Path.Combine(_debugFolder, _currentProfileRequest.Username, "profile_combined.txt"), sb.ToString());
 #if DEBUG
-                bitmap.Save(Path.Combine(_debugFolder, _currentProfileName, "profile_screen.png"));
+                bitmap.Save(Path.Combine(_debugFolder, _currentProfileRequest.Username, "profile_screen.png"));
 #endif
             }
 
@@ -928,7 +935,7 @@ namespace Application.Actionables.ProfileBots
                         }
                     }
 
-                    debug.Save(Path.Combine(_debugFolder, _currentProfileName, "profile_equipment.jpg"), 90L);
+                    debug.Save(Path.Combine(_debugFolder, _currentProfileRequest.Username, "profile_equipment.jpg"), 90L);
                     _logger.Log("Profile equipment image saved");
                 }
 #endif
