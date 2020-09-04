@@ -505,6 +505,8 @@ namespace Application.Actionables.ProfileBots
 
             var top = 0;
             var arr = images.ToArray();
+            if (arr.Length == 0)
+                return;
             using (var output = new Bitmap(arr.Max(i => i.Width), arr.Sum(i => i.Height)))
             {
                 using (var g = Graphics.FromImage(output))
@@ -917,7 +919,7 @@ namespace Application.Actionables.ProfileBots
             }
 
             if (tiles.Count == 0)
-                return null;
+                return new Bitmap[0];
             return tiles.ToArray();
         }
 
@@ -969,6 +971,9 @@ namespace Application.Actionables.ProfileBots
                             if (!(p.Hue >= 190 && p.Hue <= 218 && p.Value >= 0.85 && p.Saturation >= 0.72f))
                             {
                                 string guid = Guid.NewGuid().ToString();
+                                var dir = Path.Combine("debug", "bad");
+                                if (!Directory.Exists(dir))
+                                    Directory.CreateDirectory(dir);
                                 tile.Save($"debug\\bad\\equipment_bad_{guid}_item.png");
                                 bitmap.Save($"debug\\bad\\equipment_bad_{guid}_screen.png");
                                 _dataSender.AsyncSendDebugMessage($"Bad equipment tile detected. See debug\\bad\\{guid}").Wait();

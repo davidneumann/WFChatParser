@@ -150,15 +150,15 @@ namespace DebugCLI
                 StartInfo = startInfo
             };
             var logger = new DummyLogger(true);
-            var bot = new ProfileBot(cT.Token, creds, new MouseHelper(), new KeyboardHelper(), new ScreenStateHandler(), logger, new GameCapture(logger), new DummySender(), new LineParserFactory());
-            bot.AddProfileRequest("magnus");
-            bot.AddProfileRequest("magnus");
+            var bot = new ProfileBot(cT.Token, creds, new MouseHelper(), new KeyboardHelper(), new ScreenStateHandler(), logger, new GameCapture(logger), new DummySender(), new DummyParserFactory());
+            bot.AddProfileRequest("DavidRivenBot");
+            //bot.AddProfileRequest("magnus");
             //bot.AddProfileRequest("ayeigui");
             //bot.AddProfileRequest("gigapatches");
             //bot.AddProfileRequest("semlar");
             //bot.AddProfileRequest("unreality101");
 
-             while (true)
+            while (true)
             {
                 if (bot.IsRequestingControl)
                     bot.TakeControl().Wait();
@@ -3541,6 +3541,27 @@ namespace DebugCLI
 
         public async Task AsyncSendRivenImage(Guid imageID, string rivenBase64)
         {
+        }
+    }
+
+    class DummyParser : ILineParser
+    {
+        public void Dispose()
+        {
+
+        }
+
+        public string ParseLine(Bitmap bitmap)
+        {
+            return "Fake news";
+        }
+    }
+
+    class DummyParserFactory : ILineParserFactory
+    {
+        public ILineParser CreateParser(ClientLanguage language)
+        {
+            return new DummyParser();
         }
     }
 }
