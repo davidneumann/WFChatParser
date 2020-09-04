@@ -669,7 +669,7 @@ namespace Application.Actionables.ProfileBots
 
             return new Hsv() { Hue = hue / count, Saturation = saturation / count, Value = value / count };
         }
-        private static int[] LocateEquipmentRows(Bitmap bitmap)
+        public static int[] LocateEquipmentRows(Bitmap bitmap)
         {
             var results = new int[2];
             var resultI = 0;
@@ -678,32 +678,39 @@ namespace Application.Actionables.ProfileBots
 
             var width = 503;
             var xStart = 337;
-            var currentRows = new Hsv[width];
-            var up4s = new Hsv[width];
-            var up2s = new Hsv[width];
             for (int y = 1155; y < 1858; y++)
             {
                 if (resultI >= 2)
                     break;
 
+                var validCount = 0;
+                var totalChecked = 0;
+
                 for (int x = xStart; x < xStart + width; x++)
                 {
-
-                    currentRows[x - xStart] = bitmap.GetPixel(x, y).ToHsv();
-                    up4s[x - xStart] = bitmap.GetPixel(x, y - 4).ToHsv();
-                    up2s[x - xStart] = bitmap.GetPixel(x, y - 2).ToHsv();
+                    totalChecked++;
+                    if(IsLevelBarPixel(bitmap.GetPixel(x, y).ToHsv()) && localIsWhite(bitmap.GetPixel(x, y - 4).ToHsv()) && isGray(bitmap.GetPixel(x, y - 2).ToHsv()))
+                    {
+                        validCount++;
+                    }
                 }
 
-                if (IsHsvBlueBar(AverageHsv(currentRows)) && localIsWhite(AverageHsv(up4s)) && isGray(AverageHsv(up2s)))
+                if ((float)validCount / totalChecked >= 0.8f)
                 {
                     results[resultI++] = y - 353;
+                    y += 35;
                 }
             }
 
             return results;
         }
 
-        private static bool IsHsvBlueBar(Hsv p) => p.Hue >= 195 && p.Hue <= 210 && p.Value >= 0.85f;
+        private static bool IsLevelBarPixel(Hsv p)
+        {
+            return (p.Hue >= 195 && p.Hue <= 210 && p.Value >= 0.85f) //Blue
+                || (p.Saturation <= 0.05f && p.Value >= 0.9f) //White
+                || (p.Hue >= 195 && p.Hue <= 210 && p.Value <= 0.35f && p.Value >= 0.15f); // Gray
+        }
 
         private Rectangle[] LocateTextLines(Bitmap bitmap)
         {
@@ -938,6 +945,12 @@ namespace Application.Actionables.ProfileBots
                 {
                     //Read two rows
                     var ys = LocateEquipmentRows(bitmap);
+                    if(ys[0] <= 0|| ys[1] <= 0)
+                    {
+                        unownedDetected = true;
+                        break;
+                    }
+
                     //The rows are not going to be in the right place. Scan down from a y of 1142 and detect blue
 
                     for (int y = 0; y < 2; y++)

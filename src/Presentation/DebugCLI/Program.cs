@@ -126,6 +126,7 @@ namespace DebugCLI
 
         private static void ProfileShim()
         {
+            var test = ProfileBot.LocateEquipmentRows(new Bitmap("bad_equipment.png"));
             var cT = new CancellationTokenSource();
             var fileCreds = File.ReadAllLines("creds.txt");
             var startInfo = new ProcessStartInfo();
