@@ -21,5 +21,6 @@ namespace Application.Interfaces
 
         event EventHandler<ProfileRequest> ProfileParseRequest;
         Task AsyncSendProfileData(Profile profile, string target, string command);
+        Task AsyncSendProfileRequestAck(ProfileRequest request, int queueSize);
     }
 }

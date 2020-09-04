@@ -127,6 +127,27 @@ namespace DebugCLI
 
         private static void ProfileShim()
         {
+            IConfiguration config = new ConfigurationBuilder()
+              //.AddJsonFile("appsettings.json", true, true)
+              //.AddJsonFile("appsettings.development.json", true, true)
+              .AddJsonFile("appsettings.production.json", true, true)
+              .Build();
+
+            var _dataSender = new ClientWebsocketDataSender(new Uri(config["DataSender:HostName"]),
+                config.GetSection("DataSender:ConnectionMessages").GetChildren().Select(i => i.Value),
+                config["DataSender:MessagePrefix"],
+                config["DataSender:DebugMessagePrefix"],
+                true,
+                config["DataSender:RawMessagePrefix"],
+                config["DataSender:RedtextMessagePrefix"],
+                config["DataSender:RivenImageMessagePrefix"],
+                config["DataSender:LogMessagePrefix"],
+                config["DataSender:LogLineMessagePrefix"]);
+
+            var logger = new DummyLogger(true);
+            _dataSender._logger = logger;
+            var _ = Task.Run(_dataSender.ConnectAsync);
+
             var cT = new CancellationTokenSource();
             var fileCreds = File.ReadAllLines("creds.txt");
             var startInfo = new ProcessStartInfo();
@@ -150,14 +171,13 @@ namespace DebugCLI
                 Region = "debugRegion",
                 StartInfo = startInfo
             };
-            var logger = new DummyLogger(true);
-            var bot = new ProfileBot(cT.Token, creds, new MouseHelper(), new KeyboardHelper(), new ScreenStateHandler(), logger, new GameCapture(logger), new DummySender(), new LineParserFactory());
-            bot.AddProfileRequest(new ProfileRequest("DavidRivenBot","", ""));
-            bot.AddProfileRequest(new ProfileRequest("magnus","", ""));
-            bot.AddProfileRequest(new ProfileRequest("ayeigui","", ""));
-            bot.AddProfileRequest(new ProfileRequest("gigapatches","", ""));
-            bot.AddProfileRequest(new ProfileRequest("semlar","", ""));
-            bot.AddProfileRequest(new ProfileRequest("unreality101","", ""));
+            var bot = new ProfileBot(cT.Token, creds, new MouseHelper(), new KeyboardHelper(), new ScreenStateHandler(), logger, new GameCapture(logger), _dataSender, new LineParserFactory());
+            //bot.AddProfileRequest(new ProfileRequest("DavidRivenBot","", ""));
+            //bot.AddProfileRequest(new ProfileRequest("magnus","", ""));
+            //bot.AddProfileRequest(new ProfileRequest("ayeigui","", ""));
+            //bot.AddProfileRequest(new ProfileRequest("gigapatches","", ""));
+            //bot.AddProfileRequest(new ProfileRequest("semlar","", ""));
+            //bot.AddProfileRequest(new ProfileRequest("unreality101","", ""));
 
             while (true)
             {
@@ -3526,6 +3546,10 @@ namespace DebugCLI
             string json = JsonConvert.SerializeObject(profile);
             Console.WriteLine(json);
             File.WriteAllText(Path.Combine("debug", "profiles", profile.Name, $"{profile.Name}.json"), json);
+        }
+
+        public async Task AsyncSendProfileRequestAck(ProfileRequest request, int queueSize)
+        {
         }
 
         public async Task AsyncSendRedtext(string rawMessage)

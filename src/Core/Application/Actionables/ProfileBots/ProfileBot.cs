@@ -56,6 +56,7 @@ namespace Application.Actionables.ProfileBots
         private void _dataSender_ProfileParseRequest(object sender, ProfileRequest profileRequest)
         {
             AddProfileRequest(profileRequest);
+            _dataSender.AsyncSendProfileRequestAck(profileRequest, _profileRequestQueue.Count);
         }
 
         public void AddProfileRequest(ProfileRequest request)

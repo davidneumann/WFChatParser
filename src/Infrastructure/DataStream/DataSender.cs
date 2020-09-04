@@ -313,10 +313,14 @@ namespace DataStream
             if (sender.StartsWith(":")) //Only trim 1 ;
                 sender = sender.Substring(1);
             var code = data[1]; //GET
-            var command = data[2]; //KILL
+            var command = data[3];
             var payload = string.Empty;
             if (split.Length > 1)
                 payload = split[1];
+
+            //We only care about GETS
+            if (code != "GET")
+                return;
 
             switch (command)
             {
@@ -326,7 +330,7 @@ namespace DataStream
                     RequestToKill?.Invoke(this, EventArgs.Empty);
                     break;
                 case "RESTART":
-                    try
+                    try 
                     {
                         AsyncSendDebugMessage("Attempting to restart computer").Wait();
                         var shutdown = new System.Diagnostics.Process()
@@ -368,7 +372,23 @@ namespace DataStream
                     break;
                 case "BASIC":
                 case "FULL":
-                    ProfileParseRequest?.Invoke(this, new ProfileRequest(payload, sender, command));
+                    if (string.IsNullOrEmpty(payload) || payload.Trim().Length <= 0)
+                        break;
+                    if(_logger != null)
+                    {
+                        _logger.Log($"Adding {payload} to profile queue");
+                    }
+                    else
+                        Console.WriteLine($"Adding {payload} to profile queue");
+                    if (ProfileParseRequest != null)
+                    {
+                        ProfileParseRequest?.Invoke(this, new ProfileRequest(payload, sender, command));
+                    }
+                    else
+                    {
+                        Send($":PROFILEBOT POST {sender} USERQUEUED :[{payload}, -1]");
+                        Send($":BROADCAST PROFILEBOT USERQUEUED :[{payload}, -1]");
+                    }
                     break;
                 default:
                     break;
@@ -384,7 +404,15 @@ namespace DataStream
 
         public Task AsyncSendProfileData(Profile profile, string target, string command)
         {
+            Send($":BROADCAST PROFILEBOT {command} :{JsonConvert.SerializeObject(profile, _jsonSettings)}");
             Send($":PROFILEBOT POST {target} {command} :{JsonConvert.SerializeObject(profile, _jsonSettings)}");
+            return Task.CompletedTask;
+        }
+
+        public Task AsyncSendProfileRequestAck(ProfileRequest request, int queueSize)
+        {
+            Send($":PROFILEBOT POST {request.Target} USERQUEUED :[{request.Username}, {queueSize}]");
+            Send($":BROADCAST PROFILEBOT USERQUEUED :[{request.Username}, {queueSize}]");
             return Task.CompletedTask;
         }
     }
