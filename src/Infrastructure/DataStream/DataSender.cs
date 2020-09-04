@@ -306,55 +306,65 @@ namespace DataStream
             if (_logger != null)
                 _logger.Log($"Datasender received: {message}");
 
-            if (message.Substring(message.LastIndexOf(":") + 1).Trim() == "KILL")
+            var split = message.Split(new string[] { " :" }, StringSplitOptions.RemoveEmptyEntries); // :5f5196d9fdd47d3d8df5fede GET RIVENBOT9000 TEST :KILL
+            var data = split[0].Split(' ');
+            var sender = data[0]; //5f5196d9fdd47d3d8df5fede
+            var code = data[1]; //GET
+            var command = data[2];
+            var payload = string.Empty;
+            if (split.Length > 1)
+                payload = split[1];
+
+            switch (command)
             {
-                try { AsyncSendDebugMessage("Kill acknowledged. Requesting a stop.").Wait(); }
-                catch { }
-                RequestToKill?.Invoke(this, EventArgs.Empty);
-            }
-            else if (message.Substring(message.LastIndexOf(":") + 1).Trim() == "RESTART")
-            {
-                try
-                {
-                    AsyncSendDebugMessage("Attempting to restart computer").Wait();
-                    var shutdown = new System.Diagnostics.Process()
+                case "KILL":
+                    try { AsyncSendDebugMessage("Kill acknowledged. Requesting a stop.").Wait(); }
+                    catch { }
+                    RequestToKill?.Invoke(this, EventArgs.Empty);
+                    break;
+                case "RESTART":
+                    try
                     {
-                        StartInfo = new ProcessStartInfo("shutdown.exe", "/r /f /t 0")
-                    };
-                    shutdown.Start();
-                }
-                catch
-                {
-                    AsyncSendDebugMessage("FAILED TO RESTART COMPUTER!").Wait();
-                }
-            }
-            else if (message.Substring(message.LastIndexOf(":") + 1).Trim().StartsWith("SAVE"))
-            {
-                var name = message.Substring(message.IndexOf(":SAVE") + 5).Trim();
-                RequestSaveAll?.Invoke(this, new SaveEventArgs(name));
-            }
-            else if (message.Substring(message.LastIndexOf(":") + 1).Trim().StartsWith("BADNAME"))
-            {
-                var name = message.Substring(message.IndexOf("BADNAME") + 7).Trim();
-                try
-                {
-                    lock (TradeChatBot._debugBadNames)
-                    {
-                        var orig = TradeChatBot._debugBadNames.Count;
-                        TradeChatBot._debugBadNames.Add(name.ToLower());
-                        File.WriteAllLines(TradeChatBot._debugBadNamesFilename, TradeChatBot._debugBadNames);
-                        AsyncSendDebugMessage($"Added {name} to bad names. Old count {orig}. New count {TradeChatBot._debugBadNames.Count}");
+                        AsyncSendDebugMessage("Attempting to restart computer").Wait();
+                        var shutdown = new System.Diagnostics.Process()
+                        {
+                            StartInfo = new ProcessStartInfo("shutdown.exe", "/r /f /t 0")
+                        };
+                        shutdown.Start();
                     }
-                }
-                catch (Exception e)
-                {  
-                    if(_logger != null)
+                    catch
                     {
-                        Console.WriteLine(e.ToString());
-                        _logger.Log(e.ToString());
-                        AsyncSendDebugMessage(e.ToString());
+                        AsyncSendDebugMessage("FAILED TO RESTART COMPUTER!").Wait();
                     }
-                }
+                    break;
+                case "SAVE":
+                    var name = payload;
+                    RequestSaveAll?.Invoke(this, new SaveEventArgs(name));
+                    break;
+                case "BADNAME":
+                    var username = message.Substring(message.IndexOf("BADNAME") + 7).Trim();
+                    try
+                    {
+                        lock (TradeChatBot._debugBadNames)
+                        {
+                            var orig = TradeChatBot._debugBadNames.Count;
+                            TradeChatBot._debugBadNames.Add(username.ToLower());
+                            File.WriteAllLines(TradeChatBot._debugBadNamesFilename, TradeChatBot._debugBadNames);
+                            AsyncSendDebugMessage($"Added {username} to bad names. Old count {orig}. New count {TradeChatBot._debugBadNames.Count}");
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        if (_logger != null)
+                        {
+                            Console.WriteLine(e.ToString());
+                            _logger.Log(e.ToString());
+                            AsyncSendDebugMessage(e.ToString());
+                        }
+                    }
+                    break;
+                default:
+                    break;
             }
         }
 
