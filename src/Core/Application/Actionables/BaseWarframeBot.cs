@@ -80,13 +80,25 @@ namespace Application.Actionables
                     break;
             }
 
-            return Task.CompletedTask;
+            return Task.CompletedTask; 
         }
 
         private async Task StartWarframe()
         {
             _requestingControl = false;
             var existingWarframes = System.Diagnostics.Process.GetProcessesByName("Warframe.x64").ToArray();
+            foreach (var existing in existingWarframes)
+            {
+                try
+                {
+                    if (existing.StartInfo.UserName == _warframeCredentials.StartInfo.UserName)
+                        existing.Kill();
+                }
+                catch
+                {
+                    existing.Kill();
+                }
+            }
 
             var launcher = new System.Diagnostics.Process()
             {
@@ -112,7 +124,6 @@ namespace Application.Actionables
             var start = DateTime.Now;
             while (true)
             {
-
                 //Yield to other tasks after 4 minutes of waiting
                 if (DateTime.Now.Subtract(start).TotalMinutes > 4f)
                 {
@@ -130,15 +141,25 @@ namespace Application.Actionables
                 await Task.Delay(1000);
                 if (launcher.HasExited)
                 {
-                    await Task.Delay(10000);
+                    await Task.Delay(1000);
                     break;
                 }
             }
 
-            foreach (var warframe in System.Diagnostics.Process.GetProcessesByName("Warframe.x64").ToArray())
+            for (int tries = 0; tries < 20; tries++)
             {
-                if (!existingWarframes.Any(eWF => eWF.MainWindowHandle == warframe.MainWindowHandle))
-                    _warframeProcess = warframe;
+                if (_warframeProcess != null || (_warframeProcess != null && !_warframeProcess.HasExited))
+                    break;
+
+                foreach (var warframe in System.Diagnostics.Process.GetProcessesByName("Warframe.x64").ToArray())
+                {
+                    if (!existingWarframes.Any(eWF => eWF.MainWindowHandle == warframe.MainWindowHandle))
+                    {
+                        _warframeProcess = warframe;
+                    }
+                }
+
+                await Task.Delay(1000);
             }
 
             //Give 15 minutes on a fresh login to allow slow chats to fill up before killing them.
