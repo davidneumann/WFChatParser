@@ -214,13 +214,16 @@ namespace Application.Actionables.ProfileBots
             // Take a name from the queue. If somehow it's empty abort, set status to WaitingForBaseBot, set requesting control to false
             if (!_profileRequestQueue.TryDequeue(out _currentProfileRequest))
             {
+                _currentState = ProfileBotState.WaitingForBaseBot;
+                if (_profileRequestQueue.Count > 0)
+                    _requestingControl = true;
                 return;
             }
 
             // Paste /profile {name}
             _mouse.Click(80, 2120);
             Thread.Sleep(250);
-            _keyboard.SendPaste($"/profile {_currentProfileRequest}");
+            _keyboard.SendPaste($"/profile {_currentProfileRequest.Username}");
 
             // Hit enter
             Thread.Sleep(33);
@@ -261,7 +264,7 @@ namespace Application.Actionables.ProfileBots
 
                         var _ = Task.Run(() =>
                         {
-                            Thread.Sleep(2500);
+                            Thread.Sleep(1500);
                             if (!Directory.Exists(Path.Combine(_debugFolder, _currentProfileRequest.Username)))
                                 Directory.CreateDirectory(Path.Combine(_debugFolder, _currentProfileRequest.Username));
                             var newestImage = (new DirectoryInfo(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures) + @"\Warframe"))
@@ -324,7 +327,7 @@ namespace Application.Actionables.ProfileBots
         {
             var sw = new System.Diagnostics.Stopwatch();
             sw.Start();
-            _logger.Log($"Starting to parse profile {_currentProfileRequest}.");
+            _logger.Log($"Starting to parse profile {_currentProfileRequest.Username}.");
 
             var profile = ParseProfileTab();
             var tiles = new Bitmap[0];
@@ -891,11 +894,21 @@ namespace Application.Actionables.ProfileBots
                 sb.Append(text + " ");
             }
 
-            var result = new EquipmentItem()
+            EquipmentItem result = null;
+            try
             {
-                Rank = texts[0],
-                Name = sb.ToString().Trim()
-            };
+                result = new EquipmentItem()
+                {
+                    Rank = texts[0],
+                    Name = sb.ToString().Trim()
+                };
+            }
+            catch
+            {
+                string filename = Path.Combine("debug", DateTime.Now.Ticks + ".png");
+                bitmap.Save(filename);
+                _dataSender.AsyncSendDebugMessage($"Failed to parse item. See {filename}.").Wait();
+            }
 
             return result;
         }
@@ -982,7 +995,7 @@ namespace Application.Actionables.ProfileBots
                 {
                     //Read two rows
                     var ys = LocateEquipmentRows(bitmap);
-                    if(ys[0] <= 0|| ys[1] <= 0)
+                    if(ys[0] <= 0)
                     {
                         unownedDetected = true;
                         break;
