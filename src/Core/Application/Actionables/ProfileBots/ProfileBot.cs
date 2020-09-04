@@ -340,6 +340,26 @@ namespace Application.Actionables.ProfileBots
             var request = _currentProfileRequest;
             var _ = Task.Run(() =>
             {
+                /*
+                    var memImage = new MemoryStream();
+                    bitmap.Save(memImage, System.Drawing.Imaging.ImageFormat.Jpeg);
+                    var rivenBase64 = Convert.ToBase64String(memImage.ToArray());
+                */
+                string imageBase64 = null;
+                try
+                {
+                    using (var image = new Bitmap(Path.Combine("debug", "profiles", request.Username, "screenshot.jpg_small.jpg")))
+                    {
+                        using (var memImage = new MemoryStream())
+                        {
+                            image.Save(memImage, ImageFormat.Jpeg);
+                            imageBase64 = Convert.ToBase64String(memImage.ToArray());
+                        }
+                    }
+                }
+                catch { }
+                profile.PlayerImage = imageBase64;
+
                 _logger.Log("Parsing equipment tiles");
                 var equipment = new EquipmentItem[tiles.Length];
                 using (var lineParser = _lineParserFactory.CreateParser(ClientLanguage.English))

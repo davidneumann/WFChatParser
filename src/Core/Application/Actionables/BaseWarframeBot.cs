@@ -96,7 +96,11 @@ namespace Application.Actionables
                 }
                 catch
                 {
-                    existing.Kill();
+                    try
+                    {
+                        existing.Kill();
+                    }
+                    catch { }
                 }
             }
 

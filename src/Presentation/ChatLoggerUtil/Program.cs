@@ -12,8 +12,8 @@ namespace ChatLoggerUtil
     {
         static void Main(string[] args)
         {
-            GetCrednetials(true);
-            //SaveCredentials();
+            //GetCrednetials(true);
+            SaveCredentials();
         }
 
         private static void SaveCredentials()

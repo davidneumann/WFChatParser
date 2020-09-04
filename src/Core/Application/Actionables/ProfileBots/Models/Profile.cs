@@ -17,5 +17,6 @@ namespace Application.Actionables.ProfileBots.Models
         public ProfileStats ProfileStats { get; set; }
         public string MasteryRankTitle { get; set; }
         public string MarkedBy { get; set; }
+        public string PlayerImage { get; set; }
     }
 }
