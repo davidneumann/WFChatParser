@@ -126,7 +126,6 @@ namespace DebugCLI
 
         private static void ProfileShim()
         {
-            var test = ProfileBot.LocateEquipmentRows(new Bitmap("bad_equipment.png"));
             var cT = new CancellationTokenSource();
             var fileCreds = File.ReadAllLines("creds.txt");
             var startInfo = new ProcessStartInfo();
@@ -151,13 +150,13 @@ namespace DebugCLI
                 StartInfo = startInfo
             };
             var logger = new DummyLogger(true);
-            var bot = new ProfileBot(cT.Token, creds, new MouseHelper(), new KeyboardHelper(), new ScreenStateHandler(), logger, new GameCapture(logger), new DummySender(), new DummyParserFactory());
+            var bot = new ProfileBot(cT.Token, creds, new MouseHelper(), new KeyboardHelper(), new ScreenStateHandler(), logger, new GameCapture(logger), new DummySender(), new LineParserFactory());
             bot.AddProfileRequest("DavidRivenBot");
-            //bot.AddProfileRequest("magnus");
-            //bot.AddProfileRequest("ayeigui");
-            //bot.AddProfileRequest("gigapatches");
-            //bot.AddProfileRequest("semlar");
-            //bot.AddProfileRequest("unreality101");
+            bot.AddProfileRequest("magnus");
+            bot.AddProfileRequest("ayeigui");
+            bot.AddProfileRequest("gigapatches");
+            bot.AddProfileRequest("semlar");
+            bot.AddProfileRequest("unreality101");
 
             while (true)
             {

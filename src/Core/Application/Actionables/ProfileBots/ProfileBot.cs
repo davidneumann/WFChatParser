@@ -146,7 +146,7 @@ namespace Application.Actionables.ProfileBots
                 using (var screen = _gameCapture.GetFullImage())
                 {
                     var state = _screenStateHandler.GetScreenState(screen);
-                    if (state != Enums.ScreenState.ControllingWarframe)
+                    if (state != Enums.ScreenState.ControllingWarframe && state != ScreenState.MainMenu)
                     {
                         _keyboard.SendEscape();
                         Thread.Sleep(600);
@@ -161,9 +161,17 @@ namespace Application.Actionables.ProfileBots
                     throw new NavigationException(ScreenState.ControllingWarframe);
                 }
             }
-            //Send escape to open main menu
-            _keyboard.SendEscape();
-            Thread.Sleep(1000); //Give menu time to animate
+            //We know we are either controlling a warfrme or on the menu. If not on menu then open it
+            using (var screen = _gameCapture.GetFullImage())
+            {
+                var state = _screenStateHandler.GetScreenState(screen);
+                if (state == ScreenState.ControllingWarframe)
+                {
+                    //Send escape to open main menu
+                    _keyboard.SendEscape();
+                    Thread.Sleep(1000); //Give menu time to animate
+                }
+            }
 
             //Check if on Main Menu
             _screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle);
@@ -191,7 +199,7 @@ namespace Application.Actionables.ProfileBots
                 {
                     _logger.Log("Expanding chat");
                     //Click and drag to move chat into place
-                    _mouse.ClickAndDrag(new Point(91, 2122), new Point(0, 2160), 1000);
+                    _mouse.ClickAndDrag(new Point(91, 2122), new Point(0, 2160), 33);
                     Thread.Sleep(100);
                 }
                 else if (!_screenStateHandler.IsChatOpen(screen))
@@ -317,8 +325,9 @@ namespace Application.Actionables.ProfileBots
             _logger.Log($"Starting to parse profile {_currentProfileName}.");
 
             var profile = ParseProfileTab();
-            _logger.Log("Getting equipment tiles");
-            var tiles = GetEquipmentTileBitmaps();
+            //_logger.Log("Getting equipment tiles");
+            //var tiles = GetEquipmentTileBitmaps();
+            var tiles = new Bitmap[0];
 
             //Close profile
             _logger.Log("Closing profile");
@@ -669,7 +678,7 @@ namespace Application.Actionables.ProfileBots
 
             return new Hsv() { Hue = hue / count, Saturation = saturation / count, Value = value / count };
         }
-        public static int[] LocateEquipmentRows(Bitmap bitmap)
+        private static int[] LocateEquipmentRows(Bitmap bitmap)
         {
             var results = new int[2];
             var resultI = 0;
