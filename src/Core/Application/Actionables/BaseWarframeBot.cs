@@ -317,11 +317,11 @@ namespace Application.Actionables
                 }
 
 
-                _logger.Log("Waiting in the background for 45 seconds");
+                _logger.Log("Waiting in the background for 60 seconds");
                 var _ = Task.Run(async () =>
                 {
-                    await Task.Delay(45 * 1000);
-                    _logger.Log("Done waiting 45 seconds");
+                    await Task.Delay(60 * 1000);
+                    _logger.Log("Done waiting 60 seconds");
 
                     _baseState = BaseBotState.Running;
                     _requestingControl = true;

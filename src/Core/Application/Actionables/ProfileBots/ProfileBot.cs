@@ -33,6 +33,7 @@ namespace Application.Actionables.ProfileBots
         private string _debugFolder = Path.Combine("debug", "profiles");
         private ILineParserFactory _lineParserFactory;
         private ILineParser _profileTabParser;
+        private DirectoryInfo _picturesDirectory = new DirectoryInfo(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures) + @"\Warframe");
 
         public ProfileBot(
             CancellationToken cancellationToken,
@@ -51,6 +52,15 @@ namespace Application.Actionables.ProfileBots
             _profileTabParser = _lineParserFactory.CreateParser(ClientLanguage.English);
             if (!Directory.Exists(_debugFolder))
                 Directory.CreateDirectory(_debugFolder);
+
+            foreach (var image in _picturesDirectory.GetFiles())
+            {
+                try
+                {
+                    image.Delete();
+                }
+                catch { }
+            }
         }
 
         private void _dataSender_ProfileParseRequest(object sender, ProfileRequest profileRequest)
@@ -275,7 +285,7 @@ namespace Application.Actionables.ProfileBots
                             Thread.Sleep(1500);
                             if (!Directory.Exists(Path.Combine(_debugFolder, _currentProfileRequest.Username)))
                                 Directory.CreateDirectory(Path.Combine(_debugFolder, _currentProfileRequest.Username));
-                            var newestImage = (new DirectoryInfo(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures) + @"\Warframe"))
+                            var newestImage = _picturesDirectory
                                             .GetFiles().OrderByDescending(f => f.LastWriteTime).First();
 
                             string destFilename = Path.Combine(_debugFolder, _currentProfileRequest.Username, "screenshot" + newestImage.Extension);
@@ -1000,6 +1010,9 @@ namespace Application.Actionables.ProfileBots
 
                 GiveWarframeFocus().Wait();
 
+                _mouse.MoveTo(0, 0);
+                Thread.Sleep(66);
+
                 using (var bitmap = _gameCapture.GetFullImage())
                 {
                     //Read two rows
@@ -1032,8 +1045,8 @@ namespace Application.Actionables.ProfileBots
                             //White is v >= 0.961
                             if (IsTileUnowned(bitmap, curRect))
                             {
-                                //_logger.Log("Unowned equipment detected");
-                                DebugSaveImages(new Bitmap[] { bitmap, tile }, Path.Combine(_debugFolder, _currentProfileRequest.Username, $"equipment_unowned_{Guid.NewGuid()}.png"));
+                                _logger.Log($"Unowned equipment detected. Ys: {ys[0]} {ys[1]}. OnlyOneLine: {onlyOneLine}.");
+                                //DebugSaveImages(new Bitmap[] { bitmap, tile }, Path.Combine(_debugFolder, _currentProfileRequest.Username, $"equipment_unowned_{Guid.NewGuid()}.png"));
                                 //bitmap.Save("equipment_unowned_screen.png");
                                 unownedDetected = true;
                                 tile.Dispose();
@@ -1072,7 +1085,7 @@ namespace Application.Actionables.ProfileBots
                 _mouse.MoveTo(606, 1036);
                 Thread.Sleep(33);
                 _mouse.Click(3148, 1029);
-                Thread.Sleep(66);
+                Thread.Sleep(33);
                 _mouse.ScrollDown();
                 Thread.Sleep(33);
                 if (IsEquipmentScrolledDown())
@@ -1082,6 +1095,7 @@ namespace Application.Actionables.ProfileBots
                 if (!onlyOneLine && IsEquipmentScrolledDown())
                     onlyOneLine = true;
                 _mouse.MoveTo(0, 0);
+                Thread.Sleep(66);
                 Thread.Sleep(Math.Max(0, 250 - (int)timer.ElapsedMilliseconds)); //Let rows animate in partially
                 timer.Stop();
             }
