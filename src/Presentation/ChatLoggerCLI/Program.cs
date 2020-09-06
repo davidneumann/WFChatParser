@@ -4,6 +4,7 @@ using Application.Actionables;
 using Application.Actionables.ChatBots;
 using Application.Data;
 using Application.Enums;
+using Application.Interfaces;
 using Application.LogParser;
 using DataStream;
 using ImageOCR;
@@ -19,6 +20,7 @@ using System.Security.Permissions;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using TesseractService.Factories;
 using WarframeDriver;
 using WFGameCapture;
 
@@ -94,6 +96,10 @@ namespace ChatLoggerCLI
                         Username = GetUsername(config["Credentials:Key"], config["Credentials:Salt"], section.GetSection("WarframeCredentialsTarget").Value),
                         Region = section.GetSection("Region").Value
                     };
+
+                    if (credentials.Region.ToLower().StartsWith("profile"))
+                        credentials.BotType = BotType.ProfileBot;
+
                     return credentials;
                 }).ToArray();
 
@@ -144,7 +150,8 @@ namespace ChatLoggerCLI
                     _dataSender,
                     gc,
                     logger,
-                    new RelativePixelParserFactory(logger, _dataSender));
+                    new RelativePixelParserFactory(logger, _dataSender),
+                    new LineParserFactory());
 
                 var drive = DriveInfo.GetDrives().First(d => d.Name == Path.GetPathRoot(Environment.CurrentDirectory));
                 logger.Log("Starting bot on drive: " + Path.GetPathRoot(Environment.CurrentDirectory) + ". Available space: " + drive.AvailableFreeSpace + " bytes");

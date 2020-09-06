@@ -11,5 +11,6 @@ namespace Application.Actionables.ChatBots
         public string Password { get; set; }
         public ProcessStartInfo StartInfo { get; set; }
         public string Region { get; set; }
+        public BotType BotType { get; set; } = BotType.ChatBot;
     }
 }

@@ -87,22 +87,22 @@ namespace Application.Actionables
         {
             _requestingControl = false;
             var existingWarframes = System.Diagnostics.Process.GetProcessesByName("Warframe.x64").ToArray();
-            foreach (var existing in existingWarframes)
-            {
-                try
-                {
-                    if (existing.StartInfo.UserName == _warframeCredentials.StartInfo.UserName)
-                        existing.Kill();
-                }
-                catch
-                {
-                    try
-                    {
-                        existing.Kill();
-                    }
-                    catch { }
-                }
-            }
+            //foreach (var existing in existingWarframes)
+            //{
+            //    try
+            //    {
+            //        if (existing.StartInfo.UserName == _warframeCredentials.StartInfo.UserName)
+            //            existing.Kill();
+            //    }
+            //    catch
+            //    {
+            //        try
+            //        {
+            //            existing.Kill();
+            //        }
+            //        catch { }
+            //    }
+            //}
 
             var launcher = new System.Diagnostics.Process()
             {
@@ -145,7 +145,7 @@ namespace Application.Actionables
                 await Task.Delay(1000);
                 if (launcher.HasExited)
                 {
-                    await Task.Delay(1000);
+                    await Task.Delay(20000);
                     break;
                 }
             }

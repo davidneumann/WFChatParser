@@ -83,11 +83,17 @@ namespace Application.Actionables.ProfileBots
             else if (_baseState == BaseBotState.Running && _currentState == ProfileBotState.WaitingForBaseBot && _profileRequestQueue.Count > 0)
                 _currentState = ProfileBotState.OpenProfile;
 
+            GiveWarframeFocus().Wait();
+
             switch (_currentState)
             {
                 case ProfileBotState.OpenProfile:
                     _logger.Log("Opening profile page");
-                    return OpenProfile();
+                    Task.Run(OpenProfile).Wait();
+                    if (_currentState == ProfileBotState.WaitingForProfile)
+                        return TakeControl();
+                    else
+                        return Task.CompletedTask;
                 case ProfileBotState.WaitingForProfile:
                     _logger.Log("Waiting for profile");
                     return VerifyProfileOpen();
@@ -224,6 +230,7 @@ namespace Application.Actionables.ProfileBots
             _mouse.Click(80, 2120);
             Thread.Sleep(250);
             _keyboard.SendPaste($"/profile {_currentProfileRequest.Username}");
+            _logger.Log($"Pasting in /profile {_currentProfileRequest.Username}");
 
             // Hit enter
             Thread.Sleep(33);
@@ -245,6 +252,7 @@ namespace Application.Actionables.ProfileBots
 
         private Task VerifyProfileOpen()
         {
+            GiveWarframeFocus().Wait();
             _logger.Log("Verifying that profile is fully visible.");
             //Give it a few attempts incase the loading is almost done
             for (int tries = 0; tries < 15; tries++)
@@ -311,6 +319,7 @@ namespace Application.Actionables.ProfileBots
 
             }
 
+            _logger.Log($"Failed to verify profile for {_currentProfileRequest.Username} in time.");
             string filename = Path.Combine("debug", DateTime.Now.Ticks + ".png");
             using (var debug = _gameCapture.GetFullImage())
             {
@@ -735,7 +744,7 @@ namespace Application.Actionables.ProfileBots
                     }
                 }
 
-                if ((float)validCount / totalChecked >= 0.8f)
+                if ((float)validCount / totalChecked >= 0.8f && y - 353 >= 912)
                 {
                     results[resultI++] = y - 353;
                     y += 35;
@@ -1013,21 +1022,24 @@ namespace Application.Actionables.ProfileBots
 
                         for (int x = 0; x < 6; x++)
                         {
-                            //For white check point: Right - 8, Bottom - 20
-                            //White is v >= 0.961
-                            if (IsTileUnowned(bitmap, curRect))
-                            {
-                                //_logger.Log("Unowned equipment detected");
-                                //bitmap.Save("equipment_unowned_screen.png");
-                                unownedDetected = true;
-                                break;
-                            }
-
                             var tile = new Bitmap(curRect.Width, curRect.Height);
                             using (var g = Graphics.FromImage(tile))
                             {
                                 g.DrawImage(bitmap, new Rectangle(0, 0, tile.Width, tile.Height), curRect, GraphicsUnit.Pixel);
                             }
+
+                            //For white check point: Right - 8, Bottom - 20
+                            //White is v >= 0.961
+                            if (IsTileUnowned(bitmap, curRect))
+                            {
+                                //_logger.Log("Unowned equipment detected");
+                                DebugSaveImages(new Bitmap[] { bitmap, tile }, Path.Combine(_debugFolder, _currentProfileRequest.Username, $"equipment_unowned_{Guid.NewGuid()}.png"));
+                                //bitmap.Save("equipment_unowned_screen.png");
+                                unownedDetected = true;
+                                tile.Dispose();
+                                break;
+                            }
+
                             tiles.Add(tile);
 
                             var p = bitmap.GetPixel(curRect.Left + 16, curRect.Bottom - 11).ToHsv();

@@ -1,4 +1,5 @@
 ﻿using Application.Actionables.ChatBots;
+using Application.Actionables.ProfileBots;
 using Application.ChatMessages.Model;
 using Application.Enums;
 using Application.Interfaces;
@@ -20,7 +21,7 @@ namespace Application.Actionables
     {
         private WarframeClientInformation[] _warframeCredentials;
 
-        private TradeChatBot[] _bots;
+        private IActionable[] _bots;
 
         private IMouse _mouse;
         private IKeyboard _keyboard;
@@ -34,6 +35,7 @@ namespace Application.Actionables
         private IGameCapture _gameCapture;
         //private IChatParser _chatParser;
         private IChatParserFactory _chatParserFactory;
+        private ILineParserFactory _lineParserFactory;
 
         public MultiChatRivenBot(WarframeClientInformation[] warframeCredentials,
             IMouse mouse,
@@ -44,10 +46,11 @@ namespace Application.Actionables
             IDataTxRx dataSender,
             IGameCapture gameCapture,
             ILogger logger,
-            IChatParserFactory chatParserFactory)
+            IChatParserFactory chatParserFactory,
+            ILineParserFactory lineParserFactory)
         {
             _warframeCredentials = warframeCredentials;
-            _bots = new TradeChatBot[_warframeCredentials.Length];
+            _bots = new IActionable[_warframeCredentials.Length];
             _mouse = mouse;
             _keyboard = keyboard;
             _screenStateHandler = screenStateHandler;
@@ -57,6 +60,7 @@ namespace Application.Actionables
             _logger = logger;
             _gameCapture = gameCapture;
             _chatParserFactory = chatParserFactory;
+            _lineParserFactory = lineParserFactory;
         }
 
         public void ProcessRivenQueue(CancellationToken c)
@@ -172,7 +176,10 @@ namespace Application.Actionables
                 if (_warframeCredentials[i].Region == "T_ZH")
                     language = ClientLanguage.Chinese;
 
-                _bots[i] = new TradeChatBot(_rivenWorkQueue, _rivenParserFactory.CreateRivenParser(), c, _warframeCredentials[i], _mouse, _keyboard, _screenStateHandler, _logger, _gameCapture, _dataSender, _chatParserFactory.CreateChatParser(language));
+                if (_warframeCredentials[i].BotType == BotType.ChatBot)
+                    _bots[i] = new TradeChatBot(_rivenWorkQueue, _rivenParserFactory.CreateRivenParser(), c, _warframeCredentials[i], _mouse, _keyboard, _screenStateHandler, _logger, _gameCapture, _dataSender, _chatParserFactory.CreateChatParser(language));
+                else if (_warframeCredentials[i].BotType == BotType.ProfileBot)
+                    _bots[i] = new ProfileBot(c, _warframeCredentials[i], _mouse, _keyboard, _screenStateHandler, _logger, _gameCapture, _dataSender, _lineParserFactory);
             }
 
             var controlSw = new Stopwatch();
@@ -181,7 +188,7 @@ namespace Application.Actionables
                 var possibleBadState = true;
                 foreach (var bot in _bots)
                 {
-                    if (bot != null && bot.LastMessage != null && DateTime.UtcNow.Subtract(bot.LastMessage).TotalMinutes < 15)
+                    if (bot != null && bot is TradeChatBot && ((TradeChatBot)bot).LastMessage != null && DateTime.UtcNow.Subtract(((TradeChatBot)bot).LastMessage).TotalMinutes < 15)
                     {
                         possibleBadState = false;
                         break;
