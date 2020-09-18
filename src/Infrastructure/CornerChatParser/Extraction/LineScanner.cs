@@ -138,6 +138,32 @@ namespace RelativeChatParser.Extraction
                 bitmap.Dispose();
             }
         }
+        public static void SaveExtractedGlyphs(ImageCache image, string outputDir, FastExtractedGlyph[] glyphs)
+        {
+            var glyphsSaved = 0;
+
+            if (Directory.Exists(outputDir))
+                Directory.Delete(outputDir, true);
+            Directory.CreateDirectory(outputDir);
+
+            foreach (var glyph in glyphs)
+            {
+                var bitmap = new Bitmap(glyph.Width, glyph.Height);
+                for (int x = 0; x < bitmap.Width; x++)
+                {
+                    for (int y = 0; y < bitmap.Height; y++)
+                    {
+                        var v = (int)(image[x + glyph.Left, y + glyph.Top] * 255);
+                        var c = Color.FromArgb(v, v, v);
+                        bitmap.SetPixel(x, y, c);
+                    }
+                }
+
+                var output = System.IO.Path.Combine(outputDir, $"glyph_{glyphsSaved++}.png");
+                bitmap.Save(output);
+                bitmap.Dispose();
+            }
+        }
 
         public static void SaveLines(Bitmap b, string outputDir)
         {

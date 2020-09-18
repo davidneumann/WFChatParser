@@ -16,7 +16,7 @@ namespace RelativeChatParser.Extraction
 {
     public class GlyphExtractor
     {
-        public static int distanceThreshold = 1;
+        public static int distanceThreshold = 2;
 
         //public List<Point> GetValidPixels(ImageCache image, bool[,] localBlacklist, Point firstPixel, Rectangle lineRect)
         //{

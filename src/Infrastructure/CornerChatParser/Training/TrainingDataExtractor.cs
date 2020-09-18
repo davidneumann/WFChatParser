@@ -12,9 +12,9 @@ namespace RelativeChatParser.Training
 {
     public static class TrainingDataExtractor
     {
-        public static Dictionary<char, List<ExtractedGlyph>> ExtractGlyphs(IEnumerable<TrainingInput> inputs)
+        public static Dictionary<char, List<FastExtractedGlyph>> ExtractGlyphs(IEnumerable<TrainingInput> inputs)
         {
-            var glyphDict = new Dictionary<char, List<ExtractedGlyph>>();
+            var glyphDict = new Dictionary<char, List<FastExtractedGlyph>>();
             foreach (var input in inputs)
             {
                 var inputShort = input.ImageFilePath;
@@ -27,7 +27,7 @@ namespace RelativeChatParser.Training
                 var ic = new ImageCache(bitmap);
                 ic.DebugFilename = input.ImageFilePath;
                 var textLines = File.ReadAllLines(input.CorrectTextPath).Where(l => l.ToLower() != "clear").ToArray();
-                var glyphLines = textLines.Select((u, i) => LineScanner.ExtractGlyphsFromLine(ic, i)).ToArray();
+                var glyphLines = textLines.Select((u, i) => LineScanner.ExtractGlyphsFromLineShim(ic, i)).ToArray();
                 for (int i = 0; i < textLines.Length; i++)
                 {
                     var cleanText = textLines[i].Replace(" ", "").Trim();
@@ -44,7 +44,7 @@ namespace RelativeChatParser.Training
                         char c = cleanText[j];
                         if (!glyphDict.ContainsKey(c))
                         {
-                            glyphDict[c] = new List<ExtractedGlyph>();
+                            glyphDict[c] = new List<FastExtractedGlyph>();
                         }
                         glyphDict[c].Add(glyphLines[i][j]);
                     }
