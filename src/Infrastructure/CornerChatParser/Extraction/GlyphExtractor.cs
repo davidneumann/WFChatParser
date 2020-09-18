@@ -34,22 +34,67 @@ namespace RelativeChatParser.Extraction
             currentCacheGlobalMinX = currentCachGlobaleMaxX;
         }
 
-        public List<Point> GetValidPixels(ImageCache image, bool[,] localBlacklist, Point firstPixel, Rectangle lineRect)
+        //public List<Point> GetValidPixels(ImageCache image, bool[,] localBlacklist, Point firstPixel, Rectangle lineRect)
+        //{
+        //    if (cache == null || cache.GetLength(0) != lineRect.Width || cache.GetLength(1) != lineRect.Height || lineRect.Top != lastLineTop)
+        //    {
+        //        cache = new bool[lineRect.Width, lineRect.Height];
+        //        lastLineTop = lineRect.Top;
+        //        currentCacheGlobalMinX = firstPixel.X;
+        //        currentCachGlobaleMaxX = firstPixel.X;
+        //    }
+
+        //    ClearCacheSubregion(lineRect);
+
+        //    if (image[firstPixel.X, firstPixel.Y] <= 0
+        //        || localBlacklist[firstPixel.X - lineRect.Left, firstPixel.Y - lineRect.Top])
+        //        return null;
+
+        //    var checkQueue = new Queue<Point>();
+        //    var validPixels = new List<Point>();
+        //    checkQueue.Enqueue(firstPixel);
+        //    //Find all points within 2 pixels of current pixels
+        //    while (checkQueue.Count > 0)
+        //    {
+        //        var pixel = checkQueue.Dequeue();
+        //        validPixels.Add(pixel);
+        //        cache[pixel.X - lineRect.Left, pixel.Y - lineRect.Top] = true;
+        //        currentCachGlobaleMaxX = Math.Max(currentCachGlobaleMaxX, pixel.X);
+
+        //        for (int globalX = Math.Max(lineRect.Left, pixel.X - distanceThreshold); globalX <= Math.Min(lineRect.Right - 1, pixel.X + distanceThreshold); globalX++)
+        //        {
+        //            for (int globalY = Math.Max(lineRect.Top, pixel.Y - distanceThreshold); globalY <= Math.Min(lineRect.Bottom - 1, pixel.Y + distanceThreshold); globalY++)
+        //            {
+        //                if (!cache[globalX - lineRect.Left, globalY - lineRect.Top] &&
+        //                    !localBlacklist[globalX - lineRect.Left, globalY - lineRect.Top] &&
+        //                    image[globalX, globalY] > 0f &&
+        //                    PointsInRange(pixel, globalX, globalY))
+        //                {
+        //                    cache[globalX - lineRect.Left, globalY - lineRect.Top] = true;
+        //                    checkQueue.Enqueue(new Point(globalX, globalY));
+        //                }
+        //            }
+        //        }
+        //    }
+
+        //    return validPixels;
+        //}
+
+        public List<Point> GetValidCorePixels(ImageCache image, ref bool[,] localBlacklist, Point firstPixel, Rectangle lineRect)
         {
-            if (cache == null || cache.GetLength(0) != lineRect.Width || cache.GetLength(1) != lineRect.Height || lineRect.Top != lastLineTop)
-            {
-                cache = new bool[lineRect.Width, lineRect.Height];
-                lastLineTop = lineRect.Top;
-                currentCacheGlobalMinX = firstPixel.X;
-                currentCachGlobaleMaxX = firstPixel.X;
-            }
-
-            ClearCacheSubregion(lineRect);
-
             if (image[firstPixel.X, firstPixel.Y] <= 0
                 || localBlacklist[firstPixel.X - lineRect.Left, firstPixel.Y - lineRect.Top])
                 return null;
 
+            var debug = 0;
+            for (int x = lineRect.Left; x < lineRect.Right; x++)
+            {
+                for (int y = lineRect.Top; y < lineRect.Bottom; y++)
+                {
+                    if (localBlacklist[x - lineRect.Left, y - lineRect.Top])
+                        debug++;
+                }
+            }
             var checkQueue = new Queue<Point>();
             var validPixels = new List<Point>();
             checkQueue.Enqueue(firstPixel);
@@ -58,20 +103,18 @@ namespace RelativeChatParser.Extraction
             {
                 var pixel = checkQueue.Dequeue();
                 validPixels.Add(pixel);
-                cache[pixel.X - lineRect.Left, pixel.Y - lineRect.Top] = true;
                 currentCachGlobaleMaxX = Math.Max(currentCachGlobaleMaxX, pixel.X);
 
                 for (int globalX = Math.Max(lineRect.Left, pixel.X - distanceThreshold); globalX <= Math.Min(lineRect.Right - 1, pixel.X + distanceThreshold); globalX++)
                 {
                     for (int globalY = Math.Max(lineRect.Top, pixel.Y - distanceThreshold); globalY <= Math.Min(lineRect.Bottom - 1, pixel.Y + distanceThreshold); globalY++)
                     {
-                        if (!cache[globalX - lineRect.Left, globalY - lineRect.Top] &&
-                            !localBlacklist[globalX - lineRect.Left, globalY - lineRect.Top] &&
-                            image[globalX, globalY] > 0f &&
+                        if (!localBlacklist[globalX - lineRect.Left, globalY - lineRect.Top] &&
+                            image[globalX, globalY] >= GlyphDatabase.BrightMinV &&
                             PointsInRange(pixel, globalX, globalY))
                         {
-                            cache[globalX - lineRect.Left, globalY - lineRect.Top] = true;
                             checkQueue.Enqueue(new Point(globalX, globalY));
+                            localBlacklist[globalX - lineRect.Left, globalY - lineRect.Top] = true;
                         }
                     }
                 }
@@ -80,59 +123,50 @@ namespace RelativeChatParser.Extraction
             return validPixels;
         }
 
-        public ExtractedGlyph ExtractGlyphFromPixels(List<Point> validPixels, Rectangle lineRect, ImageCache image)
+        public ExtractedGlyph ExtractGlyphFromCorePixels(List<Point> globalCorePixels, Rectangle lineRect, ImageCache image)
         {
-            ClearCacheSubregion(lineRect);
+            var minX = lineRect.Right;
+            var maxX = lineRect.Left;
+            var topY = lineRect.Top;
+            var bottomY = lineRect.Bottom;
 
-            foreach (var p in validPixels)
+            foreach (var pixel in globalCorePixels)
             {
-                cache[p.X - lineRect.Left, p.Y - lineRect.Top] = true;
+                minX = Math.Min(minX, pixel.X);
+                maxX = Math.Max(maxX, pixel.X);
+                topY = Math.Min(topY, pixel.Y);
+                bottomY = Math.Max(bottomY, pixel.Y);
             }
 
-            var minGlobalX = lineRect.Right;
-            var maxGlobalX = lineRect.Left;
-            var minGlobalY = lineRect.Bottom;
-            var maxGlobalY = lineRect.Top;
-            foreach (var p in validPixels)
+            //Ensure we didn't escape the line somehow
+            minX = Math.Max(lineRect.Left, minX - 2);
+            maxX = Math.Min(lineRect.Right, maxX + 2);
+            topY = Math.Max(lineRect.Top, topY - 2);
+            bottomY = Math.Min(lineRect.Bottom, bottomY + 2);
+
+            var localEmpties = new List<Point>();
+            var localValdidPixels = new List<Point3>();
+            var localBrights = new List<Point3>();
+            for (int x = minX; x <= maxX; x++)
             {
-                minGlobalX = Math.Min(p.X, minGlobalX);
-                maxGlobalX = Math.Max(p.X, maxGlobalX);
-                minGlobalY = Math.Min(p.Y, minGlobalY);
-                maxGlobalY = Math.Max(p.Y, maxGlobalY);
+                for (int y = topY; y <= bottomY; y++)
+                {
+                    if (image[x, y] > 0)
+                    {
+                        Point3 point = new Point3(x - minX, y - topY, image[x, y]);
+                        localValdidPixels.Add(point);
+                        if (image[x, y] >= GlyphDatabase.BrightMinV)
+                            localBrights.Add(point);
+                    }
+                    else
+                        localEmpties.Add(new Point(x - minX, y - topY));
+                }
             }
-            List<Point> corners = GetCorners(lineRect, minGlobalX, maxGlobalX, minGlobalY, maxGlobalY);
-            List<Point> emptyPixels = GetEmpties(lineRect, minGlobalX, maxGlobalX, minGlobalY, maxGlobalY);
 
-            var extractedGlobalMinX = maxGlobalX;
-            var extractedGlobalMaxX = minGlobalX;
-            var extractedGlobalMinY = maxGlobalY;
-            var extractedGlobalMaxY = minGlobalY;
-            foreach (var p in corners)
+            var glyphRect = new Rectangle(minX, topY, maxX - minX, bottomY - topY);
+            return new ExtractedGlyph()
             {
-                extractedGlobalMinX = Math.Min(p.X, extractedGlobalMinX);
-                extractedGlobalMaxX = Math.Max(p.X, extractedGlobalMaxX);
-                extractedGlobalMinY = Math.Min(p.Y, extractedGlobalMinY);
-                extractedGlobalMaxY = Math.Max(p.Y, extractedGlobalMaxY);
-            }
-            var width = extractedGlobalMaxX - extractedGlobalMinX + 1;
-            var height = extractedGlobalMaxY - extractedGlobalMinY + 1;
-
-            
-            var relativePixels = validPixels.Select(p =>
-            {
-                int x = p.X - extractedGlobalMinX;
-                int y = p.Y - extractedGlobalMinY;
-                return new Point3(x, y, image[p.X, p.Y]);
-            });
-            var relativeBrights = relativePixels.Where(p => p.Z >= GlyphDatabase.BrightMinV).ToArray();
-            var relativeEmpties = emptyPixels.Select(p => new Point(p.X - extractedGlobalMinX, p.Y - extractedGlobalMinY));
-
-            var glyphRect = new Rectangle(extractedGlobalMinX, extractedGlobalMinY, width, height);
-            var extracedCombinedEmpties = relativePixels.Select(p => new Point(p.X, p.Y)).Union(relativeEmpties).ToArray();
-
-            var result = new ExtractedGlyph()
-            {
-                PixelsFromTopOfLine = minGlobalY - lineRect.Top,
+                PixelsFromTopOfLine = topY - lineRect.Top,
                 Left = glyphRect.Left,
                 Bottom = glyphRect.Bottom,
                 Height = glyphRect.Height,
@@ -140,73 +174,143 @@ namespace RelativeChatParser.Extraction
                 Top = glyphRect.Top,
                 Width = glyphRect.Width,
                 LineOffset = lineRect.Top,
-                AspectRatio = (float)width / height,
-                RelativeEmptyLocations = relativeEmpties.ToArray(),
-                RelativePixelLocations = relativePixels.ToArray(),
+                AspectRatio = (float)glyphRect.Width / glyphRect.Height,
+                RelativeEmptyLocations = localEmpties.ToArray(),
+                RelativePixelLocations = localValdidPixels.ToArray(),
                 FromFile = image.DebugFilename,
-                RelativeBrights = relativeBrights,
-                CombinedLocations = extracedCombinedEmpties
+                RelativeBrights = localBrights.ToArray(),
+                CombinedLocations = localValdidPixels.Select(p => new Point(p.X, p.Y)).Union(localEmpties).ToArray()
             };
-
-            ClearCacheSubregion(lineRect);
-
-            return result;
         }
 
-        private List<Point> GetEmpties(Rectangle lineRect, int minGlobalX, int maxGlobalX, int minGlobalY, int maxGlobalY)
-        {
-            var empties = new List<Point>();
-            for (int globalX = minGlobalX; globalX <= maxGlobalX; globalX++)
-            {
-                for (int globalY = minGlobalY; globalY <= maxGlobalY; globalY++)
-                {
-                    if (!cache[globalX - lineRect.Left, globalY - lineRect.Top])
-                    {
-                        empties.Add(new Point(globalX, globalY));
-                    }
-                }
-            }
 
-            var validEmpties = new List<Point>();
-            foreach (var empty in empties)
-            {
-                var neighborCount = empties.Where(p => p != empty ? p.Distance(empty, 1) <= 1 : false).Count();
-                if (neighborCount != 0)
-                    validEmpties.Add(empty);
-            }
-            empties = validEmpties;
+        //public ExtractedGlyph ExtractGlyphFromPixels(List<Point> validPixels, Rectangle lineRect, ImageCache image)
+        //{
+        //    ClearCacheSubregion(lineRect);
 
-            return empties;
-        }
+        //    foreach (var p in validPixels)
+        //    {
+        //        cache[p.X - lineRect.Left, p.Y - lineRect.Top] = true;
+        //    }
 
-        private List<Point> GetCorners(Rectangle lineRect, int minGlobalX, int maxGlobalX, int minGlobalY, int maxGlobalY)
-        {
-            var corners = new List<Point>();
-            for (int globalX = minGlobalX; globalX <= maxGlobalX; globalX++)
-            {
-                for (int globalY = minGlobalY; globalY <= maxGlobalY; globalY++)
-                {
-                    if (cache[globalX - lineRect.Left, globalY - lineRect.Top])
-                    {
-                        var cacheX = globalX - lineRect.Left;
-                        var cacheY = globalY - lineRect.Top;
-                        // Valid only if no neighbor directly across
-                        var aboveEmpty = cacheY - 1 < 0 || !cache[cacheX, cacheY - 1];
-                        var belowEmpty = cacheY + 1 >= lineRect.Height || !cache[cacheX, cacheY + 1];
-                        var leftEmpty = cacheX - 1 < 0 || !cache[cacheX - 1, cacheY];
-                        var rightEmpty = globalX + 1 > maxGlobalX || !cache[cacheX + 1, cacheY];
+        //    var minGlobalX = lineRect.Right;
+        //    var maxGlobalX = lineRect.Left;
+        //    var minGlobalY = lineRect.Bottom;
+        //    var maxGlobalY = lineRect.Top;
+        //    foreach (var p in validPixels)
+        //    {
+        //        minGlobalX = Math.Min(p.X, minGlobalX);
+        //        maxGlobalX = Math.Max(p.X, maxGlobalX);
+        //        minGlobalY = Math.Min(p.Y, minGlobalY);
+        //        maxGlobalY = Math.Max(p.Y, maxGlobalY);
+        //    }
+        //    List<Point> corners = GetCorners(lineRect, minGlobalX, maxGlobalX, minGlobalY, maxGlobalY);
+        //    List<Point> emptyPixels = GetEmpties(lineRect, minGlobalX, maxGlobalX, minGlobalY, maxGlobalY);
 
-                        var oneOrLessVertNeighbors = aboveEmpty || belowEmpty;
-                        var oneOrLessHorizNeighbors = leftEmpty || rightEmpty;
+        //    var extractedGlobalMinX = maxGlobalX;
+        //    var extractedGlobalMaxX = minGlobalX;
+        //    var extractedGlobalMinY = maxGlobalY;
+        //    var extractedGlobalMaxY = minGlobalY;
+        //    foreach (var p in corners)
+        //    {
+        //        extractedGlobalMinX = Math.Min(p.X, extractedGlobalMinX);
+        //        extractedGlobalMaxX = Math.Max(p.X, extractedGlobalMaxX);
+        //        extractedGlobalMinY = Math.Min(p.Y, extractedGlobalMinY);
+        //        extractedGlobalMaxY = Math.Max(p.Y, extractedGlobalMaxY);
+        //    }
+        //    var width = extractedGlobalMaxX - extractedGlobalMinX + 1;
+        //    var height = extractedGlobalMaxY - extractedGlobalMinY + 1;
 
-                        if (oneOrLessHorizNeighbors && oneOrLessVertNeighbors)
-                            corners.Add(new Point(globalX, globalY));
-                    }
-                }
-            }
+            
+        //    var relativePixels = validPixels.Select(p =>
+        //    {
+        //        int x = p.X - extractedGlobalMinX;
+        //        int y = p.Y - extractedGlobalMinY;
+        //        return new Point3(x, y, image[p.X, p.Y]);
+        //    });
+        //    var relativeBrights = relativePixels.Where(p => p.Z >= GlyphDatabase.BrightMinV).ToArray();
+        //    var relativeEmpties = emptyPixels.Select(p => new Point(p.X - extractedGlobalMinX, p.Y - extractedGlobalMinY));
 
-            return corners;
-        }
+        //    var glyphRect = new Rectangle(extractedGlobalMinX, extractedGlobalMinY, width, height);
+        //    var extracedCombinedEmpties = relativePixels.Select(p => new Point(p.X, p.Y)).Union(relativeEmpties).ToArray();
+
+        //    var result = new ExtractedGlyph()
+        //    {
+        //        PixelsFromTopOfLine = minGlobalY - lineRect.Top,
+        //        Left = glyphRect.Left,
+        //        Bottom = glyphRect.Bottom,
+        //        Height = glyphRect.Height,
+        //        Right = glyphRect.Right,
+        //        Top = glyphRect.Top,
+        //        Width = glyphRect.Width,
+        //        LineOffset = lineRect.Top,
+        //        AspectRatio = (float)width / height,
+        //        RelativeEmptyLocations = relativeEmpties.ToArray(),
+        //        RelativePixelLocations = relativePixels.ToArray(),
+        //        FromFile = image.DebugFilename,
+        //        RelativeBrights = relativeBrights,
+        //        CombinedLocations = extracedCombinedEmpties
+        //    };
+
+        //    ClearCacheSubregion(lineRect);
+
+        //    return result;
+        //}
+
+        //private List<Point> GetEmpties(Rectangle lineRect, int minGlobalX, int maxGlobalX, int minGlobalY, int maxGlobalY)
+        //{
+        //    var empties = new List<Point>();
+        //    for (int globalX = minGlobalX; globalX <= maxGlobalX; globalX++)
+        //    {
+        //        for (int globalY = minGlobalY; globalY <= maxGlobalY; globalY++)
+        //        {
+        //            if (!cache[globalX - lineRect.Left, globalY - lineRect.Top])
+        //            {
+        //                empties.Add(new Point(globalX, globalY));
+        //            }
+        //        }
+        //    }
+
+        //    var validEmpties = new List<Point>();
+        //    foreach (var empty in empties)
+        //    {
+        //        var neighborCount = empties.Where(p => p != empty ? p.Distance(empty, 1) <= 1 : false).Count();
+        //        if (neighborCount != 0)
+        //            validEmpties.Add(empty);
+        //    }
+        //    empties = validEmpties;
+
+        //    return empties;
+        //}
+
+        //private List<Point> GetCorners(Rectangle lineRect, int minGlobalX, int maxGlobalX, int minGlobalY, int maxGlobalY)
+        //{
+        //    var corners = new List<Point>();
+        //    for (int globalX = minGlobalX; globalX <= maxGlobalX; globalX++)
+        //    {
+        //        for (int globalY = minGlobalY; globalY <= maxGlobalY; globalY++)
+        //        {
+        //            if (cache[globalX - lineRect.Left, globalY - lineRect.Top])
+        //            {
+        //                var cacheX = globalX - lineRect.Left;
+        //                var cacheY = globalY - lineRect.Top;
+        //                // Valid only if no neighbor directly across
+        //                var aboveEmpty = cacheY - 1 < 0 || !cache[cacheX, cacheY - 1];
+        //                var belowEmpty = cacheY + 1 >= lineRect.Height || !cache[cacheX, cacheY + 1];
+        //                var leftEmpty = cacheX - 1 < 0 || !cache[cacheX - 1, cacheY];
+        //                var rightEmpty = globalX + 1 > maxGlobalX || !cache[cacheX + 1, cacheY];
+
+        //                var oneOrLessVertNeighbors = aboveEmpty || belowEmpty;
+        //                var oneOrLessHorizNeighbors = leftEmpty || rightEmpty;
+
+        //                if (oneOrLessHorizNeighbors && oneOrLessVertNeighbors)
+        //                    corners.Add(new Point(globalX, globalY));
+        //            }
+        //        }
+        //    }
+
+        //    return corners;
+        //}
 
         private bool PointsInRange(Point point, int x2, int y2)
         {

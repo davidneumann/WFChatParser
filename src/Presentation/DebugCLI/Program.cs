@@ -122,7 +122,39 @@ namespace DebugCLI
 
             //OverlappGrouperShim();
 
-            ProfileShim();
+            //ProfileShim();
+
+            NewRelativeExtractorShim();
+        }
+
+        private static void NewRelativeExtractorShim()
+        {
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps\overlap_slice_7.png"))
+            {
+                var ic = new ImageCache(b);
+                var glyphs = LineScanner.ExtractGlyphsFromLine(ic, 17);
+                var c = 0;
+                const string outDir = "newExtractor";
+                if (!Directory.Exists(outDir))
+                    Directory.CreateDirectory(outDir);
+                Directory.GetFiles(outDir).ToList().ForEach(f => File.Delete(f));
+
+                foreach (var glyph in glyphs)
+                {
+                        glyph.Save(Path.Combine(outDir, $"{c++}.png"));
+                }
+
+                var sw = new Stopwatch();
+                var c2 = 0;
+                sw.Start();
+                for (int i = 0; i < LineScanner.LineOffsets.Length; i++)
+                {
+                    c2 += LineScanner.ExtractGlyphsFromLine(ic, i).Length;
+
+                }
+                sw.Stop();
+                Console.WriteLine($"Extracted {c2} glyphs in {sw.Elapsed.TotalSeconds}s.");
+            }
         }
 
         private static void ProfileShim()

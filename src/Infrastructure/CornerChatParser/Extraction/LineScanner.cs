@@ -1,4 +1,5 @@
 ﻿using Application.ChatLineExtractor;
+using RelativeChatParser.Database;
 using RelativeChatParser.Models;
 using System;
 using System.Collections.Generic;
@@ -43,23 +44,23 @@ namespace RelativeChatParser.Extraction
                 var chatColor = image.GetColor(nextPoint.X, nextPoint.Y);
                 var validPixels = new List<Point>();
 
-                var newValidPixels = ge.GetValidPixels(image, localBlacklist, nextPoint, lineRect);
+                var newValidPixels = ge.GetValidCorePixels(image, ref localBlacklist, nextPoint, lineRect);
                 //Gotta keep scanning down for things like the dot in ! or the bits of a %
 
                 while (newValidPixels != null && newValidPixels.Count > 0)
                 {
                     validPixels.AddRange(newValidPixels);
-                    BlacklistPixels(localBlacklist, newValidPixels, lineRect);
+                    //BlacklistPixels(localBlacklist, newValidPixels, lineRect);
                     var leftmostX = validPixels.Min(p => p.X);
                     var rightmostX = validPixels.Max(p => p.X);
-                    var bototmMost = validPixels.Where(p => p.X == leftmostX).Max(p => p.Y);
+                    //var bottomMost = validPixels.Where(p => p.X == leftmostX).Max(p => p.Y);
                     nextPoint = FindNextPoint(image, lineRect, localBlacklist, leftmostX);
                     if (nextPoint.X > rightmostX || nextPoint == Point.Empty)
                         break;
-                    newValidPixels = ge.GetValidPixels(image, localBlacklist, nextPoint, lineRect);
+                    newValidPixels = ge.GetValidCorePixels(image, ref localBlacklist, nextPoint, lineRect);
                 }
 
-                var newGlyph = ge.ExtractGlyphFromPixels(validPixels, lineRect, image);
+                var newGlyph = ge.ExtractGlyphFromCorePixels(validPixels, lineRect, image);
                 newGlyph.FirstPixelColor = chatColor;
                 results.Add(newGlyph);
 
@@ -148,7 +149,7 @@ namespace RelativeChatParser.Extraction
             {
                 for (int globalY = globalLineRect.Top; globalY < globalLineRect.Bottom; globalY++)
                 {
-                    if (image[globalX, globalY] > 0.8 &&
+                    if (image[globalX, globalY] >= GlyphDatabase.BrightMinV &&
                         !localBlacklist[globalX - globalLineRect.Left, globalY - globalLineRect.Top])
                         return new Point(globalX, globalY);
                 }
