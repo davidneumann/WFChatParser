@@ -73,8 +73,8 @@ namespace RelativeChatParser.Extraction
             var checkQueue = new Queue<Point>();
             var minX = lineRect.Right;
             var maxX = lineRect.Left;
-            var topY = lineRect.Top;
-            var bottomY = lineRect.Bottom;
+            var topY = lineRect.Bottom;
+            var bottomY = lineRect.Top;
             checkQueue.Enqueue(firstPixel);
             //Find all points within 2 pixels of current pixels
             while (checkQueue.Count > 0)
@@ -100,7 +100,7 @@ namespace RelativeChatParser.Extraction
                 }
             }
 
-            return new Rectangle(minX, topY, maxX - minX, bottomY - topY);
+            return new Rectangle(minX, topY, maxX - minX + 1, bottomY - topY + 1);
         }
 
         public FastExtractedGlyph ExtractGlyphFromCorePixels(Rectangle lineRect, ImageCache image, Rectangle coreRect)
@@ -119,20 +119,25 @@ namespace RelativeChatParser.Extraction
             //}
 
             //Ensure we didn't escape the line somehow
+            //var glyphRect = new Rectangle(coreRect.Left - 2, coreRect.Top - 2, coreRect.Width + 4, coreRect.Height + 4);
+
             var minX = Math.Max(lineRect.Left, coreRect.Left - 2);
             var maxX = Math.Min(lineRect.Right, coreRect.Right + 2);
             var topY = Math.Max(lineRect.Top, coreRect.Top - 2);
             var bottomY = Math.Min(lineRect.Bottom, coreRect.Bottom + 2);
 
-            var glyphRect = new Rectangle(minX, topY, maxX - minX + 1, bottomY - topY + 1);
+            var widthChange = (coreRect.Left - minX) + (maxX - coreRect.Right);
+            var heightchange = (coreRect.Top - topY) + (bottomY - coreRect.Bottom);
+
+            var glyphRect = new Rectangle(minX, topY, coreRect.Width + widthChange, coreRect.Height + heightchange);
 
             var localEmpties = new bool[glyphRect.Width, glyphRect.Height];
             var localValdidPixels = new float[glyphRect.Width, glyphRect.Height];
             var localBrights = new float[glyphRect.Width, glyphRect.Height];
             var localCombined = new float[glyphRect.Width, glyphRect.Height];
-            for (int x = minX; x <= maxX; x++)
+            for (int x = minX; x < maxX; x++)
             {
-                for (int y = topY; y <= bottomY; y++)
+                for (int y = topY; y < bottomY; y++)
                 {
                     var localX = x - minX;
                     var localY = y - topY;

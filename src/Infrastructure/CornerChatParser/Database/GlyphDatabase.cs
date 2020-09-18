@@ -23,7 +23,7 @@ namespace RelativeChatParser.Database
 
         private FuzzyGlyph[] _cachedSingleCharOverlaps;
         
-        public const float BrightMinV = 0.85f;
+        public const float BrightMinV = 0.95f;
 
         private static GlyphDatabase _instance = null;
         private static object _threadLock = new object();

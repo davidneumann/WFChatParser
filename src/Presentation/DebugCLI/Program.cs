@@ -129,10 +129,10 @@ namespace DebugCLI
 
         private static void NewRelativeExtractorShim()
         {
-            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps\overlap_slice_7.png"))
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\637313915793512966.png"))
             {
                 var ic = new ImageCache(b);
-                var glyphs = LineScanner.ExtractGlyphsFromLineShim(ic, 17);
+                var glyphs = LineScanner.ExtractGlyphsFromLineShim(ic, 1);
                 var c = 0;
                 const string outDir = "newExtractor";
                 if (!Directory.Exists(outDir))
