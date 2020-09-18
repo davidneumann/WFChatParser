@@ -132,7 +132,7 @@ namespace DebugCLI
             using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps\overlap_slice_7.png"))
             {
                 var ic = new ImageCache(b);
-                var glyphs = LineScanner.ExtractGlyphsFromLine(ic, 17);
+                var glyphs = LineScanner.ExtractGlyphsFromLineShim(ic, 17);
                 var c = 0;
                 const string outDir = "newExtractor";
                 if (!Directory.Exists(outDir))
@@ -149,7 +149,7 @@ namespace DebugCLI
                 sw.Start();
                 for (int i = 0; i < LineScanner.LineOffsets.Length; i++)
                 {
-                    c2 += LineScanner.ExtractGlyphsFromLine(ic, i).Length;
+                    c2 += LineScanner.ExtractGlyphsFromLineShim(ic, i).Length;
 
                 }
                 sw.Stop();

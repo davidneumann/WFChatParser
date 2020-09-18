@@ -40,6 +40,7 @@ namespace RelativeChatParser.Models
             clone.RelativePixelLocations = (Point3[])this.RelativePixelLocations.Clone();
             clone.RelativeEmptyLocations = (Point[])this.RelativeEmptyLocations.Clone();
             clone.CombinedLocations = (Point[])this.CombinedLocations.Clone();
+            clone.RelativeBrights = (Point3[])this.RelativeBrights.Clone();
             return clone;
         }
 
