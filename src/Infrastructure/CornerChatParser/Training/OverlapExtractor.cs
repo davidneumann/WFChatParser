@@ -23,9 +23,9 @@ namespace RelativeChatParser.Training
             using (var b = new Bitmap(imagePath))
             {
                 //Boost all the Vs in the chatbox
-                for (int x = LineScanner.ChatLeftX; x < LineScanner.ChatWidth + LineScanner.ChatLeftX; x++)
+                for (int x = FastLineScanner.ChatLeftX; x < FastLineScanner.ChatWidth + FastLineScanner.ChatLeftX; x++)
                 {
-                    for (int y = LineScanner.LineOffsets[0]; y < LineScanner.LineOffsets.Max() + LineScanner.Lineheight; y++)
+                    for (int y = FastLineScanner.LineOffsets[0]; y < FastLineScanner.LineOffsets.Max() + FastLineScanner.Lineheight; y++)
                     {
                         var hsv = b.GetPixel(x, y).ToHsv();
                         if (hsv.Value > 0.35)
@@ -46,7 +46,7 @@ namespace RelativeChatParser.Training
                 for (int i = 0; i < expectedLines.Length; i++)
                 {
                     var charI = 0;
-                    var glyphs = LineScanner.ExtractGlyphsFromLine(ic, i);
+                    var glyphs = FastLineScanner.ExtractGlyphsFromLine(ic, i);
                     //Parallel.ForEach(glyphs, g =>
                     foreach (var g in glyphs)
                     {

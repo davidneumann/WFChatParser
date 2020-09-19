@@ -22,7 +22,7 @@ namespace RelativeChatParser.Models
         public int ReferenceMinHeight { get; set;}
         public float ReferenceGapFromLineTop { get; set;}
         public bool IsOverlap { get; set;} = false;
-        public float[,] RelativeCombinedLocations { get; set;}
+        public bool[,] RelativeCombinedMask { get; set;}
         public int RelativePixelsCount { get; set; }
         public int RelativeEmptiesCount { get; set; }
         public int RelativeBrightsCount { get; set; }
@@ -39,7 +39,7 @@ namespace RelativeChatParser.Models
             clone.RelativePixels = (float[,]) RelativePixels.Clone();
             clone.RelativeBrights = (float[,])RelativeBrights.Clone();
             clone.RelativeEmpties = (bool[,])RelativeEmpties.Clone();
-            clone.RelativeCombinedLocations = (float[,])RelativeCombinedLocations.Clone();
+            clone.RelativeCombinedMask = (bool[,])RelativeCombinedMask.Clone();
 
             return clone;
         }

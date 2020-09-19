@@ -27,7 +27,7 @@ namespace RelativeChatParser.Training
                 var ic = new ImageCache(bitmap);
                 ic.DebugFilename = input.ImageFilePath;
                 var textLines = File.ReadAllLines(input.CorrectTextPath).Where(l => l.ToLower() != "clear").ToArray();
-                var glyphLines = textLines.Select((u, i) => LineScanner.ExtractGlyphsFromLineShim(ic, i)).ToArray();
+                var glyphLines = textLines.Select((u, i) => FastLineScanner.ExtractGlyphsFromLineShim(ic, i)).ToArray();
                 for (int i = 0; i < textLines.Length; i++)
                 {
                     var cleanText = textLines[i].Replace(" ", "").Trim();
@@ -35,7 +35,7 @@ namespace RelativeChatParser.Training
                     {
                         Console.WriteLine($"Fatal error in {inputShort}! Glyph text count mistmatch on line index {i}\n{textLines[i]}");
                         Console.WriteLine("Dumping glyphs to training_errors\\");
-                        LineScanner.SaveExtractedGlyphs(ic, "training_errors", glyphLines[i]);
+                        FastLineScanner.SaveExtractedGlyphs(ic, "training_errors", glyphLines[i]);
                         throw new Exception("Input mismatch");
                     }
 

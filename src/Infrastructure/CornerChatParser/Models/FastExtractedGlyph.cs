@@ -14,8 +14,10 @@ namespace RelativeChatParser.Models
 {
     public class FastExtractedGlyph
     {
-        public float[,] RelativePixelLocations;
-        public bool[,] RelativeEmptyLocations;
+        public float[,] RelativePixels;
+        public int RelativePixelsCount;
+        public bool[,] RelativeEmpties;
+        public int RelativeEmptiesCount;
         //public Rectangle GlobalGlpyhRect;
         public int Left;
         public int Right;
@@ -30,16 +32,17 @@ namespace RelativeChatParser.Models
         public float AspectRatio;
         public string FromFile;
         public ChatColor FirstPixelColor;
-        public float[,] CombinedLocations;
+        public bool[,] RelativeCombinedMask;
 
         public float[,] RelativeBrights { get; set; }
+        public int RelativeBrightsCount { get; set; }
 
         public FastExtractedGlyph Clone()
         {
             var clone = (FastExtractedGlyph)(this.MemberwiseClone());
-            clone.RelativePixelLocations = (float[,])this.RelativePixelLocations.Clone();
-            clone.RelativeEmptyLocations = (bool[,])this.RelativeEmptyLocations.Clone();
-            clone.CombinedLocations = (float[,])this.CombinedLocations.Clone();
+            clone.RelativePixels = (float[,])this.RelativePixels.Clone();
+            clone.RelativeEmpties = (bool[,])this.RelativeEmpties.Clone();
+            clone.RelativeCombinedMask = (bool[,])this.RelativeCombinedMask.Clone();
             clone.RelativeBrights = (float[,])this.RelativeBrights.Clone();
             return clone;
         }
@@ -125,7 +128,7 @@ namespace RelativeChatParser.Models
 
         public void Save(string filename, bool brightsOnly = false)
         {
-            var pixels = brightsOnly ? RelativeBrights : RelativePixelLocations;
+            var pixels = brightsOnly ? RelativeBrights : RelativePixels;
             using (var b = new Bitmap(Width, Height))
             {
                 for (int x = 0; x < b.Width; x++)

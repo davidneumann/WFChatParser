@@ -38,7 +38,7 @@ namespace RelativeChatParser.Training
                 {
                     for (int y = 0; y < glyph.Height; y++)
                     {
-                        var value = glyph.CombinedLocations[x, y];
+                        var value = glyph.RelativePixels[x, y];
                         if (value > 0)
                         {
                             pixelCounts[x, y]++;

@@ -121,7 +121,7 @@ namespace RelativeChatParser
         {
             var sw = new Stopwatch();
             sw.Start();
-            lineParseCount = Math.Min(lineParseCount, LineScanner.LineOffsets.Length);
+            lineParseCount = Math.Min(lineParseCount, FastLineScanner.LineOffsets.Length);
             var imageCache = new ImageCache(image);
             while (_timeUserCache.Count > 75)
             {
@@ -231,18 +231,18 @@ namespace RelativeChatParser
 
                 if (!fullWords[i].First().WordColor.IsTimestamp() && last != null && !debugMode)
                 {
-                    if (isScrolledUp && i == LineScanner.LineOffsets.Length - 1 && headLines[i] != null && headLines[i].LineType == LineType.Continuation && results.Count > 0)
+                    if (isScrolledUp && i == FastLineScanner.LineOffsets.Length - 1 && headLines[i] != null && headLines[i].LineType == LineType.Continuation && results.Count > 0)
                     {
                         //_logger.Log("Last line in chat box is contiuation. Removing last real message to prevent partial cut off.");
                         var tempLast = results.Last();
                         results.Remove(tempLast);
                     }
                     else if(!_blacklistedRegex.Any(r => r.Match(headLines[i].RawMessage).Success))
-                        last.Append(headLines[i], LineScanner.Lineheight, LineScanner.LineOffsets[i]);
+                        last.Append(headLines[i], FastLineScanner.Lineheight, FastLineScanner.LineOffsets[i]);
                 }
                 else
                 {
-                    if (isScrolledUp && i == LineScanner.LineOffsets.Length - 1 && headLines[i] != null && headLines[i].LineType == LineType.NewMessage)
+                    if (isScrolledUp && i == FastLineScanner.LineOffsets.Length - 1 && headLines[i] != null && headLines[i].LineType == LineType.NewMessage)
                     {
                         //_logger.Log("Last line in chat box is a new message. Possible contiuation off screen, not adding.");
                         continue;
@@ -310,7 +310,7 @@ namespace RelativeChatParser
 
         private static Letter[] ExtractLettersSingleLine(int i, ImageCache imageCache, bool abortAfterUsername, int startX = 0)
         {
-            return LineScanner.ExtractGlyphsFromLine(imageCache, i, abortAfterUsername, startX)
+            return FastLineScanner.ExtractGlyphsFromLine(imageCache, i, abortAfterUsername, startX)
                 .AsParallel().Select(extracted =>
                 {
                     var fuzzies = RelativePixelGlyphIdentifier.IdentifyGlyph(extracted);

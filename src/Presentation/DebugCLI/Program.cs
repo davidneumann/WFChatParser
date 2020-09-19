@@ -112,7 +112,7 @@ namespace DebugCLI
             //RelativeParserWithSpacesShim();
 
             //GenerateRelativeParserCharacterTrainingData();
-            RelativeParserGlyphTrainer();
+            //RelativeParserGlyphTrainer();
             //RelativeParserSpaceTrainer();
             //OverlapExtractingShim();
             //RelativeParserTest();
@@ -124,37 +124,116 @@ namespace DebugCLI
 
             //ProfileShim();
 
-            //NewRelativeExtractorShim();
+            NewFastGlyphShim();
         }
 
-        private static void NewRelativeExtractorShim()
+        private static void NewFastGlyphShim()
         {
+            //var test = new bool[5, 5];
+            //for (int x = 0; x < 5; x++)
+            //{
+            //    for (int y = 0; y < 5; y++)
+            //    {
+            //        test[x, y] = true;
+            //    }
+            //}
+            //OutputArray(test);
+            //Console.WriteLine();
+            //for (int x = 1; x <= 4; x++)
+            //{
+            //    OutputArray(FastRelativePixelGlyphIdentifier.PadArray(test, 5 + x, 5 + x, false));
+            //    Console.WriteLine();
+            //}
+
             //using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\New Character Training\characters_0.png"))
-            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\637313915793512966.png"))
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\New Character Training\characters_0.png"))
             {
                 var ic = new ImageCache(b);
-                var glyphs = LineScanner.ExtractGlyphsFromLineShim(ic, 1);
+                var glyphs = FastLineScanner.ExtractGlyphsFromLineShim(ic, 1);
                 var c = 0;
                 const string outDir = "newExtractor";
                 if (!Directory.Exists(outDir))
                     Directory.CreateDirectory(outDir);
                 Directory.GetFiles(outDir).ToList().ForEach(f => File.Delete(f));
 
+                var outputTarget = 0;
                 foreach (var glyph in glyphs)
                 {
-                        glyph.Save(Path.Combine(outDir, $"{c++}.png"));
+                    glyph.Save(Path.Combine(outDir, $"{c++}.png"));
+                    outputTarget++;
                 }
 
+                Console.WriteLine("New System");
                 var sw = new Stopwatch();
                 var c2 = 0;
                 sw.Start();
-                for (int i = 0; i < LineScanner.LineOffsets.Length; i++)
+                var allglyphs = new List<FastExtractedGlyph>();
+                for (int i = 0; i < FastLineScanner.LineOffsets.Length; i++)
                 {
-                    c2 += LineScanner.ExtractGlyphsFromLineShim(ic, i).Length;
+                    var lineGlyphs = FastLineScanner.ExtractGlyphsFromLineShim(ic, i);
+                    c2 += lineGlyphs.Length;
+                    foreach (var glyph in lineGlyphs)
+                    {
+                        allglyphs.Add(glyph);
+                    }
 
                 }
                 sw.Stop();
                 Console.WriteLine($"Extracted {c2} glyphs in {sw.Elapsed.TotalSeconds}s.");
+
+                var sw2 = new Stopwatch();
+                sw2.Start();
+                var output = 0;
+                foreach (var glyph in allglyphs)
+                {
+                    var result = FastRelativePixelGlyphIdentifier.IdentifyGlyph(glyph);
+                    if (output++ < outputTarget)
+                        Console.Write(result[0].Character);
+                }
+                sw2.Stop();
+                Console.WriteLine($"\nParsed {c2} glyphs in {sw2.Elapsed.TotalSeconds}s.");
+
+                Console.WriteLine("\nOld System");
+                var sw3 = new Stopwatch();
+                var oldGlyphCount = 0;
+                sw3.Start();
+                var oldAllglyphs = new List<ExtractedGlyph>();
+                for (int i = 0; i < LineScanner.LineOffsets.Length; i++)
+                {
+                    var lineGlyphs = LineScanner.ExtractGlyphsFromLine(ic, i);
+                    oldGlyphCount += lineGlyphs.Length;
+                    foreach (var glyph in lineGlyphs)
+                    {
+                        oldAllglyphs.Add(glyph);
+                    }
+
+                }
+                sw3.Stop();
+                Console.WriteLine($"Extracted {oldGlyphCount} glyphs in {sw3.Elapsed.TotalSeconds}s.");
+
+                var sw4 = new Stopwatch();
+                sw4.Start();
+                output = 0;
+                foreach (var glyph in oldAllglyphs)
+                {
+                    var result = RelativePixelGlyphIdentifier.IdentifyGlyph(glyph);
+                    if (output++ < outputTarget)
+                        Console.Write(result[0].Character);
+                }
+                sw4.Stop();
+                Console.WriteLine($"\nParsed {oldGlyphCount} glyphs in {sw4.Elapsed.TotalSeconds}s.");
+            }
+        }
+
+        private static void OutputArray<T>(T[,] test)
+        {
+            for (int x = 0; x < test.GetLength(0); x++)
+            {
+                for (int y = 0; y < test.GetLength(1); y++)
+                {
+                    Console.Write(test[x, y].ToString()[0]);
+                }
+                Console.WriteLine();
             }
         }
 
@@ -611,7 +690,7 @@ namespace DebugCLI
         private static void OverlapExtractingShim()
         {
             const int overlapExtraThreshold = 2;
-            GlyphExtractor.distanceThreshold += overlapExtraThreshold;
+            FastGlyphExtractor.distanceThreshold += overlapExtraThreshold;
             RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs.RemoveAll(g => g.IsOverlap == true);
             RelativeChatParser.Database.GlyphDatabase.Instance.Init();
             const string overlapDir = "overlaps";
@@ -646,7 +725,7 @@ namespace DebugCLI
                         var str = overlap.IdentifiedGlyphs.Aggregate("", (acc, glyph) => acc + glyph.Character);
                         ExtractedGlyph extracted = overlap.Extracted;
                         Console.WriteLine($"Saving overlap {str}/{overlap.ExpectedCharacters} from {extracted.Left},{extracted.Top} {extracted.Width}x{extracted.Height}.");
-                        using (var output = new Bitmap(extracted.Width, LineScanner.Lineheight))
+                        using (var output = new Bitmap(extracted.Width, FastLineScanner.Lineheight))
                         {
                             for (int x = 0; x < output.Width; x++)
                             {
@@ -721,7 +800,7 @@ namespace DebugCLI
             RelativeChatParser.Database.GlyphDatabase.Instance.Init();
             var json = JsonConvert.SerializeObject(RelativeChatParser.Database.GlyphDatabase.Instance);
             File.WriteAllText("RelativeDB_with_overlaps.json", json);
-            GlyphExtractor.distanceThreshold -= overlapExtraThreshold;
+            FastGlyphExtractor.distanceThreshold -= overlapExtraThreshold;
         }
 
         private static void LineExtractorTest(Dictionary<int, int> knownCounts = null)
@@ -747,11 +826,11 @@ namespace DebugCLI
                 while (offset < 2093)
                 {
                     var firstY = 0;
-                    for (int y = offset; y < offset + LineScanner.Lineheight; y++)
+                    for (int y = offset; y < offset + FastLineScanner.Lineheight; y++)
                     {
                         if (firstY > offset)
                             break;
-                        for (int x = LineScanner.ChatLeftX; x < 1700; x++)
+                        for (int x = FastLineScanner.ChatLeftX; x < 1700; x++)
                         {
                             if (ic[x, y] > 0)
                             {
@@ -761,13 +840,13 @@ namespace DebugCLI
                         }
                     }
                     Console.WriteLine("First y: " + firstY);
-                    offset = firstY + (int)(LineScanner.Lineheight * 1.2f);
+                    offset = firstY + (int)(FastLineScanner.Lineheight * 1.2f);
                     if (!lineCounts.ContainsKey(firstY))
                         lineCounts[firstY] = 0;
                     lineCounts[firstY]++;
                     if (knownCounts != null && knownCounts[firstY] < maxCount / 2)
                     {
-                        var rect = new Rectangle(4, firstY, LineScanner.ChatWidth, LineScanner.Lineheight);
+                        var rect = new Rectangle(4, firstY, FastLineScanner.ChatWidth, FastLineScanner.Lineheight);
                         using (var clone = b.Clone(rect, b.PixelFormat))
                         {
                             clone.Save(Path.Combine("debug_lines", (maxCount++) + ".png"));
@@ -811,7 +890,7 @@ namespace DebugCLI
                 //4515
                 {
                     var files = Directory.GetFiles("debug_lines");
-                    var final = new Bitmap(LineScanner.ChatWidth, heightTotal + files.Length * 2);
+                    var final = new Bitmap(FastLineScanner.ChatWidth, heightTotal + files.Length * 2);
                     var top = 0;
                     var colors = new[] { Color.Green, Color.Blue };
                     //var i = 0;
@@ -1054,7 +1133,7 @@ namespace DebugCLI
             var sw = new Stopwatch();
             sw.Start();
             var glyphs = new ExtractedGlyph[][] {
-                LineScanner.ExtractGlyphsFromLine(image, 13),
+                FastLineScanner.ExtractGlyphsFromLine(image, 13),
                 //LineScanner.ExtractGlyphsFromLine(image, 1),
                 //LineScanner.ExtractGlyphsFromLine(image, 2),
                 //LineScanner.ExtractGlyphsFromLine(image, 3),
@@ -1062,7 +1141,7 @@ namespace DebugCLI
             }.SelectMany(g => g).ToArray();
             sw.Stop();
             Console.WriteLine($"Extracted {glyphs.Length} glyphs in {sw.ElapsedMilliseconds}ms.");
-            LineScanner.SaveExtractedGlyphs(image, "glyphs", glyphs);
+            FastLineScanner.SaveExtractedGlyphs(image, "glyphs", glyphs);
             b.Dispose();
         }
 
