@@ -115,7 +115,7 @@ namespace DebugCLI
             //RelativeParserGlyphTrainer();
             //RelativeParserSpaceTrainer();
             //OverlapExtractingShim();
-            //RelativeParserTest();
+            RelativeParserTest();
 
             //RelativeCacheShim();
 
@@ -124,7 +124,7 @@ namespace DebugCLI
 
             //ProfileShim();
 
-            NewFastGlyphShim();
+            //NewFastGlyphShim();
         }
 
         private static void NewFastGlyphShim()
@@ -149,7 +149,7 @@ namespace DebugCLI
             using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\New Character Training\characters_0.png"))
             {
                 var ic = new ImageCache(b);
-                var glyphs = FastLineScanner.ExtractGlyphsFromLineShim(ic, 0);
+                var glyphs = LineScanner.ExtractGlyphsFromLineShim(ic, 0);
                 var c = 0;
                 const string outDir = "newExtractor";
                 if (!Directory.Exists(outDir))
@@ -167,10 +167,10 @@ namespace DebugCLI
                 var sw = new Stopwatch();
                 var c2 = 0;
                 sw.Start();
-                var allglyphs = new List<FastExtractedGlyph>();
-                for (int i = 0; i < FastLineScanner.LineOffsets.Length; i++)
+                var allglyphs = new List<ExtractedGlyph>();
+                for (int i = 0; i < LineScanner.LineOffsets.Length; i++)
                 {
-                    var lineGlyphs = FastLineScanner.ExtractGlyphsFromLineShim(ic, i);
+                    var lineGlyphs = LineScanner.ExtractGlyphsFromLineShim(ic, i);
                     c2 += lineGlyphs.Length;
                     foreach (var glyph in lineGlyphs)
                     {
@@ -186,7 +186,7 @@ namespace DebugCLI
                 var output = 0;
                 foreach (var glyph in allglyphs)
                 {
-                    var result = FastRelativePixelGlyphIdentifier.IdentifyGlyph(glyph);
+                    var result = RelativePixelGlyphIdentifier.IdentifyGlyph(glyph);
                     if (output++ < outputTarget)
                         Console.Write(result[0].Character);
                 }
@@ -687,121 +687,121 @@ namespace DebugCLI
                 "RelativeDB_with_spaces.json");
         }
 
-        private static void OverlapExtractingShim()
-        {
-            const int overlapExtraThreshold = 2;
-            FastGlyphExtractor.distanceThreshold += overlapExtraThreshold;
-            RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs.RemoveAll(g => g.IsOverlap == true);
-            RelativeChatParser.Database.GlyphDatabase.Instance.Init();
-            const string overlapDir = "overlaps";
-            if (Directory.Exists(overlapDir))
-            {
-                Directory.Delete(overlapDir, true);
-                Thread.Sleep(1000);
-            }
-            Directory.CreateDirectory(overlapDir);
+        //private static void OverlapExtractingShim()
+        //{
+        //    const int overlapExtraThreshold = 2;
+        //    GlyphExtractor.distanceThreshold += overlapExtraThreshold;
+        //    RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs.RemoveAll(g => g.IsOverlap == true);
+        //    RelativeChatParser.Database.GlyphDatabase.Instance.Init();
+        //    const string overlapDir = "overlaps";
+        //    if (Directory.Exists(overlapDir))
+        //    {
+        //        Directory.Delete(overlapDir, true);
+        //        Thread.Sleep(1000);
+        //    }
+        //    Directory.CreateDirectory(overlapDir);
 
-            var overlapCount = 0;
-            var overlappingGlyphs = new List<FuzzyGlyph>();
-            Console.WriteLine("Looking for overlaps");
-            foreach (var item in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps").Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct())
-            {
-                Console.WriteLine($"={item}=");
-                var text = new FileInfo(item + ".txt");
-                var image = new FileInfo(item + ".png");
-                if (!text.Exists || !image.Exists)
-                {
-                    Console.WriteLine($"Missing text {text.Exists}. Missing image {image.Exists}.");
-                    throw new Exception("File missing");
-                }
+        //    var overlapCount = 0;
+        //    var overlappingGlyphs = new List<FuzzyGlyph>();
+        //    Console.WriteLine("Looking for overlaps");
+        //    foreach (var item in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps").Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct())
+        //    {
+        //        Console.WriteLine($"={item}=");
+        //        var text = new FileInfo(item + ".txt");
+        //        var image = new FileInfo(item + ".png");
+        //        if (!text.Exists || !image.Exists)
+        //        {
+        //            Console.WriteLine($"Missing text {text.Exists}. Missing image {image.Exists}.");
+        //            throw new Exception("File missing");
+        //        }
 
-                var overlaps = OverlapExtractor.GetOverlapingGlyphs(text.FullName, image.FullName);
-                var expectedLines = File.ReadAllLines(text.FullName);
-                var charI = 0;
-                using (var b = new Bitmap(image.FullName))
-                {
-                    foreach (var overlap in overlaps)
-                    {
-                        var str = overlap.IdentifiedGlyphs.Aggregate("", (acc, glyph) => acc + glyph.Character);
-                        ExtractedGlyph extracted = overlap.Extracted;
-                        Console.WriteLine($"Saving overlap {str}/{overlap.ExpectedCharacters} from {extracted.Left},{extracted.Top} {extracted.Width}x{extracted.Height}.");
-                        using (var output = new Bitmap(extracted.Width, FastLineScanner.Lineheight))
-                        {
-                            for (int x = 0; x < output.Width; x++)
-                            {
-                                for (int y = 0; y < output.Height; y++)
-                                {
-                                    var pixel = extracted.RelativePixelLocations.FirstOrDefault(p => p.X == x && p.Y + extracted.PixelsFromTopOfLine == y);
-                                    bool emptyValid = extracted.RelativeEmptyLocations.Any(p => p.X == x && p.Y + extracted.PixelsFromTopOfLine == y);
+        //        var overlaps = OverlapExtractor.GetOverlapingGlyphs(text.FullName, image.FullName);
+        //        var expectedLines = File.ReadAllLines(text.FullName);
+        //        var charI = 0;
+        //        using (var b = new Bitmap(image.FullName))
+        //        {
+        //            foreach (var overlap in overlaps)
+        //            {
+        //                var str = overlap.IdentifiedGlyphs.Aggregate("", (acc, glyph) => acc + glyph.Character);
+        //                ExtractedGlyph extracted = overlap.Extracted;
+        //                Console.WriteLine($"Saving overlap {str}/{overlap.ExpectedCharacters} from {extracted.Left},{extracted.Top} {extracted.Width}x{extracted.Height}.");
+        //                using (var output = new Bitmap(extracted.Width, FastLineScanner.Lineheight))
+        //                {
+        //                    for (int x = 0; x < output.Width; x++)
+        //                    {
+        //                        for (int y = 0; y < output.Height; y++)
+        //                        {
+        //                            var pixel = extracted.RelativePixelLocations.FirstOrDefault(p => p.X == x && p.Y + extracted.PixelsFromTopOfLine == y);
+        //                            bool emptyValid = extracted.RelativeEmptyLocations.Any(p => p.X == x && p.Y + extracted.PixelsFromTopOfLine == y);
 
-                                    if (pixel != null)
-                                    {
-                                        var v = (int)(pixel.Z * byte.MaxValue);
-                                        if (emptyValid)
-                                        {
-                                            var c = Color.FromArgb(0, 0, v);
-                                            output.SetPixel(x, y, c);
-                                        }
-                                        else
-                                        {
-                                            var c = Color.FromArgb(v, v, v);
-                                            output.SetPixel(x, y, c);
-                                        }
-                                    }
-                                    else if (emptyValid)
-                                    {
-                                        output.SetPixel(x, y, Color.Black);
-                                    }
-                                    else
-                                        output.SetPixel(x, y, Color.Magenta);
-                                }
-                            }
-                            output.Save(Path.Combine(overlapDir, (overlapCount++) + ".png"));
-                            //output.Save(Path.Combine(overlapDir, "current.png"));
-                            //Console.WriteLine("Just saved what is hopefully " + overlap.ExpectedCharacters);
-                        }
+        //                            if (pixel != null)
+        //                            {
+        //                                var v = (int)(pixel.Z * byte.MaxValue);
+        //                                if (emptyValid)
+        //                                {
+        //                                    var c = Color.FromArgb(0, 0, v);
+        //                                    output.SetPixel(x, y, c);
+        //                                }
+        //                                else
+        //                                {
+        //                                    var c = Color.FromArgb(v, v, v);
+        //                                    output.SetPixel(x, y, c);
+        //                                }
+        //                            }
+        //                            else if (emptyValid)
+        //                            {
+        //                                output.SetPixel(x, y, Color.Black);
+        //                            }
+        //                            else
+        //                                output.SetPixel(x, y, Color.Magenta);
+        //                        }
+        //                    }
+        //                    output.Save(Path.Combine(overlapDir, (overlapCount++) + ".png"));
+        //                    //output.Save(Path.Combine(overlapDir, "current.png"));
+        //                    //Console.WriteLine("Just saved what is hopefully " + overlap.ExpectedCharacters);
+        //                }
 
-                        //Console.Write($"Consult {overlapCount - 1}.png. Is this {overlap.ExpectedCharacters}? [y/n]: ");
-                        //var input = Console.ReadLine().Trim();
-                        //if(input == "y" || input.Length == 0)
-                        //    input = overlap.ExpectedCharacters;
-                        //else
-                        //{
-                        //    Console.Write("Enter correct input: ");
-                        //    input = Console.ReadLine().Trim();
-                        //}
-                        var input = overlap.ExpectedCharacters;
-                        if (input.Length > 0)
-                        {
-                            var glyph = new FuzzyGlyph()
-                            {
-                                AspectRatio = extracted.AspectRatio,
-                                Character = input,
-                                IsOverlap = true,
-                                ReferenceGapFromLineTop = extracted.PixelsFromTopOfLine,
-                                ReferenceMaxHeight = extracted.Height + 1,
-                                ReferenceMinHeight = extracted.Height - 1,
-                                ReferenceMaxWidth = extracted.Width + 1,
-                                ReferenceMinWidth = extracted.Width - 1,
-                                RelativeEmptyLocations = extracted.RelativeEmptyLocations,
-                                RelativePixelLocations = extracted.RelativePixelLocations
-                            };
-                            overlappingGlyphs.Add(glyph);
-                        }
-                    }
-                }
-            }
+        //                //Console.Write($"Consult {overlapCount - 1}.png. Is this {overlap.ExpectedCharacters}? [y/n]: ");
+        //                //var input = Console.ReadLine().Trim();
+        //                //if(input == "y" || input.Length == 0)
+        //                //    input = overlap.ExpectedCharacters;
+        //                //else
+        //                //{
+        //                //    Console.Write("Enter correct input: ");
+        //                //    input = Console.ReadLine().Trim();
+        //                //}
+        //                var input = overlap.ExpectedCharacters;
+        //                if (input.Length > 0)
+        //                {
+        //                    var glyph = new FuzzyGlyph()
+        //                    {
+        //                        AspectRatio = extracted.AspectRatio,
+        //                        Character = input,
+        //                        IsOverlap = true,
+        //                        ReferenceGapFromLineTop = extracted.PixelsFromTopOfLine,
+        //                        ReferenceMaxHeight = extracted.Height + 1,
+        //                        ReferenceMinHeight = extracted.Height - 1,
+        //                        ReferenceMaxWidth = extracted.Width + 1,
+        //                        ReferenceMinWidth = extracted.Width - 1,
+        //                        RelativeEmptyLocations = extracted.RelativeEmptyLocations,
+        //                        RelativePixelLocations = extracted.RelativePixelLocations
+        //                    };
+        //                    overlappingGlyphs.Add(glyph);
+        //                }
+        //            }
+        //        }
+        //    }
 
-            //Combine glyphs
-            var allGlyphs = new List<FuzzyGlyph>();
-            allGlyphs.AddRange(RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs);
-            allGlyphs.AddRange(overlappingGlyphs);
-            RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs = allGlyphs;
-            RelativeChatParser.Database.GlyphDatabase.Instance.Init();
-            var json = JsonConvert.SerializeObject(RelativeChatParser.Database.GlyphDatabase.Instance);
-            File.WriteAllText("RelativeDB_with_overlaps.json", json);
-            FastGlyphExtractor.distanceThreshold -= overlapExtraThreshold;
-        }
+        //    //Combine glyphs
+        //    var allGlyphs = new List<FuzzyGlyph>();
+        //    allGlyphs.AddRange(RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs);
+        //    allGlyphs.AddRange(overlappingGlyphs);
+        //    RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs = allGlyphs;
+        //    RelativeChatParser.Database.GlyphDatabase.Instance.Init();
+        //    var json = JsonConvert.SerializeObject(RelativeChatParser.Database.GlyphDatabase.Instance);
+        //    File.WriteAllText("RelativeDB_with_overlaps.json", json);
+        //    GlyphExtractor.distanceThreshold -= overlapExtraThreshold;
+        //}
 
         private static void LineExtractorTest(Dictionary<int, int> knownCounts = null)
         {
@@ -826,11 +826,11 @@ namespace DebugCLI
                 while (offset < 2093)
                 {
                     var firstY = 0;
-                    for (int y = offset; y < offset + FastLineScanner.Lineheight; y++)
+                    for (int y = offset; y < offset + LineScanner.Lineheight; y++)
                     {
                         if (firstY > offset)
                             break;
-                        for (int x = FastLineScanner.ChatLeftX; x < 1700; x++)
+                        for (int x = LineScanner.ChatLeftX; x < 1700; x++)
                         {
                             if (ic[x, y] > 0)
                             {
@@ -840,13 +840,13 @@ namespace DebugCLI
                         }
                     }
                     Console.WriteLine("First y: " + firstY);
-                    offset = firstY + (int)(FastLineScanner.Lineheight * 1.2f);
+                    offset = firstY + (int)(LineScanner.Lineheight * 1.2f);
                     if (!lineCounts.ContainsKey(firstY))
                         lineCounts[firstY] = 0;
                     lineCounts[firstY]++;
                     if (knownCounts != null && knownCounts[firstY] < maxCount / 2)
                     {
-                        var rect = new Rectangle(4, firstY, FastLineScanner.ChatWidth, FastLineScanner.Lineheight);
+                        var rect = new Rectangle(4, firstY, LineScanner.ChatWidth, LineScanner.Lineheight);
                         using (var clone = b.Clone(rect, b.PixelFormat))
                         {
                             clone.Save(Path.Combine("debug_lines", (maxCount++) + ".png"));
@@ -890,7 +890,7 @@ namespace DebugCLI
                 //4515
                 {
                     var files = Directory.GetFiles("debug_lines");
-                    var final = new Bitmap(FastLineScanner.ChatWidth, heightTotal + files.Length * 2);
+                    var final = new Bitmap(LineScanner.ChatWidth, heightTotal + files.Length * 2);
                     var top = 0;
                     var colors = new[] { Color.Green, Color.Blue };
                     //var i = 0;
@@ -956,7 +956,7 @@ namespace DebugCLI
         {
             var ignore = RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs;
             var parser = new RelativeChatParser.RelativePixelParser(new DummyLogger(), new DummySender());
-            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps";
+            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\New Character Training";
             var allFiles = Directory.GetFiles(inputDir);
             var sw = new Stopwatch();
             sw.Start();
@@ -1059,11 +1059,11 @@ namespace DebugCLI
             Console.WriteLine($"Extracted {glyphDict.Values.SelectMany(g => g).Count()} named glyphs without error.");
 
             //var finalGlyphs = glyphDict.Select((kvp) => GlyphTrainer.CombineExtractedGlyphsByRects(kvp.Key, kvp.Value)).SelectMany(o => o);
-            var finalGlyphs = glyphDict.Select(kvp => FastGlyphTrainer.CombineExtractedGlyphs(kvp.Key.ToString()[0], kvp.Value)).ToList();
-            RelativeChatParser.Database.FastGlyphDatabase.Instance.AllGlyphs = finalGlyphs;
-            RelativeChatParser.Database.FastGlyphDatabase.Instance.AllSpaces.Clear();
-            RelativeChatParser.Database.FastGlyphDatabase.Instance.Init();
-            File.WriteAllText("FastRelativeDB.json", JsonConvert.SerializeObject(RelativeChatParser.Database.FastGlyphDatabase.Instance));
+            var finalGlyphs = glyphDict.Select(kvp => GlyphTrainer.CombineExtractedGlyphs(kvp.Key.ToString()[0], kvp.Value)).ToList();
+            RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs = finalGlyphs;
+            RelativeChatParser.Database.GlyphDatabase.Instance.AllSpaces.Clear();
+            RelativeChatParser.Database.GlyphDatabase.Instance.Init();
+            File.WriteAllText("FastRelativeDB.json", JsonConvert.SerializeObject(RelativeChatParser.Database.GlyphDatabase.Instance));
 
             Console.WriteLine("Attempt to save finalGlyphs to debug images");
             var glyphVisualizerDir = @"glyphs";
@@ -1133,7 +1133,7 @@ namespace DebugCLI
             var sw = new Stopwatch();
             sw.Start();
             var glyphs = new ExtractedGlyph[][] {
-                FastLineScanner.ExtractGlyphsFromLine(image, 13),
+                LineScanner.ExtractGlyphsFromLine(image, 13),
                 //LineScanner.ExtractGlyphsFromLine(image, 1),
                 //LineScanner.ExtractGlyphsFromLine(image, 2),
                 //LineScanner.ExtractGlyphsFromLine(image, 3),
@@ -1141,7 +1141,7 @@ namespace DebugCLI
             }.SelectMany(g => g).ToArray();
             sw.Stop();
             Console.WriteLine($"Extracted {glyphs.Length} glyphs in {sw.ElapsedMilliseconds}ms.");
-            FastLineScanner.SaveExtractedGlyphs(image, "glyphs", glyphs);
+            LineScanner.SaveExtractedGlyphs(image, "glyphs", glyphs);
             b.Dispose();
         }
 

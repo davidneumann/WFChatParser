@@ -1,10 +1,12 @@
 ﻿using Application.ChatLineExtractor;
+using RelativeChatParser.Database;
 using RelativeChatParser.Models;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using WebSocketSharp;
 
@@ -41,25 +43,30 @@ namespace RelativeChatParser.Extraction
                     break;
 
                 var chatColor = image.GetColor(nextPoint.X, nextPoint.Y);
-                var validPixels = new List<Point>();
 
-                var newValidPixels = ge.GetValidPixels(image, localBlacklist, nextPoint, lineRect);
+                var newValidCoreRect = ge.GetCorePixelsRect(image, ref localBlacklist, nextPoint, lineRect);
                 //Gotta keep scanning down for things like the dot in ! or the bits of a %
 
-                while (newValidPixels != null && newValidPixels.Count > 0)
+                while (newValidCoreRect != null && newValidCoreRect != Rectangle.Empty)
                 {
-                    validPixels.AddRange(newValidPixels);
-                    BlacklistPixels(localBlacklist, newValidPixels, lineRect);
-                    var leftmostX = validPixels.Min(p => p.X);
-                    var rightmostX = validPixels.Max(p => p.X);
-                    var bototmMost = validPixels.Where(p => p.X == leftmostX).Max(p => p.Y);
+                    //BlacklistPixels(localBlacklist, newValidPixels, lineRect);
+                    var leftmostX = newValidCoreRect.Left;
+                    var rightmostX = newValidCoreRect.Right;
+                    //var bottomMost = validPixels.Where(p => p.X == leftmostX).Max(p => p.Y);
                     nextPoint = FindNextPoint(image, lineRect, localBlacklist, leftmostX);
                     if (nextPoint.X > rightmostX || nextPoint == Point.Empty)
                         break;
-                    newValidPixels = ge.GetValidPixels(image, localBlacklist, nextPoint, lineRect);
+                    var additionalRect = ge.GetCorePixelsRect(image, ref localBlacklist, nextPoint, lineRect);
+                    if (additionalRect == Rectangle.Empty)
+                        break;
+                    var left = Math.Min(newValidCoreRect.Left, additionalRect.Left);
+                    var top = Math.Min(newValidCoreRect.Top, additionalRect.Top);
+                    var right = Math.Max(newValidCoreRect.Right, additionalRect.Right);
+                    var bottom = Math.Max(newValidCoreRect.Bottom, additionalRect.Bottom);
+                    newValidCoreRect = new Rectangle(left, top, right - left, bottom - top);
                 }
 
-                var newGlyph = ge.ExtractGlyphFromPixels(validPixels, lineRect, image);
+                var newGlyph = ge.ExtractGlyphFromCorePixels(lineRect, image, newValidCoreRect);
                 newGlyph.FirstPixelColor = chatColor;
                 results.Add(newGlyph);
 
@@ -80,6 +87,18 @@ namespace RelativeChatParser.Extraction
         }
 
         public static ExtractedGlyph[] ExtractGlyphsFromLine(ImageCache image, int lineIndex, bool abortAfterUsername = false, int startX = 0)
+        {
+            var rect = new Rectangle(ChatLeftX, LineOffsets[lineIndex], ChatWidth, Lineheight);
+            if (startX > 0)
+            {
+                var left = startX;
+                var width = ChatWidth - (startX - ChatLeftX);
+                rect = new Rectangle(left, LineOffsets[lineIndex], width, Lineheight);
+            }
+            return ExtractGlyphsFromLine(image, rect, abortAfterUsername: abortAfterUsername);
+        }
+
+        public static ExtractedGlyph[] ExtractGlyphsFromLineShim(ImageCache image, int lineIndex, bool abortAfterUsername = false, int startX = 0)
         {
             var rect = new Rectangle(ChatLeftX, LineOffsets[lineIndex], ChatWidth, Lineheight);
             if (startX > 0)
@@ -133,22 +152,13 @@ namespace RelativeChatParser.Extraction
             }
         }
 
-        private static void BlacklistGlyph(bool[,] localBlacklist, ExtractedGlyph extractedGlyph, Rectangle lineRect)
-        {
-            foreach (var p in extractedGlyph.RelativePixelLocations)
-            {
-                localBlacklist[p.X + extractedGlyph.Left - lineRect.Left,
-                               p.Y + extractedGlyph.Top - lineRect.Top] = true;
-            }
-        }
-
         private static Point FindNextPoint(ImageCache image, Rectangle globalLineRect, bool[,] localBlacklist, int startingGlobalX)
         {
             for (int globalX = startingGlobalX; globalX < globalLineRect.Right; globalX++)
             {
                 for (int globalY = globalLineRect.Top; globalY < globalLineRect.Bottom; globalY++)
                 {
-                    if (image[globalX, globalY] > 0.8 &&
+                    if (image[globalX, globalY] >= GlyphDatabase.BrightMinV &&
                         !localBlacklist[globalX - globalLineRect.Left, globalY - globalLineRect.Top])
                         return new Point(globalX, globalY);
                 }

@@ -37,7 +37,7 @@ namespace RelativeChatParser.Training
                     var expectedLines = File.ReadAllLines(textFile).Select(f => f.Replace(" ", "")).ToArray();
                     for (int i = 0; i < expectedLines.Length; i++)
                     {
-                        var glyphs = FastLineScanner.ExtractGlyphsFromLine(ic, i);
+                        var glyphs = LineScanner.ExtractGlyphsFromLine(ic, i);
                         if(expectedLines[i].Length != glyphs.Length)
                         {
                             Console.WriteLine($"Glyph count unextected on line {i}");
