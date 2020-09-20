@@ -13,7 +13,7 @@ namespace RelativeChatParser.Models
     {
         public string Character { get; set;}
         public float[,] RelativePixels { get; set;}
-        public float[,] RelativeBrights { get; set;}
+        [JsonIgnore] public float[,] RelativeBrights { get; set;}
         public bool[,] RelativeEmpties { get; set;}
         public float AspectRatio { get; set;}
         public int ReferenceMaxWidth { get; set;}
@@ -22,10 +22,10 @@ namespace RelativeChatParser.Models
         public int ReferenceMinHeight { get; set;}
         public float ReferenceGapFromLineTop { get; set;}
         public bool IsOverlap { get; set;} = false;
-        public bool[,] RelativeCombinedMask { get; set;}
+        [JsonIgnore] public bool[,] RelativeCombinedMask { get; set;}
         public int RelativePixelsCount { get; set; }
         public int RelativeEmptiesCount { get; set; }
-        public int RelativeBrightsCount { get; set; }
+        [JsonIgnore] public int RelativeBrightsCount { get; set; }
 
         public FastFuzzyGlyph()
         {

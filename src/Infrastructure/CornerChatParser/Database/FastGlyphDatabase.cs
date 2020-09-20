@@ -64,26 +64,59 @@ namespace RelativeChatParser.Database
         {
             foreach (var glyph in AllGlyphs)
             {
-                //glyph.RelativeBrights = glyph.RelativePixelLocations.Where(p =>
-                //{
-                //    return p.Z >= BrightMinV;
-                //}).ToArray();
+                //Remove any empty that does not have a neighbor
+                //Also update brights to be only where current threshold is
+                //Also setup combined mask
+                int width = glyph.RelativeEmpties.GetLength(0);
+                int height = glyph.RelativeEmpties.GetLength(1);
+                var brightCount = 0;
+                glyph.RelativeBrights = new float[width, height];
+                glyph.RelativeCombinedMask = new bool[width, height];
+                for (int x = 0; x < width; x++)
+                {
+                    for (int y = 0; y < height; y++)
+                    {
+                        //Only do empty stuff if on an actual empty
+                        if (glyph.RelativeEmpties[x, y])
+                        {
+                            var valid = false;
+                            //Left
+                            if (x > 0 && glyph.RelativeEmpties[x - 1, y])
+                                valid = true;
+                            //Right
+                            if (x + 1 < width && glyph.RelativeEmpties[x + 1, y])
+                                valid = true;
 
-                //var validEmpties = new List<Point>();
-                //foreach (var empty in glyph.RelativeEmptyLocations.ToList())
-                //{
-                //    var neighborCount = glyph.RelativeEmptyLocations.Where(p => p != empty ? p.Distance(empty, 2) <= 1 : false).Count();
-                //    if (neighborCount != 0)
-                //        validEmpties.Add(empty);
-                //}
-                //glyph.RelativeEmptyLocations = validEmpties.ToArray();
+                            //Top
+                            if (y > 0 && glyph.RelativeEmpties[x, y - 1])
+                                valid = true;
+                            //Bottom
+                            if (y + 1 < height && glyph.RelativeEmpties[x, y + 1])
+                                valid = true;
 
-                //if (glyph.Character == "l" || glyph.Character == "I")
-                //{
-                //    glyph.RelativeEmptyLocations = new System.Drawing.Point[0];
-                //}
+                            if (!valid)
+                                glyph.RelativeEmpties[x, y] = false;
+                        }
 
-                //glyph.RelativeCombinedLocations = glyph.RelativePixelLocations.Select(p => new Point(p.X, p.Y)).Union(glyph.RelativeEmptyLocations).ToArray();
+                        //Setup brights
+                        if (glyph.RelativePixels[x, y] >= BrightMinV)
+                        {
+                            glyph.RelativeBrights[x, y] = glyph.RelativePixels[x, y];
+                            brightCount++;
+                        }
+                        else
+                            glyph.RelativePixels[x, y] = 0f;
+
+                        //Add to combined mask
+                        glyph.RelativeCombinedMask[x, y] = glyph.RelativeEmpties[x, y] || glyph.RelativePixels[x, y] > 0;
+                    }
+                }
+                glyph.RelativeBrightsCount = brightCount;
+
+                if (glyph.Character == "l" || glyph.Character == "I")
+                {
+                    glyph.RelativeEmpties = new bool[width, height];
+                }
             }
 
             _cachedDescSize = AllGlyphs.Count;
