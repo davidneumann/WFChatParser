@@ -97,6 +97,7 @@ namespace RelativeChatParser.Recognition
                 extracted.Save(Path.Combine(overlapDir, $"{time}_{Guid.NewGuid()}.png"));
                 SaveRequested?.Invoke(null, EventArgs.Empty);
 
+                extracted.Save("debug_fast_extract_overlap.png");
                 throw new NotImplementedException();
                 //return ExtractOverlap(extracted);
             }
@@ -126,10 +127,10 @@ namespace RelativeChatParser.Recognition
             //    useBrights = false;
 
             ////Add a stupid hack for O Q. 
-            if (extracted.Height == 25 + 4)
+            if (extracted.Height == 25)
                 candidates = candidates.Where(g => g.Character != "Q").ToArray();
 
-            if (extracted.Width <= 4 + 4 && (candidates.Any(g => g.Character == "I" || g.Character == "|" || g.Character == "l")))
+            if (extracted.Width <= 4  && (candidates.Any(g => g.Character == "I" || g.Character == "|" || g.Character == "l")))
             {
                 var maxY = 0;
                 var minY = extracted.Height;

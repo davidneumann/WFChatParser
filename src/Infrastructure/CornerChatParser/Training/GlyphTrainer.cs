@@ -92,6 +92,14 @@ namespace RelativeChatParser.Training
                 }
             }
 
+            if (!Directory.Exists("debugTraining"))
+                Directory.CreateDirectory("debugTraining");
+            var dC = 0;
+            foreach (var glyph in glyphs)
+            {
+                glyph.Save(Path.Combine("debugTraining", $"{dC++}.png"));
+            }
+
             return new FuzzyGlyph()
             {
                 AspectRatio = (float)maxWidth / maxHeight,

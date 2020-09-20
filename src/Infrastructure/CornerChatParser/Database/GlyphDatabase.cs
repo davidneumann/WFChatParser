@@ -105,7 +105,7 @@ namespace RelativeChatParser.Database
                             brightCount++;
                         }
                         else
-                            glyph.RelativePixels[x, y] = 0f;
+                            glyph.RelativeBrights[x, y] = 0f;
 
                         //Add to combined mask
                         glyph.RelativeCombinedMask[x, y] = glyph.RelativeEmpties[x, y] || glyph.RelativePixels[x, y] > 0;

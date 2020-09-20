@@ -1032,6 +1032,9 @@ namespace DebugCLI
 
         private static void RelativeParserGlyphTrainer()
         {
+            var debug = GlyphDatabase.Instance.AllGlyphs.First(g => g.Character == "O");
+            debug.SaveVisualization("debug_glyph.png", false);
+
             var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\New Character Training\";
             var allFiles = Directory.GetFiles(inputDir);
             var inputs = allFiles.Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct();
@@ -1060,6 +1063,7 @@ namespace DebugCLI
 
             //var finalGlyphs = glyphDict.Select((kvp) => GlyphTrainer.CombineExtractedGlyphsByRects(kvp.Key, kvp.Value)).SelectMany(o => o);
             var finalGlyphs = glyphDict.Select(kvp => GlyphTrainer.CombineExtractedGlyphs(kvp.Key.ToString()[0], kvp.Value)).ToList();
+            RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs.Clear();
             RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs = finalGlyphs;
             RelativeChatParser.Database.GlyphDatabase.Instance.AllSpaces.Clear();
             RelativeChatParser.Database.GlyphDatabase.Instance.Init();

@@ -101,7 +101,7 @@ namespace RelativeChatParser.Extraction
                 }
             }
 
-            return new ExtractedGlyph()
+            var result = new ExtractedGlyph()
             {
                 PixelsFromTopOfLine = topY - lineRect.Top,
                 Left = glyphRect.Left,
@@ -121,7 +121,60 @@ namespace RelativeChatParser.Extraction
                 RelativeBrightsCount = brightsCount,
                 RelativeCombinedMask = localCombined
             };
+            TrimGlyph(result);
+            return result;
         }
+
+        private void TrimGlyph(ExtractedGlyph extracted)
+        {
+            var minX = extracted.Width;
+            var maxX = 0;
+            var minY = extracted.Height;
+            var maxY = 0;
+
+            for (int x = 0; x < extracted.Width; x++)
+            {
+                for (int y = 0; y < extracted.Height; y++)
+                {
+                    if(extracted.RelativePixels[x, y] > 0)
+                    {
+                        minX = Math.Min(minX, x);
+                        maxX = Math.Max(maxX, x);
+                        minY = Math.Min(minY, y);
+                        maxY = Math.Max(maxY, y);
+                    }
+                }
+            }
+
+            var width = maxX - minX + 1;
+            var height = maxY - minY + 1;
+            var pixels = new float[width, height];
+            var empties = new bool[width, height];
+            var brights = new float[width, height];
+            var combined = new bool[width, height];
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    pixels[x, y]  = extracted.RelativePixels [x + minX, y + minY];
+                    empties[x, y] = extracted.RelativeEmpties[x + minX, y + minY];
+                    brights[x, y] = extracted.RelativeBrights[x + minX, y + minY];
+                    combined[x, y] = extracted.RelativeCombinedMask[x + minX, y + minY];
+                }
+            }
+            extracted.Width = width;
+            extracted.Height = height;
+            extracted.RelativeBrights = brights;
+            extracted.RelativePixels = pixels;
+            extracted.RelativeEmpties = empties;
+            extracted.AspectRatio = (float)width / height;
+            extracted.Top += minY;
+            extracted.Bottom -= minY;
+            extracted.Left += minX;
+            extracted.PixelsFromTopOfLine += minY;
+            extracted.Right -= minX;
+        }
+
         private bool PointsInRange(Point point, int x2, int y2)
         {
             var xDistance = Math.Abs(point.X - x2);
