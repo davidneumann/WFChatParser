@@ -149,7 +149,7 @@ namespace DebugCLI
             using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\New Character Training\characters_0.png"))
             {
                 var ic = new ImageCache(b);
-                var glyphs = FastLineScanner.ExtractGlyphsFromLineShim(ic, 1);
+                var glyphs = FastLineScanner.ExtractGlyphsFromLineShim(ic, 0);
                 var c = 0;
                 const string outDir = "newExtractor";
                 if (!Directory.Exists(outDir))

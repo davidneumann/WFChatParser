@@ -120,13 +120,16 @@ namespace RelativeChatParser.Recognition
 
         private static bool FilterCandidates(FastExtractedGlyph extracted, ref FastFuzzyGlyph[] candidates)
         {
+            //NOTE: Currently approach adds 4 padding to top and bottom. 2 per side.
             var useBrights = true;
             //if (allowOverlaps)
             //    useBrights = false;
-            //Add a stupid hack for O Q. 
-            if (extracted.Height == 25)
+
+            ////Add a stupid hack for O Q. 
+            if (extracted.Height == 25 + 4)
                 candidates = candidates.Where(g => g.Character != "Q").ToArray();
-            if (extracted.Width <= 4 && (candidates.Any(g => g.Character == "I" || g.Character == "|" || g.Character == "l")))
+
+            if (extracted.Width <= 4 + 4 && (candidates.Any(g => g.Character == "I" || g.Character == "|" || g.Character == "l")))
             {
                 var maxY = 0;
                 var minY = extracted.Height;
