@@ -426,17 +426,16 @@ namespace RelativeChatParser.Recognition
             int height = source.GetLength(1);
             for (int x = 0; x < width; x++)
             {
-                double minDistance = MissedDistancePenalty;
                 for (int y = 0; y < height; y++)
                 {
                     //If this is a black spot ignore it with no penality
                     if(source[x, y] <= 0f)
                     {
-                        minDistance = 0;
                         continue;
                     }
 
                     //Search around the distance threshold on the target
+                    double minDistance = MissedDistancePenalty;
                     for (int x2 = Math.Max(0, x - distanceThreshold); x2 < Math.Min(width, x + distanceThreshold); x2++)
                     {
                         for (int y2 = Math.Max(0, y - distanceThreshold); y2 < Math.Min(height, y + distanceThreshold); y2++)
@@ -448,11 +447,9 @@ namespace RelativeChatParser.Recognition
                         if (minDistance == 0)
                             break;
                     }
-                    if (minDistance == 0)
-                        break;
-                }
 
-                result += minDistance;
+                    result += minDistance;
+                }
             }
             return result;
         }
