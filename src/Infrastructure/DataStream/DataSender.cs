@@ -117,7 +117,7 @@ namespace DataStream
 
             try
             {
-                await _websocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, _cancellationTokenSource.Token);
+                await _websocket.SendAsync(new ArraySegment<byte>(bytes, 0, length), WebSocketMessageType.Text, true, _cancellationTokenSource.Token);
             }
             finally
             {
