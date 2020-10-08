@@ -126,6 +126,7 @@ namespace Application.Actionables
 
             ////If not start launcher, click play until WF starts
             var start = DateTime.Now;
+            var launcherClosed = false;
             while (true)
             {
                 //Yield to other tasks after 4 minutes of waiting
@@ -145,9 +146,26 @@ namespace Application.Actionables
                 await Task.Delay(1000);
                 if (launcher.HasExited)
                 {
+                    launcherClosed = true;
                     await Task.Delay(20000);
                     break;
                 }
+            }
+            
+            //Launcher failed to close game. Kill all warframes
+            if(!launcherClosed)
+            {
+                foreach (var warframe in System.Diagnostics.Process.GetProcessesByName("Warframe.x64").ToArray())
+                {
+
+                    try
+                    {
+                        warframe.Kill();
+                    }
+                    catch
+                    { }
+                }
+                return;
             }
 
             for (int tries = 0; tries < 20; tries++)
@@ -413,7 +431,7 @@ namespace Application.Actionables
                 }
                 catch
                 {
-                    _warframeProcess.Close();
+                    _warframeProcess.Kill();
                     _warframeProcess = null;
                 }
             }
