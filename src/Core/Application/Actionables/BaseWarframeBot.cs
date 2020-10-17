@@ -26,7 +26,7 @@ namespace Application.Actionables
         protected IMouse _mouse;
         protected IDataTxRx _dataSender;
         protected Process _warframeProcess;
-        protected DateTime _lastMessage = DateTime.UtcNow.AddMinutes(10);
+        protected DateTime _lastMessage = DateTime.UtcNow;
 
         protected BaseBotState _baseState = BaseBotState.StartWarframe;
         
@@ -34,6 +34,8 @@ namespace Application.Actionables
         public bool IsRequestingControl => _requestingControl;
 
         protected int _failedPostLoginScreens;
+
+        private static Dictionary<Process, BaseWarframeBot> _claimedWarframes = new Dictionary<Process, BaseWarframeBot>(); 
 
         protected BaseWarframeBot(CancellationToken cancellationToken,
             WarframeClientInformation warframeCredentials,
@@ -59,6 +61,7 @@ namespace Application.Actionables
 
         protected Task BaseTakeControl()
         {
+            KillDeadWarframes();
             switch (_baseState)
             {
                 case BaseBotState.StartWarframe:
@@ -83,26 +86,40 @@ namespace Application.Actionables
             return Task.CompletedTask; 
         }
 
+        protected void KillDeadWarframes()
+        {
+            var deadWarframes = _claimedWarframes.Where(p => p.Key.HasExited).ToList();
+            foreach (var kvp in deadWarframes)
+            {
+                try
+                {
+                    kvp.Key.Kill();
+                    kvp.Value.CloseWarframe();
+                }
+                catch { }
+            }
+
+            var allIds = System.Diagnostics.Process.GetProcessesByName("Warframe.x64").Select(p => p.Id);
+            var unclaimedIds = allIds.Where(id => !_claimedWarframes.Keys.Any(p => p.Id == id)).ToList();
+            foreach (var id in unclaimedIds)
+            {
+                try
+                {
+                    var p = Process.GetProcessById(id);
+                    p.Kill();
+                }
+                catch
+                {
+
+                }
+            }
+        }
+
         private async Task StartWarframe()
         {
+            KillDeadWarframes();
+
             _requestingControl = false;
-            var existingWarframes = System.Diagnostics.Process.GetProcessesByName("Warframe.x64").ToArray();
-            //foreach (var existing in existingWarframes)
-            //{
-            //    try
-            //    {
-            //        if (existing.StartInfo.UserName == _warframeCredentials.StartInfo.UserName)
-            //            existing.Kill();
-            //    }
-            //    catch
-            //    {
-            //        try
-            //        {
-            //            existing.Kill();
-            //        }
-            //        catch { }
-            //    }
-            //}
 
             var launcher = new System.Diagnostics.Process()
             {
@@ -175,9 +192,10 @@ namespace Application.Actionables
 
                 foreach (var warframe in System.Diagnostics.Process.GetProcessesByName("Warframe.x64").ToArray())
                 {
-                    if (!existingWarframes.Any(eWF => eWF.MainWindowHandle == warframe.MainWindowHandle))
+                    if (!_claimedWarframes.Keys.Any(eWF => eWF.Id == warframe.Id))
                     {
                         _warframeProcess = warframe;
+                        _claimedWarframes.Add(warframe, this);
                     }
                 }
 

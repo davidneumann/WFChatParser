@@ -18,6 +18,12 @@ namespace Application.Logger
         public Logger(IDataTxRx dataSender, CancellationToken c)
         {
             _dataSender = dataSender;
+            var existingLog = new FileInfo("log.txt");
+            if (existingLog.Exists)
+            {
+                File.Delete("log.old.txt");
+                existingLog.MoveTo("log.old.txt");
+            }
             _streamWriter = new System.IO.StreamWriter("log.txt", false);
             _token = c;
             var t = new Thread(new ThreadStart(DataSenderMessageSender));

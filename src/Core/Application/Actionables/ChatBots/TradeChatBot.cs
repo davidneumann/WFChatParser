@@ -83,6 +83,7 @@ namespace Application.Actionables.ChatBots
                 _currentState = TradeBotState.WaitingForBaseBot;
                 _baseState = BaseBotState.StartWarframe;
             }
+            KillDeadWarframes();
 
             _requestingControl = false;
 

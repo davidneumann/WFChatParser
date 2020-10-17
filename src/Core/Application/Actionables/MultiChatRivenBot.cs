@@ -188,7 +188,10 @@ namespace Application.Actionables
                 var possibleBadState = true;
                 foreach (var bot in _bots)
                 {
-                    if (bot != null && bot is TradeChatBot && ((TradeChatBot)bot).LastMessage != null && DateTime.UtcNow.Subtract(((TradeChatBot)bot).LastMessage).TotalMinutes < 15)
+                    if (bot == null || !(bot is TradeChatBot))
+                        continue;
+
+                    if (((TradeChatBot)bot).LastMessage == null || (((TradeChatBot)bot).LastMessage != null && DateTime.UtcNow.Subtract(((TradeChatBot)bot).LastMessage).TotalMinutes < 15))
                     {
                         possibleBadState = false;
                         break;
