@@ -23,7 +23,7 @@ using System.Threading.Tasks;
 
 namespace Application.Actionables.ProfileBots
 {
-    public partial class ProfileBot : BaseWarframeBot, IActionable
+    public partial class ProfileBot : BaseBot, IActionable
     {
         private const float minV = 0.43f;
         private ConcurrentQueue<ProfileRequest> _profileRequestQueue = new ConcurrentQueue<ProfileRequest>();
@@ -77,6 +77,11 @@ namespace Application.Actionables.ProfileBots
 
         public override Task TakeControl()
         {
+            /* 
+             * todo: Add support for username lookup failed
+             * JOIN FORUMUSER UPDATED
+             * it outputs if json data from the FORUMUSER UPDATED event has forumid set to 0
+            */
             _logger.Log(_warframeCredentials.StartInfo.UserName + ":" + _warframeCredentials.Region + " taking control");
             _logger.Log($"Profile queue size: {_profileRequestQueue.Count}.");
 

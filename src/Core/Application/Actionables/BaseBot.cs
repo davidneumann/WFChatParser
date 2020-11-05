@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace Application.Actionables
 {
-    public abstract class BaseWarframeBot : IActionable
+    public abstract class BaseBot : IActionable
     {
         protected IKeyboard _keyboard;
         protected IScreenStateHandler _screenStateHandler;
@@ -29,15 +29,15 @@ namespace Application.Actionables
         protected DateTime _lastMessage = DateTime.UtcNow;
 
         protected BaseBotState _baseState = BaseBotState.StartWarframe;
-        
+
         protected bool _requestingControl = true;
         public bool IsRequestingControl => _requestingControl;
 
         protected int _failedPostLoginScreens;
 
-        private static Dictionary<Process, BaseWarframeBot> _claimedWarframes = new Dictionary<Process, BaseWarframeBot>(); 
+        private static Dictionary<Process, BaseBot> _claimedWarframes = new Dictionary<Process, BaseBot>();
 
-        protected BaseWarframeBot(CancellationToken cancellationToken,
+        protected BaseBot(CancellationToken cancellationToken,
             WarframeClientInformation warframeCredentials,
             IMouse mouse,
             IKeyboard keyboard,
@@ -83,7 +83,7 @@ namespace Application.Actionables
                     break;
             }
 
-            return Task.CompletedTask; 
+            return Task.CompletedTask;
         }
 
         protected void KillDeadWarframes()
@@ -154,13 +154,24 @@ namespace Application.Actionables
                     return;
                 }
 
-                _screenStateHandler.GiveWindowFocus(launcher.MainWindowHandle);
-                var launcherRect = _screenStateHandler.GetWindowRectangle(launcher.MainWindowHandle);
-                _mouse.Click(launcherRect.Left + (int)((launcherRect.Right - launcherRect.Left) * 0.7339181286549708f),
-                    launcherRect.Top + (int)((launcherRect.Bottom - launcherRect.Top) * 0.9252336448598131f));
-                await Task.Delay(17);
-                _keyboard.SendSpace();
-                await Task.Delay(1000);
+                var didTryMain = false;
+                for (int i = 0; i < 2; i++)
+                {
+                    var handle = launcher.MainWindowHandle;
+                    if (didTryMain)
+                        handle = launcher.Handle;
+                    didTryMain = true;
+                    _screenStateHandler.GiveWindowFocus(launcher.MainWindowHandle);
+                    var launcherRect = _screenStateHandler.GetWindowRectangle(launcher.MainWindowHandle);
+                    _logger.Log($"Found launcher {handle.ToString()} at {launcherRect.Left},{launcherRect.Top} {launcherRect.Right - launcherRect.Left}x{launcherRect.Bottom - launcherRect.Top}");
+                    _mouse.Click(launcherRect.Left + (int)((launcherRect.Right - launcherRect.Left) * 0.7339181286549708f),
+                        launcherRect.Top + (int)((launcherRect.Bottom - launcherRect.Top) * 0.9252336448598131f));
+                    await Task.Delay(17);
+                    _keyboard.SendSpace();
+                    await Task.Delay(1000);
+                    if (launcher.HasExited)
+                        break;
+                }
                 if (launcher.HasExited)
                 {
                     launcherClosed = true;
@@ -168,9 +179,9 @@ namespace Application.Actionables
                     break;
                 }
             }
-            
+
             //Launcher failed to close game. Kill all warframes
-            if(!launcherClosed)
+            if (!launcherClosed)
             {
                 foreach (var warframe in System.Diagnostics.Process.GetProcessesByName("Warframe.x64").ToArray())
                 {
@@ -454,7 +465,7 @@ namespace Application.Actionables
                 }
             }
         }
-        
+
         protected string SaveScreenToDebug(Bitmap screen)
         {
             if (!System.IO.Directory.Exists("debug"))

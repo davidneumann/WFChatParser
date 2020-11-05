@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace Application.Actionables.ChatWatcher
 {
-    internal class ChatWatcher : BaseWarframeBot
+    internal class ChatWatcher : BaseBot
     {
         private IChatParser _chatParser;
         

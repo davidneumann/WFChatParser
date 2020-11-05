@@ -20,7 +20,7 @@ using static Application.ChatRivenBot;
 
 namespace Application.Actionables.ChatBots
 {
-    public partial class TradeChatBot : BaseWarframeBot, IActionable
+    public partial class TradeChatBot : BaseBot, IActionable
     {
         private ConcurrentQueue<RivenParseTaskWorkItem> _workQueue;
         private IRivenParser _rivenCropper;
