@@ -625,6 +625,7 @@ namespace Application.Actionables.ChatBots
                 else
                 {
                     _failedPostLoginScreens = 0;
+                    _logger.Log("Setting failed past logins to 0");
                 }
 
                 //Check if we have some weird OK prompt (hotfixes, etc)
@@ -769,6 +770,7 @@ namespace Application.Actionables.ChatBots
                 if (state == Enums.ScreenState.MainMenu)
                 {
                     _failedPostLoginScreens = 0;
+                    _logger.Log("Setting failed past logins to 0");
 
                     //Click profile
                     if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))

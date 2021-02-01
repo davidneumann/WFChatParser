@@ -5,6 +5,7 @@ using Application.Actionables.ChatBots;
 using Application.Data;
 using Application.Enums;
 using Application.Interfaces;
+using Application.Logger;
 using Application.LogParser;
 using DataStream;
 using ImageOCR;
@@ -31,6 +32,7 @@ namespace ChatLoggerCLI
         private static List<IDisposable> _disposables = new List<IDisposable>();
         private static CancellationTokenSource _cancellationSource = new CancellationTokenSource();
         private static ClientWebsocketDataSender _dataSender;
+        private static Logger _logger;
         private static bool _cleanExitRequested = false;
 
         [SecurityPermission(SecurityAction.Demand, Flags = SecurityPermissionFlag.ControlAppDomain)]
@@ -64,8 +66,8 @@ namespace ChatLoggerCLI
                 config["DataSender:LogMessagePrefix"],
                 config["DataSender:LogLineMessagePrefix"]);
 
-            var logger = new Application.Logger.Logger(_dataSender, _cancellationSource.Token);
-            _dataSender._logger = logger;
+            _logger = new Application.Logger.Logger(_dataSender, _cancellationSource.Token);
+            _dataSender._logger = _logger;
 
             _ = Task.Run(_dataSender.ConnectAsync);
 
@@ -108,7 +110,7 @@ namespace ChatLoggerCLI
 
                 _dataSender.RequestToKill += (s, e) =>
                 {
-                    logger.Log("Request to kill received");
+                    _logger.Log("Request to kill received");
                     Console_CancelKeyPress(null, null);
                 };
                 _dataSender.RequestSaveAll += (s, e) =>
@@ -139,9 +141,9 @@ namespace ChatLoggerCLI
                 redtextthing.OnRedText += Redtextthing_OnRedText;
                 logParser.OnNewMessage += LogParser_OnNewMessage;
 
-                var gc = new GameCapture(logger);
+                var gc = new GameCapture(_logger);
                 var obs = GetObsSettings(config["Credentials:Key"], config["Credentials:Salt"]);
-                logger.Log($"Starting bot {DateTime.Now}. Expected " + warframeCredentials.Length + " clients");
+                _logger.Log($"Starting bot {DateTime.Now}. Expected " + warframeCredentials.Length + " clients");
                 var bot = new MultiChatRivenBot(warframeCredentials, new MouseHelper(),
                     new KeyboardHelper(),
                     new ScreenStateHandler(),
@@ -149,12 +151,12 @@ namespace ChatLoggerCLI
                     new RivenCleaner(),
                     _dataSender,
                     gc,
-                    logger,
-                    new RelativePixelParserFactory(logger, _dataSender),
+                    _logger,
+                    new RelativePixelParserFactory(_logger, _dataSender),
                     new LineParserFactory());
 
                 var drive = DriveInfo.GetDrives().First(d => d.Name == Path.GetPathRoot(Environment.CurrentDirectory));
-                logger.Log("Starting bot on drive: " + Path.GetPathRoot(Environment.CurrentDirectory) + ". Available space: " + drive.AvailableFreeSpace + " bytes");
+                _logger.Log("Starting bot on drive: " + Path.GetPathRoot(Environment.CurrentDirectory) + ". Available space: " + drive.AvailableFreeSpace + " bytes");
 
                 Task t = bot.AsyncRun(_cancellationSource.Token);
                 var lastDate = DateTime.Today.Subtract(TimeSpan.FromDays(1));
@@ -163,20 +165,20 @@ namespace ChatLoggerCLI
                     //Delete old files
                     if (lastDate != DateTime.Today)
                     {
-                        logger.Log("Deleting old files");
+                        _logger.Log("Deleting old files");
                         if (Directory.Exists("riven_images"))
                         {
                             foreach (var folder in Directory.GetDirectories("riven_images"))
                             {
                                 var folderInfo = new DirectoryInfo(folder);
-                                logger.Log("Looking at: " + folderInfo.Name);
+                                _logger.Log("Looking at: " + folderInfo.Name);
                                 var splits = folderInfo.Name.Split('_');
                                 try
                                 {
                                     var time = new DateTime(int.Parse(splits[0]), int.Parse(splits[1]), int.Parse(splits[2]));
                                     if (DateTime.Today.Subtract(time).TotalDays > 3)
                                     {
-                                        logger.Log("Deleting: " + folderInfo.Name);
+                                        _logger.Log("Deleting: " + folderInfo.Name);
                                         Directory.Delete(folderInfo.FullName, true);
                                     }
                                 }
@@ -184,7 +186,7 @@ namespace ChatLoggerCLI
                             }
                         }
                         else
-                            logger.Log("Failed to find riven_images folder for deletion");
+                            _logger.Log("Failed to find riven_images folder for deletion");
                         lastDate = DateTime.Today;
                     }
 
@@ -203,7 +205,7 @@ namespace ChatLoggerCLI
                     catch
                     {
                         _cancellationSource.Cancel();
-                        logger.Log("Bad state detected: IsFaulted: " + t.IsFaulted + " Exception: " + t.Exception);
+                        _logger.Log("Bad state detected: IsFaulted: " + t.IsFaulted + " Exception: " + t.Exception);
                         _dataSender.AsyncSendDebugMessage("Bad state detected: IsFaulted: " + t.IsFaulted + " Exception: " + t.Exception).Wait();
                     }
                 }
@@ -319,6 +321,7 @@ namespace ChatLoggerCLI
         private static void LogParser_OnNewMessage(LogMessage msg)
         {
             _dataSender.AsyncSendLogLine(msg).Wait();
+            _logger.Log($"{msg.Category} {msg.Level} {msg.Message}");
         }
 
         private static void Redtextthing_OnRedText(RedTextMessage msg)

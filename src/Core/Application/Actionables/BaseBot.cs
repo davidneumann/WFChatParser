@@ -133,6 +133,7 @@ namespace Application.Actionables
             {
                 System.Diagnostics.Process.GetProcesses().Where(p => p.ProcessName.ToLower().Contains("launcher")).ToList().ForEach(p =>
                 {
+                    _logger.Log("Found an existing launcher " + p.Id);
                     try { p.Kill(); } catch { }
                 });
 
@@ -170,11 +171,15 @@ namespace Application.Actionables
                     _keyboard.SendSpace();
                     await Task.Delay(1000);
                     if (launcher.HasExited)
+                    {
+                        _logger.Log("Launcher has exited");
                         break;
+                    }
                 }
                 if (launcher.HasExited)
                 {
                     launcherClosed = true;
+                    _logger.Log("Waiting 20 seconds as launcher has exited");
                     await Task.Delay(20000);
                     break;
                 }
@@ -183,6 +188,7 @@ namespace Application.Actionables
             //Launcher failed to close game. Kill all warframes
             if (!launcherClosed)
             {
+                _logger.Log("Launcher failed to operate correctly. Killing all warframes");
                 foreach (var warframe in System.Diagnostics.Process.GetProcessesByName("Warframe.x64").ToArray())
                 {
 
@@ -198,8 +204,11 @@ namespace Application.Actionables
 
             for (int tries = 0; tries < 20; tries++)
             {
+                _logger.Log("Trying to find our warframe instance");
                 if (_warframeProcess != null || (_warframeProcess != null && !_warframeProcess.HasExited))
+                {
                     break;
+                }
 
                 foreach (var warframe in System.Diagnostics.Process.GetProcessesByName("Warframe.x64").ToArray())
                 {
@@ -207,6 +216,8 @@ namespace Application.Actionables
                     {
                         _warframeProcess = warframe;
                         _claimedWarframes.Add(warframe, this);
+                        _logger.Log("New launcher instance found: " + warframe.Id);
+                        break;
                     }
                 }
 
