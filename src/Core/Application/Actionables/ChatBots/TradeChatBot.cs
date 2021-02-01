@@ -321,8 +321,9 @@ namespace Application.Actionables.ChatBots
             for (int i = 0; i < 27; i++)
             {
                 _mouse.ScrollDown();
-                await Task.Delay(17);
+                await Task.Delay(33);
             }
+            await Task.Delay(33);
             for (int i = 0; i < 1; i++)
             {
                 _mouse.ScrollUp();//Pause chat
