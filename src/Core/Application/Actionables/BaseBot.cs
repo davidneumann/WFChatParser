@@ -137,6 +137,7 @@ namespace Application.Actionables
                     try { p.Kill(); } catch { }
                 });
 
+                _logger.Log("Trying to start again as there was already a launcher");
                 _baseState = BaseBotState.StartWarframe;
                 _requestingControl = true;
                 return;
@@ -150,6 +151,7 @@ namespace Application.Actionables
                 //Yield to other tasks after 4 minutes of waiting
                 if (DateTime.Now.Subtract(start).TotalMinutes > 4f)
                 {
+                    _logger.Log("Yielding after 4 minutes of waiting");
                     _baseState = BaseBotState.StartWarframe;
                     _requestingControl = true;
                     return;
@@ -159,8 +161,13 @@ namespace Application.Actionables
                 for (int i = 0; i < 2; i++)
                 {
                     var handle = launcher.MainWindowHandle;
-                    if (didTryMain)
+                    if (!didTryMain)
+                        _logger.Log("Trying to interact with main window handle");
+                    else
+                    {
+                        _logger.Log("Trying to interact with other handle");
                         handle = launcher.Handle;
+                    }
                     didTryMain = true;
                     _screenStateHandler.GiveWindowFocus(launcher.MainWindowHandle);
                     var launcherRect = _screenStateHandler.GetWindowRectangle(launcher.MainWindowHandle);
@@ -329,6 +336,7 @@ namespace Application.Actionables
             using (var screen = _gameCapture.GetFullImage())
             {
                 ScreenState state = _screenStateHandler.GetScreenState(screen);
+                _logger.Log("New screen state: " + state.ToString());
                 if (state == ScreenState.LoginScreen)
                 {
                     _logger.Log("Login screen still detected. Restarting warframe.");
