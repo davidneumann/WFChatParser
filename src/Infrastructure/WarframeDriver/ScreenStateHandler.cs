@@ -21,10 +21,10 @@ namespace WarframeDriver
                 return ScreenState.LoadingScreen;
             if (IsLoginScreen(bitmap))
                 return ScreenState.LoginScreen;
-            if (IsDailyRewardScreenItem(bitmap))
-                return ScreenState.DailyRewardScreenItem;
             if (IsDailyRewardScreenPlat(bitmap))
                 return ScreenState.DailyRewardScreenPlat;
+            if (IsDailyRewardScreenItem(bitmap))
+                return ScreenState.DailyRewardScreenItem;
             if (IsWarframeControl(bitmap))
                 return ScreenState.ControllingWarframe;
             if (IsMainMenu(bitmap))
@@ -221,12 +221,16 @@ namespace WarframeDriver
             //Console.WriteLine("Checked login item thing in: " + sw.ElapsedMilliseconds + "ms.");
             //return averageHue >= 40 && averageHue <= 50;
 
-            var lightPixels = new Point[] { new Point(2711, 1873), new Point(2764, 1878), new Point(2790, 1873), new Point(2886, 1883), new Point(3027, 1886),
-                                            new Point(3160, 1897), new Point(3123, 1888), new Point(3124, 1873), new Point(3058, 1896), new Point(2790, 1897) };
-            var darkPixels = new Point[] { new Point(2691, 1885), new Point(2809, 1889), new Point(2917, 1878), new Point(3106, 1891), new Point(3201, 1884),
-                                           new Point(3030, 1878), new Point(2926, 1884), new Point(2820, 1876), new Point(2752, 1892), new Point(2716, 1877) };
-            return lightPixels.Select(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value).Average() > 0.65f
-                    && darkPixels.Select(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value).Average() < 0.4f;
+            //var lightPixels = new Point[] { new Point(2711, 1873), new Point(2764, 1878), new Point(2790, 1873), new Point(2886, 1883), new Point(3027, 1886),
+            //                                new Point(3160, 1897), new Point(3123, 1888), new Point(3124, 1873), new Point(3058, 1896), new Point(2790, 1897) };
+            //var darkPixels = new Point[] { new Point(2691, 1885), new Point(2809, 1889), new Point(2917, 1878), new Point(3106, 1891), new Point(3201, 1884),
+            //                               new Point(3030, 1878), new Point(2926, 1884), new Point(2820, 1876), new Point(2752, 1892), new Point(2716, 1877) };
+
+            var lightPixels = new Point[] { new Point(2604, 335), new Point(2604, 390), new Point(2607, 393), new Point(2614, 393), new Point(2615, 335), new Point(2618, 338), new Point(2618, 389), new Point(2664, 354), new Point(2665, 347), new Point(2666, 340), new Point(2667, 351), new Point(2668, 344), new Point(2668, 355), new Point(2758, 390), new Point(2761, 393), new Point(2815, 357), new Point(2816, 361), new Point(2816, 366), new Point(2921, 335), new Point(2924, 338), new Point(2927, 335), new Point(2978, 363), new Point(2978, 368), new Point(2982, 366), new Point(2987, 364), new Point(2990, 361), new Point(3076, 335), new Point(3076, 361), new Point(3076, 366), new Point(3076, 390), new Point(3079, 393), new Point(3085, 335), new Point(3085, 393), new Point(3088, 338), new Point(3088, 390), new Point(3131, 391), new Point(3145, 391), new Point(3192, 335), new Point(3197, 335), new Point(3247, 335), new Point(3247, 360), new Point(3247, 365), new Point(3247, 390), new Point(3250, 393) };
+
+            var darkPixels = new Point[] { new Point(2591, 325), new Point(2591, 330), new Point(2591, 335), new Point(2591, 340), new Point(2591, 345), new Point(2591, 350), new Point(2591, 355), new Point(2591, 360), new Point(2591, 365), new Point(2591, 370), new Point(2591, 375), new Point(2591, 380), new Point(2591, 385), new Point(2591, 390), new Point(2591, 395), new Point(2591, 400), new Point(2591, 405), new Point(2595, 326), new Point(2595, 331), new Point(2595, 336), new Point(2595, 341), new Point(2595, 346), new Point(2595, 351), new Point(2595, 356), new Point(2595, 361), new Point(2595, 366), new Point(2595, 371), new Point(2595, 376), new Point(2595, 381), new Point(2595, 386), new Point(2595, 391), new Point(2595, 396), new Point(2595, 401), new Point(2595, 406), new Point(2599, 325), new Point(2599, 402), new Point(2599, 407), new Point(2603, 326), new Point(2603, 403), new Point(2604, 407), new Point(2607, 325), new Point(2607, 402), new Point(2608, 406), new Point(2611, 326) };
+            return lightPixels.Select(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value).Average() > 0.5f
+                    && darkPixels.Select(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value).Average() < 0.5f;
         }
 
         private bool IsLoginScreen(Bitmap bitmap)

@@ -122,7 +122,94 @@ namespace DebugCLI
 
             //OverlappGrouperShim();
 
-            ProfileShim();
+            //ProfileShim();
+
+            PostLoginFix();
+        }
+
+        private class RewardInfo
+        {
+            public List<Point> BrightPixels = new List<Point>();
+            public List<Point> DarkPixels = new List<Point>();
+        }
+
+        private static double Distance(Point p1, Point p2)
+        {
+            return Math.Round(Math.Sqrt(Math.Pow((p2.X - p1.X), 2) + Math.Pow((p2.Y - p1.Y), 2)), 1);
+        }
+
+        private static void PostLoginFix()
+        {
+            //var infos = new List<RewardInfo>();
+            //foreach (var b in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\bad_rewards\").Select(f => new Bitmap(f)))
+            //{
+            //    var info = new RewardInfo();
+            //    //2591,325 686x83
+            //    for (int x = 2591; x < 2591+686; x++)
+            //    {
+            //        for (int y = 325; y < 325 + 83; y++)
+            //        {
+            //            if (b.GetPixel(x, y).ToHsv().Value >= 0.5f)
+            //                info.BrightPixels.Add(new Point(x, y));
+            //            else
+            //                info.DarkPixels.Add(new Point(x, y));
+            //        }
+            //    }
+            //    infos.Add(info);
+            //}
+
+            //var bestBrights = new List<Point>();
+            //var bestDarks = new List<Point>();
+            //var baseI = infos.First();
+            //var targetI = infos.Last();
+            //foreach (var bright in baseI.BrightPixels)
+            //{
+            //    //MAke sure the other image contains this bright
+            //    if(targetI.BrightPixels.Contains(bright))
+            //    {
+            //        //Verify that the distance is at least 4 from any dark
+            //        var farDarks = baseI.DarkPixels.All(p => Distance(p, bright) > 4) && targetI.DarkPixels.All(p => Distance(p, bright) > 4);
+            //        //Verify that the distance to any existing best bright is greater than 4
+            //        var farExisting = bestBrights.All(p => Distance(p, bright) > 4);
+            //        if (farDarks && farExisting)
+            //            bestBrights.Add(bright);
+            //    }
+            //}
+            //foreach (var dark in baseI.DarkPixels)
+            //{
+            //    //MAke sure the other image contains this dark
+            //    if (targetI.DarkPixels.Contains(dark))
+            //    {
+            //        //Verify that the distance is at least 4 from any bright
+            //        var farBrights = baseI.BrightPixels.All(p => Distance(p, dark) > 4) && targetI.BrightPixels.All(p => Distance(p, dark) > 4);
+            //        //Verify that the distance to any existing best bright is greater than 4
+            //        var farExisting = bestDarks.All(p => Distance(p, dark) > 4);
+            //        if (farBrights && farExisting)
+            //            bestDarks.Add(dark);
+            //    }
+            //}
+
+            //Console.Write("var lightPixels = new Point[] { ");
+            //foreach (var bright in bestBrights)
+            //{
+            //    Console.Write($"new Point({bright.X}, {bright.Y}), ");
+            //}
+            //Console.Write("};\n\n");
+
+
+            //Console.Write("var darkPixels = new Point[] { ");
+            //foreach (var dark in bestDarks.Take(bestBrights.Count))
+            //{
+            //    Console.Write($"new Point({dark.X}, {dark.Y}), ");
+            //}
+            //Console.Write("};");
+
+            var path = @"C:\Users\david\OneDrive\Documents\WFChatParser\132566513965260877.png";
+            using (var b = new Bitmap(path))
+            {
+                var ssh = new ScreenStateHandler();
+                var debug = ssh.GetScreenState(b);
+            }
         }
 
         private static void ProfileShim()
