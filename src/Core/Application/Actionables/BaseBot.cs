@@ -337,6 +337,8 @@ namespace Application.Actionables
             {
                 ScreenState state = _screenStateHandler.GetScreenState(screen);
                 _logger.Log("New screen state: " + state.ToString());
+                var path = SaveScreenToDebug(screen);
+                await _dataSender.AsyncSendDebugMessage("New post login screen: " + path);
                 if (state == ScreenState.LoginScreen)
                 {
                     _logger.Log("Login screen still detected. Restarting warframe.");
@@ -352,9 +354,11 @@ namespace Application.Actionables
                 }
                 else if (_failedPostLoginScreens < 3)
                 {
+                    _logger.Log("Increasing failed login attempt counter");
                     _failedPostLoginScreens++;
+                    _logger.Log($"Failed logins {_failedPostLoginScreens}");
                 }
-                else if (_failedPostLoginScreens == 3)
+                else if (_failedPostLoginScreens >= 3)
                 {
                     //We are stuck on some unkown reward screen or new feature screen.
                     //Time to click wildly
