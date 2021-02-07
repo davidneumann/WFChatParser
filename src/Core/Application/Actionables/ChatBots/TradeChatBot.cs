@@ -802,7 +802,7 @@ namespace Application.Actionables.ChatBots
                             _logger.Log("Clicking glyph");
                             //Click Glyph
                             _mouse.Click(693, 948);
-                            Thread.Sleep(750);
+                            Thread.Sleep(5000);
                         }
                         else if (retry)
                             await NavigateToGlyphScreen(false);
