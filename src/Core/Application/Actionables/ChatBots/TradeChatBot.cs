@@ -683,14 +683,18 @@ namespace Application.Actionables.ChatBots
             await Task.Delay(250);
             using (var glyphScreen = _gameCapture.GetFullImage())
             {
+                _logger.Log("checking if we need to give focus and click");
                 if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
                 {
+                    _logger.Log("Clicking top left");
                     await Task.Delay(17);
                     _mouse.Click(0, 0);
                 }
+                _logger.Log("Verifying we are on glyph window");
                 if (_screenStateHandler.GetScreenState(glyphScreen) == ScreenState.GlyphWindow)
                 {
                     //Check if filter is setup with asdf
+                    _logger.Log("Chekcing if we need to set filters");
                     if (!_screenStateHandler.GlyphFiltersPresent(glyphScreen))
                     {
                         _logger.Log("Setting up filters");
@@ -707,6 +711,7 @@ namespace Application.Actionables.ChatBots
                         _keyboard.SendPaste("asdf");
                         await Task.Delay(100);
                     }
+                    _logger.Log("Checking if we need to expand chat");
                     if (_screenStateHandler.IsChatCollapsed(glyphScreen))
                     {
                         _logger.Log("Expanding chat");
@@ -750,7 +755,10 @@ namespace Application.Actionables.ChatBots
                         await Task.Delay(600);
                     }
                     else
+                    {
+                        _logger.Log("We are now controlling a warframe");
                         break;
+                    }
                 }
                 tries++;
                 if (tries > 25)
@@ -774,8 +782,10 @@ namespace Application.Actionables.ChatBots
                     _logger.Log("Setting failed past logins to 0");
 
                     //Click profile
+                    _logger.Log("Checking if we need to click profile");
                     if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
                     {
+                        _logger.Log("Clicking profile");
                         await Task.Delay(17);
                         _mouse.Click(0, 0);
                         await Task.Delay(17);
@@ -786,8 +796,10 @@ namespace Application.Actionables.ChatBots
 
                     using (var profileMenuImage = _gameCapture.GetFullImage())
                     {
+                        _logger.Log("Checking if we need to click glyph");
                         if (_screenStateHandler.GetScreenState(profileMenuImage) == Enums.ScreenState.ProfileMenu)
                         {
+                            _logger.Log("Clicking glyph");
                             //Click Glyph
                             _mouse.Click(693, 948);
                             Thread.Sleep(750);
