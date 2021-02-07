@@ -204,7 +204,7 @@ namespace DebugCLI
             //}
             //Console.Write("};");
 
-            var path = @"C:\Users\david\OneDrive\Documents\WFChatParser\132566513965260877.png";
+            var path = @"C:\Users\david\OneDrive\Documents\WFChatParser\132569636989417845.png";
             using (var b = new Bitmap(path))
             {
                 var ssh = new ScreenStateHandler();
@@ -3600,7 +3600,7 @@ namespace DebugCLI
         {
             _output = false;
         }
-        public void Log(string message, bool writeToConsole = true)
+        public void Log(string message, bool writeToConsole = true, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
         {
             if (_output)
                 Console.WriteLine(message);

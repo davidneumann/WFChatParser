@@ -60,9 +60,9 @@ namespace Application.Logger
             }
         }
 
-        public void Log(string message, bool writeToConsole = true)
+        public void Log(string message, bool writeToConsole = true, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
         {
-            message = $"[{DateTime.Now.ToString("HH:mm:ss.f")}] {message}";
+            message = $"[{DateTime.Now.ToString("HH:mm:ss.f")}] {memberName} -> {message}";
             if (writeToConsole)
             {
                 var consoleMessage = message;

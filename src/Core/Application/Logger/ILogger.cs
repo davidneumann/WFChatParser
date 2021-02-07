@@ -6,6 +6,6 @@ namespace Application.Logger
 {
     public interface ILogger
     {
-        void Log(string message, bool writeToConsole = true);
+        void Log(string message, bool writeToConsole = true, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "");
     }
 }
