@@ -18,9 +18,10 @@ namespace RelativeChatParser.Extraction
         //public static readonly int[] LineOffsets = new int[] { 710, 729, 749, 768, 787, 807, 826, 846, 865, 885, 904, 923, 943, 962, 982, 1001, 1021, 1040, 1059, 1079, 1098, 1118, 1137, 1157, 1176, 1195, 1215, 1234, 1254, 1273, 1293, 1312, 1331, 1351, 1370, 1390, 1409, 1429, 1448, 1468, 1487, 1506, 1526, 1545, 1565, 1584, 1604, 1623, 1642, 1662, 1681, 1701, 1720, 1740, 1759, 1778, 1798, 1817, 1837, 1856, 1876, 1895, 1914, 1934, 1953, 1973, 1992, 2012, 2031, 2050, 2070, 2089, 2109 };
         //public static readonly int ChatWidth = 1722;
         //public static readonly int Lineheight = 14;
-        public static readonly int[] LineOffsets = new int[] { 768, 817, 867, 916, 966, 1016, 1065, 1115, 1164, 1214, 1264, 1313, 1363, 1412, 1462, 1511, 1561, 1611, 1660, 1710, 1759, 1809, 1859, 1908, 1958, 2007, 2057 };
+        //public static readonly int[] LineOffsets = new int[] { 768, 817, 867, 916, 966, 1016, 1065, 1115, 1164, 1214, 1264, 1313, 1363, 1412, 1462, 1511, 1561, 1611, 1660, 1710, 1759, 1809, 1859, 1908, 1958, 2007, 2057 };
+        public static readonly int[] LineOffsets = new int[] { 766, 816, 865, 915, 965, 1014, 1064, 1113, 1163, 1213, 1262, 1312, 1361, 1411, 1461, 1510, 1560, 1609, 1659, 1708, 1758, 1808, 1857, 1907, 1956, 2006, 2056 };
         public static readonly int ChatWidth = 3236;
-        public static readonly int Lineheight = 35;
+        public static readonly int Lineheight = 38;
 
         public static readonly int ChatLeftX = 4;
 

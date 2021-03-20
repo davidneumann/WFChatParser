@@ -124,7 +124,7 @@ namespace DebugCLI
 
             //ProfileShim();
 
-            PostLoginFix();
+            //PostLoginFix();
         }
 
         private class RewardInfo
@@ -658,7 +658,7 @@ namespace DebugCLI
 
         private static void RelativeParserSpaceTrainer()
         {
-            SpaceTrainer.TrainOnSpace(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Space Training",
+            SpaceTrainer.TrainOnSpace(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New New New English\Space Training",
                 "RelativeDB_with_spaces.json");
         }
 
@@ -679,7 +679,7 @@ namespace DebugCLI
             var overlapCount = 0;
             var overlappingGlyphs = new List<FuzzyGlyph>();
             Console.WriteLine("Looking for overlaps");
-            foreach (var item in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps").Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct())
+            foreach (var item in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New New New English\Overlaps").Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct())
             {
                 Console.WriteLine($"={item}=");
                 var text = new FileInfo(item + ".txt");
@@ -1007,7 +1007,7 @@ namespace DebugCLI
 
         private static void RelativeParserGlyphTrainer()
         {
-            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\New Character Training\";
+            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New New New English\Character Training\";
             var allFiles = Directory.GetFiles(inputDir);
             var inputs = allFiles.Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct();
             var error = false;
@@ -1051,6 +1051,15 @@ namespace DebugCLI
             foreach (var glyph in finalGlyphs)
             {
                 glyph.SaveVisualization(Path.Combine(glyphVisualizerDir, (int)glyph.Character[0] + ".png"), false);
+            }
+
+            //Check if any glyph is taller than line height
+            foreach (var glyph in finalGlyphs)
+            {
+                if(glyph.ReferenceMaxHeight > LineScanner.Lineheight)
+                {
+                    Console.WriteLine($"Glyph {glyph.Character} has a max height of {glyph.ReferenceMaxHeight} which is above the max height expected of {LineScanner.Lineheight}");
+                }
             }
             //var imageCount = 0;
             //foreach (var glyph in finalGlyphs)
