@@ -78,7 +78,7 @@ namespace DebugCLI
             //FindErrorAgain();
             //TestRivenParsing();
             //VerifyNoErrors(2);
-            //TestScreenHandler();
+            TestScreenHandler();
             //TestBot();
             //ParseChatImage();
             //TessShim();
@@ -2851,6 +2851,11 @@ namespace DebugCLI
             var c = new GameCapture(new DummyLogger());
             var ss = new ScreenStateHandler();
 
+            using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Notice Me Senpai\132606924224963827.png"))
+            {
+                var state = ss.GetScreenState(b);
+                Console.WriteLine($"Is main menu: {state == ScreenState.MainMenu} should be true.");
+            }
             using (var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\reward_1.png"))
             {
                 var state = ss.GetScreenState(b);
