@@ -791,7 +791,7 @@ namespace Application.Actionables.ChatBots
                         await Task.Delay(17);
                     }
 
-                    _mouse.Click(728, 937);
+                    _mouse.Click(709, 1064);
                     Thread.Sleep(750);
 
                     using (var profileMenuImage = _gameCapture.GetFullImage())
