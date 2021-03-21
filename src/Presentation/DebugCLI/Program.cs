@@ -78,7 +78,7 @@ namespace DebugCLI
             //FindErrorAgain();
             //TestRivenParsing();
             //VerifyNoErrors(2);
-            TestScreenHandler();
+            //TestScreenHandler();
             //TestBot();
             //ParseChatImage();
             //TessShim();
