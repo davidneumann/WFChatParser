@@ -154,6 +154,9 @@ namespace RelativeChatParser.Recognition
             if (candidates.Any(c => c.Character == "@"))
                 useBrights = false;
 
+            if (candidates.Any(c => c.Character == "O" || c.Character == "C"))
+                useBrights = true;
+
             return useBrights;
         }
 
