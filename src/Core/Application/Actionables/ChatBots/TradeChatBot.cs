@@ -700,16 +700,16 @@ namespace Application.Actionables.ChatBots
                         _logger.Log("Setting up filters");
                         //Click clear to be safe
                         _mouse.Click(1125, 263);
-                        await Task.Delay(100);
+                        await Task.Delay(200);
                         _mouse.Click(0, 0);
-                        await Task.Delay(100);
+                        await Task.Delay(200);
                         _mouse.Click(1125, 263);
-                        await Task.Delay(100);
+                        await Task.Delay(200);
                         //_mouse.Click(1125, 263);
                         //Thread.Sleep(50);
 
                         _keyboard.SendPaste("asdf");
-                        await Task.Delay(100);
+                        await Task.Delay(200);
                     }
                     _logger.Log("Checking if we need to expand chat");
                     if (_screenStateHandler.IsChatCollapsed(glyphScreen))
@@ -788,7 +788,7 @@ namespace Application.Actionables.ChatBots
                         _logger.Log("Clicking profile");
                         await Task.Delay(17);
                         _mouse.Click(0, 0);
-                        await Task.Delay(17);
+                        await Task.Delay(60);
                     }
 
                     _mouse.Click(709, 1064);
@@ -802,7 +802,7 @@ namespace Application.Actionables.ChatBots
                             _logger.Log("Clicking glyph");
                             //Click Glyph
                             _mouse.Click(693, 948);
-                            Thread.Sleep(5000);
+                            Thread.Sleep(7500);
                         }
                         else if (retry)
                             await NavigateToGlyphScreen(false);
