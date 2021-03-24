@@ -188,6 +188,21 @@ namespace ChatLoggerCLI
                         else
                             _logger.Log("Failed to find riven_images folder for deletion");
                         lastDate = DateTime.Today;
+
+                        //Deleting old debug images
+                        _logger.Log("Deleting old debug images");
+                        var cutoffDate = DateTime.Now.Subtract(new TimeSpan(30, 0, 0, 0));
+                        var oldFiles = Directory.GetFiles("debug", "*", SearchOption.AllDirectories).Where(f => File.GetLastWriteTime(f) <= cutoffDate).ToList();
+                        _logger.Log($"There are {oldFiles.Count} old files to delete");
+                        foreach (var f in oldFiles)
+                        {
+                            try
+                            {
+                                Console.WriteLine($"Deleting {(new FileInfo(f)).Name}");
+                                File.Delete(f);
+                            }
+                            catch { }
+                        }
                     }
 
                     //var debug = progress.GetAwaiter().IsCompleted;
