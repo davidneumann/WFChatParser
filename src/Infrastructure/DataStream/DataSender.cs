@@ -238,6 +238,7 @@ namespace DataStream
 
         public Task AsyncSendChatMessage(ChatMessageModel message)
         {
+            message.SentTimestamp = DateTimeOffset.UtcNow;
             if (!string.IsNullOrEmpty(_messagePrefix))
                 Send(_messagePrefix + JsonConvert.SerializeObject(message, Formatting.None, _jsonSettings));
             else

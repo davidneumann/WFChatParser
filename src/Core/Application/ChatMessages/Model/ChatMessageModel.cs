@@ -16,5 +16,6 @@ namespace Application.ChatMessages.Model
         public string DEBUGREASON { get; set; }
         public DateTimeOffset SystemTimestamp { get; set; }
         public string Region { get; internal set; }
+        public DateTimeOffset SentTimestamp { get; set; } = DateTimeOffset.UtcNow;
     }
 }
