@@ -125,6 +125,100 @@ namespace DebugCLI
             //ProfileShim();
 
             //PostLoginFix();
+
+            //MakeDatFiles();
+        }
+
+        private static void MakeDatFiles()
+        {
+            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New New New English\Character Training\";
+
+            var allFiles = Directory.GetFiles(inputDir);
+            var inputs = allFiles.Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct();
+            var error = false;
+            foreach (var input in inputs)
+            {
+                var pic = input + ".png";
+                var txt = input + ".txt";
+                if (!allFiles.Contains(pic))
+                {
+                    Console.WriteLine($"Missing picture for {input}");
+                    error = true;
+                }
+                if (!allFiles.Contains(txt))
+                {
+                    Console.WriteLine($"Missing text for {input}");
+                    error = true;
+                }
+            }
+            if (error)
+                return;
+
+            var glyphDict = TrainingDataExtractor.ExtractGlyphs(inputs.Select(input => new TrainingInput(input + ".png", input + ".txt")));
+            foreach (var pair in glyphDict)
+            {
+                var count = 0;
+                foreach (var glyph in pair.Value)
+                {
+                    var outputFile = new FileInfo(Path.Combine("dats", ((int)pair.Key).ToString(), $"{count++}.dat"));
+                    if (!outputFile.Directory.Exists)
+                        Directory.CreateDirectory(outputFile.DirectoryName);
+
+                    var arr = new bool[glyph.Width, glyph.Height];
+                    var startX = glyph.Width - 1;
+                    var endX = 0;
+                    var startY = glyph.Height - 1;
+                    var endY = 0;
+                    for (int y = 0; y < glyph.Height; y++)
+                    {
+                        for (int x = 0; x < glyph.Width; x++)
+                        {
+                            arr[x, y] = glyph.RelativeBrights.Any(p => p.X == x && p.Y == y);
+                            if(arr[x,y])
+                            {
+                                startX = Math.Min(startX, x);
+                                endX = Math.Max(endX, x);
+                                startY = Math.Min(startY, y);
+                                endY = Math.Max(endY, y);
+                            }
+                        }
+                    }
+
+                    var width = endX - startX + 1;
+                    int height = endY - startY + 1;
+                    var trimmedArr = new bool[width, height];
+                    for (int x = startX; x <= endX; x++)
+                    {
+                        for (int y = startY; y <= endY; y++)
+                        {
+                            trimmedArr[x - startX, y - startY] = arr[x, y];
+                        }
+                    }
+                    var debug = outputFile.FullName.Replace(".dat", ".png");
+                    //glyph.Save(debug, false);
+                    using (var b = new Bitmap(width, height))
+                    {
+                        using (var fout = new BinaryWriter(outputFile.Open(FileMode.Create, FileAccess.Write)))
+                        {
+                            fout.Write(width);
+                            fout.Write(height);
+                            for (int y = 0; y < height; y++)
+                            {
+                                for (int x = 0; x < width; x++)
+                                {
+                                    fout.Write(trimmedArr[x, y]);
+                                    if (trimmedArr[x, y])
+                                        b.SetPixel(x, y, Color.White);
+                                    else
+                                        b.SetPixel(x, y, Color.Black);
+                                }
+                            }
+
+                        }
+                        //b.Save(debug);
+                    }
+                }
+            }
         }
 
         private class RewardInfo
