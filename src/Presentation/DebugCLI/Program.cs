@@ -126,11 +126,13 @@ namespace DebugCLI
 
             //PostLoginFix();
 
-            //MakeDatFiles();
+            MakeDatFiles();
         }
 
         private static void MakeDatFiles()
         {
+            ImageCache.MinV = GlyphDatabase.BrightMinV;
+            GlyphExtractor.distanceThreshold = 3;
             var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New New New English\Character Training\";
 
             var allFiles = Directory.GetFiles(inputDir);
@@ -194,25 +196,47 @@ namespace DebugCLI
                             trimmedArr[x - startX, y - startY] = arr[x, y];
                         }
                     }
+                    if (width != glyph.Width || height != glyph.Height)
+                        System.Diagnostics.Debugger.Break();
+
                     var debug = outputFile.FullName.Replace(".dat", ".png");
                     //glyph.Save(debug, false);
                     using (var b = new Bitmap(width, height))
                     {
                         using (var fout = new BinaryWriter(outputFile.Open(FileMode.Create, FileAccess.Write)))
                         {
-                            fout.Write(width);
-                            fout.Write(height);
-                            for (int y = 0; y < height; y++)
+                            fout.Write((ushort)width);
+                            fout.Write((byte)height);
+                            fout.Write((byte)glyph.PixelsFromTopOfLine);
+
+                            var packedBytesLen = height * width / 8;
+                            if (height * width % 8 != 0)
+                                packedBytesLen++;
+                            var packedBytes = new byte[packedBytesLen];
+                            for (int i = 0; i < packedBytesLen; i++)
                             {
-                                for (int x = 0; x < width; x++)
+                                for (int j = 0; j < 8; j++)
                                 {
-                                    fout.Write(trimmedArr[x, y]);
+                                    var x = (i * 8 + j) % width;
+                                    var y = (i * 8 + j) / width;
+                                    if (y >= height)
+                                        break;
                                     if (trimmedArr[x, y])
-                                        b.SetPixel(x, y, Color.White);
-                                    else
-                                        b.SetPixel(x, y, Color.Black);
+                                        packedBytes[i] |= (byte)(1 << (7 - j));
                                 }
                             }
+                            fout.Write(packedBytes);
+                            //for (int y = 0; y < height; y++)
+                            //{
+                            //    for (int x = 0; x < width; x++)
+                            //    {
+                            //        fout.Write(trimmedArr[x, y]);
+                            //        if (trimmedArr[x, y])
+                            //            b.SetPixel(x, y, Color.White);
+                            //        else
+                            //            b.SetPixel(x, y, Color.Black);
+                            //    }
+                            //}
 
                         }
                         //b.Save(debug);

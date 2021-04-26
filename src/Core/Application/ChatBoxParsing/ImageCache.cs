@@ -40,6 +40,8 @@ namespace Application.ChatLineExtractor
             _valueMapMask = new bool[this._image.Width, this._image.Height];
         }
 
+        public static float MinV = 0f;
+
         public float this[int x, int y]
         {
             get
@@ -98,8 +100,8 @@ namespace Application.ChatLineExtractor
                     else
                         v = 0;
 
-                    //if (v < 0.85f)
-                    //    v = 0;
+                    if (v < MinV)
+                        v = 0;
 
                     _valueMap[x, y] = Math.Max(0f, Math.Min(v, 1f));
                     _valueMapMask[x, y] = true;
