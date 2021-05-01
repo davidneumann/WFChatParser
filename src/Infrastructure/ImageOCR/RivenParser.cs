@@ -1,7 +1,6 @@
 ﻿using Application.ChatMessages.Model;
 using Application.Interfaces;
 using Common;
-using Leptonica;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
