@@ -167,22 +167,22 @@ namespace DebugCLI
             RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs.RemoveAll(g => g.IsOverlap == true);
             RelativeChatParser.Database.GlyphDatabase.Instance.Init();
 
-            Console.WriteLine("Looking for overlaps");
-            glyphDict[(char)0] = new List<ExtractedGlyph>();
-            foreach (var item in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New New New English\Overlaps").Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct())
-            {
-                Console.WriteLine($"={item}=");
-                var text = new FileInfo(item + ".txt");
-                var image = new FileInfo(item + ".png");
-                if (!text.Exists || !image.Exists)
-                {
-                    Console.WriteLine($"Missing text {text.Exists}. Missing image {image.Exists}.");
-                    throw new Exception("File missing");
-                }
+            //Console.WriteLine("Looking for overlaps");
+            //glyphDict[(char)0] = new List<ExtractedGlyph>();
+            //foreach (var item in Directory.GetFiles(Path.Combine("inputs", "overlaps")).Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct())
+            //{
+            //    Console.WriteLine($"={item}=");
+            //    var text = new FileInfo(item + ".txt");
+            //    var image = new FileInfo(item + ".png");
+            //    if (!text.Exists || !image.Exists)
+            //    {
+            //        Console.WriteLine($"Missing text {text.Exists}. Missing image {image.Exists}.");
+            //        throw new Exception("File missing");
+            //    }
 
-                var overlaps = OverlapExtractor.GetOverlapingGlyphs(text.FullName, image.FullName);
-                glyphDict[(char)0].AddRange(overlaps.Select(o => o.Extracted));
-            }
+            //    var overlaps = OverlapExtractor.GetOverlapingGlyphs(text.FullName, image.FullName);
+            //    glyphDict[(char)0].AddRange(overlaps.Select(o => o.Extracted));
+            //}
 
             foreach (var pair in glyphDict)
             {
@@ -270,6 +270,19 @@ namespace DebugCLI
                     }
                 }
             }
+
+            //Benchmarking
+            var sw = new System.Diagnostics.Stopwatch();
+            sw.Start();
+            var glyph_count = 0;
+            foreach (var item in glyphDict) {
+                //Console.WriteLine($"Recognizing glyphs for char {item.Key}");
+                if(item.Key == (char)0)
+                    continue;
+                glyph_count += item.Value.Count;
+                item.Value.ForEach(g => RelativePixelGlyphIdentifier.IdentifyGlyph(g));
+            }
+            Console.WriteLine($"Recognized {glyph_count} glyphs. Took: {sw.Elapsed.TotalSeconds}s");
         }
 
         private class RewardInfo
