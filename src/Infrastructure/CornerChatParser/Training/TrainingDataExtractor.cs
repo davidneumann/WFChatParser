@@ -41,7 +41,7 @@ namespace RelativeChatParser.Training
 
                     for (int j = 0; j < cleanText.Length; j++)
                     {
-                        char c = cleanText[j];
+                        var c = cleanText[j];
                         if (!glyphDict.ContainsKey(c))
                         {
                             glyphDict[c] = new List<ExtractedGlyph>();

@@ -131,6 +131,8 @@ namespace DebugCLI
 
         private static void MakeDatFiles()
         {
+            if(Directory.Exists("dats"))
+                Directory.Delete("dats", true);
             ImageCache.MinV = GlyphDatabase.BrightMinV;
             GlyphExtractor.distanceThreshold = 3;
             var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New New New English\Character Training\";
@@ -157,6 +159,31 @@ namespace DebugCLI
                 return;
 
             var glyphDict = TrainingDataExtractor.ExtractGlyphs(inputs.Select(input => new TrainingInput(input + ".png", input + ".txt")));
+
+            //Overlap stuff
+            //const int overlapExtraThreshold = 2;
+            //GlyphExtractor.distanceThreshold += overlapExtraThreshold;
+            GlyphExtractor.distanceThreshold = 2;
+            RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs.RemoveAll(g => g.IsOverlap == true);
+            RelativeChatParser.Database.GlyphDatabase.Instance.Init();
+
+            Console.WriteLine("Looking for overlaps");
+            glyphDict[(char)0] = new List<ExtractedGlyph>();
+            foreach (var item in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New New New English\Overlaps").Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct())
+            {
+                Console.WriteLine($"={item}=");
+                var text = new FileInfo(item + ".txt");
+                var image = new FileInfo(item + ".png");
+                if (!text.Exists || !image.Exists)
+                {
+                    Console.WriteLine($"Missing text {text.Exists}. Missing image {image.Exists}.");
+                    throw new Exception("File missing");
+                }
+
+                var overlaps = OverlapExtractor.GetOverlapingGlyphs(text.FullName, image.FullName);
+                glyphDict[(char)0].AddRange(overlaps.Select(o => o.Extracted));
+            }
+
             foreach (var pair in glyphDict)
             {
                 var count = 0;
