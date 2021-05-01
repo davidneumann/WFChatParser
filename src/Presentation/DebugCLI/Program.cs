@@ -135,7 +135,7 @@ namespace DebugCLI
                 Directory.Delete("dats", true);
             ImageCache.MinV = GlyphDatabase.BrightMinV;
             GlyphExtractor.distanceThreshold = 3;
-            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New New New English\Character Training\";
+            var inputDir = Path.Combine("inputs", "character_training");
 
             var allFiles = Directory.GetFiles(inputDir);
             var inputs = allFiles.Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct();
@@ -803,7 +803,7 @@ namespace DebugCLI
 
         private static void RelativeParserSpaceTrainer()
         {
-            SpaceTrainer.TrainOnSpace(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New New New English\Space Training",
+            SpaceTrainer.TrainOnSpace(Path.Combine("inputs", "space_training"),
                 "RelativeDB_with_spaces.json");
         }
 
@@ -824,7 +824,7 @@ namespace DebugCLI
             var overlapCount = 0;
             var overlappingGlyphs = new List<FuzzyGlyph>();
             Console.WriteLine("Looking for overlaps");
-            foreach (var item in Directory.GetFiles(@"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New New New English\Overlaps").Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct())
+            foreach (var item in Directory.GetFiles(Path.Combine("inputs", "overlaps")).Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct())
             {
                 Console.WriteLine($"={item}=");
                 var text = new FileInfo(item + ".txt");
@@ -1076,7 +1076,7 @@ namespace DebugCLI
         {
             var ignore = RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs;
             var parser = new RelativeChatParser.RelativePixelParser(new DummyLogger(), new DummySender());
-            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New English\Overlaps";
+            var inputDir = Path.Combine("inputs", "character_training");
             var allFiles = Directory.GetFiles(inputDir);
             var sw = new Stopwatch();
             sw.Start();
@@ -1152,7 +1152,7 @@ namespace DebugCLI
 
         private static void RelativeParserGlyphTrainer()
         {
-            var inputDir = @"C:\Users\david\OneDrive\Documents\WFChatParser\Training Inputs\New New New English\Character Training\";
+            var inputDir = Path.Combine("inputs", "character_training");
             var allFiles = Directory.GetFiles(inputDir);
             var inputs = allFiles.Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct();
             var error = false;
