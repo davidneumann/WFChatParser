@@ -22,7 +22,7 @@ namespace RelativeChatParser.Database
         private ConcurrentDictionary<(int, int), FuzzyGlyph[]> _targetSizeCache = new ConcurrentDictionary<(int, int), FuzzyGlyph[]>();
 
         private FuzzyGlyph[] _cachedSingleCharOverlaps;
-        
+
         public const float BrightMinV = 0.91f;
 
         private static GlyphDatabase _instance = null;

@@ -131,9 +131,9 @@ namespace DebugCLI
 
         private static void MakeDatFiles()
         {
-            if(Directory.Exists("dats"))
+            if (Directory.Exists("dats"))
                 Directory.Delete("dats", true);
-            ImageCache.MinV = GlyphDatabase.BrightMinV;
+            // ImageCache.MinV = GlyphDatabase.BrightMinV;
             GlyphExtractor.distanceThreshold = 3;
             var inputDir = Path.Combine("inputs", "character_training");
 
@@ -158,38 +158,97 @@ namespace DebugCLI
             if (error)
                 return;
 
-            var glyphDict = TrainingDataExtractor.ExtractGlyphs(inputs.Select(input => new TrainingInput(input + ".png", input + ".txt")));
+            var glyphDict = TrainingDataExtractor.ExtractGlyphs(inputs.Select(input => new TrainingInput(input + ".png", input + ".txt")))
+                .ToDictionary(kvp => ((int)kvp.Key).ToString(), kvp => kvp.Value);
 
             //Overlap stuff
             //const int overlapExtraThreshold = 2;
             //GlyphExtractor.distanceThreshold += overlapExtraThreshold;
-            GlyphExtractor.distanceThreshold = 2;
+            GlyphExtractor.distanceThreshold += 1;
             RelativeChatParser.Database.GlyphDatabase.Instance.AllGlyphs.RemoveAll(g => g.IsOverlap == true);
             RelativeChatParser.Database.GlyphDatabase.Instance.Init();
 
-            //Console.WriteLine("Looking for overlaps");
-            //glyphDict[(char)0] = new List<ExtractedGlyph>();
-            //foreach (var item in Directory.GetFiles(Path.Combine("inputs", "overlaps")).Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct())
-            //{
-            //    Console.WriteLine($"={item}=");
-            //    var text = new FileInfo(item + ".txt");
-            //    var image = new FileInfo(item + ".png");
-            //    if (!text.Exists || !image.Exists)
-            //    {
-            //        Console.WriteLine($"Missing text {text.Exists}. Missing image {image.Exists}.");
-            //        throw new Exception("File missing");
-            //    }
+            Console.WriteLine("Looking for overlaps");
+            foreach (var item in Directory.GetFiles(Path.Combine("inputs", "overlaps")).Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct())
+            {
+                Console.WriteLine($"={item}=");
+                var text = new FileInfo(item + ".txt");
+                var image = new FileInfo(item + ".png");
+                if (!text.Exists || !image.Exists)
+                {
+                    Console.WriteLine($"Missing text {text.Exists}. Missing image {image.Exists}.");
+                    throw new Exception("File missing");
+                }
 
-            //    var overlaps = OverlapExtractor.GetOverlapingGlyphs(text.FullName, image.FullName);
-            //    glyphDict[(char)0].AddRange(overlaps.Select(o => o.Extracted));
-            //}
+                using (var b = new Bitmap(image.FullName))
+                {
+                    var iCache = new ImageCache(b);
+                    var expectedChars = File.ReadAllLines(text.FullName).Select(l => l.Replace(" ", "")).ToArray();
+                    //var le = LineScanner.ExtractGlyphsFromLine(iCache,
+                    for (int line = 0; line < LineScanner.LineOffsets.Length; line++)
+                    {
+                        var charIndex = 0;
+                        var startX = LineScanner.ChatWidth;
+                        var endX = LineScanner.ChatWidth;
+                        for (int x = LineScanner.ChatLeftX; x < LineScanner.ChatWidth; x++)
+                        {
+                            for (int y = 0; y < LineScanner.Lineheight; y++)
+                            {
+                                if(iCache[x, LineScanner.LineOffsets[line] + y] > 0)
+                                {
+                                    startX = Math.Min(startX, x);
+                                    endX = x;
+                                }
+                            }
+                            if(x > endX + 21)
+                            {
+                                //New end of overlap detected
+                                Console.WriteLine($"New glyph block detected {LineScanner.LineOffsets[line]} {startX},{endX - startX + 1}");
+
+                                var rect = new Rectangle(startX, LineScanner.LineOffsets[line], endX-startX+1, LineScanner.Lineheight);
+                                var extractedGlyph = LineScanner.ExtractGlyphsFromLine(iCache, rect);
+                                if(extractedGlyph.Length != 2)
+                                {
+                                    //We have detected an overlap
+                                    Console.WriteLine("Overlap detected!");
+                                    var key = $"{(int)expectedChars[line][charIndex]}_{(int)expectedChars[line][charIndex]+1}";
+                                    glyphDict[key] = new List<ExtractedGlyph>(extractedGlyph);
+                                }
+                                startX = LineScanner.ChatWidth;
+                                endX = LineScanner.ChatWidth;
+                                charIndex += 2;
+                            }
+                        }
+                    }
+                }
+                // var overlaps = OverlapExtractor.GetOverlapingGlyphs(text.FullName, image.FullName);
+                // foreach (var overlap in overlaps)
+                // {
+                //     var key = String.Join('_', overlap.ExpectedCharacters.ToCharArray().Select(c => (int)c));
+                //     glyphDict[key] = new List<ExtractedGlyph>(new[] { overlap.Extracted });
+                // }
+                // //glyphDict[(char)0].AddRange(overlaps.Select(o => o.Extracted));
+            }
+
+
+
+
+
 
             foreach (var pair in glyphDict)
             {
+                // if(pair.Key == (char)0)
+                // {
+                //     System.Diagnostics.Debugger.Break();
+                // }
                 var count = 0;
                 foreach (var glyph in pair.Value)
                 {
-                    var outputFile = new FileInfo(Path.Combine("dats", ((int)pair.Key).ToString(), $"{count++}.dat"));
+                    var outputFile = new FileInfo(Path.Combine("dats", pair.Key, $"{count++}.dat"));
+                    if (pair.Key.Contains("_"))
+                    {
+                        outputFile = new FileInfo(Path.Combine("dats", "overlaps", $"{pair.Key}.dat"));
+                    }
                     if (!outputFile.Directory.Exists)
                         Directory.CreateDirectory(outputFile.DirectoryName);
 
@@ -203,7 +262,7 @@ namespace DebugCLI
                         for (int x = 0; x < glyph.Width; x++)
                         {
                             arr[x, y] = glyph.RelativeBrights.Any(p => p.X == x && p.Y == y);
-                            if(arr[x,y])
+                            if (arr[x, y])
                             {
                                 startX = Math.Min(startX, x);
                                 endX = Math.Max(endX, x);
@@ -223,8 +282,8 @@ namespace DebugCLI
                             trimmedArr[x - startX, y - startY] = arr[x, y];
                         }
                     }
-                    if (width != glyph.Width || height != glyph.Height)
-                        System.Diagnostics.Debugger.Break();
+                    // if (width != glyph.Width || height != glyph.Height)
+                    //     System.Diagnostics.Debugger.Break();
 
                     var debug = outputFile.FullName.Replace(".dat", ".png");
                     //glyph.Save(debug, false);
@@ -271,18 +330,21 @@ namespace DebugCLI
                 }
             }
 
-            //Benchmarking
-            var sw = new System.Diagnostics.Stopwatch();
-            sw.Start();
-            var glyph_count = 0;
-            foreach (var item in glyphDict) {
-                //Console.WriteLine($"Recognizing glyphs for char {item.Key}");
-                if(item.Key == (char)0)
-                    continue;
-                glyph_count += item.Value.Count;
-                item.Value.ForEach(g => RelativePixelGlyphIdentifier.IdentifyGlyph(g));
-            }
-            Console.WriteLine($"Recognized {glyph_count} glyphs. Took: {sw.Elapsed.TotalSeconds}s");
+            // //Benchmarking
+            // var sw = new System.Diagnostics.Stopwatch();
+            // sw.Start();
+            // var glyph_count = 0;
+            // Parallel.ForEach(glyphDict, item => {
+            // //foreach (var item in glyphDict) {
+            //     //Console.WriteLine($"Recognizing glyphs for char {item.Key}");
+            //     if(item.Key == (char)0)
+            //         //continue;
+            //         return;
+            //     glyph_count += item.Value.Count;
+            //     Parallel.ForEach(item.Value, g =>RelativePixelGlyphIdentifier.IdentifyGlyph(g));
+            //     //item.Value.ForEach(g => RelativePixelGlyphIdentifier.IdentifyGlyph(g));
+            // });
+            // Console.WriteLine($"Recognized {glyph_count} glyphs. Took: {sw.Elapsed.TotalSeconds}s");
         }
 
         private class RewardInfo
@@ -1214,7 +1276,7 @@ namespace DebugCLI
             //Check if any glyph is taller than line height
             foreach (var glyph in finalGlyphs)
             {
-                if(glyph.ReferenceMaxHeight > LineScanner.Lineheight)
+                if (glyph.ReferenceMaxHeight > LineScanner.Lineheight)
                 {
                     Console.WriteLine($"Glyph {glyph.Character} has a max height of {glyph.ReferenceMaxHeight} which is above the max height expected of {LineScanner.Lineheight}");
                 }
@@ -1279,7 +1341,7 @@ namespace DebugCLI
                 //LineScanner.ExtractGlyphsFromLine(image, 1),
                 //LineScanner.ExtractGlyphsFromLine(image, 2),
                 //LineScanner.ExtractGlyphsFromLine(image, 3),
-                //LineScanner.ExtractGlyphsFromLine(image, 4) 
+                //LineScanner.ExtractGlyphsFromLine(image, 4)
             }.SelectMany(g => g).ToArray();
             sw.Stop();
             Console.WriteLine($"Extracted {glyphs.Length} glyphs in {sw.ElapsedMilliseconds}ms.");
