@@ -11,7 +11,15 @@ namespace Application.Data
         {
             get
             {
+                //var debug = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase), "data");
+                //Console.WriteLine(debug);
+                //Console.WriteLine(Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase), "data"));
+                //var data = System.Reflection.Assembly.GetExecutingAssembly().CodeBase;
+                //if (Environment.OSVersion.Platform.)
+                //{
+                //}
                 return (new Uri(Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase), "data"))).LocalPath;
+                //return (new DirectoryInfo("data")).FullName;
             }
         }
 
