@@ -211,7 +211,7 @@ namespace DebugCLI
                                 {
                                     //We have detected an overlap
                                     Console.WriteLine("Overlap detected!");
-                                    var key = $"{(int)expectedChars[line][charIndex]}_{(int)expectedChars[line][charIndex]+1}";
+                                    var key = $"{(int)expectedChars[line][charIndex]}_{(int)expectedChars[line][charIndex+1]}";
                                     glyphDict[key] = new List<ExtractedGlyph>(extractedGlyph);
                                 }
                                 startX = LineScanner.ChatWidth;
