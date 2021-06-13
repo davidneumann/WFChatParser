@@ -56,6 +56,7 @@ using Application.Actionables.ChatBots;
 using TesseractService.Parsers;
 using TesseractService.Factories;
 using Application.Models;
+using System.Net.Sockets;
 
 namespace DebugCLI
 {
@@ -126,7 +127,130 @@ namespace DebugCLI
 
             //PostLoginFix();
 
-            MakeDatFiles();
+            //MakeDatFiles();
+
+            RustServerShim();
+        }
+
+        private static void RustServerShim()
+        {
+            Console.WriteLine($"cd {Environment.CurrentDirectory}");
+            var client = new TcpClient("127.0.0.1", 3333);
+            using var stream = client.GetStream();
+            using var fout = new BinaryWriter(stream);
+            using var fin = new BinaryReader(stream);
+
+            var inputDir = Path.Combine("inputs", "character_training");
+
+            var allFiles = Directory.GetFiles(inputDir);
+            var inputs = allFiles.Select(f => f.Substring(0, f.LastIndexOf("."))).Distinct();
+            var error = false;
+            foreach (var input in inputs)
+            {
+                var pic = input + ".png";
+                var txt = input + ".txt";
+                if (!allFiles.Contains(pic))
+                {
+                    Console.WriteLine($"Missing picture for {input}");
+                    error = true;
+                }
+                if (!allFiles.Contains(txt))
+                {
+                    Console.WriteLine($"Missing text for {input}");
+                    error = true;
+                }
+            }
+            if (error)
+                return;
+
+            var glyphDict = TrainingDataExtractor.ExtractGlyphs(inputs.Select(input => new TrainingInput(input + ".png", input + ".txt")))
+                .ToDictionary(kvp => ((int)kvp.Key).ToString(), kvp => kvp.Value);
+            foreach(var pair in glyphDict) {
+                Console.WriteLine($"Sending {pair.Value.Count} glyphs to server");
+                fout.Write((ushort)pair.Value.Count);
+
+
+                foreach (var glyph in pair.Value)
+                {
+                    var arr = new bool[glyph.Width, glyph.Height];
+                    var startX = glyph.Width - 1;
+                    var endX = 0;
+                    var startY = glyph.Height - 1;
+                    var endY = 0;
+                    for (int y = 0; y < glyph.Height; y++)
+                    {
+                        for (int x = 0; x < glyph.Width; x++)
+                        {
+                            arr[x, y] = glyph.RelativeBrights.Any(p => p.X == x && p.Y == y);
+                            if (arr[x, y])
+                            {
+                                startX = Math.Min(startX, x);
+                                endX = Math.Max(endX, x);
+                                startY = Math.Min(startY, y);
+                                endY = Math.Max(endY, y);
+                            }
+                        }
+                    }
+
+                    var width = endX - startX + 1;
+                    int height = endY - startY + 1;
+                    var trimmedArr = new bool[width, height];
+                    for (int x = startX; x <= endX; x++)
+                    {
+                        for (int y = startY; y <= endY; y++)
+                        {
+                            trimmedArr[x - startX, y - startY] = arr[x, y];
+                        }
+                    }
+                    // if (width != glyph.Width || height != glyph.Height)
+                    //     System.Diagnostics.Debugger.Break();
+
+                    //glyph.Save(debug, false);
+                    using (var b = new Bitmap(width, height))
+                    {
+                        fout.Write((ushort)width);
+                        fout.Write((byte)height);
+                        fout.Write((byte)glyph.PixelsFromTopOfLine);
+
+                        var packedBytesLen = height * width / 8;
+                        if (height * width % 8 != 0)
+                            packedBytesLen++;
+                        var packedBytes = new byte[packedBytesLen];
+                        for (int i = 0; i < packedBytesLen; i++)
+                        {
+                            for (int j = 0; j < 8; j++)
+                            {
+                                var x = (i * 8 + j) % width;
+                                var y = (i * 8 + j) / width;
+                                if (y >= height)
+                                    break;
+                                if (trimmedArr[x, y])
+                                    packedBytes[i] |= (byte)(1 << (7 - j));
+                            }
+                        }
+                        fout.Write(packedBytes);
+                        //for (int y = 0; y < height; y++)
+                        //{
+                        //    for (int x = 0; x < width; x++)
+                        //    {
+                        //        fout.Write(trimmedArr[x, y]);
+                        //        if (trimmedArr[x, y])
+                        //            b.SetPixel(x, y, Color.White);
+                        //        else
+                        //            b.SetPixel(x, y, Color.Black);
+                        //    }
+                        //}
+                    }
+                }
+                break;
+            }
+            fout.Flush();
+            var response_count = fin.ReadUInt16();
+            Console.WriteLine($"Response count: {response_count}");
+            for(int i = 0; i < response_count; i++){
+                Console.Write($"{fin.ReadChar()}");
+            }
+            Console.WriteLine();
         }
 
         private static void MakeDatFiles()
@@ -330,21 +454,21 @@ namespace DebugCLI
                 }
             }
 
-            // //Benchmarking
-            // var sw = new System.Diagnostics.Stopwatch();
-            // sw.Start();
-            // var glyph_count = 0;
-            // Parallel.ForEach(glyphDict, item => {
-            // //foreach (var item in glyphDict) {
-            //     //Console.WriteLine($"Recognizing glyphs for char {item.Key}");
-            //     if(item.Key == (char)0)
-            //         //continue;
-            //         return;
-            //     glyph_count += item.Value.Count;
-            //     Parallel.ForEach(item.Value, g =>RelativePixelGlyphIdentifier.IdentifyGlyph(g));
-            //     //item.Value.ForEach(g => RelativePixelGlyphIdentifier.IdentifyGlyph(g));
-            // });
-            // Console.WriteLine($"Recognized {glyph_count} glyphs. Took: {sw.Elapsed.TotalSeconds}s");
+            //Benchmarking
+            var sw = new System.Diagnostics.Stopwatch();
+            sw.Start();
+            var glyph_count = 0;
+            Parallel.ForEach(glyphDict, item => {
+            //foreach (var item in glyphDict) {
+                //Console.WriteLine($"Recognizing glyphs for char {item.Key}");
+                if(item.Key.Contains("_"))
+                    //continue;
+                    return;
+                glyph_count += item.Value.Count;
+                Parallel.ForEach(item.Value, g =>RelativePixelGlyphIdentifier.IdentifyGlyph(g));
+                //item.Value.ForEach(g => RelativePixelGlyphIdentifier.IdentifyGlyph(g));
+            });
+            Console.WriteLine($"Recognized {glyph_count} glyphs. Took: {sw.Elapsed.TotalSeconds}s");
         }
 
         private class RewardInfo
