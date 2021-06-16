@@ -129,7 +129,54 @@ namespace DebugCLI
 
             //MakeDatFiles();
 
-            RustServerShim();
+            //RustServerShim();
+            TestGlyphExtraction();
+        }
+
+        private static void TestGlyphExtraction()
+        {
+            var allOffsets = RustRayRecognizer.Extraction.LineScanner.LineOffsets.Select(i => int.MaxValue).ToArray();
+            foreach (var input in Directory.GetFiles(Path.Combine("inputs", "character_training")).Select(f => new FileInfo(f)).Where(f => f.Name.StartsWith("characters_") && f.Name.EndsWith(".png")))
+            {
+                var ic = new ImageCache(new Bitmap(input.FullName));
+                var lineOffsets = RustRayRecognizer.Extraction.LineScanner.ExtractLineOffsets(ic);
+                if (lineOffsets.Length != RustRayRecognizer.Extraction.LineScanner.LineOffsets.Length)
+                {
+                    Console.WriteLine($"Line offsets count is not what is expected. Skipping {input.Name}.");
+                    continue;
+                }
+                else
+                {
+                    for (int i = 0; i < lineOffsets.Length; i++)
+                    {
+                        allOffsets[i] = Math.Min(lineOffsets[i], allOffsets[i]);
+                    }
+                }
+            }
+            for (int i = 0; i < Math.Min(allOffsets.Length, RustRayRecognizer.Extraction.LineScanner.LineOffsets.Length); i++)
+            {
+                if (allOffsets[i] != RustRayRecognizer.Extraction.LineScanner.LineOffsets[i])
+                {
+                    //using (var b = new Bitmap(RustRayRecognizer.Extraction.LineScanner.ChatWidth, RustRayRecognizer.Extraction.LineScanner.Lineheight))
+                    //{
+                    //    for (int x = 0; x < b.Width; x++)
+                    //    {
+                    //        for (int y = 0; y < b.Height; y++)
+                    //        {
+                    //            var refX = RustRayRecognizer.Extraction.LineScanner.ChatLeftX + x;
+                    //            var refY = allOffsets[i] + y;
+                    //            if (ic[refX, refY] > 0)
+                    //                b.SetPixel(x, y, Color.White);
+                    //            else
+                    //                b.SetPixel(x, y, Color.Black);
+                    //        }
+                    //    }
+                    //    b.Save("debug_line.png");
+                    //}
+                    Console.WriteLine($"Line {i} does not have the expected offset. Found {allOffsets[i]}, expected {RustRayRecognizer.Extraction.LineScanner.LineOffsets[i]}");
+                }
+            }
+            RustRayRecognizer.Extraction.LineScanner.LineOffsets = allOffsets;
         }
 
         private static void RustServerShim()

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Application.ChatLineExtractor;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -12,5 +13,6 @@ namespace RustRayRecognizer.Models
         public byte Height { get; set; }
         public byte PixelsFromTop { get; set; }
         public bool[][] BrightMask { get; set; }
+        public ChatColor FirstPixelColor;
     }
 }

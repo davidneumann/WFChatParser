@@ -19,7 +19,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DataStream", "src\Infrastru
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WFGameCapture", "src\Infrastructure\WFGameCapture\WFGameCapture.csproj", "{9170CBE4-B5BA-4F30-8DE2-F074976F0B30}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageOCR", "src\Infrastructure\ImageOCR\ImageOCR.csproj", "{6A9BCC5C-F268-457B-BD47-F5BE227238C3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ImageOCR", "src\Infrastructure\ImageOCR\ImageOCR.csproj", "{6A9BCC5C-F268-457B-BD47-F5BE227238C3}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ChatLoggerCLI", "src\Presentation\ChatLoggerCLI\ChatLoggerCLI.csproj", "{DB224A2A-B1B9-45FE-B5AD-326D23E76F84}"
 EndProject
@@ -36,6 +36,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Services", "Services", "{48E541B7-208B-423A-9592-4BEE9792F62B}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TesseractService", "src\Services\TesseractService\TesseractService.csproj", "{EA1CBE9E-C2A2-4C32-8A5C-179E5A3387E5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RustRayRecognizer", "src\Infrastructure\RustRayRecognizer\RustRayRecognizer.csproj", "{7593AFB9-7342-4E50-97A0-322E7130CD06}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -203,6 +205,18 @@ Global
 		{EA1CBE9E-C2A2-4C32-8A5C-179E5A3387E5}.Release|x64.Build.0 = Release|Any CPU
 		{EA1CBE9E-C2A2-4C32-8A5C-179E5A3387E5}.Release|x86.ActiveCfg = Release|Any CPU
 		{EA1CBE9E-C2A2-4C32-8A5C-179E5A3387E5}.Release|x86.Build.0 = Release|Any CPU
+		{7593AFB9-7342-4E50-97A0-322E7130CD06}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7593AFB9-7342-4E50-97A0-322E7130CD06}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7593AFB9-7342-4E50-97A0-322E7130CD06}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7593AFB9-7342-4E50-97A0-322E7130CD06}.Debug|x64.Build.0 = Debug|Any CPU
+		{7593AFB9-7342-4E50-97A0-322E7130CD06}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7593AFB9-7342-4E50-97A0-322E7130CD06}.Debug|x86.Build.0 = Debug|Any CPU
+		{7593AFB9-7342-4E50-97A0-322E7130CD06}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7593AFB9-7342-4E50-97A0-322E7130CD06}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7593AFB9-7342-4E50-97A0-322E7130CD06}.Release|x64.ActiveCfg = Release|Any CPU
+		{7593AFB9-7342-4E50-97A0-322E7130CD06}.Release|x64.Build.0 = Release|Any CPU
+		{7593AFB9-7342-4E50-97A0-322E7130CD06}.Release|x86.ActiveCfg = Release|Any CPU
+		{7593AFB9-7342-4E50-97A0-322E7130CD06}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -220,6 +234,7 @@ Global
 		{CE7A63AC-7DEF-4B53-BD0C-07B41328A83E} = {DD1985B9-7A0F-4B8A-AC9C-2C0675DF083E}
 		{B0468020-45F6-4230-86E5-562AB5F7518A} = {908B3390-0AB4-4FFF-A227-F8CD22A58484}
 		{EA1CBE9E-C2A2-4C32-8A5C-179E5A3387E5} = {48E541B7-208B-423A-9592-4BEE9792F62B}
+		{7593AFB9-7342-4E50-97A0-322E7130CD06} = {DD1985B9-7A0F-4B8A-AC9C-2C0675DF083E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {A72EE6CA-91B9-4DBD-A082-55E80822506F}
