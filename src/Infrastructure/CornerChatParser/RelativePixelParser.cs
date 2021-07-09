@@ -109,7 +109,7 @@ namespace RelativeChatParser
             var threshold = (byte)252;
             for (int y = 2097; y > 655; y--)
             {
-                var pixel = screenImage.GetPixel(3256, y);
+                var pixel = screenImage.GetPixel(3259, y);
                 if (pixel.R > threshold && pixel.G > threshold && pixel.B > threshold)
                     return true;
             }

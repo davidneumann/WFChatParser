@@ -130,7 +130,28 @@ namespace DebugCLI
             //MakeDatFiles();
 
             //RustServerShim();
-            TestGlyphExtraction();
+            //TestGlyphExtraction();
+
+            DebugNewChat();
+        }
+
+        private static void DebugNewChat()
+        {
+            var filename = "Screenshot (1).png";
+            using var b = new Bitmap(filename);
+            var ssh = new ScreenStateHandler();
+            var state = ssh.GetScreenState(b);
+            Console.WriteLine($"{filename} screen state: {state}");
+            var rp = new RelativePixelParser(new DummyLogger(), new DummySender());
+            Console.WriteLine($"{filename} is chat focused: {rp.IsChatFocused(b)}");
+            Console.WriteLine($"{filename} is chat open: {ssh.IsChatOpen(b)}");
+            Console.WriteLine($"{filename} is scroll bar present: { rp.IsScrollbarPresent(b)}");
+            var results = rp.ParseChatImage(b, false, true, 27);
+            Console.WriteLine($"Parsed {results.Length} lines.");
+            foreach (var result in results)
+            {
+                Console.WriteLine($"{result.RawMessage}");
+            }
         }
 
         private static void TestGlyphExtraction()
