@@ -698,12 +698,12 @@ namespace Application.Actionables.ChatBots
                     if (!_screenStateHandler.GlyphFiltersPresent(glyphScreen))
                     {
                         _logger.Log("Setting up filters");
-                        //Click clear to be safe
-                        _mouse.Click(1125, 263);
+                        //Click clear to be safer
+                        _mouse.Click(3869, 328);
                         await Task.Delay(200);
                         _mouse.Click(0, 0);
                         await Task.Delay(200);
-                        _mouse.Click(1125, 263);
+                        _mouse.Click(3470, 326);
                         await Task.Delay(200);
                         //_mouse.Click(1125, 263);
                         //Thread.Sleep(50);

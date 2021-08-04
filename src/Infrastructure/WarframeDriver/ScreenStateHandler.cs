@@ -114,8 +114,8 @@ namespace WarframeDriver
 
         private bool IsGlyphScreen(Bitmap bitmap)
         {
-            var englishLightPixels = new Point[] { new Point(1934, 116), new Point(1983, 175), new Point(2041, 147), new Point(2114, 135), new Point(2182, 170) };
-            var englishDarkPixels = new Point[] { new Point(1928, 142), new Point(1989, 163), new Point(2045, 119), new Point(2099, 133), new Point(2162, 159) };
+            var englishLightPixels = new Point[] { new Point(2962, 315), new Point(3035, 339), new Point(3076, 313), new Point(3371, 324), new Point(206, 243) };
+            var englishDarkPixels = new Point[] { new Point(236, 251), new Point(2968, 337), new Point(3001, 339), new Point(3035, 316), new Point(3070, 352) };
 
             var chineseLightPixels = new Point[] { new Point(1969, 109), new Point(2023, 158), new Point(2056, 168), new Point(2079, 105), new Point(2098, 109), new Point(2124, 167) };
             var chineseDarkPixels = new Point[] { new Point(1959, 147), new Point(1991, 149), new Point(2014, 116), new Point(2067, 123), new Point(2072, 148), new Point(2106, 170) };
@@ -354,8 +354,8 @@ namespace WarframeDriver
 
         public bool GlyphFiltersPresent(Bitmap bitmap)
         {
-            var lightPixels = new Point[] { new Point(374, 257), new Point(377, 266), new Point(372, 276), new Point(435, 256), new Point(421, 276) };
-            var darkPixels = new Point[] { new Point(369, 261), new Point(367, 272), new Point(382, 269), new Point(392, 270), new Point(422, 266) };
+            var lightPixels = new Point[] { new Point(3859, 318), new Point(3879, 318), new Point(3869, 328), new Point(3859, 339), new Point(3880, 339) };
+            var darkPixels = new Point[] { new Point(3869, 317), new Point(3857, 328), new Point(3880, 327), new Point(3869, 338), new Point(3864, 314) };
             return !lightPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value <= 0.5f)
                 && !darkPixels.Any(p => bitmap.GetPixel(p.X, p.Y).ToHsv().Value >= 0.5f);
         }

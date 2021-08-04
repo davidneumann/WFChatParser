@@ -132,7 +132,22 @@ namespace DebugCLI
             //RustServerShim();
             //TestGlyphExtraction();
 
-            DebugNewChat();
+            //DebugNewChat();
+            DebugNewGlyphScreen();
+        }
+
+        private static void DebugNewGlyphScreen()
+        {
+            using var b = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\new_new_glyph_screen.png");
+            var ssh = new ScreenStateHandler();
+            var debug = ssh.GetScreenState(b);
+            var noFilters = ssh.GlyphFiltersPresent(b);
+            using var b2 = new Bitmap(@"C:\Users\david\OneDrive\Documents\WFChatParser\Screen States\new_new_glyph_screen_with_search.png");
+            var yesFilters = ssh.GlyphFiltersPresent(b2);
+            Console.WriteLine($"b on glyph? (should be glyph) {debug}");
+            Console.WriteLine($"b filters setup? (shoudl be false) {noFilters}");
+            Console.WriteLine($"b2 on glyph? (should be true) {ssh.GetScreenState(b2) == ScreenState.GlyphWindow}");
+            Console.WriteLine($"b2 filters setup (should be true) {yesFilters}");
         }
 
         private static void DebugNewChat()
