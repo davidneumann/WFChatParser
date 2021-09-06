@@ -492,7 +492,7 @@ namespace RelativeChatParser
                             lineWords.Add(Word.MakeSpaceWord((int)(Math.Round((float)gap / space))));
                             currentWord = new Word();
                             currentWord.WordColor = letter.ExtractedGlyph.FirstPixelColor;
-     color        }
+                        }
                     }
                     currentWord.Letters.Add(new Letter(NullGlyph, letter.ExtractedGlyph));
                 }
