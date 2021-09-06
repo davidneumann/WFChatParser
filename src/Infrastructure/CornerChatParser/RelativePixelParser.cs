@@ -365,7 +365,7 @@ namespace RelativeChatParser
             if (lineWords.Length >= 3 && lineWords[0].WordColor.IsTimestamp())
             {
                 result.LineType = LineType.NewMessage;
-                result.Timestamp = lineWords[0].ToString();
+                result.Timestamp = lineWords[0].ToString().Replace("D", "0").Replace("l", "1");
                 if (lineWords[1].ToString().Trim().Length == 0)
                     result.Username = lineWords[2].ToString();
                 else
@@ -492,7 +492,7 @@ namespace RelativeChatParser
                             lineWords.Add(Word.MakeSpaceWord((int)(Math.Round((float)gap / space))));
                             currentWord = new Word();
                             currentWord.WordColor = letter.ExtractedGlyph.FirstPixelColor;
-                        }
+     color        }
                     }
                     currentWord.Letters.Add(new Letter(NullGlyph, letter.ExtractedGlyph));
                 }
