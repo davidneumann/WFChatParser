@@ -365,7 +365,7 @@ namespace RelativeChatParser
             if (lineWords.Length >= 3 && lineWords[0].WordColor.IsTimestamp())
             {
                 result.LineType = LineType.NewMessage;
-                result.Timestamp = lineWords[0].ToString().Replace("D", "0").Replace("l", "1");
+                result.Timestamp = lineWords[0].ToString().Replace("D", "0").Replace("l", "1").Replace("I", "1");
                 if (lineWords[1].ToString().Trim().Length == 0)
                     result.Username = lineWords[2].ToString();
                 else
