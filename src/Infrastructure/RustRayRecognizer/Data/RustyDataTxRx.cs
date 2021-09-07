@@ -151,14 +151,14 @@ namespace RustRayRecognizer.Data
             _fout.Flush();
             var response_count = _fin.ReadUInt16();
             var results = new char[response_count];
-            Console.WriteLine($"Glyph recog response count: {response_count}");
-            var sb = new StringBuilder();
+            //Console.WriteLine($"Glyph recog response count: {response_count}");
+            //var sb = new StringBuilder();
             for (int i = 0; i < response_count; i++)
             {
                 results[i] = _fin.ReadChar();
-                sb.Append(results[i]);
+                //sb.Append(results[i]);
             }
-            Console.WriteLine(sb.ToString());
+            //Console.WriteLine(sb.ToString());
 
             _client.Dispose();
             _stream.Dispose();
