@@ -1,4 +1,5 @@
 ﻿using Application.ChatLineExtractor;
+using ParsingModel;
 using RelativeChatParser.Database;
 using RelativeChatParser.Models;
 using RelativeChatParser.Recognition;

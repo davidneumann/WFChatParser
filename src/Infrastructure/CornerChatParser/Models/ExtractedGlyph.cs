@@ -9,10 +9,11 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading;
+using ParsingModel;
 
 namespace RelativeChatParser.Models
 {
-    public class ExtractedGlyph
+    public class ExtractedGlyph : IExtractedGlyph
     {
         public Point3[] RelativePixelLocations;
         public Point[] RelativeEmptyLocations;
@@ -33,6 +34,14 @@ namespace RelativeChatParser.Models
         public Point[] CombinedLocations;
 
         public Point3[] RelativeBrights { get; set; }
+
+        int IExtractedGlyph.Height => Height;
+
+        int IExtractedGlyph.Width => Width;
+
+        int IExtractedGlyph.PixelsFromTopOfLine => PixelsFromTopOfLine;
+
+        Point3[] IExtractedGlyph.RelativeBrights => RelativeBrights;
 
         public ExtractedGlyph Clone()
         {

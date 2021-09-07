@@ -13,6 +13,7 @@ using WebSocketSharp;
 using System.Drawing.Imaging;
 using System.Security.Cryptography;
 using System.Runtime.CompilerServices;
+using ParsingModel;
 
 namespace RelativeChatParser.Recognition
 {

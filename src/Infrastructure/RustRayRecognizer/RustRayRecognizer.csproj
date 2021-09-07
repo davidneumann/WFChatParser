@@ -64,6 +64,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Data\RustyDataTxRx.cs" />
     <Compile Include="Extraction\GlyphExtractor.cs" />
     <Compile Include="Extraction\LineScanner.cs" />
     <Compile Include="Models\ExtractedGlyph.cs" />
@@ -74,6 +75,10 @@
     <ProjectReference Include="..\..\Core\Application\Application.csproj">
       <Project>{67C7C932-3C24-428E-95CD-2C2896E080CF}</Project>
       <Name>Application</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Parsing\ParsingModel\ParsingModel.csproj">
+      <Project>{11C69478-7B45-4653-BF89-1375B0F8849D}</Project>
+      <Name>ParsingModel</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

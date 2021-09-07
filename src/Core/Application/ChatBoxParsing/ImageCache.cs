@@ -76,11 +76,11 @@ namespace Application.ChatLineExtractor
                     }
                     else if (color == ChatColor.ClanTimeStampName)
                     {
-                        var minV = 0.231f;
+                        var minV = 0.3f;
                         v = Math.Max(0f, v - minV);
                         if(v > 0)
                             v += minV;
-                        v = Math.Min(1f, v / 0.667f);
+                        v = Math.Min(1f, v / 0.808f);
                         //v = Math.Min(1f, (v - minV) / (0.7f - minV));
                         //if (v < 0.358)
                         //    v = 0;

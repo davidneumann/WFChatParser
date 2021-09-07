@@ -57,6 +57,8 @@ using TesseractService.Parsers;
 using TesseractService.Factories;
 using Application.Models;
 using System.Net.Sockets;
+using ParsingModel;
+using RustRayRecognizer.Data;
 
 namespace DebugCLI
 {
@@ -130,10 +132,11 @@ namespace DebugCLI
             //MakeDatFiles();
 
             //RustServerShim();
+            RustServerShimReal();
             //TestGlyphExtraction();
 
             //DebugNewChat();
-            DebugNewGlyphScreen();
+            //DebugNewGlyphScreen();
         }
 
         private static void DebugNewGlyphScreen()
@@ -215,10 +218,28 @@ namespace DebugCLI
             RustRayRecognizer.Extraction.LineScanner.LineOffsets = allOffsets;
         }
 
+        private static void RustServerShimReal()
+        {
+            RustyDataTxRx.ConnectionAddress = "192.168.1.71";
+            Console.WriteLine($"{Environment.CurrentDirectory}");
+            var parser = new RelativePixelParser(new DummyLogger(), new DummySender());
+            var inputDir = Path.Combine("inputs", "character_training");
+
+            var input = @"C:\Users\david\OneDrive\Documents\WFChatParser\637665228366319962.png";
+
+            using var b = new Bitmap(input);
+            var chatLines = parser.ParseChatImage(b, false, false, LineScanner.LineOffsets.Length);
+            Console.WriteLine();
+            foreach (var chatLine in chatLines)
+            {
+                Console.WriteLine(chatLine.RawMessage);
+            }
+        }
+
         private static void RustServerShim()
         {
             Console.WriteLine($"cd {Environment.CurrentDirectory}");
-            var client = new TcpClient("127.0.0.1", 3333);
+            var client = new TcpClient("192.168.1.70", 3333);
             using var stream = client.GetStream();
             using var fout = new BinaryWriter(stream);
             using var fin = new BinaryReader(stream);
@@ -248,7 +269,8 @@ namespace DebugCLI
 
             var glyphDict = TrainingDataExtractor.ExtractGlyphs(inputs.Select(input => new TrainingInput(input + ".png", input + ".txt")))
                 .ToDictionary(kvp => ((int)kvp.Key).ToString(), kvp => kvp.Value);
-            foreach(var pair in glyphDict) {
+            foreach (var pair in glyphDict)
+            {
                 Console.WriteLine($"Sending {pair.Value.Count} glyphs to server");
                 fout.Write((ushort)pair.Value.Count);
 
@@ -330,7 +352,8 @@ namespace DebugCLI
             fout.Flush();
             var response_count = fin.ReadUInt16();
             Console.WriteLine($"Response count: {response_count}");
-            for(int i = 0; i < response_count; i++){
+            for (int i = 0; i < response_count; i++)
+            {
                 Console.Write($"{fin.ReadChar()}");
             }
             Console.WriteLine();
@@ -341,7 +364,8 @@ namespace DebugCLI
             if (Directory.Exists("dats"))
                 Directory.Delete("dats", true);
             // ImageCache.MinV = GlyphDatabase.BrightMinV;
-            GlyphExtractor.distanceThreshold = 3;
+            //GlyphExtractor.distanceThreshold = 3;
+            //GlyphExtractor.distanceThreshold += 1;
             var inputDir = Path.Combine("inputs", "character_training");
 
             var allFiles = Directory.GetFiles(inputDir);
@@ -401,24 +425,24 @@ namespace DebugCLI
                         {
                             for (int y = 0; y < LineScanner.Lineheight; y++)
                             {
-                                if(iCache[x, LineScanner.LineOffsets[line] + y] > 0)
+                                if (iCache[x, LineScanner.LineOffsets[line] + y] > 0)
                                 {
                                     startX = Math.Min(startX, x);
                                     endX = x;
                                 }
                             }
-                            if(x > endX + 21)
+                            if (x > endX + 21)
                             {
                                 //New end of overlap detected
                                 Console.WriteLine($"New glyph block detected {LineScanner.LineOffsets[line]} {startX},{endX - startX + 1}");
 
-                                var rect = new Rectangle(startX, LineScanner.LineOffsets[line], endX-startX+1, LineScanner.Lineheight);
+                                var rect = new Rectangle(startX, LineScanner.LineOffsets[line], endX - startX + 1, LineScanner.Lineheight);
                                 var extractedGlyph = LineScanner.ExtractGlyphsFromLine(iCache, rect);
-                                if(extractedGlyph.Length != 2)
+                                if (extractedGlyph.Length != 2)
                                 {
                                     //We have detected an overlap
                                     Console.WriteLine("Overlap detected!");
-                                    var key = $"{(int)expectedChars[line][charIndex]}_{(int)expectedChars[line][charIndex+1]}";
+                                    var key = $"{(int)expectedChars[line][charIndex]}_{(int)expectedChars[line][charIndex + 1]}";
                                     glyphDict[key] = new List<ExtractedGlyph>(extractedGlyph);
                                 }
                                 startX = LineScanner.ChatWidth;
@@ -541,14 +565,15 @@ namespace DebugCLI
             var sw = new System.Diagnostics.Stopwatch();
             sw.Start();
             var glyph_count = 0;
-            Parallel.ForEach(glyphDict, item => {
-            //foreach (var item in glyphDict) {
+            Parallel.ForEach(glyphDict, item =>
+            {
+                //foreach (var item in glyphDict) {
                 //Console.WriteLine($"Recognizing glyphs for char {item.Key}");
-                if(item.Key.Contains("_"))
+                if (item.Key.Contains("_"))
                     //continue;
                     return;
                 glyph_count += item.Value.Count;
-                Parallel.ForEach(item.Value, g =>RelativePixelGlyphIdentifier.IdentifyGlyph(g));
+                Parallel.ForEach(item.Value, g => RelativePixelGlyphIdentifier.IdentifyGlyph(g));
                 //item.Value.ForEach(g => RelativePixelGlyphIdentifier.IdentifyGlyph(g));
             });
             Console.WriteLine($"Recognized {glyph_count} glyphs. Took: {sw.Elapsed.TotalSeconds}s");

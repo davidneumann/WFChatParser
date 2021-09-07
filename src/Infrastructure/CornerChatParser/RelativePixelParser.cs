@@ -9,6 +9,7 @@ using RelativeChatParser.Database;
 using RelativeChatParser.Extraction;
 using RelativeChatParser.Models;
 using RelativeChatParser.Recognition;
+using RustRayRecognizer.Data;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -29,7 +30,7 @@ namespace RelativeChatParser
         private static readonly FuzzyGlyph NullGlyph;
         private Queue<string> _timeUserCache = new Queue<string>();
         private static List<Regex> _blacklistedRegex = new List<Regex>();
-        private static readonly Regex _kickRegex =  new Regex(@"\w was kicked.", RegexOptions.Compiled);
+        private static readonly Regex _kickRegex = new Regex(@"\w was kicked.", RegexOptions.Compiled);
 
         private static object _debugObjectLock = new object();
         private static ulong _debugGlyphsParsed = 0;
@@ -54,7 +55,7 @@ namespace RelativeChatParser
 
         private void RelativePixelGlyphIdentifier_SaveRequested(object sender, EventArgs e)
         {
-            if(_lastBitmap != null)
+            if (_lastBitmap != null)
             {
                 try
                 {
@@ -150,7 +151,7 @@ namespace RelativeChatParser
                 {
                     headLinesValid[i] = true;
                 }
-                else if(headLines[i].LineType == LineType.NewMessage)
+                else if (headLines[i].LineType == LineType.NewMessage)
                 {
                     headLinesValid[i] = true;
                     lastValidHeadLine = headLines[i];
@@ -172,7 +173,7 @@ namespace RelativeChatParser
                     bodyWords[i] = ConvertToWordsSingleLine(ExtractLettersSingleLine(i, imageCache, false, headLines[i].MessageBounds.Right + 1));
                 }
             });
-        //}
+            //}
 
             var fullWords = new Word[lineParseCount][];
             for (int i = 0; i < lineParseCount; i++)
@@ -195,7 +196,7 @@ namespace RelativeChatParser
             ChatMessageLineResult last = null;
             for (int i = 0; i < lineParseCount; i++)
             {
-                if(!headLinesValid[i])
+                if (!headLinesValid[i])
                 {
                     last = null;
                     continue;
@@ -210,7 +211,7 @@ namespace RelativeChatParser
                     continue;
                 }
 
-                if(fullWords[i].Length == 0)
+                if (fullWords[i].Length == 0)
                 {
                     var guid = Guid.NewGuid();
                     try
@@ -237,7 +238,7 @@ namespace RelativeChatParser
                         var tempLast = results.Last();
                         results.Remove(tempLast);
                     }
-                    else if(!_blacklistedRegex.Any(r => r.Match(headLines[i].RawMessage).Success))
+                    else if (!_blacklistedRegex.Any(r => r.Match(headLines[i].RawMessage).Success))
                         last.Append(headLines[i], LineScanner.Lineheight, LineScanner.LineOffsets[i]);
                 }
                 else
@@ -282,7 +283,7 @@ namespace RelativeChatParser
                 lock (_debugObjectLock)
                 {
                     _debugGlyphsParsed += (ulong)glyphCount;
-                    if(ms >= 0)
+                    if (ms >= 0)
                         _debugTotalMs += (ulong)ms;
                     var totalMsPGlyph = _debugGlyphsParsed == 0 ? 0 : _debugTotalMs / _debugGlyphsParsed;
                     glyphsPSecond = _debugGlyphsParsed / (_debugTotalMs / 1000f);
@@ -308,14 +309,33 @@ namespace RelativeChatParser
             return inCache;
         }
 
-        private static Letter[] ExtractLettersSingleLine(int i, ImageCache imageCache, bool abortAfterUsername, int startX = 0)
+        private Letter[] ExtractLettersSingleLine(int i, ImageCache imageCache, bool abortAfterUsername, int startX = 0)
         {
-            return LineScanner.ExtractGlyphsFromLine(imageCache, i, abortAfterUsername, startX)
-                .AsParallel().Select(extracted =>
+            var extracted = LineScanner.ExtractGlyphsFromLine(imageCache, i, abortAfterUsername, startX);
+            var results = new Letter[extracted.Length];
+            try
+            {
+                var characters = RustyDataTxRx.ParseCharacters(extracted);
+                for (int j = 0; j < results.Length; j++)
                 {
-                    var fuzzies = RelativePixelGlyphIdentifier.IdentifyGlyph(extracted);
-                    return fuzzies.Select(f => new Letter(f, extracted));
-                }).SelectMany(gs => gs).ToArray();
+                    results[j] = new Letter(new FuzzyGlyph() { Character = characters[j].ToString() }, extracted[j]);
+                    if (characters[j] == ' ')
+                    {
+#if DEBUG
+                        var packet = new GlyphPacket(extracted[j]);
+                        packet.Save(Path.Combine("bad_chars", $"{i}_{j}"), extracted[j]);
+#endif
+                        Console.WriteLine($"Bad character detected at {extracted[j].Left},{extracted[j].Top}");
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                var error = $"Failed to talk to glyph server.\r\n{e}";
+                _sender.AsyncSendDebugMessage(error).Wait();
+                Console.WriteLine(error);
+            }
+            return results;
         }
 
         private static Rectangle GetLineRect(Letter[] lineLetters)
@@ -444,11 +464,20 @@ namespace RelativeChatParser
             return message;
         }
 
-        private static Letter[][] ExtractLetters(Bitmap image, int lineParseCount, ImageCache imageCache, bool abortAfterUsername = false)
+        private Letter[][] ExtractLetters(Bitmap image, int lineParseCount, ImageCache imageCache, bool abortAfterUsername = false)
         {
             var allLetters = new Letter[lineParseCount][];
+#if DEBUG
+            for (int i = 0; i < lineParseCount; i++)
+            {
+                var letters = ExtractLettersSingleLine(i, imageCache, abortAfterUsername);
+                lock (allLetters)
+                {
+                    allLetters[i] = letters;
+                }
+            }
+#else
             Parallel.For(0, lineParseCount, i =>
-            //for (int i = 0; i < lineParseCount; i++)
             {
                 var letters = ExtractLettersSingleLine(i, imageCache, abortAfterUsername);
                 lock (allLetters)
@@ -456,7 +485,7 @@ namespace RelativeChatParser
                     allLetters[i] = letters;
                 }
             });
-            //}
+#endif
             return allLetters;
         }
 
@@ -479,7 +508,7 @@ namespace RelativeChatParser
             Word currentWord = new Word();
             foreach (var letter in lineLetters)
             {
-                 if (letter.FuzzyGlyph == null)
+                if (letter.FuzzyGlyph == null)
                 {
                     var last = currentWord.Letters.LastOrDefault();
                     if (last != null)

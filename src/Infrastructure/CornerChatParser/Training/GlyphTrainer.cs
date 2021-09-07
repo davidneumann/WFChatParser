@@ -1,4 +1,5 @@
-﻿using RelativeChatParser.Models;
+﻿using ParsingModel;
+using RelativeChatParser.Models;
 using System;
 using System.Collections.Generic;
 using System.Drawing;

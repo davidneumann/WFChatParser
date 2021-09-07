@@ -11,6 +11,7 @@ using DataStream;
 using ImageOCR;
 using Microsoft.Extensions.Configuration;
 using RelativeChatParser;
+using RustRayRecognizer.Data;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -66,6 +67,7 @@ namespace ChatLoggerCLI
                 config["DataSender:LogMessagePrefix"],
                 config["DataSender:LogLineMessagePrefix"]);
 
+            RustyDataTxRx.ConnectionAddress = config["Parsing:ConnectionAddress"];
             _logger = new Application.Logger.Logger(_dataSender, _cancellationSource.Token);
             _dataSender._logger = _logger;
 

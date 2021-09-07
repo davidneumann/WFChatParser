@@ -13,6 +13,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Core\Application\Application.csproj" />
+    <ProjectReference Include="..\Parsing\ParsingModel\ParsingModel.csproj" />
+    <ProjectReference Include="..\RustRayRecognizer\RustRayRecognizer.csproj" />
   </ItemGroup>
 
 </Project>
