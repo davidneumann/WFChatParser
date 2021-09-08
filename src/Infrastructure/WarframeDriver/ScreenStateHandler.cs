@@ -157,8 +157,8 @@ namespace WarframeDriver
             //No longer working as they added railjack
             //var englishLightPixels = new Point[] { new Point(554, 959), new Point(650, 975), new Point(680, 933), new Point(778, 950), new Point(810, 977) };
             //var englishDarkPixels = new Point[] { new Point(568, 942), new Point(626, 972), new Point(700, 948), new Point(771, 939), new Point(902, 956) };
-            var englishLightPixels = new Point[] { new Point(562, 1064), new Point(656, 1095), new Point(704, 1047), new Point(760, 1089), new Point(811, 1055), new Point(863, 1093), new Point(900, 1064) };
-            var englishDarkPixels = new Point[] { new Point(578, 1069), new Point(636, 1097), new Point(706, 1073), new Point(774, 1088), new Point(821, 1063), new Point(855, 1076), new Point(903, 1049) };
+            var englishLightPixels = new Point[] { new Point(563, 1064), new Point(652, 1078), new Point(704, 1047), new Point(760, 1089), new Point(809, 1055), new Point(863, 1093), new Point(900, 1064) };
+            var englishDarkPixels = new Point[] { new Point(578, 1069), new Point(640, 1097), new Point(706, 1073), new Point(774, 1088), new Point(821, 1063), new Point(855, 1076), new Point(903, 1049) };
 
 
             var chineseLightPixels = new Point[] { new Point(556, 977), new Point(576, 966), new Point(603, 922), new Point(661, 981), new Point(687, 917), new Point(708, 965) };
