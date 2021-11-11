@@ -16,9 +16,9 @@ namespace Application.LogParser
             LogParser.OnNewMessage += OnLogMessage;
         }
 
-        public RedTextParser() : this(new WarframeLogParser())
-        {
-        }
+        //public RedTextParser() : this(new WarframeLogParser())
+        //{
+        //}
 
         private void OnLogMessage(LogMessage entry)
         {

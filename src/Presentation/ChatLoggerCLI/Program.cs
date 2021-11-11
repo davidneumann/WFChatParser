@@ -36,6 +36,8 @@ namespace ChatLoggerCLI
         private static Logger _logger;
         private static bool _cleanExitRequested = false;
 
+        public static Logger Logger { get => _logger; set => _logger = value; }
+
         [SecurityPermission(SecurityAction.Demand, Flags = SecurityPermissionFlag.ControlAppDomain)]
         public static void Main(string[] args)
         {
@@ -56,6 +58,7 @@ namespace ChatLoggerCLI
               .AddJsonFile("appsettings.production.json", true, true)
               .Build();
 
+            _logger = new Application.Logger.Logger(_cancellationSource.Token);
             _dataSender = new ClientWebsocketDataSender(new Uri(config["DataSender:HostName"]),
                 config.GetSection("DataSender:ConnectionMessages").GetChildren().Select(i => i.Value),
                 config["DataSender:MessagePrefix"],
@@ -65,11 +68,11 @@ namespace ChatLoggerCLI
                 config["DataSender:RedtextMessagePrefix"],
                 config["DataSender:RivenImageMessagePrefix"],
                 config["DataSender:LogMessagePrefix"],
-                config["DataSender:LogLineMessagePrefix"]);
+                config["DataSender:LogLineMessagePrefix"],
+                _logger);
+            _logger.DataSender = _dataSender;
 
             RustyDataTxRx.ConnectionAddress = config["Parsing:ConnectionAddress"];
-            _logger = new Application.Logger.Logger(_dataSender, _cancellationSource.Token);
-            _dataSender._logger = _logger;
 
             _ = Task.Run(_dataSender.ConnectAsync);
 
@@ -138,7 +141,7 @@ namespace ChatLoggerCLI
 
                 //var password = GetPassword(config["Credentials:Key"], config["Credentials:Salt"]);
 
-                var logParser = new WarframeLogParser();
+                var logParser = new WarframeLogParser(_logger);
                 var redtextthing = new RedTextParser(logParser);
                 redtextthing.OnRedText += Redtextthing_OnRedText;
                 logParser.OnNewMessage += LogParser_OnNewMessage;
@@ -338,12 +341,13 @@ namespace ChatLoggerCLI
         private static void LogParser_OnNewMessage(LogMessage msg)
         {
             _dataSender.AsyncSendLogLine(msg).Wait();
-            //_logger.Log($"{msg.Category} {msg.Level} {msg.Message}");
+            _logger.Log($"EE log: {msg.Category} {msg.Level} {msg.Message}");
         }
 
         private static void Redtextthing_OnRedText(RedTextMessage msg)
         {
             _dataSender.AsyncSendRedtext(msg).Wait();
+            _logger.Log($"Red text: {msg.SentTime} {msg.Name} {msg.Message}");
         }
 
         private static string GetPassword(string key, string salt, string target)

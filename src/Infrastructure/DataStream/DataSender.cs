@@ -51,7 +51,7 @@ namespace DataStream
         public event EventHandler<SaveEventArgs> RequestSaveAll;
         public event EventHandler<ProfileRequest> ProfileParseRequest;
 
-        public ILogger _logger;
+        private ILogger _logger;
 
         public ClientWebsocketDataSender(Uri uri, IEnumerable<string> connectMessages,
             string messagePrefix,
@@ -61,7 +61,8 @@ namespace DataStream
             string redtextMessagePrefix,
             string rivenImageMessagePrefix,
             string logMessagePrefix,
-            string logLineMessagePrefix)
+            string logLineMessagePrefix,
+            ILogger logger)
         {
             _uri = uri;
             _connectMessages = connectMessages.ToList();
@@ -74,6 +75,7 @@ namespace DataStream
             _rivenImageMessagePrefix = rivenImageMessagePrefix;
             _logMessagePrefix = logMessagePrefix;
             _logLineMessagePrefix = logLineMessagePrefix;
+            _logger = logger;
 
             _jsonSettings = new JsonSerializerSettings
             {
@@ -86,12 +88,30 @@ namespace DataStream
             };
 
             OnReceive += Receive;
+            //This will never happen as the current logger requires the datasender in its constructor
+            Log("Datasender constructor ran");
+        }
+
+        private void Log(string message, bool toConsole = true, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
+        {
+            if(_logger != null)
+            {
+                try
+                {
+                    if (!message.StartsWith("Datasender"))
+                        message = $"Datasender {message}";
+                    _logger.Log(message, writeToConsole:toConsole, sendToSocket: false, memberName:memberName);
+                }
+                catch
+                {
+
+                }
+            }
         }
 
         public async Task ConnectAsync()
         {
-            if (_logger != null)
-                _logger.Log($"Connecting to {_uri}", writeToConsole: false);
+            Log($"Datasender Connecting to {_uri}", toConsole: false);
 
             // TODO Use cancellation tokens?
             await ActualConnect();
@@ -101,17 +121,25 @@ namespace DataStream
 
         public void Send(string message)
         {
+            Log("Adding message to queue");
             _sendQueue.Enqueue(message);
         }
 
         public Task CloseAsync()
         {
+            Log("Trying to close DataSender");
             _cancellationTokenSource.Cancel();
             return _websocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None);
         }
 
         private async Task SendAsync(string message)
         {
+            try
+            {
+                var logmsg = message.Length < 60 ? message : message.Substring(0, 60);
+                Log($"Datasender sending {logmsg}");
+            }
+            catch { }
             var bytes = ArrayPool<byte>.Shared.Rent(Encoding.UTF8.GetByteCount(message));
             var length = Encoding.UTF8.GetBytes(message, 0, message.Length, bytes, 0);
 
@@ -127,11 +155,13 @@ namespace DataStream
 
         private async Task SendQueue()
         {
+            Log("send queue started");
             var token = _cancellationTokenSource.Token;
             while (!token.IsCancellationRequested)
             {
                 if (_sendQueue.TryDequeue(out var message))
                 {
+                    Log("Item dequeued from send queue");
                     // Wait for websocket to become available
                     while (!_doneConnecting || _websocket.State != WebSocketState.Open)
                     {
@@ -146,6 +176,7 @@ namespace DataStream
                     }
                     catch (Exception e)
                     {
+                        Log($"Failed to send message:\r\n{message}\r\n\r\n{e.ToString()}");
                         // TODO Handle this
                     }
                 }
@@ -158,10 +189,12 @@ namespace DataStream
 
         private async Task ActualConnect()
         {
+            Log("Datasender actually connecting");
             _doneConnecting = false;
 
             do
             {
+                Log("Datasender attempting to connect again");
                 _websocket?.Dispose();
                 _websocket = new ClientWebSocket();
                 _websocket.Options.KeepAliveInterval = TimeSpan.FromSeconds(20);
@@ -179,10 +212,7 @@ namespace DataStream
                 }
                 catch (Exception e)
                 {
-                    if(_logger != null)
-                    {
-                        _logger.Log($"{e}", writeToConsole: false);
-                    }
+                    Log($"{e}", toConsole: false);
                     // TODO What to do here?
                 }
 
@@ -196,6 +226,7 @@ namespace DataStream
 
         private async Task ReceiveData()
         {
+            Log("Datasender receive data started");
             var token = _cancellationTokenSource.Token;
             var buffer = new byte[1024];
 
@@ -217,14 +248,17 @@ namespace DataStream
                     WebSocketReceiveResult result;
                     do
                     {
+                        Log("partial data being received");
                         result = await _websocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
                         _stringBuilder.Append(Encoding.ASCII.GetString(buffer, 0, result.Count));
                     } while (!result.EndOfMessage);
+                    Log("Full data has been received");
 
                     OnReceive?.Invoke(_stringBuilder.ToString());
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
+                    Log($"Data sender receive data error:\r\n{e}");
                     // TODO
                 }
             }
@@ -232,6 +266,7 @@ namespace DataStream
 
         public void Dispose()
         {
+            Log("Data sender disposing of itself");
             _websocket?.Dispose();
             _cancellationTokenSource?.Dispose();
         }
@@ -246,8 +281,7 @@ namespace DataStream
             if (!string.IsNullOrEmpty(_rawMessagePrefix))
                 Send(_rawMessagePrefix + message.Raw);
 
-            if (_logger != null)
-                _logger.Log(JsonConvert.SerializeObject(message, Formatting.None, _jsonSettings));
+            Log(JsonConvert.SerializeObject(message, Formatting.None, _jsonSettings));
 
             return Task.CompletedTask;
         }
@@ -268,6 +302,7 @@ namespace DataStream
 
         public Task AsyncSendRivenImage(Guid imageId, Bitmap bitmap)
         {
+            Log($"Datasender sending riven {imageId}");
             try
             {
                 bitmap.Save("riven.jpg");
@@ -299,15 +334,39 @@ namespace DataStream
 
         private void Receive(string message)
         {
-            if (_logger != null)
-                _logger.Log($"Datasender received: {message}");
+            Log($"Datasender received: {message}");
 
             var split = message.Split(new string[] { " :" }, StringSplitOptions.RemoveEmptyEntries); //:5f5196d9fdd47d3d8df5fede GET RIVENBOT9000 TEST :KILL
+            if(split == null || split.Length == 0)
+            {
+                Log("Split was empty or null");
+                return;
+            }
             var data = split[0].Split(' ');
+            if(data == null || data.Length == 0)
+            {
+                var msg = $"Data was empty or null. Length: ";
+                if (data == null)
+                    msg += "null";
+                else
+                    msg += data.Length;
+                Log($"Data was empty or null. {msg}");
+                return;
+            }
             var sender = data[0]; //:5f5196d9fdd47d3d8df5fede
             if (sender.StartsWith(":")) //Only trim 1 ;
                 sender = sender.Substring(1);
+            if(data.Length <= 1)
+            {
+                Log($"Data missing code. Length: {data.Length}");
+                return;
+            }
             var code = data[1]; //GET
+            if (data.Length <= 3)
+            {
+                Log($"Data missing command. Length: {data.Length}");
+                return;
+            }
             var command = data[3];
             var payload = string.Empty;
             if (split.Length > 1)
@@ -357,10 +416,9 @@ namespace DataStream
                     }
                     catch (Exception e)
                     {
+                        Log(e.ToString());
                         if (_logger != null)
                         {
-                            Console.WriteLine(e.ToString());
-                            _logger.Log(e.ToString());
                             AsyncSendDebugMessage(e.ToString());
                         }
                     }
@@ -369,12 +427,7 @@ namespace DataStream
                 case "FULL":
                     if (string.IsNullOrEmpty(payload) || payload.Trim().Length <= 0)
                         break;
-                    if(_logger != null)
-                    {
-                        _logger.Log($"Adding {payload} to profile queue");
-                    }
-                    else
-                        Console.WriteLine($"Adding {payload} to profile queue");
+                    Log($"Adding {payload} to profile queue");
                     if (ProfileParseRequest != null)
                     {
                         ProfileParseRequest?.Invoke(this, new ProfileRequest(payload, sender, command));

@@ -59,6 +59,7 @@ using Application.Models;
 using System.Net.Sockets;
 using ParsingModel;
 using RustRayRecognizer.Data;
+using System.Runtime.CompilerServices;
 
 namespace DebugCLI
 {
@@ -672,6 +673,8 @@ namespace DebugCLI
               .AddJsonFile("appsettings.production.json", true, true)
               .Build();
 
+
+            var logger = new DummyLogger(true);
             var _dataSender = new ClientWebsocketDataSender(new Uri(config["DataSender:HostName"]),
                 config.GetSection("DataSender:ConnectionMessages").GetChildren().Select(i => i.Value),
                 config["DataSender:MessagePrefix"],
@@ -681,10 +684,8 @@ namespace DebugCLI
                 config["DataSender:RedtextMessagePrefix"],
                 config["DataSender:RivenImageMessagePrefix"],
                 config["DataSender:LogMessagePrefix"],
-                config["DataSender:LogLineMessagePrefix"]);
-
-            var logger = new DummyLogger(true);
-            _dataSender._logger = logger;
+                config["DataSender:LogLineMessagePrefix"],
+                logger);
             var _ = Task.Run(_dataSender.ConnectAsync);
 
             var cT = new CancellationTokenSource();
@@ -1687,7 +1688,8 @@ namespace DebugCLI
                 config["DataSender:RedtextMessagePrefix"],
                 config["DataSender:RivenImageMessagePrefix"],
                 config["DataSender:LogMessagePrefix"],
-                config["DataSender:LogLineMessagePrefix"]);
+                config["DataSender:LogLineMessagePrefix"],
+                new DummyLogger());
             _ = Task.Run(dataSender.ConnectAsync);
 
             var duck = new Bitmap("17662706-ad79-41a4-8da9-acd4c891a1e4.png");
@@ -4066,7 +4068,7 @@ namespace DebugCLI
         {
             _output = false;
         }
-        public void Log(string message, bool writeToConsole = true, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
+        public void Log(string message, bool writeToConsole = true, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "", bool sendToSocket = true)
         {
             if (_output)
                 Console.WriteLine(message);

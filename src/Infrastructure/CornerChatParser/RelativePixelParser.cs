@@ -311,21 +311,34 @@ namespace RelativeChatParser
 
         private Letter[] ExtractLettersSingleLine(int i, ImageCache imageCache, bool abortAfterUsername, int startX = 0)
         {
+            var hasSavedScreenshot = false;
+            var screenshotGuid = Guid.Empty;
             var extracted = LineScanner.ExtractGlyphsFromLine(imageCache, i, abortAfterUsername, startX);
-            var results = new Letter[extracted.Length];
+            var results = new List<Letter>();
             try
             {
-                var characters = RustyDataTxRx.ParseCharacters(extracted);
-                for (int j = 0; j < results.Length; j++)
+                var dataPacket = new ExtractedGlyph[1];
+                foreach (var item in extracted)
                 {
-                    results[j] = new Letter(new FuzzyGlyph() { Character = characters[j].ToString() }, extracted[j]);
-                    if (characters[j] == ' ')
+                    dataPacket[0] = item;
+                    var characters = RustyDataTxRx.ParseCharacters(dataPacket);
+                    foreach (var character in characters)
                     {
-#if DEBUG
-                        var packet = new GlyphPacket(extracted[j]);
-                        packet.Save(Path.Combine("bad_chars", $"{i}_{j}"), extracted[j]);
-#endif
-                        Console.WriteLine($"Bad character detected at {extracted[j].Left},{extracted[j].Top}");
+                        if (character == ' ')
+                        {
+                            if (!hasSavedScreenshot)
+                            {
+                                screenshotGuid = Guid.NewGuid();
+                                imageCache.SaveChatScreenshot(Path.Combine("bad_chars", $"ss_{screenshotGuid}"));
+                            }
+                            var packet = new GlyphPacket(item);
+                            packet.Save(Path.Combine("bad_chars", $"{i}_{Guid.NewGuid()}_{screenshotGuid}"), item);
+                            _logger.Log($"Bad character detected at {item.Left},{item.Top}");
+                        }
+
+                        if (character == ' ')
+                            continue;
+                        results.Add(new Letter(new FuzzyGlyph() { Character = character.ToString() }, item));
                     }
                 }
             }
@@ -335,7 +348,7 @@ namespace RelativeChatParser
                 _sender.AsyncSendDebugMessage(error).Wait();
                 Console.WriteLine(error);
             }
-            return results;
+            return results.ToArray();
         }
 
         private static Rectangle GetLineRect(Letter[] lineLetters)

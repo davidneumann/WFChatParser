@@ -13,11 +13,12 @@ namespace Application.Logger
         private IDataTxRx _dataSender;
         private StreamWriter _streamWriter;
         private CancellationToken _token;
-        private ConcurrentQueue<string> _messages = new ConcurrentQueue<string>();
+        private ConcurrentQueue<LogMessage> _messages = new ConcurrentQueue<LogMessage>();
 
-        public Logger(IDataTxRx dataSender, CancellationToken c)
+        public IDataTxRx DataSender { get => _dataSender; set => _dataSender = value; }
+
+        public Logger(CancellationToken c)
         {
-            _dataSender = dataSender;
             var existingLog = new FileInfo("log.txt");
             if (existingLog.Exists)
             {
@@ -37,22 +38,35 @@ namespace Application.Logger
             {
                 processingSw.Restart();
                 var messageSb = new StringBuilder();
-                string message = null;
+                var socketMessageSb = new StringBuilder();
+                LogMessage message = null;
                 var messageCount = 0;
                 do
                 {
                     if (_messages.TryDequeue(out message))
                     {
                         messageCount++;
-                        messageSb.Insert(0, message + "\n");
-                        _streamWriter.WriteLine(message);
+                        if (message.WriteToFile)
+                        {
+                            _streamWriter.WriteLine(message.Message);
+                        }
+                        if(message.SendToSocket)
+                            messageSb.Insert(0, message.Message + "\n");
+                        if(message.WriteToConsole)
+                        {
+                            var consoleMessage = message.Message;
+                            if (consoleMessage.Length > Console.BufferWidth)
+                                consoleMessage = consoleMessage.Substring(0, Console.BufferWidth - 1);
+                            Console.WriteLine(consoleMessage);
+                        }
                     }
                     else
                         break;
                 } while (messageCount < 1000 && message != null);
                 if (messageCount > 0)
                 {
-                    _dataSender.AsyncSendLogMessage(messageSb.ToString());
+                    if(_dataSender != null)
+                        _dataSender.AsyncSendLogMessage(messageSb.ToString());
                     _streamWriter.Flush();
                 }
                 processingSw.Stop();
@@ -60,17 +74,23 @@ namespace Application.Logger
             }
         }
 
-        public void Log(string message, bool writeToConsole = true, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "")
+        public void Log(string message, bool writeToConsole = true, [System.Runtime.CompilerServices.CallerMemberName] string memberName = "",
+            bool sendToSocket = true)
         {
             message = $"[{DateTime.Now.ToString("HH:mm:ss.f")}] {memberName} -> {message}";
-            if (writeToConsole)
+            _messages.Enqueue(new LogMessage() { Message = message, SendToSocket = sendToSocket, WriteToConsole = writeToConsole });
+        }
+
+        private class LogMessage
+        {
+            public bool WriteToFile = true;
+            public bool SendToSocket = true;
+            public bool WriteToConsole = true;
+            public string Message = string.Empty;
+            public override string ToString()
             {
-                var consoleMessage = message;
-                if (consoleMessage.Length > Console.BufferWidth)
-                    consoleMessage = consoleMessage.Substring(0, Console.BufferWidth - 1);
-                Console.WriteLine(consoleMessage);
+                return Message;
             }
-            _messages.Enqueue(message);
         }
     }
 }

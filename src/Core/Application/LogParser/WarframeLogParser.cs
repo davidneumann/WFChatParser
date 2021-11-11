@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Application.Logger;
+using System;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -25,16 +26,25 @@ namespace Application.LogParser
 
         public event Action<LogMessage> OnNewMessage;
 
-        public WarframeLogParser() : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Warframe", "EE.log"))
+        private ILogger _logger;
+
+        public WarframeLogParser(ILogger logger) : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Warframe", "EE.log"), logger)
         {
         }
 
-        public WarframeLogParser(string path)
+        public WarframeLogParser(string path, ILogger logger)
         {
             _logFilePath = path;
 
+            _logger = logger;
             _timer = new Timer(TimerHandler);
             _timer.Change(_pollingInterval, Timeout.Infinite);
+
+            try
+            {
+                _logger.Log("Warframe log parser started");
+            }
+            catch { }
         }
 
         private LogMessage ParseLine(string line)
@@ -158,6 +168,11 @@ namespace Application.LogParser
                     {
                         if (_prevEntry != null)
                         {
+                            try
+                            {
+                                _logger.Log("Trying to send new log message");
+                            }
+                            catch { }
                             _prevEntry.Message = _prevMessage.ToString();
                             OnNewMessage?.Invoke(_prevEntry);
                             _prevMessage.Clear();
