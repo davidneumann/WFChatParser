@@ -9,8 +9,8 @@ namespace RustRayRecognizer.Extraction
 {
     public static class LineScanner
     {
-        public static int[] LineOffsets = new int[] { 767, 816, 866, 915, 965, 1014, 1064, 1114, 1163, 1213, 1262, 1312, 1362, 1411, 1461, 1510, 1560, 1610, 1659, 1709, 1758, 1808, 1857, 1907, 1957, 2006, 2056 };
-        
+        public static int[] LineOffsets = new int[] { 891, 936, 981, 1025, 1070, 1115, 1160, 1205, 1249, 1294, 1339, 1384, 1429, 1473, 1518, 1563, 1608, 1653, 1697, 1742, 1787, 1832, 1877, 1921, 1966, 2011 };
+
         public static readonly int ChatWidth = 3236;
         public static readonly int Lineheight = 38;
 
@@ -19,7 +19,7 @@ namespace RustRayRecognizer.Extraction
         public static int[] ExtractLineOffsets(ImageCache image)
         {
             var offsets = new List<int>();
-            for (int y = 660; y < 2095; y++)
+            for (int y = 726; y < 2095; y++)
             {
                 for (int x = ChatLeftX; x < ChatWidth; x++)
                 {
