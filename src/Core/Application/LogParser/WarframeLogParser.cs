@@ -168,11 +168,11 @@ namespace Application.LogParser
                     {
                         if (_prevEntry != null)
                         {
-                            try
-                            {
-                                _logger.Log("Trying to send new log message");
-                            }
-                            catch { }
+                            //try
+                            //{
+                            //    _logger.Log("Trying to send new log message");
+                            //}
+                            //catch { }
                             _prevEntry.Message = _prevMessage.ToString();
                             OnNewMessage?.Invoke(_prevEntry);
                             _prevMessage.Clear();

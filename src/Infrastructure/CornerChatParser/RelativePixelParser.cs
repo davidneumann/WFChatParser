@@ -311,9 +311,11 @@ namespace RelativeChatParser
 
         private Letter[] ExtractLettersSingleLine(int i, ImageCache imageCache, bool abortAfterUsername, int startX = 0)
         {
+            //_logger.Log($"Trying to parse single letters from {memberName}");
             var hasSavedScreenshot = false;
             var screenshotGuid = Guid.Empty;
             var extracted = LineScanner.ExtractGlyphsFromLine(imageCache, i, abortAfterUsername, startX);
+            //_logger.Log($"Extracted {extracted.Length} items from line {i}");
             var results = new List<Letter>();
             try
             {
@@ -330,10 +332,11 @@ namespace RelativeChatParser
                             {
                                 screenshotGuid = Guid.NewGuid();
                                 imageCache.SaveChatScreenshot(Path.Combine("bad_chars", $"ss_{screenshotGuid}"));
+                                hasSavedScreenshot = true;
                             }
                             var packet = new GlyphPacket(item);
                             packet.Save(Path.Combine("bad_chars", $"{i}_{Guid.NewGuid()}_{screenshotGuid}"), item);
-                            _logger.Log($"Bad character detected at {item.Left},{item.Top}");
+                            _logger.Log($"Bad character detected at {item.Left},{item.Top}. Guid: {screenshotGuid}");
                         }
 
                         if (character == ' ')
@@ -499,10 +502,11 @@ namespace RelativeChatParser
                 }
             });
 #endif
+            //_logger.Log($"Extracted {allLetters.Length} letters");
             return allLetters;
         }
 
-        private static Word[][] ConvertToWords(int lineParseCount, Letter[][] allLetters)
+        private Word[][] ConvertToWords(int lineParseCount, Letter[][] allLetters)
         {
             var allWords = new Word[lineParseCount][];
             for (int i = 0; i < lineParseCount; i++)
@@ -510,8 +514,8 @@ namespace RelativeChatParser
                 var lineLetters = allLetters[i];
                 var lineWords = ConvertToWordsSingleLine(lineLetters);
                 allWords[i] = lineWords.ToArray();
+                //_logger.Log($"Converted {lineWords.Length} words");
             }
-
             return allWords;
         }
 

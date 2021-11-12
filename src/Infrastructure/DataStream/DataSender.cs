@@ -121,7 +121,7 @@ namespace DataStream
 
         public void Send(string message)
         {
-            Log("Adding message to queue");
+            //Log("Adding message to queue");
             _sendQueue.Enqueue(message);
         }
 
@@ -137,7 +137,7 @@ namespace DataStream
             try
             {
                 var logmsg = message.Length < 60 ? message : message.Substring(0, 60);
-                Log($"Datasender sending {logmsg}");
+                //Log($"Datasender sending {logmsg}");
             }
             catch { }
             var bytes = ArrayPool<byte>.Shared.Rent(Encoding.UTF8.GetByteCount(message));
@@ -161,7 +161,7 @@ namespace DataStream
             {
                 if (_sendQueue.TryDequeue(out var message))
                 {
-                    Log("Item dequeued from send queue");
+                    //Log("Item dequeued from send queue");
                     // Wait for websocket to become available
                     while (!_doneConnecting || _websocket.State != WebSocketState.Open)
                     {
@@ -427,7 +427,7 @@ namespace DataStream
                 case "FULL":
                     if (string.IsNullOrEmpty(payload) || payload.Trim().Length <= 0)
                         break;
-                    Log($"Adding {payload} to profile queue");
+                    //Log($"Adding {payload} to profile queue");
                     if (ProfileParseRequest != null)
                     {
                         ProfileParseRequest?.Invoke(this, new ProfileRequest(payload, sender, command));

@@ -133,11 +133,48 @@ namespace DebugCLI
             //MakeDatFiles();
 
             //RustServerShim();
-            RustServerShimReal();
+            //RustServerShimReal();
             //TestGlyphExtraction();
 
             //DebugNewChat();
             //DebugNewGlyphScreen();
+
+            //NewMenuFix();
+            //NewNewMenuFix();
+
+            TestChat();
+        }
+
+        private static void TestChat()
+        {
+            RustyDataTxRx.ConnectionAddress = "192.168.1.71";
+            var input = @"C:\Users\david\Nextcloud\Documents\WFChatParser\Errors\Screenshot (7).png";
+            var rpp = new RelativePixelParser(new DummyLogger(true), new DummySender());
+            using (var b = new Bitmap(input))
+            {
+                var results = rpp.ParseChatImage(b, true, true, 27, false);
+                foreach (var result in results)
+                {
+                    Console.WriteLine(result.RawMessage);
+                }
+            }
+        }
+
+        private static void NewNewMenuFix()
+        {
+            var input = @"C:\Users\david\Nextcloud\Documents\WFChatParser\Screen States\132811350814347751.png";
+            var ss = new ScreenStateHandler();
+            using var b = new Bitmap(input);
+            var debug = ss.GetScreenState(b);
+            Console.WriteLine($"{input} screen state: {debug}");
+        }
+
+        private static void NewMenuFix()
+        {
+            var input = @"C:\Users\david\OneDrive\Documents\WFChatParser\132756092968760684.png";
+            var ss = new ScreenStateHandler();
+            using var b = new Bitmap(input);
+            var debug = ss.GetScreenState(b);
         }
 
         private static void DebugNewGlyphScreen()
@@ -193,6 +230,7 @@ namespace DebugCLI
                     }
                 }
             }
+
             for (int i = 0; i < Math.Min(allOffsets.Length, RustRayRecognizer.Extraction.LineScanner.LineOffsets.Length); i++)
             {
                 if (allOffsets[i] != RustRayRecognizer.Extraction.LineScanner.LineOffsets[i])
@@ -226,7 +264,7 @@ namespace DebugCLI
             var parser = new RelativePixelParser(new DummyLogger(), new DummySender());
             var inputDir = Path.Combine("inputs", "character_training");
 
-            var input = @"C:\Users\david\OneDrive\Documents\WFChatParser\637665228366319962.png";
+            var input = @"C:\Users\david\OneDrive\Documents\WFChatParser\637666221831364319.png";
 
             using var b = new Bitmap(input);
             var chatLines = parser.ParseChatImage(b, false, false, LineScanner.LineOffsets.Length);

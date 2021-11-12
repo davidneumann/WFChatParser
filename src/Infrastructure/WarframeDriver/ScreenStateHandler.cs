@@ -114,8 +114,8 @@ namespace WarframeDriver
 
         private bool IsGlyphScreen(Bitmap bitmap)
         {
-            var englishLightPixels = new Point[] { new Point(2962, 315), new Point(3035, 339), new Point(3076, 313), new Point(3371, 324), new Point(206, 243) };
-            var englishDarkPixels = new Point[] { new Point(236, 251), new Point(2968, 337), new Point(3001, 339), new Point(3035, 316), new Point(3070, 352) };
+            var englishLightPixels = new Point[] { new Point(206, 244), new Point(254, 267), new Point(230, 172), new Point(2938, 320), new Point(3039, 346) };
+            var englishDarkPixels = new Point[] { new Point(206, 256), new Point(207, 268), new Point(282, 143), new Point(3640, 2090), new Point(4021, 53) };
 
             var chineseLightPixels = new Point[] { new Point(1969, 109), new Point(2023, 158), new Point(2056, 168), new Point(2079, 105), new Point(2098, 109), new Point(2124, 167) };
             var chineseDarkPixels = new Point[] { new Point(1959, 147), new Point(1991, 149), new Point(2014, 116), new Point(2067, 123), new Point(2072, 148), new Point(2106, 170) };
@@ -134,8 +134,8 @@ namespace WarframeDriver
         private bool IsProfileMenu(Bitmap bitmap)
         {
             //English anchors
-            var englishLightPixels = new Point[] { new Point(569, 929), new Point(585, 956), new Point(659, 980), new Point(673, 926), new Point(760, 951) };
-            var englishDarkPixels = new Point[] { new Point(571, 957), new Point(647, 953), new Point(694, 932), new Point(749, 940), new Point(810, 932) };
+            var englishLightPixels = new Point[] { new Point(576, 727), new Point(902, 705), new Point(787, 824), new Point(1074, 823), new Point(728, 1125) };
+            var englishDarkPixels = new Point[] { new Point(574, 689), new Point(851, 704), new Point(975, 828), new Point(707, 1106), new Point(840, 1115) };
 
             var chineseLightPixels = new Point[] { new Point(559, 921), new Point(550, 943), new Point(566, 965), new Point(599, 928), new Point(611, 952), new Point(655, 973), new Point(721, 919) };
             var chineseDarkPixels = new Point[] { new Point(553, 959), new Point(589, 931), new Point(622, 957), new Point(667, 931), new Point(669, 958), new Point(711, 945) };
@@ -157,8 +157,8 @@ namespace WarframeDriver
             //No longer working as they added railjack
             //var englishLightPixels = new Point[] { new Point(554, 959), new Point(650, 975), new Point(680, 933), new Point(778, 950), new Point(810, 977) };
             //var englishDarkPixels = new Point[] { new Point(568, 942), new Point(626, 972), new Point(700, 948), new Point(771, 939), new Point(902, 956) };
-            var englishLightPixels = new Point[] { new Point(563, 1064), new Point(652, 1078), new Point(704, 1047), new Point(760, 1089), new Point(809, 1055), new Point(863, 1093), new Point(900, 1064) };
-            var englishDarkPixels = new Point[] { new Point(578, 1069), new Point(640, 1097), new Point(706, 1073), new Point(774, 1088), new Point(821, 1063), new Point(855, 1076), new Point(903, 1049) };
+            var englishLightPixels = new Point[] { new Point(546, 703), new Point(710, 852), new Point(751, 951), new Point(924, 1063), new Point(644, 1199), new Point(835, 1192), new Point(946, 1204) };
+            var englishDarkPixels = new Point[] { new Point(618, 705), new Point(794, 811), new Point(767, 938), new Point(650, 1065), new Point(590, 1214), new Point(813, 1179), new Point(942, 1163) };
 
 
             var chineseLightPixels = new Point[] { new Point(556, 977), new Point(576, 966), new Point(603, 922), new Point(661, 981), new Point(687, 917), new Point(708, 965) };

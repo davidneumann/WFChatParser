@@ -336,9 +336,11 @@ namespace Application.Actionables
             using (var screen = _gameCapture.GetFullImage())
             {
                 ScreenState state = _screenStateHandler.GetScreenState(screen);
-                _logger.Log("New screen state: " + state.ToString());
-                var path = SaveScreenToDebug(screen);
-                await _dataSender.AsyncSendDebugMessage("New post login screen: " + path);
+                
+                //_logger.Log("New screen state: " + state.ToString());
+                //var path = SaveScreenToDebug(screen);
+                //await _dataSender.AsyncSendDebugMessage("New post login screen: " + path);
+
                 if (state == ScreenState.LoginScreen)
                 {
                     _logger.Log("Login screen still detected. Restarting warframe.");

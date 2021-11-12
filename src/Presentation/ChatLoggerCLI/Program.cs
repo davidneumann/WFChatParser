@@ -341,7 +341,7 @@ namespace ChatLoggerCLI
         private static void LogParser_OnNewMessage(LogMessage msg)
         {
             _dataSender.AsyncSendLogLine(msg).Wait();
-            _logger.Log($"EE log: {msg.Category} {msg.Level} {msg.Message}");
+            //_logger.Log($"EE log: {msg.Category} {msg.Level} {msg.Message}");
         }
 
         private static void Redtextthing_OnRedText(RedTextMessage msg)

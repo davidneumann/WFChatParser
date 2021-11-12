@@ -722,6 +722,11 @@ namespace Application.Actionables.ChatBots
                     else if (!_screenStateHandler.IsChatOpen(glyphScreen))
                         throw new ChatMissingException();
                 }
+                else
+                {
+                    var path = SaveScreenToDebug(glyphScreen);
+                    await _dataSender.AsyncSendDebugMessage("Failed to navigate to glyph screen. See: " + path);
+                }
             }
         }
 
@@ -791,7 +796,7 @@ namespace Application.Actionables.ChatBots
                         await Task.Delay(60);
                     }
 
-                    _mouse.Click(709, 1064);
+                    _mouse.Click(644, 954);
                     Thread.Sleep(750);
 
                     using (var profileMenuImage = _gameCapture.GetFullImage())

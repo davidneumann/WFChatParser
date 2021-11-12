@@ -140,6 +140,23 @@ namespace Application.ChatLineExtractor
             return ChatColor.Unknown;
         }
 
+        public void SaveChatScreenshot(string filename)
+        {
+            _image.Save(filename + "_orig.png");
+            using (var b = new Bitmap(Width, Height))
+            {
+                for (int x = 0; x < Width; x++)
+                {
+                    for (int y = 0; y < Height; y++)
+                    {
+                        var v = (int)(255 * this[x, y]);
+                        b.SetPixel(x, y, Color.FromArgb(v, v, v));
+                    }
+                }
+                b.Save(filename + "_v.png");
+            }
+        }
+
         //internal Hsv GetHsv(int x, int y)
         //{
         //    return _converter.ToHsv(_image[x, y]);
