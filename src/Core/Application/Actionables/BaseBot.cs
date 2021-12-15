@@ -186,8 +186,8 @@ namespace Application.Actionables
                 if (launcher.HasExited)
                 {
                     launcherClosed = true;
-                    _logger.Log("Waiting 20 seconds as launcher has exited");
-                    await Task.Delay(20000);
+                    _logger.Log("Waiting 60 seconds as launcher has exited");
+                    await Task.Delay(60000);
                     break;
                 }
             }
