@@ -323,21 +323,21 @@ namespace RelativeChatParser
                 foreach (var item in extracted)
                 {
                     dataPacket[0] = item;
-                    var characters = RustyDataTxRx.ParseCharacters(dataPacket);
+                    var characters = RustyDataTxRx.ParseCharacters(dataPacket, _logger);
                     foreach (var character in characters)
                     {
-                        if (character == ' ')
-                        {
-                            if (!hasSavedScreenshot)
-                            {
-                                screenshotGuid = Guid.NewGuid();
-                                imageCache.SaveChatScreenshot(Path.Combine("bad_chars", $"ss_{screenshotGuid}"));
-                                hasSavedScreenshot = true;
-                            }
-                            var packet = new GlyphPacket(item);
-                            packet.Save(Path.Combine("bad_chars", $"{i}_{Guid.NewGuid()}_{screenshotGuid}"), item);
-                            _logger.Log($"Bad character detected at {item.Left},{item.Top}. Guid: {screenshotGuid}");
-                        }
+                        //if (character == ' ')
+                        //{
+                        //    if (!hasSavedScreenshot)
+                        //    {
+                        //        screenshotGuid = Guid.NewGuid();
+                        //        imageCache.SaveChatScreenshot(Path.Combine("bad_chars", $"ss_{screenshotGuid}"));
+                        //        hasSavedScreenshot = true;
+                        //    }
+                        //    var packet = new GlyphPacket(item);
+                        //    packet.Save(Path.Combine("bad_chars", $"{i}_{Guid.NewGuid()}_{screenshotGuid}"), item);
+                        //    _logger.Log($"Bad character detected at {item.Left},{item.Top}. Guid: {screenshotGuid}");
+                        //}
 
                         if (character == ' ')
                             continue;

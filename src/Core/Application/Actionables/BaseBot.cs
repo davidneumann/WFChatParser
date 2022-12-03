@@ -174,9 +174,9 @@ namespace Application.Actionables
                     _logger.Log($"Found launcher {handle.ToString()} at {launcherRect.Left},{launcherRect.Top} {launcherRect.Right - launcherRect.Left}x{launcherRect.Bottom - launcherRect.Top}");
                     _mouse.Click(launcherRect.Left + (int)((launcherRect.Right - launcherRect.Left) * 0.7339181286549708f),
                         launcherRect.Top + (int)((launcherRect.Bottom - launcherRect.Top) * 0.9252336448598131f));
-                    await Task.Delay(17);
+                    await Task.Delay(66);
                     _keyboard.SendSpace();
-                    await Task.Delay(1000);
+                    await Task.Delay(10000);
                     if (launcher.HasExited)
                     {
                         _logger.Log("Launcher has exited");
@@ -186,8 +186,8 @@ namespace Application.Actionables
                 if (launcher.HasExited)
                 {
                     launcherClosed = true;
-                    _logger.Log("Waiting 60 seconds as launcher has exited");
-                    await Task.Delay(60000);
+                    _logger.Log("Waiting 30 seconds as launcher has exited");
+                    await Task.Delay(30000);
                     break;
                 }
             }
@@ -249,7 +249,7 @@ namespace Application.Actionables
             {
                 _screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle);
                 _mouse.MoveTo(0, 0);
-                await Task.Delay(17);
+                await Task.Delay(66);
                 using (var screen = _gameCapture.GetFullImage())
                 {
                     screen.Save("screen.png");
@@ -288,23 +288,31 @@ namespace Application.Actionables
                     _logger.Log("Logging in");
                     ////Username
                     //_mouse.Click(3041, 1145);
-                    //await Task.Delay(17);
+                    //await Task.Delay(66);
                     //_keyboard.SendPaste(_warframeCredentials.Username);
-                    //await Task.Delay(17);
+                    //await Task.Delay(66);
 
                     //Password
                     _screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle);
-                    await Task.Delay(25);
+                    _logger.Log("Clicking password box");
+                    await Task.Delay(66);
                     _mouse.Click(2936, 1235);
-                    await Task.Delay(250);
+                    await Task.Delay(66);
                     _mouse.Click(2936, 1235);
-                    await Task.Delay(250);
+                    await Task.Delay(750);
+
+                    _logger.Log("Pasting password");
+                    await Task.Delay(350);
                     _keyboard.SendPaste(_warframeCredentials.Password);
-                    await Task.Delay(17);
+                    await Task.Delay(350);
 
                     //Login
+                    _logger.Log("Clicking log in button");
                     _screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle);
                     _mouse.Click(2945, 1333);
+                    await Task.Delay(66);
+                    _mouse.Click(2945, 1333);
+                    await Task.Delay(750);
 
                     //Give plenty of time for the screen to transition
                     var startTime = DateTime.Now;
@@ -415,7 +423,7 @@ namespace Application.Actionables
         {
             if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
             {
-                await Task.Delay(17);
+                await Task.Delay(66);
                 _mouse.Click(0, 0);
             }
 
@@ -435,7 +443,7 @@ namespace Application.Actionables
                 }
             }
 
-            await Task.Delay(17);
+            await Task.Delay(66);
 
             CloseUnknownWindow();
 

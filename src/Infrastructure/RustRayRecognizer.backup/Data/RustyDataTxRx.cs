@@ -1,5 +1,4 @@
-﻿using Application.Logger;
-using ParsingModel;
+﻿using ParsingModel;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -77,7 +76,6 @@ namespace RustRayRecognizer.Data
             stream.Write((byte)height);
             stream.Write((byte)pixelsFromTopOfLine);
             stream.Write(contents);
-            stream.Flush();
         }
 
         public void Save(string filename, IExtractedGlyph glyph)
@@ -136,60 +134,36 @@ namespace RustRayRecognizer.Data
         public static string ConnectionAddress { get; set; }
         public static int ConnectionPort { get; set; } = 3333;
 
-        public static char[] ParseCharacters(IExtractedGlyph[] glyphs, ILogger logger)
+        public static char[] ParseCharacters(IExtractedGlyph[] glyphs)
         {
-            TcpClient _client = null;
-            NetworkStream _stream = null;
-            BinaryWriter _fout = null;
-            BinaryReader _fin = null;
+            var _client = new TcpClient(ConnectionAddress, ConnectionPort);
+            var _stream = _client.GetStream();
+            var _fout = new BinaryWriter(_stream);
+            var _fin = new BinaryReader(_stream);
 
-            var results = new char[0];
-            try
-            {
-                _client = new TcpClient(ConnectionAddress, ConnectionPort);
-                _stream = _client.GetStream();
-                if(_stream.CanTimeout)
-                {
-                    _stream.ReadTimeout = 1000;
-                    _stream.WriteTimeout = 1000;
-                }
-                _fout = new BinaryWriter(_stream);
-                _fin = new BinaryReader(_stream);
+            _fout.Write((ushort)glyphs.Length);
 
-                _fout.Write((ushort)glyphs.Length);
+            foreach (var glyph in glyphs)
+            {
+                var packet = new GlyphPacket(glyph);
+                packet.Send(_fout);
+            }
+            _fout.Flush();
+            var response_count = _fin.ReadUInt16();
+            var results = new char[response_count];
+            //Console.WriteLine($"Glyph recog response count: {response_count}");
+            //var sb = new StringBuilder();
+            for (int i = 0; i < response_count; i++)
+            {
+                results[i] = _fin.ReadChar();
+                //sb.Append(results[i]);
+            }
+            //Console.WriteLine(sb.ToString());
 
-                foreach (var glyph in glyphs)
-                {
-                    var packet = new GlyphPacket(glyph);
-                    packet.Send(_fout);
-                }
-                _fout.Flush();
-                var response_count = _fin.ReadUInt16();
-                results = new char[response_count];
-                //Console.WriteLine($"Glyph recog response count: {response_count}");
-                //var sb = new StringBuilder();
-                for (int i = 0; i < response_count; i++)
-                {
-                    results[i] = _fin.ReadChar();
-                    //sb.Append(results[i]);
-                }
-                //Console.WriteLine(sb.ToString());
-            }
-            catch (Exception ex)
-            {
-                logger.Log("HYPER FATAL ERROR: " + ex.Message);
-            }
-            finally
-            {
-                if (_client != null)
-                    _client.Dispose();
-                if (_stream != null)
-                    _stream.Dispose();
-                if (_fout != null)
-                    _fout.Dispose();
-                if (_fin != null)
-                    _fin.Dispose();
-            }
+            _client.Dispose();
+            _stream.Dispose();
+            _fout.Dispose();
+            _fin.Dispose();
 
             return results;
         }

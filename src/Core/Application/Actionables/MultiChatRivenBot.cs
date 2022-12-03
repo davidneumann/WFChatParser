@@ -223,7 +223,7 @@ namespace Application.Actionables
                         {
                             _logger.Log("Giving control to: " + _warframeCredentials[i].StartInfo.UserName + ":" + _warframeCredentials[i].Region);
                             await bot.TakeControl();
-                            await Task.Delay(17);
+                            await Task.Delay(66);
                         }
                         catch (Exception e)
                         {

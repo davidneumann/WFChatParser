@@ -42,10 +42,10 @@ namespace WarframeDriver
             if (p.X != x || p.Y != y)
             {
                 MoveTo((int)x, (int)y);
-                System.Threading.Thread.Sleep(33);
+                System.Threading.Thread.Sleep(66);
             }
             mouse_event(MOUSEEVENTF_LEFTDOWN, x, y, 0, (IntPtr)0);
-            System.Threading.Thread.Sleep(60);
+            System.Threading.Thread.Sleep(66);
             mouse_event(MOUSEEVENTF_LEFTUP, x, y, 0, (IntPtr)0);
         }
 

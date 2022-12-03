@@ -114,8 +114,8 @@ namespace WarframeDriver
 
         private bool IsGlyphScreen(Bitmap bitmap)
         {
-            var englishLightPixels = new Point[] { new Point(206, 244), new Point(254, 267), new Point(230, 172), new Point(2938, 320), new Point(3039, 346) };
-            var englishDarkPixels = new Point[] { new Point(206, 256), new Point(207, 268), new Point(282, 143), new Point(3640, 2090), new Point(4021, 53) };
+            var englishLightPixels = new Point[] { new Point(392, 111), new Point(506, 160), new Point(627, 103), new Point(2938, 320), new Point(245, 317) };
+            var englishDarkPixels = new Point[] { new Point(206, 251), new Point(240, 250), new Point(564, 115), new Point(3128, 328), new Point(3576, 231) };
 
             var chineseLightPixels = new Point[] { new Point(1969, 109), new Point(2023, 158), new Point(2056, 168), new Point(2079, 105), new Point(2098, 109), new Point(2124, 167) };
             var chineseDarkPixels = new Point[] { new Point(1959, 147), new Point(1991, 149), new Point(2014, 116), new Point(2067, 123), new Point(2072, 148), new Point(2106, 170) };
@@ -336,8 +336,8 @@ namespace WarframeDriver
         public bool IsChatCollapsed(Bitmap screen)
         {
             //Already moved down pixels
-            var lightPixelsLower = new Point[] { new Point(151, 2115), new Point(158, 2136), new Point(166, 2115), new Point(173, 2124), new Point(171, 2136) };
-            var darkPixelsLower = new Point[] { new Point(156, 2120), new Point(168, 2131), new Point(172, 2110), new Point(146, 2118), new Point(176, 2133) };
+            var lightPixelsLower = new Point[] { new Point(159, 2115), new Point(181, 2123), new Point(166, 2136), new Point(173, 2115), new Point(159, 2125) };
+            var darkPixelsLower = new Point[] { new Point(150, 2121), new Point(168, 2124), new Point(165, 2107), new Point(170, 2142), new Point(187, 2122) };
             var isLowerAndCollapsed = !lightPixelsLower.Any(p => screen.GetPixel(p.X, p.Y).ToHsv().Value <= 0.3f)
                 && !darkPixelsLower.Any(p => screen.GetPixel(p.X, p.Y).ToHsv().Value >= 0.15f);
             if (isLowerAndCollapsed)
@@ -362,8 +362,8 @@ namespace WarframeDriver
 
         public bool IsChatOpen(Bitmap screen)
         {
-            var lightPixels = new Point[] { new Point(147, 617), new Point(154, 617), new Point(170, 612), new Point(175, 629), new Point(153, 634) };
-            var darkPixels = new Point[] { new Point(151, 608), new Point(154, 630), new Point(170, 630), new Point(172, 608), new Point(162, 609) };
+            var lightPixels = new Point[] { new Point(147, 617), new Point(154, 617), new Point(170, 615), new Point(173, 629), new Point(153, 634) };
+            var darkPixels = new Point[] { new Point(159, 609), new Point(174, 609), new Point(180, 618), new Point(166, 630), new Point(159, 629) };
             return !lightPixels.Any(p => screen.GetPixel(p.X, p.Y).ToHsv().Value <= 0.5f)
                 && !darkPixels.Any(p => screen.GetPixel(p.X, p.Y).ToHsv().Value >= 0.5f);
         }

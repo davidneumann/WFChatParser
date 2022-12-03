@@ -142,7 +142,30 @@ namespace DebugCLI
             //NewMenuFix();
             //NewNewMenuFix();
 
-            TestChat();
+            //TestChat();
+
+            //TestNewKvmThing();
+            NewGlyphScreen2();
+        }
+
+        private static void NewGlyphScreen2()
+        {
+            var input = @"C:\Users\david\Downloads\133145057266744720.png";
+            var ss = new ScreenStateHandler();
+            using var b = new Bitmap(input);
+            //var debug = ss.IsChatCollapsed(b);
+            //Console.WriteLine($"{input} screen state: {debug}");
+            var state = ss.GetScreenState(b);
+            Console.WriteLine($"{state == ScreenState.GlyphWindow} && {ss.IsChatOpen(b)}");
+        }
+
+        private static void TestNewKvmThing()
+        {
+            var input = @"C:\Users\david\Downloads\test\Warframe 4_28_2022 7_36_52 PM.png";
+            var ss = new ScreenStateHandler();
+            using var b = new Bitmap(input);
+            var debug = ss.GetScreenState(b);
+            Console.WriteLine($"{input} screen state: {debug}");
         }
 
         private static void TestChat()
@@ -3623,7 +3646,7 @@ namespace DebugCLI
         //            Console.WriteLine("Got \"riven\" in " + sw.Elapsed.TotalSeconds + " seconds");
 
         //            //Hover over exit
-        //            System.Threading.Thread.Sleep(33);
+        //            System.Threading.Thread.Sleep(66);
         //            mouse.MoveTo(3816, 2013);
 
         //            //Click exit

@@ -148,9 +148,9 @@ namespace Application.Actionables.ProfileBots
         {
             if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
             {
-                await Task.Delay(17);
+                await Task.Delay(66);
                 _mouse.Click(0, 0);
-                await Task.Delay(17);
+                await Task.Delay(66);
             }
         }
 

@@ -254,11 +254,11 @@ namespace ChatLoggerCLI
                 }
                 catch { }
 
-                var shutdown = new System.Diagnostics.Process()
-                {
-                    StartInfo = new ProcessStartInfo("shutdown.exe", "/r /f /t 0")
-                };
-                shutdown.Start();
+                //var shutdown = new System.Diagnostics.Process()
+                //{
+                //    StartInfo = new ProcessStartInfo("shutdown.exe", "/r /f /t 0")
+                //};
+                //shutdown.Start();
             }
         }
 

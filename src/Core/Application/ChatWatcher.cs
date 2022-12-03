@@ -274,7 +274,7 @@ namespace Application
 
                         //Click exit
                         _mouseMover.Click(3814, 2014);
-                        await Task.Delay(30);
+                        await Task.Delay(66);
                         continue;
                     }
                     await _dataSender.AsyncSendDebugMessage("Help I'm stuck!");
@@ -290,7 +290,7 @@ namespace Application
                     {
                         scrollbarFound = true;
                         _mouseMover.MoveTo(3259, 658);
-                        await Task.Delay(33);
+                        await Task.Delay(66);
                         _mouseMover.Click(3259, 658);
                         await Task.Delay(100);
                         continue;
@@ -414,7 +414,7 @@ namespace Application
                             if (_chatParser.IsChatFocused(b))
                             {
                                 _mouseMover.MoveTo(clickpoint.X, clickpoint.Y);
-                                await Task.Delay(30);
+                                await Task.Delay(66);
                                 _mouseMover.Click(clickpoint.X, clickpoint.Y);
                                 await Task.Delay(80);
                             }
@@ -442,7 +442,7 @@ namespace Application
                                     _mouseMover.Click(3816, 2013);
                                     await Task.Delay(160);
                                     _mouseMover.MoveTo(0, 0);
-                                    await Task.Delay(17);
+                                    await Task.Delay(66);
                                     break;
                                 }
                                 b.Dispose();
@@ -514,7 +514,7 @@ namespace Application
                                     _mouseMover.Click(3816, 2013);
                                     await Task.Delay(250);
                                     _mouseMover.MoveTo(0, 0);
-                                    await Task.Delay(17);
+                                    await Task.Delay(66);
                                 }
                                 else
                                     await Task.Delay(80);
@@ -567,12 +567,12 @@ namespace Application
                 for (int i = 0; i < 27; i++)
                 {
                     _mouseMover.ScrollDown();
-                    await Task.Delay(17);
+                    await Task.Delay(66);
                 }
                 for (int i = 0; i < 1; i++)
                 {
                     _mouseMover.ScrollUp();//Pause chat
-                    await Task.Delay(17);
+                    await Task.Delay(66);
                 }
                 _mouseMover.MoveTo(0, 0);
                 await Task.Delay(100);

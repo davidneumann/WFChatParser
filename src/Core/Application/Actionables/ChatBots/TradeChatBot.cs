@@ -122,7 +122,7 @@ namespace Application.Actionables.ChatBots
 
             if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
             {
-                await Task.Delay(17);
+                await Task.Delay(66);
                 _mouse.Click(0, 0);
                 _logger.Log("Trying to give focus to warframe window");
             }
@@ -136,7 +136,7 @@ namespace Application.Actionables.ChatBots
                 }
                 catch { }
                 _mouse.MoveTo(0, 0);
-                await Task.Delay(17);
+                await Task.Delay(66);
                 //screen.Save("screen.png");
                 var state = _screenStateHandler.GetScreenState(screen);
 
@@ -145,7 +145,7 @@ namespace Application.Actionables.ChatBots
                 {
                     _logger.Log("Unknown prompt detected. Closing.");
                     _mouse.Click(screen.Width / 2, (int)(screen.Height * 0.57));
-                    await Task.Delay(30);
+                    await Task.Delay(66);
                 }
 
                 //If we somehow got off the glyph screen get back on it
@@ -178,7 +178,7 @@ namespace Application.Actionables.ChatBots
                         {
                             _logger.Log("Scrollbar found. Starting.");
                             _mouse.MoveTo(3259, 658);
-                            await Task.Delay(33);
+                            await Task.Delay(66);
                             _mouse.Click(3259, 658);
                             await Task.Delay(100);
                             firstParse = false;
@@ -316,21 +316,21 @@ namespace Application.Actionables.ChatBots
 
             //Scroll down to get 27 more messages
             _mouse.MoveTo(3250, 768);
-            await Task.Delay(30);
+            await Task.Delay(66);
             //Scroll down for new page of messages
             for (int i = 0; i < 27; i++)
             {
                 _mouse.ScrollDown();
-                await Task.Delay(33);
+                await Task.Delay(66);
             }
-            await Task.Delay(33);
+            await Task.Delay(66);
             for (int i = 0; i < 1; i++)
             {
                 _mouse.ScrollUp();//Pause chat
                 await Task.Delay(90);
             }
             _mouse.MoveTo(0, 0);
-            await Task.Delay(17);
+            await Task.Delay(66);
 
             _currentState = TradeBotState.ParseChat;
             _requestingControl = true;
@@ -398,11 +398,13 @@ namespace Application.Actionables.ChatBots
                 _logger.Log($"Attempting to click on click point {clickpoint.X},{clickpoint.Y}");
                 //Click riven
                 _mouse.MoveTo(clickpoint.X, clickpoint.Y);
-                await Task.Delay(17);
+                await Task.Delay(66);
                 _mouse.Click(clickpoint.X, clickpoint.Y);
-                await Task.Delay(17);
+                await Task.Delay(66);
+                _mouse.Click(clickpoint.X, clickpoint.Y);
+                await Task.Delay(66);
                 _mouse.MoveTo(0, 0);
-                await Task.Delay(17);
+                await Task.Delay(66);
 
                 //Wait for riven to open
                 Bitmap crop = null;
@@ -417,9 +419,9 @@ namespace Application.Actionables.ChatBots
                             crop = cropper.CropToRiven(b);
 
                             _mouse.Click(3816, 2013);
-                            await Task.Delay(33);
+                            await Task.Delay(66);
                             _mouse.MoveTo(0, 0);
-                            await Task.Delay(33);
+                            await Task.Delay(66);
                             break;
                         }
                         else if (_screenStateHandler.GetScreenState(b) == ScreenState.GlyphWindow && _screenStateHandler.IsChatOpen(b))
@@ -606,7 +608,7 @@ namespace Application.Actionables.ChatBots
             }
 
             _screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle);
-            await Task.Delay(17);
+            await Task.Delay(66);
             _mouse.Click(0, 0);
 
             using (var screen = _gameCapture.GetFullImage())
@@ -634,7 +636,7 @@ namespace Application.Actionables.ChatBots
                 {
                     _logger.Log("Unknown prompt detected. Closing.");
                     _mouse.Click(screen.Width / 2, (int)(screen.Height * 0.57));
-                    await Task.Delay(30);
+                    await Task.Delay(66);
                 }
 
                 //If we somehow got off the glyph screen get back on it
@@ -642,7 +644,7 @@ namespace Application.Actionables.ChatBots
                 {
                     _logger.Log("Going to glyph screen.");
                     await GoToGlyphScreenAndSetupFilters();
-                    await Task.Delay(30);
+                    await Task.Delay(66);
                     //In the event that we did not keep up with chat and ended up in a bad state we need to scroll to the bottom
                     if (!firstParse)
                     {
@@ -660,7 +662,7 @@ namespace Application.Actionables.ChatBots
         {
             if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
             {
-                await Task.Delay(17);
+                await Task.Delay(66);
                 _mouse.Click(0, 0);
             }
             _mouse.ClickAndDrag(new Point(3263, 2085), new Point(3263, 2121), 200);
@@ -674,7 +676,7 @@ namespace Application.Actionables.ChatBots
         {
             if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
             {
-                await Task.Delay(17);
+                await Task.Delay(66);
                 _mouse.Click(0, 0);
             }
             _logger.Log("Navigtating to glyph screen inside SetupFilters");
@@ -687,7 +689,7 @@ namespace Application.Actionables.ChatBots
                 if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
                 {
                     _logger.Log("Clicking top left");
-                    await Task.Delay(17);
+                    await Task.Delay(66);
                     _mouse.Click(0, 0);
                 }
                 _logger.Log("Verifying we are on glyph window");
@@ -720,7 +722,10 @@ namespace Application.Actionables.ChatBots
                         await Task.Delay(100);
                     }
                     else if (!_screenStateHandler.IsChatOpen(glyphScreen))
+                    {
+                        _logger.Log($"Saving failed to find glyph screen to  {SaveScreenToDebug(glyphScreen)}");
                         throw new ChatMissingException();
+                    }
                 }
                 else
                 {
@@ -734,7 +739,7 @@ namespace Application.Actionables.ChatBots
         {
             if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
             {
-                await Task.Delay(17);
+                await Task.Delay(66);
                 _mouse.Click(0, 0);
             }
             //Ensure we are controlling a warframe
@@ -743,7 +748,7 @@ namespace Application.Actionables.ChatBots
             {
                 if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
                 {
-                    await Task.Delay(17);
+                    await Task.Delay(66);
                     _mouse.Click(0, 0);
                 }
                 using (var screen = _gameCapture.GetFullImage())
@@ -751,13 +756,13 @@ namespace Application.Actionables.ChatBots
                     var state = _screenStateHandler.GetScreenState(screen);
                     if (state == ScreenState.GlyphWindow)
                     {
-                        await Task.Delay(30);
+                        await Task.Delay(66);
                         return;
                     }
                     else if (state != Enums.ScreenState.ControllingWarframe)
                     {
                         _keyboard.SendEscape();
-                        await Task.Delay(600);
+                        await Task.Delay(1200);
                     }
                     else
                     {
@@ -791,7 +796,7 @@ namespace Application.Actionables.ChatBots
                     if (_screenStateHandler.GiveWindowFocus(_warframeProcess.MainWindowHandle))
                     {
                         _logger.Log("Clicking profile");
-                        await Task.Delay(17);
+                        await Task.Delay(66);
                         _mouse.Click(0, 0);
                         await Task.Delay(60);
                     }
@@ -807,7 +812,9 @@ namespace Application.Actionables.ChatBots
                             _logger.Log("Clicking glyph");
                             //Click Glyph
                             _mouse.Click(693, 948);
-                            Thread.Sleep(7500);
+                            await Task.Delay(66);
+                            _mouse.MoveTo(0, 0);
+                            Thread.Sleep(10000);
                         }
                         else if (retry)
                             await NavigateToGlyphScreen(false);
